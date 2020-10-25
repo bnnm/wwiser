@@ -1,0 +1,63 @@
+<html>
+<head>
+    <title>wwiser viewer</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="stylesheet" type="text/css" href="/viewer.css?v1" />
+</head>
+<body>
+    <header>
+        <h1 class="logo">wwiser viewer</h1>
+    </header>
+    <nav class="tabs-panel" id="tabs-panel">
+        <label class="tab-button" for="tab-bank">bank</label>
+        <!-- 
+        <label class="tab-button" for="tab-simple">simple</label>
+        -->
+        <label class="tab-button" for="tab-docs-readme">readme</label>
+        <label class="tab-button" for="tab-docs-wwiser">docs</label>
+    </nav>
+
+    <div id="tabs">
+
+        <input class="tab-radio" type="radio" name="tabs-control" id="tab-bank">
+        <div class="view">
+            <!--<h2>bank view</h2>-->
+            <div class="tools">
+                <button class="load-all">Preload</button>
+                <input class="load-type" placeholder="HIRC name (default: all)"/>
+
+                Hide:
+                <label><input type="checkbox" class="hide" value="hide-offset"/>Offset</label>
+                <label><input type="checkbox" class="hide" value="hide-type"/>Type</label>
+            </div>
+
+            <div class="content">
+
+            </div>
+        </div>
+
+        <input class="tab-radio" type="radio" name="tabs-control" id="tab-simple">
+        <div class="view">
+            <!--<h2>simple view</h2>-->
+            <div class="tools">
+                <button class="load-all">Preload</button>
+            </div>
+            <div class="content">
+
+            </div>
+        </div>
+
+        <input class="tab-radio" type="radio" name="tabs-control" id="tab-docs-readme">
+        <div class="view">
+            <div class="content">
+            </div>
+        </div>
+        <input class="tab-radio" type="radio" name="tabs-control" id="tab-docs-wwiser">
+        <div class="view">
+            <div class="content">
+            </div>
+        </div>
+    </div>
+    <script src="/viewer.js?v1"></script>
+</body>
+</html>

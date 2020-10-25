@@ -1,0 +1,3292 @@
+import logging
+from . import wmodel, wio, wdefs, wparser_cls as wcls
+
+
+# parser mimics AK's functions, naming and some internals as to simplify debugging.
+# It's still a representation of the bank, rather than AK's classes, so it doesn't
+# try to follow all inheritance stuff (so it's easier to compare with disassembly).
+#
+# Typically each bank object reads values, sets some global engine defaults, and
+# creates/adds a new object to some list/hashmap (while checking no repeats are
+# added and other validations). This create new nodes roughly when Wwise uses a new
+# class, but often isn't 1:1, since values are moved around (for example multiple
+# bank u8 bitflags may end in the same u32, in a different order, in a global
+# object rather than where it's read). Similarly some extra nodes are added here
+# and there to help understanding usage.
+#
+# Could go in a Parser class but python 'slef' stuff is annoying
+
+
+def get_version(obj):
+    root = obj.get_root()
+    return root.get_version()
+
+def has_feedback(obj):
+    root = obj.get_root()
+    return root.has_feedback()
+
+#******************************************************************************
+# HIRC: COMMON
+
+#helper
+def parse_plugin(obj, name='ulPluginID'):
+    #actual format is:
+    # 16b=plugin id
+    # 12b=company id (managed by AK)
+    # 4b=plugin type
+    obj.U32(name).fmt(wdefs.AkPluginType_id) \
+        .U16('type',    (obj.lastval >>  0) & 0x000F) \
+            .fmt(wdefs.AkPluginType).up() \
+        .U16('company', (obj.lastval >>  4) & 0x03FF) \
+            .fmt(wdefs.AkPluginType_company).up()
+        #ids can repeat in different companies
+        #.U16('id',      (obj.lastval >> 16) & 0xFFFF) \
+        #    .fmt(wdefs.AkPluginType_id).up()
+    return
+
+#helper
+def parse_rtpc_graph(obj, name='pRTPCMgr', subname='AkRTPCGraphPoint'):
+    for elem in obj.list(name, 'AkRTPCGraphPoint', obj.lastval):
+        elem.f32('From')
+        elem.f32('To')
+        elem.U32('Interp').fmt(wdefs.AkCurveInterpolation)
+    return
+
+#128>=
+def AkPropBundle_float_unsigned_short___SetInitialParams(obj, cls):
+    #AkPropBundle<float,unsigned short>::SetInitialParams
+    #AkPropBundle<float,unsigned short,(AkMemID)0>::SetInitialParams #135
+    obj = obj.node('AkPropBundle<float,unsigned short>') #AkPropBundle
+
+    obj.u16('cProps')
+    elems = obj.list('pProps', 'AkPropBundle', obj.lastval).preload()
+    for elem in elems:
+        elem.U16('pID').fmt(wdefs.AkPropID)
+    for elem in elems:
+        elem.f32('pValue')
+
+#    count = obj.lastval
+#    for i in range(count):
+#        obj.U16('pID').fmt(wdefs.AkPropID)
+#    for i in range(count):
+#        obj.f32('pValue')
+    return
+
+#072>= 128<= (062>=?)
+def AkPropBundle_float___SetInitialParams(obj, cls):
+    #AkPropBundle<float>::SetInitialParams
+    obj = obj.node('AkPropBundle<float>') #AkPropBundle
+
+    obj.u8i('cProps')
+    elems = obj.list('pProps', 'AkPropBundle', obj.lastval).preload()
+    for elem in elems:
+        elem.U8x('pID').fmt(wdefs.AkPropID)
+    for elem in elems:
+        elem.f32('pValue')
+
+#    count = obj.lastval
+#    for i in range(count):
+#        obj.U8x('pID').fmt(wdefs.AkPropID)
+#    for i in range(count):
+#        obj.f32('pValue')
+    return
+
+#072>= (062>=?)
+def AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls, modulator=False):
+    #AkPropBundle<AkPropValue>::SetInitialParams
+    #AkPropBundle<AkPropValue,unsigned char>::SetInitialParams #v128>=
+    #AkPropBundle<AkPropValue,unsigned char,(AkMemID)0>::SetInitialParams #v135>=
+    obj = obj.node('AkPropBundle<AkPropValue,unsigned char>') #AkPropBundle
+
+    if modulator:
+        prop_fmt = wdefs.AkModulatorPropID
+    else:
+        prop_fmt = wdefs.AkPropID
+
+    obj.u8i('cProps')
+    elems = obj.list('pProps', 'AkPropBundle', obj.lastval).preload()
+    for elem in elems:
+        elem.U8x('pID').fmt(prop_fmt)
+    for elem in elems:
+        elem.uni('pValue')
+
+#    count = obj.lastval
+#    for i in range(count):
+#        obj.U8x('pID').fmt(prop_fmt)
+#    for i in range(count):
+#        obj.uni('pValue')
+    return
+
+#072>= (062>=?)
+def AkPropBundle_RANGED_MODIFIERS_AkPropValue__unsigned_char___SetInitialParams(obj, cls, modulator=False):
+    #AkPropBundle<RANGED_MODIFIERS<AkPropValue>>::SetInitialParams
+    #AkPropBundle<RANGED_MODIFIERS<AkPropValue>,unsigned char>::SetInitialParams #v128>=
+    #AkPropBundle<RANGED_MODIFIERS<AkPropValue>,unsigned char,(AkMemID)1>::SetInitialParams #v135>=
+    obj = obj.node('AkPropBundle<RANGED_MODIFIERS<AkPropValue>>') #AkPropBundle
+
+    if modulator:
+        prop_fmt = wdefs.AkModulatorPropID
+    else:
+        prop_fmt = wdefs.AkPropID
+
+    obj.u8i('cProps')
+    elems = obj.list('pProps', 'AkPropBundle', obj.lastval).preload()
+    for elem in elems:
+        elem.U8x('pID').fmt(prop_fmt)
+    for elem in elems:
+        elem.uni('min')
+        elem.uni('max')
+
+#    count = obj.lastval
+#    for i in range(count):
+#        obj.U8x('pID').fmt(prop_fmt)
+#    for i in range(count):
+#        obj.uni('min')
+#        obj.uni('max')
+    return
+
+#046>=
+def CAkBankMgr__LoadSource(obj, cls, subnode=False):
+    #CAkBankMgr::LoadSource
+    if not subnode:
+        obj = obj.node('AkBankSourceData')
+
+    parse_plugin(obj)
+    PluginType = (obj.lastval & 0x0F)
+
+    if   cls.version <= 88:
+        obj.U32('StreamType').fmt(wdefs.AkBank__AKBKSourceType)
+    else:
+        obj.U8x('StreamType').fmt(wdefs.AkBank__AKBKSourceType)
+    stream_type = obj.lastval
+
+    if cls.version <= 46:
+        elem = obj.node('AkAudioFormat')
+        if cls.version <= 26: #26=TH
+            elem.u32('index')
+        else: #36=SM
+            pass
+        elem.u32('uSampleRate')
+        elem.U32('uFormatBits') \
+            .bit('uChannelMask', elem.lastval, 0, 0x3FFFF) \
+            .bit('uBitsPerSample', elem.lastval, 18, 0x3F) \
+            .bit('uBlockAlign', elem.lastval, 24, 0x1F) \
+            .bit('uTypeID', elem.lastval, 29, 0x3) \
+            .bit('uInterleaveID', elem.lastval, 31)
+    else:
+        pass
+
+    elem = obj.node('AkMediaInformation')
+    elem.tid('sourceID')
+
+    if   cls.version <= 88:
+        elem.tid('uFileID') #wem or bnk
+        if stream_type != 1: #memory/prefetch
+            elem.U32('uFileOffset')
+            elem.U32('uInMemoryMediaSize')
+
+    elif cls.version <= 112:
+        elem.tid('uFileID') #wem or bnk
+        if stream_type != 2: #memory/prefetch
+            elem.U32('uFileOffset')
+        elem.U32('uInMemoryMediaSize')
+
+    else:
+        #fileID is sourceID
+        elem.U32('uInMemoryMediaSize')
+
+    elem.U8x('uSourceBits') \
+        .bit('bIsLanguageSpecific', elem.lastval,0) \
+        .bit('bPrefetch', elem.lastval,1) \
+        .bit('bNonCachable', elem.lastval, 3) \
+        .bit('bHasSource', elem.lastval, 7)
+
+    if cls.version <= 125:
+        has_param = (PluginType == 2 or PluginType == 5)
+    else:
+        has_param = (PluginType == 2)
+
+    if has_param:
+        obj.U32('uSize')
+        obj.gap('pParam', obj.lastval)
+    return
+
+#046>=
+def CAkParameterNode__SetAdvSettingsParams(obj, cls):
+    #CAkParameterNode::SetAdvSettingsParams
+    obj = obj.node('AdvSettingsParams')
+
+    if   cls.version <= 36: #36=UFC
+        #fields seem correct based on common values and comparing 34=SM's BE/LE bnks
+        obj.U32('eVirtualQueueBehavior').fmt(wdefs.AkVirtualQueueBehavior)
+        obj.U8x('bKillNewest') #MaxReachedBehavior
+        obj.u16('u16MaxNumInstance')
+        obj.U32('eBelowThresholdBehavior').fmt(wdefs.AkBelowThresholdBehavior)
+        obj.U8x('bIsMaxNumInstOverrideParent')
+        obj.U8x('bIsVVoicesOptOverrideParent')
+
+    elif cls.version <= 53: #44=AC2
+        obj.U8x('eVirtualQueueBehavior').fmt(wdefs.AkVirtualQueueBehavior)
+        obj.U8x('bKillNewest') #MaxReachedBehavior
+        obj.u16('u16MaxNumInstance')
+        obj.U8x('eBelowThresholdBehavior').fmt(wdefs.AkBelowThresholdBehavior)
+        obj.U8x('bIsMaxNumInstOverrideParent')
+        obj.U8x('bIsVVoicesOptOverrideParent')
+
+    elif cls.version <= 88: #56=KOF13
+        obj.U8x('eVirtualQueueBehavior').fmt(wdefs.AkVirtualQueueBehavior)
+        obj.U8x('bKillNewest') #MaxReachedBehavior
+        obj.U8x('bUseVirtualBehavior') #OverLimitBehavior
+        obj.u16('u16MaxNumInstance')
+        obj.U8x('bIsGlobalLimit')
+        obj.U8x('eBelowThresholdBehavior').fmt(wdefs.AkBelowThresholdBehavior)
+        obj.U8x('bIsMaxNumInstOverrideParent')
+        obj.U8x('bIsVVoicesOptOverrideParent')
+        if cls.version <= 72:
+            pass
+        else:
+            obj.U8x('bOverrideHdrEnvelope')
+            obj.U8x('bOverrideAnalysis')
+            obj.U8x('bNormalizeLoudness')
+            obj.U8x('bEnableEnvelope')
+    else:
+        obj.U8x('byBitVector') \
+           .bit('bKillNewest', obj.lastval, 0) \
+           .bit('bUseVirtualBehavior', obj.lastval, 1) \
+           .bit('bIgnoreParentMaxNumInst', obj.lastval, 3) \
+           .bit('bIsVVoicesOptOverrideParent', obj.lastval, 4)
+        obj.U8x('eVirtualQueueBehavior').fmt(wdefs.AkVirtualQueueBehavior)
+        obj.u16('u16MaxNumInstance')
+        obj.U8x('eBelowThresholdBehavior').fmt(wdefs.AkBelowThresholdBehavior)
+        obj.U8x('byBitVector') \
+           .bit('bOverrideHdrEnvelope', obj.lastval, 0) \
+           .bit('bOverrideAnalysis', obj.lastval, 1) \
+           .bit('bNormalizeLoudness', obj.lastval, 2) \
+           .bit('bEnableEnvelope', obj.lastval, 3)
+
+    return
+
+#046>=
+def CAkParameterNode__SetInitialFxParams(obj, cls):
+    #CAkParameterNode::SetInitialFxParams
+    obj = obj.node('NodeInitialFxParams')
+
+    obj.U8x('bIsOverrideParentFX') #when != 0
+    obj.u8i('uNumFx')
+    count = obj.lastval
+    if count > 0:
+        obj.u8i('bitsFXBypass')
+        for elem in obj.list('pFXChunk', 'FXChunk', count):
+            elem.u8i('uFXIndex')
+            elem.tid('fxID') #.fnv(wdefs.fnv_sfx) #tid in 113=Doom16
+
+            if   cls.version <= 48:
+                elem.U8x('bIsRendered')
+                elem.U32('ulPresetSize')
+                elem.gap('pDataBloc', elem.lastval)
+            else:
+                elem.U8x('bIsShareSet')
+                elem.U8x('bIsRendered')
+
+            if   cls.version <= 46:
+                pass
+            elif cls.version <= 48:
+                elem.u32('ulNumBankData')
+                for elem2 in elem.list('pParams', 'Plugin', elem.lastval):
+                    elem2.U32('FXParameterSetID') #plugin? (not seen)
+                    elem2.U32('item')
+            else:
+                pass
+
+    return
+
+#046>=
+def CAkParameterNode__SetInitialParams(obj, cls):
+    #CAkParameterNode::SetInitialParams
+    obj = obj.node('NodeInitialParams')
+
+    if cls.version <= 38: #38=KOF12
+        obj.f32('Volume') #VolumeMain #f32
+        obj.f32('Volume.min')
+        obj.f32('Volume.max')
+        obj.f32('LFE') #LFEVolumeMain #f32
+        obj.f32('LFE.min')
+        obj.f32('LFE.max')
+        obj.s32('Pitch')#PitchMain #s32
+        obj.s32('Pitch.min') #s32
+        obj.s32('Pitch.max') #s32
+        obj.s32('LPF')#LPFMain
+        obj.s32('LPF.min')
+        obj.s32('LPF.max')
+
+    elif cls.version <= 56: #44=AC2
+        #RANGED_MODIFIERS<float>
+        obj.f32('Volume') #VolumeMain
+        obj.f32('Volume.min')
+        obj.f32('Volume.max')
+        obj.f32('LFE') #LFEVolumeMain
+        obj.f32('LFE.min')
+        obj.f32('LFE.max')
+        obj.f32('Pitch')#PitchMain
+        obj.f32('Pitch.min')
+        obj.f32('Pitch.max')
+        obj.f32('LPF')#LPFMain
+        obj.f32('LPF.min')
+        obj.f32('LPF.max')
+
+    else: #62=Blands2
+        AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls)
+
+        AkPropBundle_RANGED_MODIFIERS_AkPropValue__unsigned_char___SetInitialParams(obj, cls)
+
+
+    if cls.version <= 52:
+        obj.tid('ulStateGroupID').fnv(wdefs.fnv_var)
+    else:
+        pass
+
+    return
+
+#-
+def CAkParameterNodeBase__SetAdvSettingsParams(obj, cls):
+    #CAkParameterNodeBase::SetAdvSettingsParams
+    raise wmodel.ParseError("dummy virtual function", obj)
+
+#125>=
+def CAkParameterNodeBase__SetAuxParams(obj, cls):
+    #CAkParameterNodeBase::SetAuxParams
+    obj = obj.node('AuxParams')
+
+    if cls.version <= 88:
+        obj.U8x('bOverrideGameAuxSends')
+        obj.U8x('bUseGameAuxSends')
+        obj.U8x('bOverrideUserAuxSends')
+        obj.U8x('bHasAux')
+        has_aux = obj.lastval != 0
+    else:
+        obj.U8x('byBitVector') \
+           .bit('bOverrideUserAuxSends', obj.lastval, 2) \
+           .bit('bHasAux', obj.lastval, 3) \
+           .bit('bOverrideReflectionsAuxBus', obj.lastval, 4) # bHasAux in v122, > 135
+        has_aux = (obj.lastval >> 3) & 1
+
+    if has_aux:
+        for i in range(4):
+            obj.tid('auxID')
+
+    if cls.version <= 134:
+        pass
+    else:
+        obj.tid('reflectionsAuxBus')
+    return
+
+#072>= 120<=
+def CAkParameterNode__SetAuxParams(obj, cls):
+    #CAkParameterNode::SetAuxParams
+
+    #same code, should be called by callbacks
+    CAkParameterNodeBase__SetAuxParams(obj, cls)
+    return
+
+#046>=
+def CAkParentNode_CAkParameterNode___SetChildren(obj, cls):
+    #CAkParentNode<CAkParameterNode>::SetChildren
+    obj = obj.node('Children')
+
+    obj.u32('ulNumChilds')
+    #for elem in obj.list('mapChild', 'WwiseObject', obj.lastval):
+    for i in range(obj.lastval):
+        obj.tid('ulChildID')
+    return
+
+#125>=
+def CAkStateAware__ReadStateChunk(obj, cls):
+    #CAkStateAware::ReadStateChunk
+    obj = obj.node('StateChunk')
+
+    obj.var('ulNumStateProps')
+    for elem in obj.list('stateProps', 'AkStatePropertyInfo', obj.lastval):
+        elem.var('PropertyId')
+        elem.U8x('accumType').fmt(wdefs.AkRtpcAccum)
+        if   cls.version <= 125:
+            pass
+        else:
+            elem.U8x('inDb') #bool
+
+    obj.var('ulNumStateGroups')
+    for elem in obj.list('pStateChunks', 'AkStateGroupChunk', obj.lastval):
+        elem.tid('ulStateGroupID').fnv(wdefs.fnv_var)
+        elem.U8x('eStateSyncType').fmt(wdefs.AkSyncType)
+        elem.var('ulNumStates')
+        for elem2 in elem.list('pStates', 'AkState', elem.lastval):
+            elem2.tid('ulStateID').fnv(wdefs.fnv_val)
+            elem2.tid('ulStateInstanceID')
+    return
+
+#053>= 120<=
+def CAkParameterNodeBase__ReadStateChunk(obj, cls):
+    #CAkParameterNodeBase::ReadStateChunk
+    obj = obj.node('StateChunk')
+
+    obj.u32('ulNumStateGroups')
+    for elem in obj.list('pStateChunks', 'AkStateGroupChunk', obj.lastval):
+        elem.tid('ulStateGroupID').fnv(wdefs.fnv_var)
+        elem.U8x('eStateSyncType').fmt(wdefs.AkSyncType)
+        elem.u16('ulNumStates')
+        for elem2 in elem.list('pStates', 'AkState', elem.lastval):
+            elem2.tid('ulStateID').fnv(wdefs.fnv_val)
+            elem2.tid('ulStateInstanceID')
+    return
+
+#128>=
+def CAkParamNodeStateAware__ReadStateChunk(obj, cls):
+    #CAkParamNodeStateAware::ReadStateChunk
+    CAkStateAware__ReadStateChunk(obj, cls)
+    return
+
+#046>= 125<=
+def CAkParameterNodeBase__ReadFeedbackInfo(obj, cls):
+    #CAkParameterNodeBase::ReadFeedbackInfo
+
+    if has_feedback(obj):
+        obj = obj.node('FeedbackInfo')
+        obj.tid('BusId').fnv(wdefs.fnv_bus) #unused in 112>=
+
+        if cls.version <= 53:
+            if obj.lastval != 0:
+                obj.f32('fFeedbackVolume')
+                obj.f32('fFeedbackModifierMin')
+                obj.f32('fFeedbackModifierMax')
+                obj.f32('fFeedbackLPF')
+                obj.f32('fFeedbackLPFModMin')
+                obj.f32('fFeedbackLPFModMax')
+        else:
+            pass
+    return
+
+#046>=
+def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
+    #CAkParameterNodeBase::SetInitialRTPC #113<=
+    #SetInitialRTPC<CAkParameterNodeBase>
+    obj = obj.node('InitialRTPC')
+
+    if cls.version <= 36: #36=UFC
+        obj.u32('ulNumRTPC')
+    else: #38=KOF12
+        obj.u16('ulNumRTPC')
+    for elem in obj.list('pRTPCMgr', 'RTPC', obj.lastval):
+
+        if   cls.version <= 36: #36=UFC
+            parse_plugin(elem, 'FXID')
+        elif cls.version <= 48: #44=AC2
+            parse_plugin(elem, 'FXID')
+            elem.U8x('_bIsRendered') #unused
+        else:
+            pass
+
+        elem.tid('RTPCID').fnv(wdefs.fnv_gme)
+
+        if   cls.version <= 88:
+            pass
+        else:
+            elem.U8x('rtpcType').fmt(wdefs.AkRtpcType)
+            elem.U8x('rtpcAccum').fmt(wdefs.AkRtpcAccum)
+
+
+        if   cls.version <= 88:
+            elem.U32('ParamID').fmt(wdefs.AkRTPC_ParameterID)
+        elif cls.version <= 113:
+            elem.U8x('ParamID').fmt(wdefs.AkRTPC_ParameterID)
+        else:
+            if modulator:
+                param_fmt = wdefs.AkRTPC_ModulatorParamID
+            else:
+                param_fmt = wdefs.AkRTPC_ParameterID
+            elem.var('ParamID').fmt(param_fmt)
+
+        elem.sid('rtpcCurveID')
+
+        if cls.version <= 36: #36=UFC
+            elem.U32('eScaling').fmt(wdefs.AkCurveScaling)
+            elem.u32('ulSize')
+        else: #44=AC2
+            elem.U8x('eScaling').fmt(wdefs.AkCurveScaling)
+            elem.u16('ulSize')
+        parse_rtpc_graph(elem) #indirectly in _vptr$CAkIndexable + 63
+    return
+
+#for all sub-RTPCs SDK code is copy-pasted (not call'd), except it sets the RTPC on the bus/layer/etc
+def SetInitialRTPC_CAkBus_(obj, cls):
+    #CAkParameterNodeBase::SetInitialRTPC #113<=
+    #SetInitialRTPC<CAkBus>
+    SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
+    return
+def SetInitialRTPC_CAkLayer_(obj, cls):
+    #CAkLayer::SetInitialRTPC #113<=
+    #SetInitialRTPC<CAkLayer>
+    SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
+    return
+def SetInitialRTPC_CAkAttenuation_(obj, cls):
+    #SetInitialRTPC<CAkAttenuation>
+    SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
+    return
+def SetInitialRTPC_CAkFxBase_(obj, cls):
+    #SetInitialRTPC<CAkFxBase>
+    SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
+    return
+def SetInitialRTPC_CAkModulator_(obj, cls):
+    #SetInitialRTPC<CAkModulator>
+    SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=True)
+    return
+
+#046>=
+def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
+    #CAkParameterNodeBase::SetNodeBaseParams
+    obj = obj.node('NodeBaseParams')
+
+    cls.CAkClass__SetInitialFxParams(obj, cls) #_vptr$CAkIndexable + 71
+
+    if   cls.version <= 88:
+        pass
+    else:
+        obj.U8x('bOverrideAttachmentParams')
+
+    obj.tid('OverrideBusId').fnv(wdefs.fnv_bus)
+    obj.tid('DirectParentID')
+
+    if   cls.version <= 56: #56=IAL
+        obj.u8i('ucPriority')
+        obj.u8i('bPriorityOverrideParent')
+        obj.u8i('bPriorityApplyDistFactor')
+        obj.s8i('iDistOffset')
+    elif cls.version <= 88: #62=Blands2
+        obj.U8x('bPriorityOverrideParent')
+        obj.U8x('bPriorityApplyDistFactor')
+    else:
+        obj.U8x('byBitVector') \
+           .bit('bPriorityOverrideParent', obj.lastval, 0) \
+           .bit('bPriorityApplyDistFactor', obj.lastval, 1) \
+           .bit('bOverrideMidiEventsBehavior', obj.lastval, 2) \
+           .bit('bOverrideMidiNoteTracking', obj.lastval, 3) \
+           .bit('bEnableMidiNoteTracking', obj.lastval, 4) \
+           .bit('bIsMidiBreakLoopOnNoteOff', obj.lastval, 5)
+
+
+    cls.CAkClass__SetInitialParams(obj, cls)
+
+
+    if   cls.version <= 120:
+        CAkParameterNode__SetPositioningParams(obj, cls) #callback, but only possible value
+    else:
+        CAkParameterNodeBase__SetPositioningParams(obj, cls)
+
+    if   cls.version <= 65: # 53=WW, 65=DmC
+        pass
+    else:
+        cls.CAkClass__SetAuxParams(obj, cls)
+
+
+    cls.CAkClass__SetAdvSettingsParams(obj, cls)
+
+
+    if   cls.version <= 52: #similar to ReadStateChunk but inline'd
+        if cls.version <= 36: #36=UFC, 34=SM
+            #todo upper bits maybe others? (0/1/0x21/0x31/etc)
+            obj.U32('eStateSyncType?').fmt(wdefs.AkSyncType)
+            obj.u32('ulNumStates')
+        else: #44=AC2
+            #todo upper bits maybe others? (0x25 found in Wwise demos 046, 0x18 in Enslaved)
+            obj.U8x('eStateSyncType').fmt(wdefs.AkSyncType)
+            obj.u16('ulNumStates')
+        for elem in obj.list('pStates', 'AKBKStateItem', obj.lastval):
+            elem.tid('ulStateID').fnv(wdefs.fnv_val)
+            elem.U8x('bIsCustom')
+            elem.tid('ulStateInstanceID')
+
+    elif cls.version <= 120:
+        CAkParameterNodeBase__ReadStateChunk(obj, cls)
+
+    elif cls.version <= 125:
+        CAkStateAware__ReadStateChunk(obj, cls)
+
+    else:
+        cls.CAkClass__ReadStateChunk(obj, cls) #_vptr$CAkStateAware + 14 (same thing though)
+
+
+    SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
+
+
+    if   cls.version <= 125:
+        CAkParameterNodeBase__ReadFeedbackInfo(obj, cls)
+
+    return
+
+#046>=
+def CAkParameterNodeBase__SetPositioningParams(obj, cls):
+    #CAkParameterNodeBase::SetPositioningParams
+    obj = obj.node('PositioningParams')
+
+    #we reuse this function though, see below
+    #if cls.version <= 120:
+    #    raise wmodel.ParseError("dummy virtual function", obj)
+
+    #todo 3dPositioning bits depends on version
+    #cbPositioningInfoOverrideParent older
+    fld = obj.U8x('uBitsPositioning')
+    fld.bit('bPositioningInfoOverrideParent', obj.lastval, 0)
+    fld.bit('bHasListenerRelativeRouting', obj.lastval, 1) #has_3d
+    if cls.version <= 112:
+        pass
+    elif cls.version <= 113:
+        fld.bit('unknown2d', obj.lastval, 2)
+        fld.bit('unknown2d', obj.lastval, 3)
+        fld.bit('unknown3d', obj.lastval, 4)
+        fld.bit('unknown3d', obj.lastval, 5)
+        fld.bit('unknown3d', obj.lastval, 6)
+        fld.bit('unknown3d', obj.lastval, 7)
+    elif cls.version <= 128:
+        pass
+    else: 
+        fld.bit('ePannerType', obj.lastval, 2, mask=3, fmt=wdefs.AkSpeakerPanningType)
+        fld.bit('e3DPositionType', obj.lastval, 5, mask=3, fmt=wdefs.Ak3DPositionType)
+    uBitsPositioning = obj.lastval
+    has_positioning = (uBitsPositioning >> 0) & 1
+
+    if has_positioning:
+        if cls.version <= 56: #56=KOF13
+            #BaseGenParams
+            obj.s32('uCenterPct')
+            obj.f32('fPAN_RL')
+            obj.f32('fPAN_FR')
+        else:
+            pass
+
+        if cls.version <= 72:
+            obj.U8x('cbIs3DPositioningAvailable')
+            has_3d = obj.lastval
+            if not has_3d:
+                obj.U8x('bIsPannerEnabled') #part of BaseGenParams
+        elif cls.version <= 88:
+            obj.U8x('cbIs2DPositioningAvailable')
+            has_2d = obj.lastval
+            obj.U8x('cbIs3DPositioningAvailable')
+            has_3d = obj.lastval
+            if has_2d:
+                obj.U8x('bPositioningEnablePanner')
+        elif cls.version <= 120:
+            has_3d = (uBitsPositioning >> 3) & 1
+        elif cls.version <= 128:
+            has_3d = (uBitsPositioning >> 4) & 1
+        else:
+            has_3d = (uBitsPositioning >> 1) & 1
+
+    if has_positioning and has_3d:
+        #Gen3DParams
+        if   cls.version <= 88:
+            obj.U32('eType').fmt(wdefs.AkPositioningType)
+            eType = obj.lastval
+        else:
+            fld = obj.U8x('uBits3d')
+            uBits3d = obj.lastval
+
+            #todo bit meanings may vary more in older versions
+            fld.bit('eSpatializationMode', obj.lastval, 0, mask=3, fmt=wdefs.Ak3DSpatializationMode)
+            if   cls.version <= 132:
+                fld.bit('bHoldEmitterPosAndOrient', obj.lastval, 3)
+                fld.bit('bHoldListenerOrient', obj.lastval, 4)
+            elif cls.version <= 134:
+                fld.bit('bEnableAttenuation', obj.lastval, 3)
+                fld.bit('bHoldEmitterPosAndOrient', obj.lastval, 4)
+                fld.bit('bHoldListenerOrient', obj.lastval, 5)
+                fld.bit('bIsNotLooping?', obj.lastval, 7) #from tests
+            else:
+                fld.bit('bEnableAttenuation', obj.lastval, 3)
+                fld.bit('bHoldEmitterPosAndOrient', obj.lastval, 4)
+                fld.bit('bHoldListenerOrient', obj.lastval, 5)
+                fld.bit('bEnableDiffraction', obj.lastval, 6)
+
+        if   cls.version <= 88:
+            obj.tid('uAttenuationID')
+            obj.U8x('bIsSpatialized')
+        elif cls.version <= 128:
+            obj.tid('uAttenuationID')
+        else:
+            pass
+
+        if   cls.version <= 72:
+            eType = eType
+            has_automation = (eType == 2) #Ak3DUserDef
+            has_dynamic = (eType == 3) #Ak3DGameDef
+        elif cls.version <= 88:
+            eType = (eType >> 0) & 3
+            has_automation = (eType != 1)
+            has_dynamic = not has_automation
+        elif cls.version <= 120:
+            e3DPositionType = (uBits3d >> 0) & 3
+            has_automation = (e3DPositionType != 1)
+            has_dynamic = False
+        elif cls.version <= 128:
+            e3DPositionType = (uBitsPositioning >> 4) & 1
+            has_automation = (e3DPositionType != 1)
+            has_dynamic = False
+        else: 
+            e3DPositionType = (uBitsPositioning >> 5) & 3
+            has_automation = (e3DPositionType != 0) #(3d == 1 or 3d != 1 and 3d == 2)
+            has_dynamic = False
+
+
+        if has_dynamic:
+            obj.U8x('bIsDynamic')
+
+        if has_automation:
+            if   cls.version <= 88:
+                obj.U32('ePathMode').fmt(wdefs.AkPathMode)
+                obj.U8x('bIsLooping')
+                obj.s32('TransitionTime')
+                if cls.version <= 36: #36=UFC (transition+vertices+items+params ok)
+                    pass
+                else:
+                    obj.U8x('bFollowOrientation')
+            else:
+                obj.U8x('ePathMode').fmt(wdefs.AkPathMode)
+                obj.s32('TransitionTime')
+
+            obj.u32('ulNumVertices')
+            for elem in obj.list('pVertices', 'AkPathVertex', obj.lastval):
+                elem.f32('Vertex.X')
+                elem.f32('Vertex.Y')
+                elem.f32('Vertex.Z')
+                elem.s32('Duration')
+
+            obj.u32('ulNumPlayListItem')
+            for elem in obj.list('pPlayListItems', 'AkPathListItemOffset', obj.lastval):
+                elem.U32('ulVerticesOffset')
+                elem.u32('iNumVertices')
+
+            #if cls.version <= 36: #36=UFC
+            if cls.version <= 36: #36=UFC
+                pass
+            #38=unknown, KOF13 doesn't use automation
+            else:  #44=AC2 (rest of data seems to match offsets but usually all 0s, so it's hard to say)
+                for elem in obj.list('Params', 'Ak3DAutomationParams', obj.lastval):
+                    elem.f32('fXRange')
+                    elem.f32('fYRange')
+                    if   cls.version <= 88:
+                        pass
+                    else:
+                        elem.f32('fZRange')
+
+    return
+
+#120<=
+def CAkParameterNode__SetPositioningParams(obj, cls):
+    #CAkParameterNode::SetPositioningParams
+
+    #has all code from above rather than call'd
+    CAkParameterNodeBase__SetPositioningParams(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: State
+
+#046>=
+def CAkState__SetInitialValues(obj, cls):
+    #CAkState::SetInitialValues
+    obj = obj.node('StateInitialValues')
+
+    if   cls.version <= 56:
+        elem = obj.node('AkStdParameters')
+        elem.f32('Volume')
+        elem.f32('LFEVolume')
+        elem.f32('Pitch')
+        elem.f32('LPF')
+        if cls.version <= 52:
+            elem.U8x('eVolumeValueMeaning').fmt(wdefs.AkValueMeaning)
+            elem.U8x('eLFEValueMeaning').fmt(wdefs.AkValueMeaning)
+            elem.U8x('ePitchValueMeaning').fmt(wdefs.AkValueMeaning)
+            elem.U8x('eLPFValueMeaning').fmt(wdefs.AkValueMeaning)
+        else:
+            pass
+
+    elif cls.version <= 125:
+        AkPropBundle_float___SetInitialParams(obj, cls)
+    else:
+        AkPropBundle_float_unsigned_short___SetInitialParams(obj, cls)
+    return
+
+#-
+def CAkBankMgr__ReadState(obj):
+    #CAkBankMgr::ReadState
+    cls = wcls.CAkState__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulStateID') #not hashname
+
+    CAkState__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Sound
+
+#046>=
+def CAkSound__SetInitialValues(obj, cls):
+    #CAkSound::SetInitialValues
+    obj = obj.node('SoundInitialValues')
+
+    CAkBankMgr__LoadSource(obj, cls)
+
+    CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
+
+    if cls.version <= 56:
+        obj.s16('Loop')
+        obj.s16('LoopMod.Min')
+        obj.s16('LoopMod.Max')
+    else:
+        pass
+
+    return
+
+#-
+def CAkBankMgr__ReadSourceParent_CAkSound_(obj):
+    #CAkBankMgr::ReadSourceParent<CAkSound>
+    cls = wcls.CAkSound__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkSound__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Event Action
+
+#046>=
+def CAkActionExcept__SetExceptParams(obj, cls):
+    #CAkAction::SetExceptParams #053, same but prints error if list size is set
+    #CAkActionExcept::SetExceptParams
+    obj = obj.node('ExceptParams')
+
+    if cls.version <= 120:
+        obj.u32('ulExceptionListSize')
+    else:
+        obj.var('ulExceptionListSize')
+
+    for elem in obj.list('listElementException', 'WwiseObjectIDext', obj.lastval):
+        elem.tid('ulID')
+        if cls.version <= 65: #65=ZoE HD
+            pass
+        else:
+            elem.U8x('bIsBus')
+    return
+
+#046>=
+def CAkAction__SetActionSpecificParams(obj, cls):
+    #CAkAction::SetActionSpecificParams
+    if cls.version <= 56: #56=KOF13
+        obj = obj.node('ActionSpecificParams')
+        obj.gap('_reserved', 0x10)
+    else: #62=Blands2
+        pass
+    return
+
+#046>=
+def CAkActionPause__SetActionSpecificParams(obj, cls):
+    #CAkActionPause::SetActionSpecificParams
+    obj = obj.node('PauseActionSpecificParams')
+
+    if cls.version <= 56: #56=KOF13
+        obj.U32('bIncludePendingResume')
+        obj.gap('_reserved', 0x0C)
+    else:
+        obj.U8x('byBitVector') \
+           .bit('bIncludePendingResume', obj.lastval, 0) \
+           .bit('bApplyToStateTransitions', obj.lastval, 1) \
+           .bit('bApplyToDynamicSequence', obj.lastval, 2)
+    return
+
+#113>=
+def CAkActionResetPlaylist__SetActionSpecificParams(obj, cls):
+    #CAkActionResetPlaylist::SetActionSpecificParams
+    return
+
+#046>=
+def CAkActionResume__SetActionSpecificParams(obj, cls):
+    #CAkActionResume::SetActionSpecificParams
+    obj = obj.node('ResumeActionSpecificParams')
+
+    if cls.version <= 56: #*
+        obj.U32('b32IsMaster')
+        obj.gap('_reserved', 0x0C)
+    else:
+        obj.U8x('byBitVector') \
+           .bit('bIsMasterResume', obj.lastval, 0) \
+           .bit('bApplyToStateTransitions', obj.lastval, 1) \
+           .bit('bApplyToDynamicSequence', obj.lastval, 2)
+    return
+
+#046>=
+def CAkActionSetAkProp__SetActionSpecificParams(obj, cls):
+    #CAkActionSetAkProp::SetActionSpecificParams #0x72>=
+    #CAkActionSetPitch::SetActionSpecificParams #053<=
+    #CAkActionSetVolume::SetActionSpecificParams #053<=
+    #CAkActionSetLFE::SetActionSpecificParams #053<=
+    #CAkActionSetLPF::SetActionSpecificParams #053<=
+    #in v053 there is one ::SetActionSpecificParams per subtype but are all the same
+    obj = obj.node('AkPropActionSpecificParams')
+
+    #if cls.version <= 53:
+    if cls.version <= 56: #assumed
+        obj.U32('eValueMeaning').fmt(wdefs.AkValueMeaning)
+    else:
+        obj.U8x('eValueMeaning').fmt(wdefs.AkValueMeaning)
+
+    for elem in [obj.node('RandomizerModifier')]: #rModifier / RANGED_PARAMETER<float>
+        elem.f32('base')#TargetValue.base
+        elem.f32('min') #TargetValue.mod.max
+        elem.f32('max') #TargetValue.mod.min
+    return
+
+#072>=
+def CAkActionSetGameParameter__SetActionSpecificParams(obj, cls):
+    #CAkActionSetGameParameter::SetActionSpecificParams
+    obj = obj.node('GameParameterActionSpecificParams')
+
+    if cls.version <= 88:
+        pass
+    else:
+        obj.U8x('bBypassTransition') #when != 0
+
+    if cls.version <= 56:
+        obj.U32('eValueMeaning').fmt(wdefs.AkValueMeaning)
+    else:
+        obj.U8x('eValueMeaning').fmt(wdefs.AkValueMeaning)
+    for elem in [obj.node('RANGED_PARAMETER<float>')]: #rModifier / RandomizerModifier
+        elem.f32('base')
+        elem.f32('min')
+        elem.f32('max')
+    return
+
+#125>=
+def CAkActionStop__SetActionSpecificParams(obj, cls):
+    #CAkActionStop::SetActionSpecificParams
+    obj = obj.node('StopActionSpecificParams')
+
+    obj.U8x('byBitVector') \
+       .bit('bApplyToStateTransitions', obj.lastval, 1) \
+       .bit('bApplyToDynamicSequence', obj.lastval, 2)
+    return
+
+#046>=
+def CAkAction__SetActionParams(obj, cls):
+    #CAkAction::SetActionParams
+    #obj = obj.node('DefaultActionParams')
+    return
+
+#046>=
+def CAkActionActive__SetActionParams(obj, cls):
+    #CAkActionActive::SetActionParams
+    obj = obj.node('ActiveActionParams')
+
+    if cls.version <= 56: #*
+        obj.s32('TTime')
+        obj.s32('TTimeMin')
+        obj.s32('TTimeMax')
+    else:
+        pass
+
+    obj.U8x('byBitVector') \
+       .bit('eFadeCurve', obj.lastval, 0, mask=0x1F, fmt=wdefs.AkCurveInterpolation)
+
+    cls.CAkClass__SetActionSpecificParams(obj, cls) #_vptr$CAkIndexable + 10
+
+    CAkActionExcept__SetExceptParams(obj, cls)
+    return
+
+#046>=
+def CAkActionBypassFX__SetActionParams(obj, cls):
+    #CAkActionBypassFX::SetActionParams
+    obj = obj.node('BypassFXActionParams')
+
+    obj.U8x('bIsBypass')
+    obj.U8x('uTargetMask')
+
+    CAkActionExcept__SetExceptParams(obj, cls)
+    return
+
+#046>=
+def CAkActionPlay__SetActionParams(obj, cls):
+    #CAkActionPlay::SetActionParams
+    obj = obj.node('PlayActionParams')
+
+    if cls.version <= 56: #*
+        obj.s32('TTime')
+        obj.s32('TTimeMin')
+        obj.s32('TTimeMax')
+    else:
+        pass
+
+    obj.U8x('byBitVector') \
+       .bit('eFadeCurve', obj.lastval, 0, mask=0x1F, fmt=wdefs.AkCurveInterpolation)
+
+    if cls.version <= 56: #*
+        cls.CAkClass__SetActionSpecificParams(obj, cls)
+
+        CAkActionExcept__SetExceptParams(obj, cls)
+    else:
+        pass
+
+    if cls.version <= 125:
+        obj.tid('fileID').fnv(wdefs.fnv_com) #same as bankID
+    else:
+        obj.tid('bankID').fnv(wdefs.fnv_com)
+    return
+
+#113>=
+def CAkActionPlayEvent__SetActionParams(obj, cls):
+    #CAkActionPlayEvent::SetActionParams
+    #obj = obj.node('PlayEventActionParams')
+    return
+
+#112>=
+def CAkActionRelease__SetActionParams(obj, cls):
+    #CAkActionRelease::SetActionParams
+    #obj = obj.node('ReleaseActionParams')
+    return
+
+#046>=
+def CAkActionSetRTPC__SetActionParams(obj, cls):
+    #CAkActionSetRTPC::SetActionParams
+    obj = obj.node('RTPCActionParams')
+
+    obj.tid('RTPC_ID').fnv(wdefs.fnv_gme) #tid? 113=Doom16
+    obj.f32('fRTPCValue')
+    return
+
+#048>=
+def CAkActionSeek__SetActionParams(obj, cls):
+    #CAkActionSeek::SetActionParams
+    obj = obj.node('SeekActionParams')
+
+    obj.U8x('bIsSeekRelativeToDuration') #when > 0
+    for elem in [obj.node('RandomizerModifier')]: #rModifier / RANGED_PARAMETER<float>
+        elem.f32('base')
+        elem.f32('min')
+        elem.f32('max')
+    obj.U8x('bSnapToNearestMarker') #when > 0
+
+    CAkActionExcept__SetExceptParams(obj, cls)
+    return
+
+#046>=
+def CAkActionSetState__SetActionParams(obj, cls):
+    #CAkActionSetState::SetActionParams
+    obj = obj.node('StateActionParams')
+
+    obj.tid('ulStateGroupID').fnv(wdefs.fnv_var)
+    obj.tid('ulTargetStateID').fnv(wdefs.fnv_val)
+    return
+
+#046>=
+def CAkActionSetSwitch__SetActionParams(obj, cls):
+    #CAkActionSetSwitch::SetActionParams
+    obj = obj.node('SwitchActionParams')
+
+    obj.tid('ulSwitchGroupID').fnv(wdefs.fnv_var)
+    obj.tid('ulSwitchStateID').fnv(wdefs.fnv_val)
+    return
+
+#046>=
+def CAkActionSetValue__SetActionParams(obj, cls):
+    #CAkActionSetValue::SetActionParams
+    obj = obj.node('ValueActionParams')
+
+    if cls.version <= 56: #*
+        obj.s32('TTime')
+        obj.s32('TTimeMin')
+        obj.s32('TTimeMax')
+    else:
+        pass
+
+    obj.U8x('byBitVector') \
+       .bit('eFadeCurve', obj.lastval, 0, mask=0x1F, fmt=wdefs.AkCurveInterpolation)
+
+    cls.CAkClass__SetActionSpecificParams(obj, cls) #_vptr$CAkIndexable + 10
+
+    CAkActionExcept__SetExceptParams(obj, cls)
+    return
+
+#056==
+def CAkActionUseState__SetActionParams(obj, cls):
+    #CAkActionUseState::SetActionParams
+
+    #exists in 056, but not in 053 or 072, and seemingly not on 062/065 [I Am Alive (PS3)]
+
+    #format is a clone of CActionSetValue's, just call
+    CAkActionSetValue__SetActionParams(obj, cls)
+    return
+
+#046>=
+def CAkAction__SetInitialValues(obj, cls):
+    #CAkAction::SetInitialValues
+    obj = obj.node('ActionInitialValues')
+
+    if cls.version <= 56: #56=IAA
+        obj.tid('ulTargetID')
+        obj.s32('tDelay')
+        obj.s32('tDelayMin')
+        obj.s32('tDelayMax')
+        obj.U32('ulSubSectionSize')
+        if obj.lastval > 0:
+            cls.CAkClass__SetActionParams(obj, cls)
+
+    else: #62=Blands2
+        # meaning of idExt:
+        #CAkAction::SetElementID = ulElementID, bIsBus
+        #CAkActionEvent::SetElementID: ulTargetEventID
+        # in CAkActionSetState meaning is a variable value (hashname)
+        obj.tid('idExt')
+
+        if cls.version <= 65: #65=DmC
+            pass
+        else:
+            obj.U8x('idExt_4') \
+               .bit('bIsBus', obj.lastval, 0)
+
+        AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls)
+
+        AkPropBundle_RANGED_MODIFIERS_AkPropValue__unsigned_char___SetInitialParams(obj, cls)
+
+        cls.CAkClass__SetActionParams(obj, cls)
+
+    return
+
+#-
+def CAkBankMgr__ReadAction(obj):
+    #CAkBankMgr::ReadAction
+    #set_name below
+
+    obj.sid('ulID')
+
+    if get_version(obj) <= 56: #56=KOF13
+        obj.U32('ulActionType').fmt(wdefs.AkActionType)
+    else: #62=Blands2
+        obj.U16('ulActionType').fmt(wdefs.AkActionType)
+    #       .U8x('type', (obj.lastval >> 8) & 0xFF) \
+    #            .fmt(wdefs.AkActionType_type).up() \
+    #       .U8x('mode', (obj.lastval >> 0) & 0xFF) \
+    #            .fmt(wdefs.AkActionType_mode).up()
+
+    cls = wcls.CAkAction__Create(obj, obj.lastval)
+    obj.set_name(cls.name)
+
+    CAkAction__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Event Sequence
+
+#046>=
+def CAkEvent__SetInitialValues(obj, cls):
+    #CAkEvent::SetInitialValues
+    obj = obj.node('EventInitialValues')
+
+    if cls.version <= 120:
+        obj.u32('ulActionListSize')
+    else:
+        obj.var('ulActionListSize')
+
+    for elem in obj.list('actions', 'Action', obj.lastval):
+        elem.tid('ulActionID')
+    return
+
+#-
+def CAkBankMgr__ReadEvent(obj):
+    #CAkBankMgr::ReadEvent
+    cls = wcls.CAkEvent__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID').fnv(wdefs.fnv_evt)
+
+    CAkEvent__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Random/Sequence Container
+
+#046>=
+def CAkRanSeqCntr__SetPlaylistWithoutCheck(obj, cls):
+    #CAkRanSeqCntr::SetPlaylistWithoutCheck
+    obj = obj.node('CAkPlayList') #pPlayList
+
+    if cls.version <= 38: #38=KOF12
+        obj.u32('ulPlayListItem')
+    else:
+        obj.u16('ulPlayListItem')
+    for elem in obj.list('pItems', 'AkPlaylistItem', obj.lastval):
+        elem.tid('ulPlayID')
+        if cls.version <= 56: #**
+            elem.u8i('weight')
+        else:
+            elem.s32('weight') #also u32 in v128
+
+    return
+
+#046>=
+def CAkRanSeqCntr__SetInitialValues(obj, cls):
+    #CAkRanSeqCntr::SetInitialValues
+    obj = obj.node('RanSeqCntrInitialValues')
+
+    CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
+
+    obj.u16('sLoopCount')
+
+    if cls.version <= 72:
+        pass
+    else:
+        obj.u16('sLoopModMin')
+        obj.u16('sLoopModMax')
+
+    if cls.version <= 38: #36=USB, 38=KOF13 (unsure of min/max, not seen)
+        obj.s32('TransitionTime')
+        obj.s32('TransitionTimeModMin')
+        obj.s32('TransitionTimeModMax')
+    else:
+        obj.f32('fTransitionTime')
+        obj.f32('fTransitionTimeModMin')
+        obj.f32('fTransitionTimeModMax')
+
+    obj.u16('wAvoidRepeatCount')
+
+    if   cls.version <= 35: #35=JS
+        pass
+    elif cls.version <= 36: #36=UFC
+        obj.u16('unknown') #related to wAvoidRepeatCount (why this version only?)
+    else:
+        pass
+
+    if cls.version <= 44: #44=DLPO/ME2/AC2
+        #todo: AoT2 needs this but no other games do, no apparent flag elsewhere
+        #(even if some banks are almost 100% exactly like other games like VO_INT_CHI_GUARD)
+        #since AoT2 has multiple bnk versions it could be buggy, as Wwise should only
+        #support one version
+        #could try to read up to Children and if it has funny values rewind back, not sure
+        #obj.U16('unknown')
+        pass
+    elif cls.version <= 45: #45=AoT2
+        obj.U16('unknown') #unrelated to wAvoidRepeatCount (00/01/03/05)
+        pass
+    else:
+        pass
+
+    if cls.version <= 36: #36=UFC
+        #todo probably ok but hard to check
+        obj.U8x('eTransitionMode').fmt(wdefs.AkTransitionMode)
+        obj.U8x('eRandomMode').fmt(wdefs.AkRandomMode)
+        obj.U8x('eMode').fmt(wdefs.AkContainerMode)
+    else:
+        obj.U8x('eTransitionMode').fmt(wdefs.AkTransitionMode)
+        obj.U8x('eRandomMode').fmt(wdefs.AkRandomMode)
+        obj.U8x('eMode').fmt(wdefs.AkContainerMode)
+        pass
+
+    if   cls.version <= 36:
+        #todo probably ok but hard to check
+        obj.U8x('_bIsUsingWeight')
+        obj.U8x('bResetPlayListAtEachPlay')
+        obj.U8x('bIsRestartBackward')
+        obj.U8x('bIsContinuous')
+        obj.U8x('bIsGlobal')
+    elif cls.version <= 88:
+        obj.U8x('_bIsUsingWeight') #unused
+        obj.U8x('bResetPlayListAtEachPlay')
+        obj.U8x('bIsRestartBackward')
+        obj.U8x('bIsContinuous')
+        obj.U8x('bIsGlobal')
+    else:
+        obj.U8x('byBitVector') \
+            .bit('_bIsUsingWeight', obj.lastval, 0) \
+            .bit('bResetPlayListAtEachPlay', obj.lastval, 1) \
+            .bit('bIsRestartBackward', obj.lastval, 2) \
+            .bit('bIsContinuous', obj.lastval, 3) \
+            .bit('bIsGlobal', obj.lastval, 4)
+
+    CAkParentNode_CAkParameterNode___SetChildren(obj, cls)
+
+    CAkRanSeqCntr__SetPlaylistWithoutCheck(obj, cls)
+
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkRanSeqCntr_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::StdBankRead<CAkRanSeqCntr,CAkParameterNodeBase>
+    cls = wcls.CAkRanSeqCntr__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkRanSeqCntr__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Switch Container
+
+#046>=
+def CAkSwitchCntr__SetInitialValues(obj, cls):
+    #CAkSwitchCntr::SetInitialValues
+    obj = obj.node('SwitchCntrInitialValues')
+
+    CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
+
+    if cls.version <= 88:
+        obj.U32('eGroupType').fmt(wdefs.AkGroupType)
+    else:
+        obj.U8x('eGroupType').fmt(wdefs.AkGroupType)
+    obj.tid('ulGroupID').fnv(wdefs.fnv_var)
+    obj.tid('ulDefaultSwitch').fnv(wdefs.fnv_val)
+    obj.U8x('bIsContinuousValidation') #!=0
+
+    CAkParentNode_CAkParameterNode___SetChildren(obj, cls)
+
+    obj.u32('ulNumSwitchGroups')
+    for elem in obj.list('SwitchList', 'CAkSwitchPackage', obj.lastval):
+        elem.sid('ulSwitchID').fnv(wdefs.fnv_val)
+        elem.u32('ulNumItems')
+        elem2 = elem.node('NodeList')
+        for i in range(elem.lastval):
+            elem2.tid('NodeID') #just 'ID'
+
+    obj.u32('ulNumSwitchParams')
+    for elem in obj.list('rParams', 'AkSwitchNodeParams', obj.lastval):
+        elem.tid('ulNodeID')
+
+        if cls.version <= 88:
+            elem.U8x('bIsFirstOnly')
+            elem.U8x('bContinuePlayback')
+            elem.U32('eOnSwitchMode').fmt(wdefs.AkOnSwitchMode)
+        else:
+            elem.U8x('byBitVector') \
+                .bit('bIsFirstOnly', elem.lastval, 0) \
+                .bit('bContinuePlayback', elem.lastval, 1)
+            elem.U8x('byBitVector') \
+                .bit('eOnSwitchMode', elem.lastval, 0, 0x7, fmt=wdefs.AkOnSwitchMode)
+
+        elem.s32('FadeOutTime')
+        elem.s32('FadeInTime')
+
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkSwitchCntr_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::StdBankRead<CAkSwitchCntr,CAkParameterNodeBase>
+    cls = wcls.CAkSwitchCntr__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkSwitchCntr__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Actor-Mixer
+
+#046>=
+def CAkActorMixer__SetInitialValues(obj, cls):
+    #CAkActorMixer::SetInitialValues
+    obj = obj.node('ActorMixerInitialValues')
+
+    CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
+
+    CAkParentNode_CAkParameterNode___SetChildren(obj, cls)
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkActorMixer_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::StdBankRead<CAkActorMixer,CAkParameterNodeBase>
+    cls = wcls.CAkActorMixer__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkActorMixer__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Audio Bus
+
+#046>=
+def CAkBus__SetInitialFxParams(obj, cls):
+    #CAkBus::SetInitialFxParams
+    obj = obj.node('BusInitialFxParams')
+
+    obj.u8i('uNumFx')
+    count = obj.lastval
+
+    if cls.version <= 48:
+        read_fx = count > 0
+    elif cls.version <= 65: #52=WW, 65=DmC
+        read_fx = count > 0 or cls.is_environmental
+    else:
+        read_fx = count > 0
+
+    if read_fx:
+        obj.u8i('bitsFXBypass') #bIsBypassed & 0x11 != 0
+        for elem in obj.list('pFXChunk', 'FXChunk', count):
+            elem.u8i('uFXIndex')
+            elem.tid('fxID') #.fnv(wdefs.fnv_sfx) #tid in 113=Doom16
+
+            if   cls.version <= 48:
+                elem.U8x('_bIsRendered') #unused
+                elem.U32('ulSize')
+                elem.gap('pDataBloc', elem.lastval)
+
+            else:
+                elem.U8x('bIsShareSet') #!=0, bIsRendered is earlier versions
+                elem.U8x('_bIsRendered') #unused
+
+
+            if   cls.version <= 46:
+                pass
+            elif cls.version <= 48:
+                elem.u32('ulNumBankData')
+                for elem2 in elem.list('pParams', 'Plugin', elem.lastval):
+                    elem2.tid('FXParameterSetID') #plugin? (not seen)
+                    elem2.U32('item')
+            else:
+                pass
+
+
+    if cls.version <= 88:
+        pass
+    else:
+        obj.tid('fxID_0')
+        obj.U8x('bIsShareSet_0') #!=0
+
+    return
+
+#046>=
+def CAkBus__SetInitialParams(obj, cls):
+    #CAkBus::SetInitialParams
+    obj = obj.node('BusInitialParams')
+
+    if cls.version <= 56: #*
+        pass
+    else:
+        AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls)
+
+    if cls.version <= 120:
+        pass
+    else:
+        CAkParameterNodeBase__SetPositioningParams(obj, cls)
+        cls.CAkClass__SetAuxParams(obj, cls) #_vptr$CAkIndexable + 72
+
+    if   cls.version <= 53:
+        obj.f32('VolumeMain')
+        obj.f32('LFEVolumeMain')
+        obj.f32('priority')
+        obj.f32('distanceOffset')
+
+        obj.U8x('bKillNewest')
+
+        obj.U16('u16MaxNumInstance')
+        obj.U8x('bIsMaxNumInstOverrideParent')
+
+        if cls.version <= 48:
+            pass
+        else:
+            obj.U16('uChannelConfig')
+
+        obj.U8x('_unused') #bPriorityApplyDistFactor?
+        obj.U8x('_unused') #bPriorityOverrideParent?
+
+        if cls.version <= 48:
+            pass
+        else:
+            obj.U8x('bIsEnvironmental')
+            cls.is_environmental = obj.lastval #save for CAkBus::SetInitialFxParams
+
+    elif  cls.version <= 56: #*
+        obj.f32('VolumeMain')
+        obj.f32('LFEVolumeMain')
+        obj.f32('priority')
+        obj.f32('distanceOffset')
+
+        obj.U8x('bKillNewest')
+        obj.U8x('bUseVirtualBehavior')
+
+        obj.U16('u16MaxNumInstance')
+        obj.U8x('bIsMaxNumInstOverrideParent')
+        obj.U16('uChannelConfig')
+
+        obj.U8x('_unused') #EnableWiiCompressor?
+        obj.U8x('_unused') #EnableWiiCompressor?
+        obj.U8x('bIsEnvironmental')
+        cls.is_environmental = obj.lastval #save for CAkBus::SetInitialFxParams
+
+    elif cls.version <= 65: #DmC
+        obj.U8x('bKillNewest')
+        obj.U8x('bUseVirtualBehavior')
+
+        obj.U16('u16MaxNumInstance')
+        obj.U8x('bIsMaxNumInstOverrideParent')
+        obj.U16('uChannelConfig')
+
+        obj.U8x('_unused')
+        obj.U8x('_unused')
+        obj.U8x('bIsEnvironmental')
+        cls.is_environmental = obj.lastval #save for CAkBus::SetInitialFxParams
+
+    elif cls.version <= 77:
+        obj.U8x('bKillNewest') #MaxReachedBehavior
+        obj.U8x('bUseVirtualBehavior') #OverLimitBehavior
+
+        obj.U16('u16MaxNumInstance')
+        obj.U8x('bIsMaxNumInstOverrideParent')
+        obj.U16('uChannelConfig')
+
+        obj.U8x('_unused')
+        obj.U8x('_unused')
+
+    elif cls.version <= 88:
+        obj.U8x('bPositioningEnabled')
+        obj.U8x('bPositioningEnablePanner')
+        obj.U8x('bKillNewest') #MaxReachedBehavior
+        obj.U8x('bUseVirtualBehavior') #OverLimitBehavior
+
+        obj.U16('u16MaxNumInstance')
+        obj.U8x('bIsMaxNumInstOverrideParent')
+        obj.U16('uChannelConfig')
+
+        obj.U8x('_unused')
+        obj.U8x('_unused')
+        obj.U8x('bIsHdrBus')
+        obj.U8x('bHdrReleaseModeExponential')
+
+    elif cls.version <= 120:
+        obj.U8x('byBitVector') \
+           .bit('bMainOutputHierarchy', obj.lastval, 0) \
+           .bit('bIsBackgroundMusic', obj.lastval, 1)
+
+        obj.U8x('byBitVector') \
+           .bit('bKillNewest', obj.lastval, 0) \
+           .bit('bUseVirtualBehavior', obj.lastval, 1)
+
+        obj.U16('u16MaxNumInstance')
+        obj.U32('uChannelConfig')
+
+        obj.U8x('byBitVector') \
+           .bit('bIsHdrBus', obj.lastval, 0) \
+           .bit('bHdrReleaseModeExponential', obj.lastval, 1)
+
+    else:
+        obj.U8x('byBitVector') \
+           .bit('bKillNewest', obj.lastval, 0) \
+           .bit('bUseVirtualBehavior', obj.lastval, 1) \
+           .bit('bIsMaxNumInstIgnoreParent', obj.lastval, 2) \
+           .bit('bIsBackgroundMusic', obj.lastval, 3)
+
+        obj.U16('u16MaxNumInstance')
+        obj.U32('uChannelConfig')
+
+        obj.U8x('byBitVector') \
+           .bit('bIsHdrBus', obj.lastval, 0) \
+           .bit('bHdrReleaseModeExponential', obj.lastval, 1)
+
+    return
+
+#046>=
+def CAkBus__SetInitialValues(obj, cls):
+    #CAkBus::SetInitialValues
+    obj = obj.node('BusInitialValues')
+
+    obj.tid('OverrideBusId').fnv(wdefs.fnv_bus)
+    if cls.version <= 125:
+        pass
+    else:
+        if obj.lastval == 0:
+            obj.tid('idDeviceShareset')
+
+    cls.CAkClass__SetInitialParams(obj, cls)
+
+    if cls.version <= 52:
+        obj.tid('ulStateGroupID').fnv(wdefs.fnv_var)
+    else:
+        pass
+
+    obj.s32('RecoveryTime')
+
+    if cls.version <= 38:
+        pass
+    else:
+        obj.f32('fMaxDuckVolume')
+
+    if cls.version <= 52:
+        obj.U32('eStateSyncType').fmt(wdefs.AkSyncType)
+    else:
+        pass
+
+
+    obj.u32('ulDucks')
+    for elem in obj.list('ToDuckList', 'AkDuckInfo', obj.lastval):
+        elem.tid('BusID').fnv(wdefs.fnv_bus) #sometimes bank hashnames too
+        elem.f32('DuckVolume')
+        elem.s32('FadeOutTime')
+        elem.s32('FadeInTime')
+        elem.U8x('eFadeCurve').fmt(wdefs.AkCurveInterpolation)
+        if cls.version <= 65: #53=WW, 65=DmC
+            pass
+        else:
+            elem.U8x('TargetProp').fmt(wdefs.AkPropID)
+
+    cls.CAkClass__SetInitialFxParams(obj, cls) #_vptr$CAkIndexable + 71
+
+    if   cls.version <= 88:
+        pass
+    else:
+        obj.U8x('bOverrideAttachmentParams')
+
+    SetInitialRTPC_CAkBus_(obj, cls)
+
+    if   cls.version <= 52: #similar to ReadStateChunk but inline'd
+        obj.u32('ulNumStates')
+        for elem in obj.list('pStates', 'AKBKStateItem', obj.lastval):
+            elem.tid('ulStateID').fnv(wdefs.fnv_val)
+            elem.U8x('bIsCustom')
+            elem.tid('ulStateInstanceID')
+
+    elif cls.version <= 120:
+        CAkParameterNodeBase__ReadStateChunk(obj, cls)
+
+    elif cls.version <= 125:
+        CAkStateAware__ReadStateChunk(obj, cls)
+
+    else:
+        cls.CAkClass__ReadStateChunk(obj, cls) #callback but same
+
+
+    if cls.version <= 125:
+        CAkParameterNodeBase__ReadFeedbackInfo(obj, cls)
+    else:
+        pass
+
+    return
+
+#-
+def CAkBankMgr__ReadBus(obj):
+    #CAkBankMgr::ReadBus
+    cls = wcls.CAkBus__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID').fnv(wdefs.fnv_bus) #usually hashname
+
+    #callback, can only logically be this
+    CAkBus__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Layer Container
+
+#046>=
+def CAkLayer__SetInitialValues(obj, cls):
+    #CAkLayer::SetInitialValues
+    obj = obj.node('LayerInitialValues')
+
+    SetInitialRTPC_CAkLayer_(obj, cls)
+
+    obj.tid('rtpcID').fnv(wdefs.fnv_gme)
+
+    if cls.version <= 88:
+        pass
+    else:
+        obj.U8x('rtpcType').fmt(wdefs.AkRtpcType)
+
+    if cls.version <= 56: #*
+        obj.f32('fCrossfadingRTPCDefaultValue')
+    else:
+        pass
+
+    obj.u32('ulNumAssoc')
+    for elem in obj.list('assocs', 'CAssociatedChildData', obj.lastval):
+        elem.tid('ulAssociatedChildID')
+        elem.u32('ulCurveSize')
+        parse_rtpc_graph(elem) #set on 'assocs'
+
+    return
+
+#046>=
+def CAkLayerCntr__SetInitialValues(obj, cls):
+    #CAkLayerCntr::SetInitialValues
+    obj = obj.node('LayerCntrInitialValues')
+
+    CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
+
+    CAkParentNode_CAkParameterNode___SetChildren(obj, cls)
+
+    obj.u32('ulNumLayers')
+    for elem in obj.list('pLayers', 'CAkLayer', obj.lastval):
+        elem.tid('ulLayerID') #indirect read in 113
+
+        CAkLayer__SetInitialValues(elem, cls)
+
+    if cls.version <= 118:
+        pass
+    else:
+        obj.U8x('bIsContinuousValidation')
+
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkLayerCntr_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::StdBankRead<CAkLayerCntr,CAkParameterNodeBase>
+    cls = wcls.CAkLayerCntr__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkLayerCntr__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Music Segment
+
+#046>=
+def CAkMusicNode__SetMusicNodeParams(obj, cls):
+    #CAkMusicNode::SetMusicNodeParams
+    obj = obj.node('MusicNodeParams')
+
+    if cls.version <= 88:
+        pass
+    else:
+        obj.U8x('uFlags') \
+            .bit('bOverrideParentMidiTempo', obj.lastval, 1) \
+            .bit('bOverrideParentMidiTarget', obj.lastval, 2) \
+            .bit('bMidiTargetTypeBus', obj.lastval, 3)
+
+    CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
+
+    CAkParentNode_CAkParameterNode___SetChildren(obj, cls)
+
+    for elem in [obj.node('AkMeterInfo')]:
+        elem.d64('fGridPeriod')
+        elem.d64('fGridOffset')
+        elem.f32('fTempo')
+        elem.u8i('uTimeSigNumBeatsBar')
+        elem.u8i('uTimeSigBeatValue')
+    obj.U8x('bMeterInfoFlag') #override meter (0=off, -1=on)
+
+    obj.u32('NumStingers')
+    for elem in obj.list('pStingers', 'CAkStinger', obj.lastval):
+        elem.tid('TriggerID').fnv(wdefs.fnv_trg)
+        elem.tid('SegmentID')
+        elem.u32('SyncPlayAt').fmt(wdefs.AkSyncType)
+        if cls.version <= 53:  #56: untested
+            pass
+        else:
+            elem.u32('uCueFilterHash')
+        elem.s32('DontRepeatTime')
+        elem.u32('numSegmentLookAhead')
+    return
+
+#046>=
+def CAkMusicSegment__SetInitialValues(obj, cls):
+    #CAkMusicSegment::SetInitialValues
+    obj = obj.node('MusicSegmentInitialValues')
+
+    CAkMusicNode__SetMusicNodeParams(obj, cls)
+
+    obj.d64('fDuration')
+    obj.u32('ulNumMarkers')
+    for elem in obj.list('pArrayMarkers', 'AkMusicMarkerWwise', obj.lastval):
+        if cls.version <= 62: #62=Blands2
+            elem.u32('id') #actually may be tid too but entry/exit use 0/1, other cues use ID (ex. Splatterhouse)
+        else: #65=DmC
+            elem.tid('id')
+        elem.d64('fPosition')
+
+        if cls.version <= 62: #53=WW, 56=Trine2/KOF13, 62=Blands2
+            pass
+        else:
+            elem.u32('uStringSize')
+            if elem.lastval > 0:
+                elem.str('pMarkerName', elem.lastval) #pszName
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkMusicSegment_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::StdBankRead<CAkMusicSegment,CAkParameterNodeBase>
+    cls = wcls.CAkMusicSegment__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkMusicSegment__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Music Track
+
+#112>=
+def TrackSwitchInfo__SetTransParams(obj, cls):
+    #TrackSwitchInfo::SetTransParams
+    obj = obj.node('TransParams')
+
+    for elem in [obj.node('srcFadeParams')]: #AkMusicFade
+        elem.s32('transitionTime')
+        elem.u32('eFadeCurve').fmt(wdefs.AkCurveInterpolation)
+        elem.s32('iFadeOffset')
+    obj.u32('eSyncType').fmt(wdefs.AkSyncType)
+    obj.u32('uCueFilterHash')
+    for elem in [obj.node('destFadeParams')]: #AkMusicFade
+        elem.s32('transitionTime')
+        elem.u32('eFadeCurve').fmt(wdefs.AkCurveInterpolation)
+        elem.s32('iFadeOffset')
+    return
+
+#112>=
+def TrackSwitchInfo__SetSwitchParams(obj, cls):
+    #TrackSwitchInfo::SetSwitchParams
+    obj = obj.node('SwitchParams')
+
+    obj.U8x('eGroupType').fmt(wdefs.AkGroupType)
+    obj.tid('uGroupID').fnv(wdefs.fnv_var)
+    obj.tid('uDefaultSwitch').fnv(wdefs.fnv_val)
+    obj.u32('numSwitchAssoc')
+    for elem in obj.list('arSwitchAssoc', 'TrackSwitchAssoc', obj.lastval):
+        elem.tid('ulSwitchAssoc').fnv(wdefs.fnv_val)
+    return
+
+#112>=
+def CAkMusicTrack__SetTransParams(obj, cls):
+    #CAkMusicTrack::SetTransParams
+    TrackSwitchInfo__SetTransParams(obj, cls)
+    return
+
+#112>=
+def CAkMusicTrack__SetSwitchParams(obj, cls):
+    #CAkMusicTrack::SetSwitchParams
+    TrackSwitchInfo__SetSwitchParams(obj, cls)
+    return
+
+#048>=
+def CAkMusicTrack__SetInitialValues(obj, cls):
+    #CAkMusicTrack::SetInitialValues
+    obj = obj.node('MusicTrackInitialValues')
+
+    if cls.version <= 88:
+        pass
+    elif cls.version <= 112:
+        obj.U8x('uOverrides') \
+           .bit('bOverrideParentMidiTempo', obj.lastval, 1) \
+           .bit('bOverrideParentMidiTarget', obj.lastval, 2)
+    else:
+        obj.U8x('uFlags') \
+            .bit('bOverrideParentMidiTempo', obj.lastval, 1) \
+            .bit('bOverrideParentMidiTarget', obj.lastval, 2) \
+            .bit('bMidiTargetTypeBus', obj.lastval, 3)
+
+    obj.u32('numSources')
+    for elem in obj.list('pSource', 'AkBankSourceData', obj.lastval): #CAkMusicSource
+        if cls.version <= 0:
+            obj.U32('unknown')
+        else:
+            pass
+        CAkBankMgr__LoadSource(elem, cls, True)
+
+    obj.u32('numPlaylistItem')
+    if obj.lastval > 0:
+        for elem in obj.list('pPlaylist', 'AkTrackSrcInfo', obj.lastval):
+            elem.u32('trackID') #0..N
+            elem.tid('sourceID')
+            if cls.version <= 132:
+                pass
+            else:
+                elem.tid('eventID')
+            elem.d64('fPlayAt')
+            elem.d64('fBeginTrimOffset')
+            elem.d64('fEndTrimOffset')
+            elem.d64('fSrcDuration')
+        obj.u32('numSubTrack')
+
+    if cls.version <= 62: #53=WW, 56=Trine2, 62=BLands2
+        pass
+    else: #65=DmC
+        obj.u32('numClipAutomationItem')
+        for elem in obj.list('pItems', 'AkClipAutomation', obj.lastval):
+            elem.u32('uClipIndex')
+            elem.U32('eAutoType').fmt(wdefs.AkClipAutomationType)
+            elem.u32('uNumPoints')
+            parse_rtpc_graph(elem, name='pArrayGraphPoints')
+
+    CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
+
+    if cls.version <= 56: #52=WW, 56=Trine2
+        obj.s16('Loop')
+        obj.s16('LoopMod.min')
+        obj.s16('LoopMod.max')
+    else:
+        pass
+
+    if cls.version <= 88:
+        obj.u32('eRSType').fmt(wdefs.AkMusicTrackRanSeqType)
+    else:
+        obj.U8x('eTrackType').fmt(wdefs.AkMusicTrackType)
+        if obj.lastval == 0x3:
+            CAkMusicTrack__SetSwitchParams(obj, cls)
+            CAkMusicTrack__SetTransParams(obj, cls)
+
+    obj.s32('iLookAheadTime')
+    return
+
+#-
+def CAkBankMgr__ReadSourceParent_CAkMusicTrack_(obj):
+    #CAkBankMgr::ReadSourceParent<CAkMusicTrack>
+    cls = wcls.CAkMusicTrack__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkMusicTrack__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Music Switch
+
+def parse_tree_node(obj, cls, count, cur_depth, max_depth):
+
+    nodes = []
+    for elem in obj.list('pNodes', 'Node', count):
+        elem.tid('key').fnv(wdefs.fnv_val) #0/default or gamesync
+
+        if cur_depth == max_depth:
+            elem.tid('audioNodeId')
+            children_count = 0
+        else:
+            elem.u16('children.uIdx')
+            elem.u16('children.uCount')
+            children_count = elem.lastval
+
+        if   cls.version <= 36: #36=UFC
+            elem.u16('uWeight')
+            elem.u16('uProbability')
+        elif cls.version <= 45: #45=AoT2
+            pass
+        else:
+            elem.u16('uWeight')
+            elem.u16('uProbability')
+
+        nodes.append((elem, children_count))
+
+    for elem, children_count in nodes:
+        if children_count > 0:
+            parse_tree_node(elem, cls, children_count, cur_depth+1, max_depth)
+
+    return
+
+
+#048>=
+def AkDecisionTree__SetTree(obj, cls, size, depth):
+    #AkDecisionTree::Init #053<=
+    #AkDecisionTree::SetTree
+    obj = obj.node('AkDecisionTree')
+    obj.omax(size)
+
+    # this tree is a linear array of AkDecisionTree::Node, used in
+    # AkDecisionTree::ResolvePath rather than pre-parsed, and selects
+    # an ID typically based on probability and weight + states.
+
+    # format: node > all children from node > all children of first child,
+    # repeat until max depth (nodes always have children up to max).
+    # idx is where the children start in the array. example:
+
+    #node[0]            idx=1, chl=1, dp=0   (max depth=4)
+    #  node[1]          idx=2, chl=2, dp=1   (parent: [0])
+    #    node[2]        idx=4, chl=2, dp=2   (parent: [1])
+    #    node[3]        idx=8, chl=1, dp=2   (parent: [1])
+    #      node[4]      idx=6, chl=1, dp=3   (parent: [2])
+    #      node[5]      idx=7, chl=1, dp=3   (parent: [2])
+    #        node[6]    audio node,   dp=4   (parent: [4])
+    #        node[7]    audio node,   dp=4   (parent: [5])
+    #      node[8]      idx=9, chl=1, dp=3   (parent: [3])
+    #        node[9]    audio node,   dp=4   (parent: [8])
+
+    # we parse it to represents the final tree rather than the array, but
+    # indexes get moved around and children idx makes less sense
+    # (it's possible to read linearly but harder to know when it's an audio node)
+    parse_tree_node(obj, cls, 1,  0, depth)
+
+#    #UFC needs weight while AoT2 (in 45/44/38 bnks) doesn't, both trees called in CAkDialogueEvent, 36 has feedback
+#    # other 38/44 games don't seem to have trees to crossreference
+#    if   cls.version <= 36: #36=UFC
+#        count = size // 0x0c
+#    elif cls.version <= 45: #45=AoT2
+#        count = size // 0x08
+#    else:
+#        count = size // 0x0C
+#
+#    for elem in obj.list('pNodes', 'Node', count):
+#        elem.tid('key')
+#
+#        if elem.lastval != 0: #not correct but works most of the time
+#            elem.tid('audioNodeId')
+#        else:
+#            elem.u16('children.uIdx')
+#            elem.u16('children.uCount')
+#
+#        if   cls.version <= 36: #36=UFC
+#            elem.u16('uWeight')
+#            elem.u16('uProbability')
+#        elif cls.version <= 45: #45=AoT2
+#            pass
+#        else:
+#            elem.u16('uWeight')
+#            elem.u16('uProbability')
+
+    obj.consume()
+    return
+
+#088>=
+def CAkMusicSwitchCntr__SetArguments(obj, count, unused=False):
+    #CAkMusicSwitchCntr::SetArguments
+    obj = obj.node('Arguments')
+
+    elems = obj.list('pArguments', 'AkGameSync', count).preload()
+    for elem in elems: #pArguments list
+        elem.tid('ulGroup').fnv(wdefs.fnv_var)
+    for elem in elems: #pGroupTypes list
+        elem.U8x('eGroupType').fmt(wdefs.AkGroupType)
+    return
+
+#046>=
+def CAkMusicSwitchCntr__SetInitialValues(obj, cls):
+    #CAkMusicSwitchCntr::SetInitialValues
+    obj = obj.node('MusicSwitchCntrInitialValues')
+
+    CAkMusicTransAware__SetMusicTransNodeParams(obj, cls)
+
+    if cls.version <= 72:
+        obj.U32('eGroupType').fmt(wdefs.AkGroupType)
+        obj.tid('ulGroupID').fnv(wdefs.fnv_var)
+        obj.tid('ulDefaultSwitch').fnv(wdefs.fnv_val)
+        obj.U8x('bIsContinuousValidation') #!=0
+        obj.u32('numSwitchAssocs')
+        for elem in obj.list('pAssocs', 'AkMusicSwitchAssoc', obj.lastval):
+            elem.tid('switchID').fnv(wdefs.fnv_val)
+            elem.tid('nodeID')
+
+    else:
+        obj.U8x('bIsContinuePlayback')
+        obj.u32('uTreeDepth')
+        depth = obj.lastval
+
+        CAkMusicSwitchCntr__SetArguments(obj, depth)
+        obj.U32('uTreeDataSize')
+        size = obj.lastval
+
+        obj.U8x('uMode').fmt(wdefs.AkDecisionTree__Mode)
+
+        AkDecisionTree__SetTree(obj, cls, size, depth)
+
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkMusicSwitchCntr_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::StdBankRead<CAkMusicSwitchCntr,CAkParameterNodeBase>
+    cls = wcls.CAkMusicSwitchCntr__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkMusicSwitchCntr__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Music Random Sequence
+
+#046>=
+def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
+    #CAkMusicTransAware::SetMusicTransNodeParams
+    obj = obj.node('MusicTransNodeParams')
+
+    CAkMusicNode__SetMusicNodeParams(obj, cls)
+
+    obj.u32('numRules')
+    for elem in obj.list('pRules', 'AkMusicTransitionRule', obj.lastval):
+
+        if cls.version <= 72:
+            numsrc = 1
+        else:
+            elem.u32('uNumSrc')
+            numsrc = elem.lastval
+
+        for i in range(numsrc):
+            elem.tid('srcID') #-1 or sid
+
+        if cls.version <= 72:
+            numdst = 1
+        else:
+            elem.u32('uNumDst')
+            numdst = elem.lastval
+
+        for i in range(numdst):
+            elem.tid('dstID')
+
+        for elem2 in [elem.node('AkMusicTransSrcRule')]:
+            elem2.s32('transitionTime')
+            elem2.u32('eFadeCurve').fmt(wdefs.AkCurveInterpolation)
+            elem2.s32('iFadeOffset')
+            elem2.u32('eSyncType').fmt(wdefs.AkSyncType)
+            if   cls.version <= 62: #53=WW, 56=Trine2, 62=Blands2
+                pass
+            elif cls.version <= 72: #65=DmC
+                elem2.u32('markerID')
+            else:
+                elem2.u32('uCueFilterHash')
+            elem2.U8x('bPlayPostExit')
+
+        for elem2 in [elem.node('AkMusicTransDstRule')]:
+            elem2.s32('transitionTime')
+            elem2.u32('eFadeCurve').fmt(wdefs.AkCurveInterpolation)
+            elem2.s32('iFadeOffset')
+            if cls.version <= 72:
+                elem2.u32('markerID')
+            else:
+                elem2.u32('uCueFilterHash')
+            elem2.tid('uJumpToID')
+            if cls.version <= 132:
+                pass
+            else:
+                elem2.U16('eJumpToType').fmt(wdefs.AkJumpToSelType)
+            elem2.U16('eEntryType').fmt(wdefs.AkEntryType)
+
+            elem2.U8x('bPlayPreEntry')
+
+            if cls.version <= 62:  #53=WW, 56=Trine2, 62=Blands2
+                pass
+            else: #65=DmC/ZoE
+                elem2.U8x('bDestMatchSourceCueName')
+
+        if cls.version <= 72:
+            elem.U8x('bIsTransObjectEnabled')
+            has_transobj = True #always! flag is used elsewhere
+        else:
+            elem.U8x('AllocTransObjectFlag')
+            has_transobj = elem.lastval != 0
+
+        if has_transobj:
+            elem2 = elem.node('AkMusicTransitionObject')
+            elem2.tid('segmentID')
+
+            for elem3 in [elem2.node('fadeInParams')]: #AkMusicFade
+                elem3.s32('transitionTime')
+                elem3.u32('eFadeCurve').fmt(wdefs.AkCurveInterpolation)
+                elem3.s32('iFadeOffset')
+
+            for elem3 in [elem2.node('fadeOutParams')]: #AkMusicFade
+                elem3.s32('transitionTime')
+                elem3.u32('eFadeCurve').fmt(wdefs.AkCurveInterpolation)
+                elem3.s32('iFadeOffset')
+
+            elem2.U8x('bPlayPreEntry')
+            elem2.U8x('bPlayPostExit')
+    return
+
+
+def parse_playlist_node(obj, cls, count):
+
+    for elem in obj.list('pPlayList', 'AkMusicRanSeqPlaylistItem', count):
+        elem.tid('SegmentID')
+        elem.sid('playlistItemID')
+        elem.u32('NumChildren')
+        children_count = elem.lastval
+
+        if cls.version <= 36: #36=UFC, 35=JSpeed
+            #this seems to work but not sure what are they going for, some fields may be wrong
+            if elem.lastval != 0: #parent node
+                elem.U32('eRSType').fmt(wdefs.RSType)
+                elem.s16('Loop')
+                elem.u16('Weight')
+                if cls.version <= 35: #35=JSpeed
+                    elem.u16('subnodes?') #ok?
+                    elem.U8x('bIsUsingWeight?')
+                    elem.U8x('bIsShuffle?')
+                else:
+                    elem.u16('subnodes?') #ok?
+                    elem.u16('subnodes?') #same?
+                    elem.U8x('bIsUsingWeight?')
+                    elem.U8x('bIsShuffle?')
+
+            else: #child node
+                elem.tid('nodeId?') #same value for multiple children
+                elem.s16('Loop')
+                elem.u16('Weight')
+                if cls.version <= 35: #35=JSpeed
+                    elem.U16('unknown') #0001
+                    elem.U8x('unknown') #00
+                    elem.U8x('unknown') #00
+                else:
+                    elem.U16('unknown') #6785
+                    elem.U16('unknown') #004C
+                    elem.U8x('unknown') #00/01/05/0E/2D
+                    elem.U8x('unknown') #00
+
+        else:
+            if cls.version <= 44: #Mass Effect 2
+                if children_count == 0:
+                    elem.tid('nodeId?') #same value for multiple children
+                else:
+                    elem.u32('eRSType').fmt(wdefs.RSType)
+            else: #046 (Enslaved)
+                elem.u32('eRSType').fmt(wdefs.RSType)
+            elem.s16('Loop')
+            if cls.version <= 88:
+                pass
+            else:
+                elem.s16('LoopMin')
+                elem.s16('LoopMax')
+
+            if cls.version <= 56: #53=WW, 56=trine2
+                elem.u16('Weight')
+            else: #62=Blands2 65=DmC
+                elem.u32('Weight')
+
+            elem.u16('wAvoidRepeatCount')
+            elem.U8x('bIsUsingWeight')
+            elem.U8x('bIsShuffle')
+
+
+        parse_playlist_node(elem, cls, children_count)
+
+    return
+
+#046>=
+def CAkMusicRanSeqCntr__SetInitialValues(obj, cls):
+    #CAkMusicRanSeqCntr::SetInitialValues
+    obj = obj.node('MusicRanSeqCntrInitialValues')
+
+    CAkMusicTransAware__SetMusicTransNodeParams(obj, cls)
+
+    obj.u32('numPlaylistItems')
+    parse_playlist_node(obj, cls, 1)
+
+    #playlists work linearly (unlike decision trees):
+    #node[0]            ch=3
+    #  node[1]          ch=2    (parent: [0])
+    #    node[2]        ch=1    (parent: [1])
+    #      node[3]      ch=0    (parent: [2])
+    #    node[4]        ch=0    (parent: [1])
+    #  node[5]          ch=0    (parent: [0])
+    #  node[6]          ch=1    (parent: [0])
+    #    node[7]        ch=0    (parent: [7])
+
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkMusicRanSeqCntr_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::StdBankRead<CAkMusicRanSeqCntr,CAkParameterNodeBase>
+    cls = wcls.CAkMusicRanSeqCntr__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkMusicRanSeqCntr__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Attenuation
+
+#046>=
+def CAkAttenuation__SetInitialValues(obj, cls):
+    #CAkAttenuation::SetInitialValues
+    obj = obj.node('AttenuationInitialValues')
+
+    obj.U8x('bIsConeEnabled')
+    if (obj.lastval & 1):
+        elem = obj.node('ConeParams')
+        elem.f32('fInsideDegrees') #fInsideAngle = ToRadians(in_fDegrees) * 0.5
+        elem.f32('fOutsideDegrees') #fOutsideAngle = ToRadians(in_fDegrees) * 0.5
+        elem.f32('fOutsideVolume')
+        elem.f32('LoPass')
+        if cls.version <= 88:
+            pass
+        else:
+            elem.f32('HiPass')
+
+    if   cls.version <= 62: #48=WW, 62=Blands2
+        num_curves = 5
+    #if   cls.version <= 65: # unknown
+    #    num_curves = ?
+    elif cls.version <= 72:
+        num_curves = 4
+    elif cls.version <= 88:
+        num_curves = 5
+    else:
+        num_curves = 7
+
+    for i in range(num_curves):
+        obj.s8i('curveToUse[%i]' % i) #read as u8 but set to s8
+
+    if cls.version <= 36: #36=UFC
+        obj.U32('NumCurves')
+    else:
+        obj.U8x('NumCurves')
+
+    for elem in obj.list('curves', 'CAkConversionTable', obj.lastval):
+        if cls.version <= 36: #36=UFC
+            elem.U32('eScaling').fmt(wdefs.AkCurveScaling)
+            elem.u32('ulSize')
+        else:
+            elem.U8x('eScaling').fmt(wdefs.AkCurveScaling)
+            elem.u16('ulSize')
+        parse_rtpc_graph(elem)
+
+    #inline'd in 113<=
+    SetInitialRTPC_CAkAttenuation_(obj, cls)
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkAttenuation_CAkAttenuation_(obj):
+    #CAkBankMgr::StdBankRead<CAkAttenuation,CAkAttenuation>
+    cls = wcls.CAkAttenuation__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkAttenuation__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Dialogue Event
+
+#046>=
+def CAkDialogueEvent__SetInitialValues(obj, cls):
+    #CAkDialogueEvent::SetInitialValues
+    obj = obj.node('DialogueEventInitialValues')
+
+    if cls.version <= 72:
+        #argsize = 0x04
+        pass
+    else:
+        #argsize = 0x05
+        obj.u8i('uProbability')
+
+    obj.u32('uTreeDepth')
+    depth = obj.lastval
+
+    # apparently skipped by Wwise, but wouldn't be able to tell arg types otherwise?
+    #obj.gap('_pArguments', argsize * depth)
+    subobj = obj.node('Arguments')
+    if cls.version <= 72:
+        elems = subobj.list('pArguments', 'AkGameSync', depth).preload()
+        for elem in elems: #pArguments list
+            elem.tid('ulGroup').fnv(wdefs.fnv_var)
+        #eGroupType seems to default to "state"
+    else:
+        elems = subobj.list('pArguments', 'AkGameSync', depth).preload()
+        for elem in elems: #pArguments list
+            elem.tid('ulGroup').fnv(wdefs.fnv_var)
+        for elem in elems: #pGroupTypes list
+            elem.U8x('eGroupType').fmt(wdefs.AkGroupType)
+
+    obj.U32('uTreeDataSize')
+    size = obj.lastval
+
+    if   cls.version <= 45: #45=AoT2
+        pass
+    elif cls.version <= 72:
+        obj.u8i('uProbability')
+    else:
+        pass
+
+    if cls.version <= 45: #45=AoT2
+        pass
+    else:
+        obj.U8x('uMode').fmt(wdefs.AkDecisionTree__Mode)
+
+    AkDecisionTree__SetTree(obj, cls, size, depth)
+
+    if   cls.version <= 118:
+        pass
+    else:
+        AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls)
+
+        AkPropBundle_RANGED_MODIFIERS_AkPropValue__unsigned_char___SetInitialParams(obj, cls)
+
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkDialogueEvent_CAkDialogueEvent_(obj):
+    #CAkBankMgr::StdBankRead<CAkDialogueEvent,CAkDialogueEvent>
+    cls = wcls.CAkDialogueEvent__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkDialogueEvent__SetInitialValues(obj, cls)
+    return
+
+#******************************************************************************
+# HIRC: Feedback Bus
+
+#-
+def CAkBankMgr__StdBankRead_CAkFeedbackBus_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::StdBankRead<CAkFeedbackBus,CAkParameterNodeBase>
+    cls = wcls.CAkFeedbackBus__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    #callback, can only logically be this
+    CAkBus__SetInitialValues(obj, cls)
+    return
+
+#******************************************************************************
+# HIRC: Feedback Node
+
+#046>=
+def CAkFeedbackNode__SetInitialValues(obj, cls):
+    #CAkFeedbackNode::SetInitialValues
+    obj = obj.node('FeedbackInitialValues')
+
+    obj.u32('numSources')
+    for elem in obj.list('pSource', 'AkBankSourceData', obj.lastval):
+        elem.U16('CompanyID')
+        elem.U16('DeviceID')
+        elem.f32('fVolumeOffset')
+        CAkBankMgr__LoadSource(elem, cls, True)
+
+    CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
+
+    if cls.version <= 53:
+        obj.s16('Loop')
+        obj.s16('LoopMod.min')
+        obj.s16('LoopMod.max')
+    else:
+        pass
+
+    return
+
+def CAkBankMgr__ReadSourceParent_CAkFeedbackNode_(obj):
+    #CAkBankMgr::ReadSourceParent<CAkFeedbackNode>
+    cls = wcls.CAkFeedbackNode__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkFeedbackNode__SetInitialValues(obj, cls)
+    return
+
+
+
+#******************************************************************************
+# HIRC: Fx Share Set
+
+#052>=
+def CAkFxBase__SetInitialValues(obj, cls):
+    #CAkFxBase::SetInitialValues
+    obj = obj.node('FxBaseInitialValues')
+
+    parse_plugin(obj, name='fxID') #obj.U32('fxID')
+    obj.U32('uSize')
+
+    #todo
+    #SetFX calls on vtable, possibly CAkFxBase::SetFXParam, whick in turn calls
+    #another thing, treats param as a float if size==4, or calls PluginRTPCSub::SetPluginParam
+    #if fxID != -1:
+    #   CAkFxBase::SetFX()
+    obj.gap('pParamBlock', obj.lastval)
+
+    obj.u8i('uNumBankData')
+    for elem in obj.list('media', 'AkMediaMap', obj.lastval):
+        elem.u8i('index')
+        elem.tid('sourceId')
+
+    #inline'd in 113<=
+    SetInitialRTPC_CAkFxBase_(obj, cls)
+
+    if cls.version <= 88:
+        pass
+    elif cls.version <= 125:
+        if cls.version <= 120:
+            pass
+        else:
+            obj.U8x('_unused')
+            obj.U8x('_unused')
+
+        obj.u16('ulNumInit')
+        for elem in obj.list('rtpcinit', 'RTPCInit', obj.lastval):
+            if cls.version <= 113:
+                elem.U8x('ParamID').fmt(wdefs.AkRTPC_ParameterID)
+            else:
+                elem.var('ParamID').fmt(wdefs.AkRTPC_ParameterID)
+            elem.f32('fInitValue')
+    else:
+        cls.CAkClass__ReadStateChunk(obj, cls)
+
+        obj.u16('numValues')
+        for elem in obj.list('propertyValues', 'PluginPropertyValue', obj.lastval):
+            elem.var('propertyId').fmt(wdefs.AkRTPC_ParameterID)
+            elem.U8x('rtpcAccum')
+            elem.f32('fValue')
+
+    return
+
+#-
+def CAkBankMgr__StdBankRead_CAkFxShareSet_CAkFxShareSet_(obj):
+    #CAkBankMgr::StdBankRead<CAkFxShareSet,CAkFxShareSet>
+    cls = wcls.CAkFxShareSet__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID').fnv(wdefs.fnv_sfx)
+
+    CAkFxBase__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Fx Custom
+
+#-
+def CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_(obj):
+    #CAkBankMgr::StdBankRead<CAkFxCustom,CAkFxCustom>
+    cls = wcls.CAkFxCustom__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkFxBase__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Auxiliary Bus
+
+#-
+def CAkBankMgr__StdBankRead_CAkAuxBus_CAkParameterNodeBase_(obj):
+    #CAkBankMgr::ReadAuxBus 120<=
+    #CAkBankMgr::StdBankRead<CAkAuxBus,CAkParameterNodeBase> 125>=
+    cls = wcls.CAkAuxBus__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID').fnv(wdefs.fnv_bus) #usually hashname
+
+    #callback, can only logically be this
+    CAkBus__SetInitialValues(obj, cls) #_vptr$CAkIndexable + 83
+    return
+
+
+#******************************************************************************
+# HIRC: LFO
+
+#112>=
+def CAkModulator__SetInitialValues(obj, cls):
+    #CAkModulator::SetInitialValues
+    obj = obj.node('ModulatorInitialValues')
+
+    AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls, modulator=True)
+
+    AkPropBundle_RANGED_MODIFIERS_AkPropValue__unsigned_char___SetInitialParams(obj, cls, modulator=True)
+
+    #inline'd in 113
+    SetInitialRTPC_CAkModulator_(obj, cls)
+    return
+
+#- (112>=)
+def CAkBankMgr__StdBankRead_CAkLFOModulator_CAkModulator_(obj):
+    #CAkBankMgr::StdBankRead<CAkLFOModulator,CAkModulator>
+    cls = wcls.CAkLFOModulator__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    #callback, can only logically be this
+    CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
+    return
+
+
+#******************************************************************************
+# HIRC: Envelope
+
+#- (112>=)
+def CAkBankMgr__StdBankRead_CAkEnvelopeModulator_CAkModulator_(obj):
+    #CAkBankMgr::StdBankRead<CAkEnvelopeModulator,CAkModulator>
+    cls = wcls.CAkEnvelopeModulator__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    #callback, can only logically be this
+    CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
+    return
+
+
+#******************************************************************************
+# HIRC: Audio Device
+
+#- (118>=)
+def CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_(obj):
+    #CAkBankMgr::StdBankRead<CAkAudioDevice,CAkAudioDevice>
+    cls = wcls.CAkAudioDevice__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    CAkFxBase__SetInitialValues(obj, cls)
+    return
+
+
+#******************************************************************************
+# HIRC: Time Mod
+
+#- (128>)
+def CAkBankMgr__StdBankRead_CAkTimeModulator_CAkModulator_(obj):
+    #CAkBankMgr::StdBankRead<CAkTimeModulator,CAkModulator>
+    cls = wcls.CAkTimeModulator__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID')
+
+    #callback, can only logically be this
+    CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
+    return
+
+
+#******************************************************************************
+# HIRC
+
+def CAkBankReader__Skip(obj):
+    obj.gap('unused', obj.lastval)
+    return
+
+def parse_hirc_default(obj):
+    #obj.gap('ignored', obj.lastval)
+    return
+
+#046>=
+def get_hirc_dispatch(obj):
+    hirc_dispatch = {
+        0x01: CAkBankMgr__ReadState,
+        0x02: CAkBankMgr__ReadSourceParent_CAkSound_,
+        0x03: CAkBankMgr__ReadAction,
+        0x04: CAkBankMgr__ReadEvent,
+        0x05: CAkBankMgr__StdBankRead_CAkRanSeqCntr_CAkParameterNodeBase_,
+        0x06: CAkBankMgr__StdBankRead_CAkSwitchCntr_CAkParameterNodeBase_,
+        0x07: CAkBankMgr__StdBankRead_CAkActorMixer_CAkParameterNodeBase_,
+        0x08: CAkBankMgr__ReadBus,
+        0x09: CAkBankMgr__StdBankRead_CAkLayerCntr_CAkParameterNodeBase_,
+        0x0a: CAkBankMgr__StdBankRead_CAkMusicSegment_CAkParameterNodeBase_,
+        0x0b: CAkBankMgr__ReadSourceParent_CAkMusicTrack_,
+        0x0c: CAkBankMgr__StdBankRead_CAkMusicSwitchCntr_CAkParameterNodeBase_,
+        0x0d: CAkBankMgr__StdBankRead_CAkMusicRanSeqCntr_CAkParameterNodeBase_,
+        0x0e: CAkBankMgr__StdBankRead_CAkAttenuation_CAkAttenuation_,
+        0x0f: CAkBankMgr__StdBankRead_CAkDialogueEvent_CAkDialogueEvent_,
+    }
+
+    version = get_version(obj)
+    if   version <= 72:
+        hirc_dispatch.update({
+            0x10: CAkBankMgr__StdBankRead_CAkFeedbackBus_CAkParameterNodeBase_,
+            0x11: CAkBankMgr__ReadSourceParent_CAkFeedbackNode_,
+            0x12: CAkBankMgr__StdBankRead_CAkFxShareSet_CAkFxShareSet_, #052>=
+            0x13: CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_, #052>=
+            0x14: CAkBankMgr__StdBankRead_CAkAuxBus_CAkParameterNodeBase_, #072>= (06x>=?)
+        })
+    elif version <= 125:
+        hirc_dispatch.update({
+            #0x10/11 in theory use CAkBankReader__Skip in SDK, but can be found in test banks
+            0x10: CAkBankMgr__StdBankRead_CAkFeedbackBus_CAkParameterNodeBase_,
+            0x11: CAkBankMgr__ReadSourceParent_CAkFeedbackNode_,
+            0x12: CAkBankMgr__StdBankRead_CAkFxShareSet_CAkFxShareSet_,
+            0x13: CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_,
+            0x14: CAkBankMgr__StdBankRead_CAkAuxBus_CAkParameterNodeBase_,
+            0x15: CAkBankMgr__StdBankRead_CAkLFOModulator_CAkModulator_, #112>=
+            0x16: CAkBankMgr__StdBankRead_CAkEnvelopeModulator_CAkModulator_, #112>=
+            0x17: CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_, #118>=
+        })
+    else:
+        hirc_dispatch.update({
+            0x10: CAkBankMgr__StdBankRead_CAkFxShareSet_CAkFxShareSet_,
+            0x11: CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_,
+            0x12: CAkBankMgr__StdBankRead_CAkAuxBus_CAkParameterNodeBase_,
+            0x13: CAkBankMgr__StdBankRead_CAkLFOModulator_CAkModulator_,
+            0x14: CAkBankMgr__StdBankRead_CAkEnvelopeModulator_CAkModulator_,
+            0x15: CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_,
+            0x16: CAkBankMgr__StdBankRead_CAkTimeModulator_CAkModulator_, #132>=
+        })
+
+    return hirc_dispatch
+
+#046>=
+def CAkBankMgr__ProcessHircChunk(obj):
+    #CAkBankMgr::ProcessHircChunk
+    obj.set_name('HircChunk')
+
+    version  = get_version(obj)
+
+    hirc_dispatch = get_hirc_dispatch(obj)
+
+    obj.u32('NumReleasableHircItem')
+    for elem in obj.list('listLoadedItem', 'AkListLoadedItem', obj.lastval):
+
+        #AkBank::AKBKSubHircSection
+        if version <= 48:
+            elem.U32('eHircType').fmt(wdefs.AkBank__AKBKHircType)
+        else:
+            elem.U8x('eHircType').fmt(wdefs.AkBank__AKBKHircType)
+        hirc_type = elem.lastval
+        elem.U32('dwSectionSize').omax()
+
+        #Section.eHircType switch
+        try:
+            dispatch = hirc_dispatch.get(hirc_type, parse_hirc_default)
+            dispatch(elem)
+        except wmodel.ParseError as e:
+            elem.add_error(str(e))
+
+        elem.consume()
+    return
+
+
+#******************************************************************************
+# BKHD
+
+#046>=
+def CAkBankMgr__ProcessBankHeader(obj):
+    #CAkBankMgr::ProcessBankHeader
+    obj.set_name('BankHeader')
+    version = get_version(obj)
+    chunk_size = obj.lastval
+
+    obj = obj.node('AkBankHeader')
+
+    if version <= 26:
+        obj.U32('unknown') #0/1
+        obj.U32('unknown') #0/1
+        obj.u32('dwBankGeneratorVersion')
+    else:
+        obj.u32('dwBankGeneratorVersion')
+        obj.sid('dwSoundBankID').fnv(wdefs.fnv_com)
+
+    if version <= 120:
+        obj.u32('dwLanguageID').fmt(wdefs.language_id)
+    else:
+        obj.sid('dwLanguageID').fnv(wdefs.fnv_com) #hashed lang string
+
+    if version <= 26:
+        obj.U64('hash') #ok comparing BE vs LE
+    else:
+        pass
+
+    if version <= 125:
+        obj.U32('bFeedbackInBank') #bFeedbackSupported
+        #in later versions seems 16b=feedback + 16b=?, but this is how it's read/checked
+        obj.get_root().set_feedback(obj.lastval & 1) #not (obj.lastval ^ 1)
+    else:
+        obj.u16('bUnused')
+        obj.u16('bDeviceAllocated')
+
+    if version <= 26:
+        gap_size = chunk_size - 0x1c
+    elif version <= 76:
+        gap_size = chunk_size - 0x10
+    else:
+        obj.u32('dwProjectID')
+        gap_size = chunk_size - 0x14
+
+    # rest is skipped like this (not defined/padding),
+    # may be used for DATA alignment to sector size
+    if gap_size > 0:
+        obj.gap('blank', gap_size)
+    return
+
+
+#******************************************************************************
+# DATA
+
+#046>=
+def CAkBankMgr__ProcessDataChunk(obj):
+    #CAkBankMgr::ProcessDataChunk
+    obj.set_name('DataChunk')
+    version = get_version(obj)
+
+
+    if version <= 26:
+        #mix of index + data
+        #00: entries
+        #04: null
+        #08: entries size
+        #0c: padding size after entries
+        #10: data size
+        #14: size?
+        #18: data start
+        #1c: data size
+        #per entry:
+        #  00: always -1
+        #  04: always 0
+        #  08: index number or -1
+        #  0c: 5 or -1?
+        #  0c: 5 or -1?
+        #  0c: 5 or -1?
+        #  10: stream offset (from DATA) or -1 if none
+        #  14: stream size or 0 if none
+        return
+
+
+    obj.gap('pData', obj.lastval)
+
+    return
+
+
+#******************************************************************************
+# FXPR
+
+#046>= 048<=
+def CAkBankMgr__ProcessFxParamsChunk(obj):
+    #CAkBankMgr::ProcessFxParamsChunk
+    obj.set_name('FxParamsChunk')
+    version = get_version(obj)
+
+    obj.u32('ulNumParamSets')
+    for elem in obj.list('pParams', 'FXParameterSet', obj.lastval):
+        elem.tid('EnvID')
+        parse_plugin(elem, 'FXID')
+        elem.U32('ulPresetSize')
+        elem.gap('pDataBloc', elem.lastval)
+
+        if version <= 46:
+            pass
+        else:
+            elem.u32('ulNumBankData')
+            for elem2 in elem.list('pParams', 'Plugin', elem.lastval):
+                elem2.tid('FXParameterSetID') #plugin? (not seen)
+                elem2.U32('item')
+
+        if version <= 34: #34=LOTR, #34=SM
+            elem.u32('ulRTPCSize')
+        else:
+            elem.u16('ulRTPCSize')
+
+        for elem2 in elem.list('pRTPCMgr', 'RTPC', elem.lastval):
+            if version <= 34: #34=LOTR
+                parse_plugin(elem2, 'FXID')
+            else:
+                elem2.U32('pBufferToFill')
+                elem2.u8i('uFXIndex')
+            elem2.tid('RTPCID').fnv(wdefs.fnv_gme)
+            elem2.U32('ParamID').fmt(wdefs.AkRTPC_ParameterID)
+            elem2.sid('rtpcCurveID')
+            if version <= 34: #34=LOTR (probably for 36 too since other parts need it
+                elem2.u32('eScaling').fmt(wdefs.AkCurveScaling)
+                elem2.u32('ulSize')
+            else:
+                elem2.U8x('eScaling').fmt(wdefs.AkCurveScaling)
+                elem2.u16('ulSize')
+            parse_rtpc_graph(elem2)
+
+    return
+
+
+#******************************************************************************
+# STID
+
+#046>=
+def CAkBankMgr__ProcessStringMappingChunk(obj):
+    #CAkBankMgr::ProcessStringMappingChunk
+    obj.set_name('StringMappingChunk')
+    version = get_version(obj)
+
+    if version <= 26:
+        #mix of index + strings
+        #00: flag?
+        #04: data size
+        #08: entries
+        #per entry:
+        # 00: offset in string table (-1 if none)
+        #string table (after all entries):
+        # 00: hash (not FNV hash unlike all other versions), or -1 for deleted entries
+        # 04: string (null terminated), doesn't exist when hash is -1
+        return
+
+    obj.U32('uiType').fmt(wdefs.AKBKStringType)
+    obj.U32('uiSize')
+    for elem in obj.list('BankIDToFileName', 'AKBKHashHeader', obj.lastval):
+        elem.tid('bankID').fnv(wdefs.fnv_com)
+        elem.u8i('stringsize')
+        elem.str('FileName', elem.lastval)
+    return
+
+
+#******************************************************************************
+# STMG
+
+#046>=
+def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
+    #CAkBankMgr::ProcessGlobalSettingsChunk
+    obj.set_name('GlobalSettingsChunk')
+
+    version = get_version(obj)
+
+    obj.f32('fVolumeThreshold')
+
+    if version <= 53:
+        pass
+    else:
+        obj.u16('maxNumVoicesLimitInternal')
+
+    if version <= 125:
+        pass
+    else:
+        obj.u16('maxNumDangerousVirtVoicesLimitInternal')
+
+    obj.u32('ulNumStateGroups')
+    for elem in obj.list('StateGroups', 'AkStateGroup', obj.lastval):
+        elem.sid('ulStateGroupID').fnv(wdefs.fnv_var)
+        elem.u32('DefaultTransitionTime')
+
+        if version <= 52:
+            elem.u32('ulNumCustomStates')
+            for elem2 in elem.list('mapTransitions', 'AkStateTransition', elem.lastval):
+                elem2.tid('ulStateType') #ulStateID
+
+                if version <= 48:
+                    elem2.u32('eHircType').fmt(wdefs.AkBank__AKBKHircType)
+                else:
+                    elem2.U8x('eHircType').fmt(wdefs.AkBank__AKBKHircType)
+                elem2.u32('dwSectionSize')
+
+                obj_state = elem2.node('state')
+                CAkBankMgr__ReadState(obj_state)
+        else:
+            pass
+
+        elem.u32('ulNumTransitions')
+        for elem2 in elem.list('mapTransitions', 'AkStateTransition', elem.lastval):
+            elem2.tid('StateFrom').fnv(wdefs.fnv_val)
+            elem2.tid('StateTo').fnv(wdefs.fnv_val)
+            elem2.u32('TransitionTime')
+
+    obj.u32('ulNumSwitchGroups')
+    for elem in obj.list('pItems', 'SwitchGroups', obj.lastval):
+        elem.tid('SwitchGroupID').fnv(wdefs.fnv_var)
+        elem.tid('rtpcID').fnv(wdefs.fnv_gme)
+        if version <= 88:
+            pass
+        else:
+            elem.U8x('rtpcType').fmt(wdefs.AkRtpcType)
+        elem.u32('ulSize')
+        parse_rtpc_graph(elem, name='pSwitchMgr', subname='AkSwitchGraphPoint')
+
+    if version <= 38:
+        return
+    else:
+        pass
+
+    obj.u32('ulNumParams')
+    for elem in obj.list('pRTPCMgr', 'RTPCRamping', obj.lastval):
+        elem.sid('RTPC_ID').fnv(wdefs.fnv_gme) #tid? 113=Doom16? (134=Xeno is sid)
+        elem.f32('fValue')
+
+        if version <= 88:
+            pass
+        else:
+            elem.u32('rampType').fmt(wdefs.AkTransitionRampingType)
+            elem.f32('fRampUp')
+            elem.f32('fRampDown')
+            elem.u8i('eBindToBuiltInParam').fmt(wdefs.AkBuiltInParam)
+
+    if   version <= 118:
+        pass
+    elif version <= 120:
+        obj.u32('ulNumTextures')
+        for elem in obj.list('acousticTextures', 'AkAcousticTexture', obj.lastval):
+            elem.tid('ID')
+            elem.u16('OnOffBand1')
+            elem.u16('OnOffBand2')
+            elem.u16('OnOffBand3')
+            elem.u16('FilterTypeBand1')
+            elem.u16('FilterTypeBand2')
+            elem.u16('FilterTypeBand3')
+            elem.f32('FrequencyBand1')
+            elem.f32('FrequencyBand2')
+            elem.f32('FrequencyBand3')
+            elem.f32('QFactorBand1')
+            elem.f32('QFactorBand2')
+            elem.f32('QFactorBand3')
+            elem.f32('GainBand1')
+            elem.f32('GainBand2')
+            elem.f32('GainBand3')
+            elem.f32('OutputGain')
+    else:
+        obj.u32('ulNumTextures')
+        for elem in obj.list('acousticTextures', 'AkAcousticTexture', obj.lastval):
+            elem.tid('ID')
+            elem.f32('fAbsorptionOffset')
+            elem.f32('fAbsorptionLow')
+            elem.f32('fAbsorptionMidLow')
+            elem.f32('fAbsorptionMidHigh')
+            elem.f32('fAbsorptionHigh')
+            elem.f32('fScattering')
+
+    if   version <= 118:
+        pass
+    elif version <= 120:
+        obj.u32('ulNumReverberator')
+        for elem in obj.list('pObjects', 'AkDiffuseReverberator', obj.lastval):
+            elem.tid('ID')
+            elem.f32('Time')
+            elem.f32('HFRatio')
+            elem.f32('DryLevel')
+            elem.f32('WetLevel')
+            elem.f32('Spread')
+            elem.f32('Density')
+            elem.f32('Quality')
+            elem.f32('Diffusion')
+            elem.f32('Scale')
+    else:
+        pass
+
+    return
+
+
+#******************************************************************************
+# ENVS
+
+#046>=
+def CAkBankMgr__ProcessEnvSettingsChunk(obj):
+    #CAkBankMgr::ProcessEnvSettingsChunk
+    obj.set_name('EnvSettingsChunk')
+    version = get_version(obj)
+
+    if version <= 88:
+        max_x = 2
+        max_y = 2
+    else:
+        max_x = 2
+        max_y = 3
+
+    obj = obj.node('ConversionTable')
+    for i in range(max_x):
+        for j in range(max_y):
+            # CAkEnvironmentsMgr->ConversionTable array
+            elem = obj.node('ObsOccCurve[%s][%s]' % (wdefs.eCurveXType.enum[i], wdefs.eCurveYType.enum[j]))
+            elem.u8i('bCurveEnabled') #when != 0
+            if version <= 36: #36=UFC
+                elem.u32('eCurveScaling').fmt(wdefs.AkCurveScaling)
+                elem.u32('ulCurveSize')
+            else:
+                elem.u8i('eCurveScaling').fmt(wdefs.AkCurveScaling)
+                elem.u16('ulCurveSize')
+            parse_rtpc_graph(elem, name='aPoints', subname='AkRTPCGraphPoint')
+    return
+
+
+#******************************************************************************
+# DIDX
+
+#046>= (034>=)
+def CAkBankMgr__LoadMediaIndex(obj):
+    #CAkBankMgr::LoadMediaIndex
+    obj.set_name('MediaIndex')
+    chunk_size = obj.lastval
+
+    uNumMedias = chunk_size // 0x0c
+    for elem in obj.list('pLoadedMedia', 'MediaHeader', uNumMedias):
+        elem.sid('id')
+        elem.U32('uOffset')
+        elem.U32('uSize')
+    return
+
+
+#******************************************************************************
+# PLAT
+
+#113>=
+def CAkBankMgr__ProcessCustomPlatformChunk(obj):
+    #CAkBankMgr::ProcessCustomPlatformChunk
+    obj.set_name('CustomPlatformChunk')
+
+    obj.u32('uStringSize')
+    obj.str('pCustomPlatformName', obj.lastval)
+    return
+
+
+#******************************************************************************
+# INIT
+
+#118>=
+def CAkBankMgr__ProcessPluginChunk(obj):
+    #CAkBankMgr::ProcessPluginChunk
+    obj.set_name('PluginChunk')
+
+    obj.u32('count')
+    for elem in obj.list('pAKPluginList', 'IAkPlugin', obj.lastval):
+        parse_plugin(elem)
+        elem.u32('uStringSize')
+        elem.str('pDLLName', elem.lastval)
+    return
+
+
+#******************************************************************************
+# chunks
+
+def parse_chunk_default(obj):
+    pass
+
+chunk_dispatch = {
+    b'BKHD': CAkBankMgr__ProcessBankHeader,
+    b'HIRC': CAkBankMgr__ProcessHircChunk,
+    b'DATA': CAkBankMgr__ProcessDataChunk,
+    b'FXPR': CAkBankMgr__ProcessFxParamsChunk,
+    b'ENVS': CAkBankMgr__ProcessEnvSettingsChunk,
+    b'STID': CAkBankMgr__ProcessStringMappingChunk,
+    b'STMG': CAkBankMgr__ProcessGlobalSettingsChunk,
+    b'DIDX': CAkBankMgr__LoadMediaIndex, #034>=
+    b'PLAT': CAkBankMgr__ProcessCustomPlatformChunk, #113>=
+    b'INIT': CAkBankMgr__ProcessPluginChunk, #118>=
+}
+
+def parse_chunk(obj):
+    try:
+        obj.four('dwTag').fmt(wdefs.chunk_type)
+        tag = obj.lastval
+        obj.U32('dwChunkSize').omax()
+
+        dispatch = chunk_dispatch.get(tag, parse_chunk_default)
+        dispatch(obj)
+    except wmodel.ParseError as e:
+        obj.add_error(str(e))
+
+    obj.consume()
+    return
+
+# #############################################################################
+
+class Parser(object):
+    def __init__(self, ignore_version=False):
+        self._ignore_version = ignore_version
+        self._banks = {}
+        self._names = None
+
+
+    def _check_header(self, r, bank):
+        current = r.current()
+
+        fourcc = r.fourcc()
+        if fourcc != b'BKHD':
+            raise wmodel.VersionError("not a Wwise bank", -1)
+
+        size = r.u32()
+
+        version = r.u32()
+        if version == 0 or version == 1:
+            version = r.u32()
+            version = r.u32() #actual version in very early banks
+
+        root = bank.get_root()
+        root.set_version(version)
+        if not self._ignore_version and version not in wdefs.bank_versions:
+            raise wmodel.VersionError("unsupported bank version %i" % (version), -1)
+
+        r.seek(current)
+
+        wdefs.setup(version)
+
+
+    def parse_banks(self, filenames):
+        loaded_filenames = []
+        for filename in filenames:
+            loaded_filename = self.parse_bank(filename)
+            if loaded_filename:
+                loaded_filenames.append(loaded_filename)
+
+        return loaded_filenames
+
+    # Parses a whole bank into memory and adds to the list. Can be kinda big (ex. ~50MB in RAM)
+    # but since games also load banks in memory should be within reasonable limits.
+    def parse_bank(self, filename):
+        if filename in self._banks:
+            logging.info("parser: ignoring %s (already parsed)", filename)
+            return
+
+        logging.info("parser: parsing %s", filename)
+
+        try:
+            with open(filename, 'rb') as infile:
+                #real_filename = infile.name
+                r = wio.FileReader(infile)
+                r.guess_endian32(0x04)
+                res = self._process(r, filename)
+
+            if res:
+                logging.info("parser: %s", res)
+                return None
+
+            logging.info("parser: done")
+            return filename
+
+        except Exception as e:
+            logging.error("parser: error parsing " + filename, e)
+
+        return None
+
+
+    def _process(self, r, filename):
+        bank = wmodel.NodeRoot(r)
+
+        try:
+            self._check_header(r, bank)
+
+            while not r.is_eof():
+                obj = bank.node('chunk')
+                parse_chunk(obj)
+
+        except wmodel.VersionError as e:
+            return e.msg
+        #other exceptions should be handled externally
+        #except wmodel.ParseError as e:
+            #bank.add_error(str(e))
+
+        if bank.get_error_count() > 0:
+            logging.info("parser: ERRORS! %i found (report issue)" % bank.get_error_count())
+        if bank.get_skip_count() > 0:
+            logging.info("parser: SKIPS! %i found (report issue)" % bank.get_skip_count())
+
+        if self._names:
+            bank.set_names(self._names)
+
+        self._banks[filename] = bank
+        return None
+
+
+    def get_banks(self):
+        banks = list(self._banks.values())
+        return banks
+
+    def get_filenames(self):
+        return list(self._banks.keys())
+
+    def set_names(self, names):
+        self._names = names
+        for bank in self._banks.values():
+            bank.set_names(names)
+
+    def set_ignore_version(self, value):
+        self._ignore_version = value
+
+    def unload_bank(self, filename):
+        if filename in self._banks:
+            logging.info("parser: unloading " + filename)
+            self._banks.pop(filename)

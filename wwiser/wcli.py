@@ -1,0 +1,187 @@
+import argparse, glob, logging, os, platform
+from . import wparser, wprinter, wnames, wutil, wview, wgenerator
+from . import wversion
+
+
+class Cli(object):
+
+    def __init__(self):
+        pass
+
+    def _parse(self):
+        title = 'wwiser'
+        version = ''
+        if wversion.WWISER_VERSION:
+            version += " " + wversion.WWISER_VERSION
+
+        description = (
+            "%s%s - Wwise .bnk parser by bnnm" % (title, version)
+        )
+
+        epilog = (
+            "examples:\n"
+            "  %(prog)s -d xsl bgm.bnk\n"
+            "  - dumps bgm.bnk info to bgm.bnk.txt\n"
+            "  %(prog)s -d txt init.bnk bgm.bnk -o banks\n"
+            "  - loads multiple .bnk (like Wwise does) and dumps to banks.txt\n"
+            "  %(prog)s *.bnk -v\n"
+            "  - loads all .bnk in the dir and starts the viewer\n"
+            "  %(prog)s BGM.bnk -g\n"
+            "  - generates TXTP files from banks to use with vgmstream\n"
+        )
+
+        parser = argparse.ArgumentParser(prog="wwiser", description=description, epilog=epilog, formatter_class=argparse.RawTextHelpFormatter)
+        parser.add_argument('files', help="Files to get (wildcards work)", nargs='+')
+        parser.add_argument('-m',  '--multi', help="Treat files as multiple separate files", action='store_true')
+        parser.add_argument('-d',  '--dump-type', help="Set dump type: txt|xml|xsl|none (default: xsl)", default='xsl')
+        parser.add_argument('-dn', '--dump-name', help="Set dump filename (default: auto)")
+        parser.add_argument('-l',  '--log', help="Write info to wwiser log (has extra messages)", action='store_true')
+        parser.add_argument('-v',  '--viewer', help="Start the viewer", action='store_true')
+        parser.add_argument('-vp', '--viewer-port', help="Set the viewer port", default=wview.DEFAULT_PORT)
+        parser.add_argument('-iv', '--ignore-version', help="Ignore bank version check", action='store_true')
+        parser.add_argument('-nx', '--names-xml', metavar='XML_NAME', help="Set SoundbanksInfo.xml companion file (default: auto)")
+        parser.add_argument('-nt', '--names-txt', metavar='TXT_NAME', help="Set (bankname).txt companion file (default: auto)")
+        parser.add_argument('-nh', '--names-h',   metavar='H_NAME',   help="Set Wwise_IDs.h companion file (default: auto)")
+        parser.add_argument('-nl', '--names-lst', metavar='LST_NAME', help="Set wwnames.txt companion file (default: auto)")
+        parser.add_argument('-nd', '--names-db',  metavar='DB_NAME',  help="Set wwnames.db3 companion file (default: auto)")
+        parser.add_argument('-sd', '--save-db',  help="Save/update wwnames.db3 with hashnames used in fields\n(needs dump set, or save-all)", action='store_true')
+        parser.add_argument('-sl', '--save-lst', help="Save .txt with hashnames actually used in fields\n(needs dump set)", action='store_true')
+        parser.add_argument('-sm', '--save-missing', help="Include in saved list of missing IDs\n(IDs that should have hashnames but weren't found)", action='store_true')
+        parser.add_argument('-sc', '--save-companion', help="Include in saved list companion names \n(loaded from companion XML/TXT/H, for a full list)", action='store_true')
+        parser.add_argument('-sa', '--save-all', help="Include all loaded names, rather than only used names", action='store_true')
+        parser.add_argument('-g',  '--txtp',        help="Generate TXTP", action='store_true')
+        parser.add_argument('-gu', '--txtp-unused', help="Generate TXTP for unused nodes too\n(try loading other banks first)", action='store_true')
+        parser.add_argument('-gf', '--txtp-filter', help="Set TXTP target name/ids (default: all usable objects)", nargs='+')
+        parser.add_argument('-gp', '--txtp-params', help="Set TXTP parameters (default: auto)", nargs='*')
+        parser.add_argument('-go', '--txtp-outdir', help="Set TXTP output dir (default: auto)")
+        parser.add_argument('-gw', '--txtp-wemdir', help="Set TXTP .wem dir (default: auto)")
+        parser.add_argument('-gws','--txtp-wemsubdir', help="Automatically set subdir per language\n(some games put voices in 'English(US)' and so on)", action='store_true')
+        parser.add_argument('-gm', '--txtp-move',   help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
+        parser.add_argument('-gwn','--txtp-wemname', help="Add all .wem names to .txtp filename\nmay create too long filenames when many .wem are used!", action='store_true')
+        parser.add_argument('-gbs','--txtp-bnkskip', help="Treat internal (in .bnk) .wem as if external", action='store_true')
+        parser.add_argument('-gbm','--txtp-bnkmark', help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
+        parser.add_argument('-gae', '--txtp-alt-exts', help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
+        parser.add_argument('-gxl', '--txtp-x-loops', help="Generator extra flag", action='store_true')
+
+        return parser.parse_args()
+
+
+    def _is_filename_ok(self, filenames, filename):
+        if not os.path.isfile(filename):
+            return False
+        if filename.upper() in (filename.upper() for filename in filenames):
+            return False
+        if filename.endswith(".py"):
+            return False
+        return True
+
+
+    def start(self):
+        wutil.setup_cli_logging()
+        args = self._parse()
+        if args.log:
+            wutil.setup_file_logging()
+
+        title = 'wwiser'
+        if wversion.WWISER_VERSION:
+            title += " " + wversion.WWISER_VERSION
+        logging.info("%s (python %s)", title, platform.python_version())
+
+
+        #get expanded list
+        filenames = []
+        for file in args.files:
+            # manually test first, as glob expands "[...]" inside paths
+            if os.path.isfile(file):
+                if not self._is_filename_ok(filenames, file):
+                    continue
+                filenames.append(file)
+            else:
+                glob_files = glob.glob(file)
+                for glob_file in glob_files:
+                    if not self._is_filename_ok(filenames, glob_file):
+                        continue
+                    filenames.append(glob_file)
+
+        if not filenames:
+            logging.info("no valid files found")
+            return
+
+        if args.multi:
+            for filename in filenames:
+                self._execute(args, [filename])
+        else:
+            self._execute(args, filenames)
+
+        logging.info("(done)")
+
+
+    def _execute(self, args, filenames):
+
+        # process banks
+        parser = wparser.Parser(ignore_version=args.ignore_version)
+        parser.parse_banks(filenames)
+        banks = parser.get_banks()
+
+        # load names
+        names = wnames.Names()
+        names.parse_files(parser.get_filenames(),
+                xml=args.names_xml, txt=args.names_txt, h=args.names_h, lst=args.names_lst, db=args.names_db)
+        parser.set_names(names)
+
+        # dump files
+        dump_name = args.dump_name
+        if not dump_name:
+            if len(filenames) == 1:
+                dump_name = filenames[0]
+            else:
+                dump_name = 'banks'
+        printer = wprinter.Printer(banks, args.dump_type, dump_name)
+        printer.dump()
+
+        # start viewer
+        if args.viewer:
+            viewer = wview.Viewer(parser)
+
+            logging.info("(stop viewer with CTRL+C)")
+            viewer.start(port=args.viewer_port)
+            #left open until manually stopped
+            viewer.stop()
+
+        # generate txtp
+        if args.txtp:
+            generator = wgenerator.Generator(banks)
+            generator.set_generate_unused(args.txtp_unused)
+            generator.set_filter(args.txtp_filter)
+            generator.set_params(args.txtp_params)
+            generator.set_outdir(args.txtp_outdir)
+            generator.set_wemdir(args.txtp_wemdir)
+            generator.set_wemsubdir(args.txtp_wemsubdir)
+            generator.set_move(args.txtp_move)
+            generator.set_wemnames(args.txtp_wemname)
+            generator.set_bnkskip(args.txtp_bnkskip)
+            generator.set_bnkmark(args.txtp_bnkmark)
+            generator.set_alt_exts(args.txtp_alt_exts)
+            generator.set_x_loops(args.txtp_x_loops)
+            generator.generate()
+
+        # db manipulation
+        if args.save_lst:
+            names.save_lst(name=dump_name, save_all=args.save_all, save_companion=args.save_companion, save_missing=args.save_missing)
+        if args.save_db:
+            names.save_db(save_all=args.save_all, save_companion=args.save_companion)
+        names.close() #in case DB was open
+
+        #try:
+            #import objgraph
+            #objgraph.show_most_common_types()
+
+            #from guppy import hpy; h=hpy()
+            #h.heap()
+
+            #from . import wmodel
+            #import sys
+            #print("NodeElement: %x" % sys.getsizeof(wmodel.NodeElement(None, 'test')))
+            #getsizeof(wmodel.NodeElement()), getsizeof(Wrong())
+        #except:
+            #pass

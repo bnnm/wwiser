@@ -1,0 +1,135 @@
+html { overflow-y: scroll; }
+body { font-family: monospace; font-size: 16px; white-space: nowrap; }
+
+/* fields */
+.object, .list, .field, .skip, .error { margin-left: 45px; }
+
+.head { display: flex;  align-items: center; }
+.head > .attr { _margin-right:10px; _display:inline-block; margin: 0; padding: 0; _outline: 1px solid red;}
+.head > .attr.type { min-width:45px; color:#0074D9; }
+.head > .attr.name { min-width:350px; color:#FF4136; }
+.head > .attr.value { color:#3D9970; }
+.head > .attr.hashname,
+.head > .attr.guidname,
+.head > .attr.objpath,
+.head > .attr.path { color:#800080; _color:#9932CC; margin-left:10px; }
+
+.list > .head > .attr { color:#B10DC9; }
+.object > .head > .attr.name { width:auto; }
+.object > .head > .attr.type,
+.object > .head > .attr.name { color:#85144b; }
+
+.index { color:#777; font-size:12px; }
+.skip { color: #777; } 
+.error { color:red; font-weight: bold; }
+.error:before { content: '**'; }
+
+.offset { color: #aaa; position: absolute; left: 10px; }
+.content { margin-left:80px; }
+
+/* simple */
+.simple .head > .attr.type { display:none; }
+.simple .offset { display:none; }
+
+/* links */
+.target {
+    display:inline-block; width:0px; height:0px; min-width:0px;max-width:0px; min-height:0px;max-height:0px; vertical-align: center;
+    margin-left:6px;text-indent:16px; overflow: hidden;
+    background-color: transparent;  border-radius:1px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid cadetblue;
+}
+.anchor {
+    display:inline-block; width:10px; height:10px; min-width:10px;max-width:10px; min-height:10px;max-height:10px; vertical-align: center;
+    margin-left:6px; text-indent:16px; overflow: hidden;
+    background-color: #87b6b8; border-radius:6px;
+}
+
+/* toggler */
+.closable > .head { cursor:pointer; margin-left: -25px; padding-left: 25px; }
+.closable > .head:before {
+    content:'-'; position:absolute; font-weight: bold; margin-top:2px; margin-left: -25px; color:666; 
+    width:20px; line-height:12px; text-align:center; display:inline-block; background-color:#eee; border-radius:3px; vertical-align: bottom;
+}
+.closable.hidden > .head:before { content:'+'; }
+.closable > .head > .attr { cursor:auto; }
+.closable.hidden > .body { display:none; }
+
+/* tooltips */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    background-color:#800080;
+    width: 10px; height: 10px; margin-left:2px;
+}
+.tooltip.objpath { }
+.tooltip.path { border-radius: 6px; }
+
+.tooltip > .attr {
+    display:none; position: absolute; top: -5px; right: 100%;
+    border-radius: 5px; padding: 1px; background-color: #eee; color:#800080
+}
+.tooltip:hover .attr {
+    display:block;
+}
+
+/* page */
+.tools {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 30px;
+}
+.view.hide-offset .offset {
+    display:none;
+}
+.view.hide-type .attr.type {
+    display:none;
+}
+
+/* above is common to XSL */
+
+
+.load-type {
+    width:200px;
+}
+
+.tabs {
+    _display:flex;
+    _position:relative;
+}
+
+header { display:flex; }
+
+.logo { margin: 0; padding: 0; margin-right: 100px; }
+.tabs-panel { /*position:sticky;*/ top:0; float:right; margin-top: -30px; }  /* todo flexstuff */
+.tabs-panel > label { font-size:20px; cursor:pointer; background-color:#ffffff; margin-left: 10px; border: 1px solid #ccc; border-radius:5pX; text-align: center; min-width:100px; display: inline-block; }
+
+.tab-radio { display: none; }
+.tab-radio:checked + .view { display:block; }
+.tab-radio + .view { display:none; margin-top: 10px; }
+
+.tab-button.selected { background-color:#666; color:#ffffff; }
+.doc {
+     margin:0 auto;
+    border:3px solid #eee; border-radius:3px; padding:10px; max-width: 900px;
+}
+
+/* adapted from github's */
+.markdown {
+    font-family: Segoe UI, Helvetica, Arial, sans-serif; white-space: normal; 
+    font-size: 16px; line-height: 1.5; word-wrap: break-word;
+}
+.markdown h1 { font-size: 2em; }
+.markdown h1, .markdown h2 { padding-bottom: .3em; border-bottom: 1px solid #eaecef; }
+.markdown h1, .markdown h2, .markdown h3 {
+	margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25;
+}
+.markdown code, .markdown pre, .markdown tt { font-family: Consolas,Liberation Mono, Menlo, monospace; font-size: 12px; }
+.markdown code, .markdown tt {
+	padding: .2em .4em; margin: 0; font-size: 85%; background-color: rgba(27,31,35,.05); border-radius: 6px;
+}
+.markdown pre {
+	padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: #f6f8fa; border-radius: 6px;
+}
+
+.markdown b, .markdown strong { /*font-weight: 600;*/ }
+.markdown i, .markdown em { }

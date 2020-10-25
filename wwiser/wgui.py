@@ -243,13 +243,15 @@ class Gui(object):
                 return
             filenames = []
             for filename in os.listdir(dirname):
-                if not filename.endswith('.bnk') or not os.path.isfile(filename):
+                pathname = os.path.join(dirname, filename)
+                if not filename.endswith('.bnk') or not os.path.isfile(pathname):
                     continue
-                filenames.append(os.path.join(dirname,filename))
+                filenames.append(pathname)
         else:
             filenames = filedialog.askopenfilenames(filetypes = (("Wwise bank files","*.bnk"),("All files","*.*")))
-            if not filenames:
-                return
+
+        if not filenames:
+            return
 
         self.parser.set_ignore_version( self._fields['ignore_version'].get() )
         loaded_filenames = self.parser.parse_banks(filenames)

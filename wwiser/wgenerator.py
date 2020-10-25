@@ -131,7 +131,7 @@ class Generator(object):
 
         except Exception: # as e
             logging.warn("generator: PROCESS ERROR! (report)")
-            #logging.exception("")
+            logging.exception("")
             raise
         return
 
@@ -351,8 +351,12 @@ class Generator(object):
         if self._txtpcache.wemsubdir:
             dir += source.subdir()
 
+
+        in_dir = node.get_root().get_path()
+        out_dir = in_dir
         if dir:
-            os.makedirs(dir, exist_ok=True)
+            out_dir = os.path.join(out_dir, dir)
+            os.makedirs(out_dir, exist_ok=True)
 
         in_extension = source.extension
         out_extension = source.extension
@@ -361,7 +365,11 @@ class Generator(object):
             out_extension = source.extension_alt
 
         in_name = "%s.%s" % (source.tid, in_extension)
-        out_name = "%s%s.%s" % (dir, source.tid, out_extension)
+        in_name = os.path.join(in_dir, in_name)
+        in_name = os.path.normpath(in_name)
+        out_name = "%s.%s" % (source.tid, out_extension)
+        out_name = os.path.join(out_dir, out_name)
+        out_name = os.path.normpath(out_name)
 
         if os.path.exists(out_name):
             logging.info("generator: cannot move %s (exists on output folder)" % (in_name))
@@ -370,11 +378,13 @@ class Generator(object):
         if not os.path.exists(in_name):
             if self._txtpcache.alt_exts:
                 in_name = "%s.%s" % (source.tid, source.extension_alt)
+                in_name = os.path.join(in_dir, in_name)
+                in_name = os.path.normpath(in_name)
                 if not os.path.exists(in_name):
-                    logging.info("generator: cannot move %s (file not found not found)" % (in_name))
+                    logging.info("generator: cannot move %s (file not found)" % (in_name))
                     return
             else:
-                logging.info("generator: cannot move %s (file not found not found)" % (in_name))
+                logging.info("generator: cannot move %s (file not found)" % (in_name))
                 return
 
         #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)

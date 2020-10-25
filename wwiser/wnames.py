@@ -205,6 +205,8 @@ class Names(object):
     # *************************************
 
     def parse_files(self, filenames, xml=None, txt=None, h=None, lst=None, db=None):
+        if not filenames:
+            return
 
         # parse files for a single bank
         for filename in filenames:
@@ -222,7 +224,7 @@ class Names(object):
             self._add_name(None, base_bankname, source=NameRow.NAME_SOURCE_EXTRA)
 
         # extra files, after other banks or priority when generating some missing lists and stuff is off
-        pathfiles = [filenames[0]] #todo fix for multiple paths in filenames, for now asummes one
+        pathfiles = [filenames[0]] #todo fix for multiple paths in filenames, for now assumes one
         for pathfile in pathfiles:
             self.set_bankname(pathfile)
 

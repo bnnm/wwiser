@@ -315,9 +315,7 @@ class Txtp(object):
 
         if outdir:
             basepath = self._node.get_root().get_path()
-            if basepath and not basepath.endswith('/'):
-                basepath = basepath + '/'
-            outdir = basepath + outdir
+            outdir = os.path.join(basepath, outdir)
             os.makedirs(outdir, exist_ok=True)
         for rpl in ['*','?',':','<','>','|']: #'\\','/'
             name = name.replace(rpl, "_")

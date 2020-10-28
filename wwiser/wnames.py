@@ -449,8 +449,8 @@ class Names(object):
         # catch "name"
         #pattern_2 = re.compile(r"^[\t]*([a-zA-Z_][a-zA-Z0-9_]*)[ ]*$")
 
-        # catch and split removing non-useful characters
-        pattern_s1 = re.compile(r'[ .<>,;.:{}\[\]()\'"$&/=!\\/#@+\^`´¨]')
+        # catch and split non-useful (FNV) characters
+        pattern_s1 = re.compile(r'[\t .<>,;.:{}\[\]()\'"$&/=!\\/#@+\^`´¨]')
         pattern_s2 = re.compile(r'[?|]')
 
         for line in infile:
@@ -718,7 +718,8 @@ class SqliteHandler(object):
         #    raise ValueError("filename not provided")
 
         basepath = filename
-        workpath = os.path.dirname(sys.argv[0]) + '/' + filename
+        workpath = os.path.dirname(sys.argv[0])
+        workpath = os.path.join(workpath, filename)
         if os.path.isfile(basepath):
             path = basepath
         elif os.path.isfile(workpath):
@@ -729,6 +730,7 @@ class SqliteHandler(object):
         # connect() creates DB if file doesn't exists, allow only if flag is set
         if not path:
             if not preinit:
+                logging.info("names: couldn't find %s name file", workpath)
                 return
             path = filename
 

@@ -385,6 +385,10 @@ Some list of features not simulated at the moment (also see README):
 - overlapping clips don't apply crossfades
 - generation for unusual cases may fail
 
+.txtp duplicates are ignored, but note that `.bnk` loading order matters. Two banks
+could contain different names but point to the same .wem, and only the first name is
+created, so changing the loaded order could (rarely) create different .txtp names.
+
 
 ## KNOWN ISSUES
 Bank format may change a bit between major Wwise SDK versions, adding new features

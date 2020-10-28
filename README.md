@@ -2,7 +2,9 @@
 A Wwise `.bnk` parser, to assist in ripping audio from games using the Wwise engine.
 
 Simply open `wwiser` without arguments to start the GUI. From there you can load
-and view banks, dump contents or make TXTP (*wwiser can't modify banks*).
+and view banks, dump contents or make TXTP (*wwiser can't modify banks*). It reads
+and shows all `.bnk` chunks, including *HIRC* (audio scripting) data, and properly
+identifies all fields.
 
 Or from the command line: `wwiser [options] (files)`
 - `wwiser bgm.bnk`
@@ -120,7 +122,9 @@ meant to show bank data and generate TXTP. But feel free to use info here to mak
 other programs.
 
 Almost all `.bnk` versions should work, except the first two, used in *Shadowrun (X360)*
-and *Too Human (X360)*, report if you get errors or incorrect behavior.
+and *Too Human (X360)*, report if you get errors or incorrect behavior. All fields should
+be correctly identified and named, save a few bit flags in some versions and some lesser
+objects like plugins.
 
 
 ## LEGAL STUFF

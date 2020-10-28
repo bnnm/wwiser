@@ -51,7 +51,7 @@ fmt_hex = wfmt.FormatterHex()
 
 # hash types
 fnv_com = 'common'
-fnv_gme = 'game-variable' #game variables AKA RTPCs
+fnv_gme = 'rtpc/game-variable' #game variables AKA RTPCs
 fnv_bus = 'bus' #game variables AKA RTPCs
 fnv_sfx = 'sfx'
 fnv_trg = 'trigger'

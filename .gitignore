@@ -10,3 +10,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 bin
+
+# extra for tests
+wwnames.db3

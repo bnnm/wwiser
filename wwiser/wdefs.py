@@ -50,9 +50,10 @@ fmt_hexfix = wfmt.FormatterHex(fixed=True)
 fmt_hex = wfmt.FormatterHex()
 
 # hash types
+fnv_no = 'none' #special value, no hashname allowed
 fnv_com = 'common'
-fnv_gme = 'rtpc/game-variable' #game variables AKA RTPCs
-fnv_bus = 'bus' #game variables AKA RTPCs
+fnv_gme = 'rtpc/game-variable'
+fnv_bus = 'bus'
 fnv_sfx = 'sfx'
 fnv_trg = 'trigger'
 fnv_evt = 'event'

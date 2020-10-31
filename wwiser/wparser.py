@@ -177,7 +177,7 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
         pass
 
     elem = obj.node('AkMediaInformation')
-    elem.tid('sourceID')
+    elem.tid('sourceID').fnv(wdefs.fnv_no)
 
     if   cls.version <= 88:
         elem.tid('uFileID') #wem or bnk
@@ -396,7 +396,7 @@ def CAkParentNode_CAkParameterNode___SetChildren(obj, cls):
     obj.u32('ulNumChilds')
     #for elem in obj.list('mapChild', 'WwiseObject', obj.lastval):
     for i in range(obj.lastval):
-        obj.tid('ulChildID')
+        obj.tid('ulChildID').fnv(wdefs.fnv_no)
     return
 
 #125>=
@@ -420,7 +420,7 @@ def CAkStateAware__ReadStateChunk(obj, cls):
         elem.var('ulNumStates')
         for elem2 in elem.list('pStates', 'AkState', elem.lastval):
             elem2.tid('ulStateID').fnv(wdefs.fnv_val)
-            elem2.tid('ulStateInstanceID')
+            elem2.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
     return
 
 #053>= 120<=
@@ -435,7 +435,7 @@ def CAkParameterNodeBase__ReadStateChunk(obj, cls):
         elem.u16('ulNumStates')
         for elem2 in elem.list('pStates', 'AkState', elem.lastval):
             elem2.tid('ulStateID').fnv(wdefs.fnv_val)
-            elem2.tid('ulStateInstanceID')
+            elem2.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
     return
 
 #128>=
@@ -552,7 +552,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
         obj.U8x('bOverrideAttachmentParams')
 
     obj.tid('OverrideBusId').fnv(wdefs.fnv_bus)
-    obj.tid('DirectParentID')
+    obj.tid('DirectParentID').fnv(wdefs.fnv_no)
 
     if   cls.version <= 56: #56=IAL
         obj.u8i('ucPriority')
@@ -601,7 +601,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
         for elem in obj.list('pStates', 'AKBKStateItem', obj.lastval):
             elem.tid('ulStateID').fnv(wdefs.fnv_val)
             elem.U8x('bIsCustom')
-            elem.tid('ulStateInstanceID')
+            elem.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
 
     elif cls.version <= 120:
         CAkParameterNodeBase__ReadStateChunk(obj, cls)
@@ -821,7 +821,7 @@ def CAkBankMgr__ReadState(obj):
     cls = wcls.CAkState__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulStateID') #not hashname
+    obj.sid('ulStateID').fnv(wdefs.fnv_no)
 
     CAkState__SetInitialValues(obj, cls)
     return
@@ -854,7 +854,7 @@ def CAkBankMgr__ReadSourceParent_CAkSound_(obj):
     cls = wcls.CAkSound__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkSound__SetInitialValues(obj, cls)
     return
@@ -1168,7 +1168,7 @@ def CAkBankMgr__ReadAction(obj):
     #CAkBankMgr::ReadAction
     #set_name below
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     if get_version(obj) <= 56: #56=KOF13
         obj.U32('ulActionType').fmt(wdefs.AkActionType)
@@ -1200,7 +1200,7 @@ def CAkEvent__SetInitialValues(obj, cls):
         obj.var('ulActionListSize')
 
     for elem in obj.list('actions', 'Action', obj.lastval):
-        elem.tid('ulActionID')
+        elem.tid('ulActionID').fnv(wdefs.fnv_no)
     return
 
 #-
@@ -1228,7 +1228,7 @@ def CAkRanSeqCntr__SetPlaylistWithoutCheck(obj, cls):
     else:
         obj.u16('ulPlayListItem')
     for elem in obj.list('pItems', 'AkPlaylistItem', obj.lastval):
-        elem.tid('ulPlayID')
+        elem.tid('ulPlayID').fnv(wdefs.fnv_no)
         if cls.version <= 56: #**
             elem.u8i('weight')
         else:
@@ -1327,7 +1327,7 @@ def CAkBankMgr__StdBankRead_CAkRanSeqCntr_CAkParameterNodeBase_(obj):
     cls = wcls.CAkRanSeqCntr__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkRanSeqCntr__SetInitialValues(obj, cls)
     return
@@ -1359,11 +1359,11 @@ def CAkSwitchCntr__SetInitialValues(obj, cls):
         elem.u32('ulNumItems')
         elem2 = elem.node('NodeList')
         for i in range(elem.lastval):
-            elem2.tid('NodeID') #just 'ID'
+            elem2.tid('NodeID').fnv(wdefs.fnv_no) #just 'ID'
 
     obj.u32('ulNumSwitchParams')
     for elem in obj.list('rParams', 'AkSwitchNodeParams', obj.lastval):
-        elem.tid('ulNodeID')
+        elem.tid('ulNodeID').fnv(wdefs.fnv_no)
 
         if cls.version <= 88:
             elem.U8x('bIsFirstOnly')
@@ -1387,7 +1387,7 @@ def CAkBankMgr__StdBankRead_CAkSwitchCntr_CAkParameterNodeBase_(obj):
     cls = wcls.CAkSwitchCntr__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkSwitchCntr__SetInitialValues(obj, cls)
     return
@@ -1412,7 +1412,7 @@ def CAkBankMgr__StdBankRead_CAkActorMixer_CAkParameterNodeBase_(obj):
     cls = wcls.CAkActorMixer__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkActorMixer__SetInitialValues(obj, cls)
     return
@@ -1659,7 +1659,7 @@ def CAkBus__SetInitialValues(obj, cls):
         for elem in obj.list('pStates', 'AKBKStateItem', obj.lastval):
             elem.tid('ulStateID').fnv(wdefs.fnv_val)
             elem.U8x('bIsCustom')
-            elem.tid('ulStateInstanceID')
+            elem.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
 
     elif cls.version <= 120:
         CAkParameterNodeBase__ReadStateChunk(obj, cls)
@@ -1715,7 +1715,7 @@ def CAkLayer__SetInitialValues(obj, cls):
 
     obj.u32('ulNumAssoc')
     for elem in obj.list('assocs', 'CAssociatedChildData', obj.lastval):
-        elem.tid('ulAssociatedChildID')
+        elem.tid('ulAssociatedChildID').fnv(wdefs.fnv_no)
         elem.u32('ulCurveSize')
         parse_rtpc_graph(elem) #set on 'assocs'
 
@@ -1732,7 +1732,7 @@ def CAkLayerCntr__SetInitialValues(obj, cls):
 
     obj.u32('ulNumLayers')
     for elem in obj.list('pLayers', 'CAkLayer', obj.lastval):
-        elem.tid('ulLayerID') #indirect read in 113
+        elem.tid('ulLayerID').fnv(wdefs.fnv_no) #indirect read in 113
 
         CAkLayer__SetInitialValues(elem, cls)
 
@@ -1749,7 +1749,7 @@ def CAkBankMgr__StdBankRead_CAkLayerCntr_CAkParameterNodeBase_(obj):
     cls = wcls.CAkLayerCntr__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkLayerCntr__SetInitialValues(obj, cls)
     return
@@ -1786,7 +1786,7 @@ def CAkMusicNode__SetMusicNodeParams(obj, cls):
     obj.u32('NumStingers')
     for elem in obj.list('pStingers', 'CAkStinger', obj.lastval):
         elem.tid('TriggerID').fnv(wdefs.fnv_trg)
-        elem.tid('SegmentID')
+        elem.tid('SegmentID').fnv(wdefs.fnv_no)
         elem.u32('SyncPlayAt').fmt(wdefs.AkSyncType)
         if cls.version <= 53:  #56: untested
             pass
@@ -1826,7 +1826,7 @@ def CAkBankMgr__StdBankRead_CAkMusicSegment_CAkParameterNodeBase_(obj):
     cls = wcls.CAkMusicSegment__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkMusicSegment__SetInitialValues(obj, cls)
     return
@@ -1906,7 +1906,7 @@ def CAkMusicTrack__SetInitialValues(obj, cls):
     if obj.lastval > 0:
         for elem in obj.list('pPlaylist', 'AkTrackSrcInfo', obj.lastval):
             elem.u32('trackID') #0..N
-            elem.tid('sourceID')
+            elem.tid('sourceID').fnv(wdefs.fnv_no)
             if cls.version <= 132:
                 pass
             else:
@@ -1953,7 +1953,7 @@ def CAkBankMgr__ReadSourceParent_CAkMusicTrack_(obj):
     cls = wcls.CAkMusicTrack__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkMusicTrack__SetInitialValues(obj, cls)
     return
@@ -1969,7 +1969,7 @@ def parse_tree_node(obj, cls, count, cur_depth, max_depth):
         elem.tid('key').fnv(wdefs.fnv_val) #0/default or gamesync
 
         if cur_depth == max_depth:
-            elem.tid('audioNodeId')
+            elem.tid('audioNodeId').fnv(wdefs.fnv_no)
             children_count = 0
         else:
             elem.u16('children.uIdx')
@@ -2038,7 +2038,7 @@ def AkDecisionTree__SetTree(obj, cls, size, depth):
 #        elem.tid('key')
 #
 #        if elem.lastval != 0: #not correct but works most of the time
-#            elem.tid('audioNodeId')
+#            elem.tid('audioNodeId').fnv(wdefs.fnv_no)
 #        else:
 #            elem.u16('children.uIdx')
 #            elem.u16('children.uCount')
@@ -2082,7 +2082,7 @@ def CAkMusicSwitchCntr__SetInitialValues(obj, cls):
         obj.u32('numSwitchAssocs')
         for elem in obj.list('pAssocs', 'AkMusicSwitchAssoc', obj.lastval):
             elem.tid('switchID').fnv(wdefs.fnv_val)
-            elem.tid('nodeID')
+            elem.tid('nodeID').fnv(wdefs.fnv_no)
 
     else:
         obj.U8x('bIsContinuePlayback')
@@ -2105,7 +2105,7 @@ def CAkBankMgr__StdBankRead_CAkMusicSwitchCntr_CAkParameterNodeBase_(obj):
     cls = wcls.CAkMusicSwitchCntr__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkMusicSwitchCntr__SetInitialValues(obj, cls)
     return
@@ -2131,7 +2131,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
             numsrc = elem.lastval
 
         for i in range(numsrc):
-            elem.tid('srcID') #-1 or sid
+            elem.tid('srcID').fnv(wdefs.fnv_no) #-1 or sid
 
         if cls.version <= 72:
             numdst = 1
@@ -2140,7 +2140,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
             numdst = elem.lastval
 
         for i in range(numdst):
-            elem.tid('dstID')
+            elem.tid('dstID').fnv(wdefs.fnv_no)
 
         for elem2 in [elem.node('AkMusicTransSrcRule')]:
             elem2.s32('transitionTime')
@@ -2163,7 +2163,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
                 elem2.u32('markerID')
             else:
                 elem2.u32('uCueFilterHash')
-            elem2.tid('uJumpToID')
+            elem2.tid('uJumpToID').fnv(wdefs.fnv_no)
             if cls.version <= 132:
                 pass
             else:
@@ -2186,7 +2186,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
 
         if has_transobj:
             elem2 = elem.node('AkMusicTransitionObject')
-            elem2.tid('segmentID')
+            elem2.tid('segmentID').fnv(wdefs.fnv_no)
 
             for elem3 in [elem2.node('fadeInParams')]: #AkMusicFade
                 elem3.s32('transitionTime')
@@ -2206,8 +2206,8 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
 def parse_playlist_node(obj, cls, count):
 
     for elem in obj.list('pPlayList', 'AkMusicRanSeqPlaylistItem', count):
-        elem.tid('SegmentID')
-        elem.sid('playlistItemID')
+        elem.tid('SegmentID').fnv(wdefs.fnv_no)
+        elem.sid('playlistItemID').fnv(wdefs.fnv_no)
         elem.u32('NumChildren')
         children_count = elem.lastval
 
@@ -2228,7 +2228,7 @@ def parse_playlist_node(obj, cls, count):
                     elem.U8x('bIsShuffle?')
 
             else: #child node
-                elem.tid('nodeId?') #same value for multiple children
+                elem.tid('nodeId?').fnv(wdefs.fnv_no) #same value for multiple children
                 elem.s16('Loop')
                 elem.u16('Weight')
                 if cls.version <= 35: #35=JSpeed
@@ -2244,7 +2244,7 @@ def parse_playlist_node(obj, cls, count):
         else:
             if cls.version <= 44: #Mass Effect 2
                 if children_count == 0:
-                    elem.tid('nodeId?') #same value for multiple children
+                    elem.tid('nodeId?').fnv(wdefs.fnv_no) #same value for multiple children
                 else:
                     elem.u32('eRSType').fmt(wdefs.RSType)
             else: #046 (Enslaved)
@@ -2298,7 +2298,7 @@ def CAkBankMgr__StdBankRead_CAkMusicRanSeqCntr_CAkParameterNodeBase_(obj):
     cls = wcls.CAkMusicRanSeqCntr__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkMusicRanSeqCntr__SetInitialValues(obj, cls)
     return
@@ -2362,7 +2362,7 @@ def CAkBankMgr__StdBankRead_CAkAttenuation_CAkAttenuation_(obj):
     cls = wcls.CAkAttenuation__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     CAkAttenuation__SetInitialValues(obj, cls)
     return
@@ -2433,7 +2433,7 @@ def CAkBankMgr__StdBankRead_CAkDialogueEvent_CAkDialogueEvent_(obj):
     cls = wcls.CAkDialogueEvent__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_evt)
 
     CAkDialogueEvent__SetInitialValues(obj, cls)
     return
@@ -2447,7 +2447,7 @@ def CAkBankMgr__StdBankRead_CAkFeedbackBus_CAkParameterNodeBase_(obj):
     cls = wcls.CAkFeedbackBus__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID').fnv(wdefs.fnv_bus) #assumed
 
     #callback, can only logically be this
     CAkBus__SetInitialValues(obj, cls)
@@ -2484,7 +2484,7 @@ def CAkBankMgr__ReadSourceParent_CAkFeedbackNode_(obj):
     cls = wcls.CAkFeedbackNode__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID') #?
 
     CAkFeedbackNode__SetInitialValues(obj, cls)
     return
@@ -2512,7 +2512,7 @@ def CAkFxBase__SetInitialValues(obj, cls):
     obj.u8i('uNumBankData')
     for elem in obj.list('media', 'AkMediaMap', obj.lastval):
         elem.u8i('index')
-        elem.tid('sourceId')
+        elem.tid('sourceId').fnv(wdefs.fnv_no)
 
     #inline'd in 113<=
     SetInitialRTPC_CAkFxBase_(obj, cls)
@@ -2565,7 +2565,7 @@ def CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_(obj):
     cls = wcls.CAkFxCustom__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID') #fnv_sfx?
 
     CAkFxBase__SetInitialValues(obj, cls)
     return
@@ -2610,7 +2610,7 @@ def CAkBankMgr__StdBankRead_CAkLFOModulator_CAkModulator_(obj):
     cls = wcls.CAkLFOModulator__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID') #fnv?
 
     #callback, can only logically be this
     CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
@@ -2626,7 +2626,7 @@ def CAkBankMgr__StdBankRead_CAkEnvelopeModulator_CAkModulator_(obj):
     cls = wcls.CAkEnvelopeModulator__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID') #fnv?
 
     #callback, can only logically be this
     CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
@@ -2642,7 +2642,7 @@ def CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_(obj):
     cls = wcls.CAkAudioDevice__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID') #fnv?
 
     CAkFxBase__SetInitialValues(obj, cls)
     return
@@ -2657,7 +2657,7 @@ def CAkBankMgr__StdBankRead_CAkTimeModulator_CAkModulator_(obj):
     cls = wcls.CAkTimeModulator__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID')
+    obj.sid('ulID') #fnv?
 
     #callback, can only logically be this
     CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
@@ -2887,7 +2887,7 @@ def CAkBankMgr__ProcessFxParamsChunk(obj):
                 elem2.u8i('uFXIndex')
             elem2.tid('RTPCID').fnv(wdefs.fnv_gme)
             elem2.U32('ParamID').fmt(wdefs.AkRTPC_ParameterID)
-            elem2.sid('rtpcCurveID')
+            elem2.sid('rtpcCurveID') #fnv?
             if version <= 34: #34=LOTR (probably for 36 too since other parts need it
                 elem2.u32('eScaling').fmt(wdefs.AkCurveScaling)
                 elem2.u32('ulSize')
@@ -3104,7 +3104,7 @@ def CAkBankMgr__LoadMediaIndex(obj):
 
     uNumMedias = chunk_size // 0x0c
     for elem in obj.list('pLoadedMedia', 'MediaHeader', uNumMedias):
-        elem.sid('id')
+        elem.sid('id').fnv(wdefs.fnv_no)
         elem.U32('uOffset')
         elem.U32('uSize')
     return

@@ -516,7 +516,7 @@ class NodeField(NodeElement):
             if names:
                 row = names.get_namerow(self.__value, hashtype=self.__hashtype)
                 if row:
-                    if row.hashname:
+                    if row.hashname and self.__hashtype != wdefs.fnv_no:
                         attrs['hashname'] = row.hashname
                     if row.guidname:
                         attrs['guidname'] = row.guidname

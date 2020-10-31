@@ -43,12 +43,20 @@ class Names(object):
         if not id or id == -1: #including id=0, that is used as "none"
             return None
         id = int(id)
+        no_hash = hashtype == 'none'
 
         # on list
         row = self._names.get(id)
         if row:
-            row.used = True
+            # in case of guidnames don't mark but allow row
+            if not (row.hashname and no_hash):
+                row.hashname_used = True
             return row
+
+        # hashnames not allowed
+        if no_hash:
+            # next tests only find ids with hashnames
+            return None
 
         # on list with a close ID
         id_fz = id & 0xFFFFFF00
@@ -57,7 +65,7 @@ class Names(object):
             hashname_uf = self._unfuzzy_hashname(id, row_fz.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
-                row.used = True
+                row.hashname_used = True
                 return row
 
         if not self._db:
@@ -68,7 +76,7 @@ class Names(object):
         if row_db:
             row = self._add_name(id, row_db.hashname, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
-                row.used = True
+                row.hashname_used = True
                 return row
 
         # on db with a close ID
@@ -77,7 +85,7 @@ class Names(object):
             hashname_uf = self._unfuzzy_hashname(id, row_df.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
-                row.used = True
+                row.hashname_used = True
                 return row
 
         # groups missing ids by types (uninteresting ids like AkSound don't pass type)
@@ -583,7 +591,7 @@ class Names(object):
                 if not row.hashname:
                     continue
                 #save used names only, unless set to save all
-                if not save_all and not row.used:
+                if not save_all and not row.hashname_used:
                     continue
                 #save names not in xml/h/etc only, unless set to save extra
                 if row.source != NameRow.NAME_SOURCE_EXTRA and not save_companion:
@@ -641,7 +649,7 @@ class Names(object):
 
 # helper containing a single name
 class NameRow(object):
-    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'used', 'source']
+    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'source']
 
     NAME_SOURCE_COMPANION = 0 #XML/TXT/H
     NAME_SOURCE_EXTRA = 1 #LST/DB
@@ -655,7 +663,7 @@ class NameRow(object):
         self.guidnames = [] #possible but useful?
         self.path = None
         self.objpath = None
-        self.used = False
+        self.hashname_used = False
         self.source = None
 
     def _exists(self, name, list):
@@ -760,7 +768,7 @@ class SqliteHandler(object):
             if not row.hashname:
                 continue
             #save used names only, unless set to save all
-            if not save_all and not row.used:
+            if not save_all and not row.hashname_used:
                 continue
             #save names not in xml/h/etc only, unless set to save extra
             if row.source != NameRow.NAME_SOURCE_EXTRA and not save_companion:

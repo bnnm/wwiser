@@ -24,7 +24,7 @@ class Names(object):
     ONREPEAT_BEST = 3
 
     FNV_DICT = '0123456789abcdefghijklmnopqrstuvwxyz_'
-    FNV_FORMAT = re.compile(r"^[a-z_][a-z0-9\_]+$") #min 2 letters just in case
+    FNV_FORMAT = re.compile(r"^[a-z_][a-z0-9\_]*$")
 
 
     def __init__(self):
@@ -450,8 +450,8 @@ class Names(object):
         #pattern_2 = re.compile(r"^[\t]*([a-zA-Z_][a-zA-Z0-9_]*)[ ]*$")
 
         # catch and split non-useful (FNV) characters
-        pattern_s1 = re.compile(r'[\t .<>,;.:{}\[\]()\'"$&/=!\\/#@+\^`´¨]')
-        pattern_s2 = re.compile(r'[?|]')
+        pattern_s1 = re.compile(r'[\t\n\r .<>,;.:{}\[\]()\'"$&/=!\\/#@+\^`´¨?|]')
+        #pattern_s2 = re.compile(r'[?|]')
 
         for line in infile:
             match = pattern_1.match(line)
@@ -484,8 +484,8 @@ class Names(object):
             # but we want "bgm_01" as the actual hashname, or XML like "<thing1 thing2='thing3'>"
             elems = pattern_s1.split(line)
             for elem in elems:
-                if pattern_s2.match(elem):
-                    continue
+                #if pattern_s2.match(elem):
+                #    continue
                 self._parse_lst_elem(elem, processed)
 
         return

@@ -2,33 +2,40 @@ import logging
 from . import wmodel, wutil
 
 
+TYPE_TXT = 'txt'
+TYPE_XSL = 'xsl'
+TYPE_XML = 'xml'
+TYPE_EMPTY = 'empty'
+TYPE_NONE = 'none'
+
+
 class Printer(object):
     attr_format = { 'offset': "%08x", 'size': "0x%x" }
 
-    def __init__(self, banks, type, name, simple=False):
+    def __init__(self, banks, type, name):
         self._banks = banks
         self._type = type
         self._name = name
+        self._file = None
         self._formatted = False
-        self._simple = simple
 
 
     def dump(self):
-        if   self._type == 'txt':
+        if   self._type == TYPE_TXT:
             self.write_txt()
-        elif self._type == 'xml':
+        elif self._type == TYPE_XSL:
             self.write_xml()
-        elif self._type == 'xsl':
+        elif self._type == TYPE_XML:
             self.write_xsl()
-        elif self._type == 'none':
+        elif self._type == TYPE_EMPTY:
+            self.write_empty()
+        elif self._type == TYPE_NONE:
             pass
         else:
             raise ValueError("unknown type: " + self._type)
 
     def _make_name(self, extension):
         outname  = self._name 
-        if self._simple:
-            outname += ".s"
         outname += extension
         return outname
 
@@ -50,18 +57,38 @@ class Printer(object):
         logging.info("printer: writting %s" % (outname))
         #it's possible to set 'buffering' on open, but doesn't seem to have any positive effect
         with open(outname, 'w', encoding='utf-8') as outfile:
-            self.file = outfile
+            self._file = outfile
             callback()
-            self.file = None
+            self._file = None
+        logging.info("printer: done")
+
+    def write_empty(self):
+        if not self._banks: #no banks loaded
+            return
+        logging.info("printer: processing empty type")
+
+        # making empty "files" is a way to force the whole tree to read names, since by
+        # default they are only loaded on demand, but full list is needed in some cases
+        for bank in self._banks:
+            self._print_empty_node(bank)
+
         logging.info("printer: done")
 
     #--------------------------------------------------------------------------
+
+    def _print_empty_node(self, node):
+        __ = node.get_attrs() #forces names!
+        children = node.get_children()
+
+        if children:
+            for subnode in children:
+                self._print_empty_node(subnode)
 
     def _print_xml(self):
         #stylesheet handling could be improved, not sure
         if self._formatted:
             text = wutil.Loader.get_resource_text('resources/stylesheet.1.xsl')
-            self.file.write(text)
+            self._file.write(text)
 
         # may reimplement this as a stack-based printer rather than recursive calls
         # but time savings are not too big (~3s for bigger files)
@@ -70,7 +97,7 @@ class Printer(object):
 
         if self._formatted:
             text = wutil.Loader.get_resource_text('resources/stylesheet.2.xsl')
-            self.file.write(text)
+            self._file.write(text)
 
     def _print_xml_node(self, node, depth):
         just = '\t' * depth
@@ -94,17 +121,17 @@ class Printer(object):
 
         if not has_children:
             line = "%s<%s%s/>\n" % (just, nodename, line)
-            self.file.write(line)
+            self._file.write(line)
         else:
             line = "%s<%s%s>\n" % (just, nodename, line)
-            self.file.write(line)
+            self._file.write(line)
 
             depth += 1
             for subnode in children:
                 self._print_xml_node(subnode, depth)
 
             line = "%s</%s>\n" % (just, nodename)
-            self.file.write(line)
+            self._file.write(line)
 
 
     def _print_txt(self):
@@ -169,7 +196,7 @@ class Printer(object):
             line = "%s  %s**error: %s" % (ojust, just, message)
 
         if line is not None:
-            self.file.write(line + '\n')
+            self._file.write(line + '\n')
             depth += 3
 
 

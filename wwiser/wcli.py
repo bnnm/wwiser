@@ -33,7 +33,7 @@ class Cli(object):
         parser = argparse.ArgumentParser(prog="wwiser", description=description, epilog=epilog, formatter_class=argparse.RawTextHelpFormatter)
         parser.add_argument('files', help="Files to get (wildcards work)", nargs='+')
         parser.add_argument('-m',  '--multi', help="Treat files as multiple separate files", action='store_true')
-        parser.add_argument('-d',  '--dump-type', help="Set dump type: txt|xml|xsl|none (default: xsl)", default='xsl')
+        parser.add_argument('-d',  '--dump-type', help="Set dump type: txt|xml|xsl|none|empty (default: xsl/auto)")
         parser.add_argument('-dn', '--dump-name', help="Set dump filename (default: auto)")
         parser.add_argument('-l',  '--log', help="Write info to wwiser log (has extra messages)", action='store_true')
         parser.add_argument('-v',  '--viewer', help="Start the viewer", action='store_true')
@@ -55,7 +55,7 @@ class Cli(object):
         parser.add_argument('-gp', '--txtp-params', help="Set TXTP parameters (default: auto)", nargs='*')
         parser.add_argument('-go', '--txtp-outdir', help="Set TXTP output dir (default: auto)")
         parser.add_argument('-gw', '--txtp-wemdir', help="Set TXTP .wem dir (default: auto)")
-        parser.add_argument('-gws','--txtp-wemsubdir', help="Automatically set subdir per language\n(some games put voices in 'English(US)' and so on)", action='store_true')
+        parser.add_argument('-gl', '--txtp-wemsubdir',   help="Mark .txtp and set .wem subdir per language\n(some games put voices/songs in 'English(US)' and so on)", action='store_true')
         parser.add_argument('-gm', '--txtp-move',   help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
         parser.add_argument('-gwn','--txtp-wemname', help="Add all .wem names to .txtp filename\nmay create too long filenames when many .wem are used!", action='store_true')
         parser.add_argument('-gbs','--txtp-bnkskip', help="Treat internal (in .bnk) .wem as if external", action='store_true')
@@ -136,6 +136,12 @@ class Cli(object):
                 dump_name = filenames[0]
             else:
                 dump_name = 'banks'
+
+        if args.dump_type is None:
+            if args.save_lst: #forces all names without making a file
+                args.dump_type = wprinter.TYPE_EMPTY
+            else: #default
+                args.dump_type = wprinter.TYPE_XSL
         printer = wprinter.Printer(banks, args.dump_type, dump_name)
         printer.dump()
 
@@ -166,6 +172,8 @@ class Cli(object):
             generator.generate()
 
         # db manipulation
+        if args.dump_type == wprinter.TYPE_NONE and (args.save_lst or args.save_db):
+            logging.info("dump set to none, may not save all names")
         if args.save_lst:
             names.save_lst(name=dump_name, save_all=args.save_all, save_companion=args.save_companion, save_missing=args.save_missing)
         if args.save_db:

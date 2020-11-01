@@ -151,6 +151,9 @@ class Gui(object):
         chk = self._chk('txtp_alt_exts', frame, "Use TXTP alt extensions (.logg/lwav)")
         chk.grid(row=3, column=0, sticky="W")
 
+        chk = self._chk('txtp_dupes', frame, "Allow TXTP dupes (WARNING: may create a lot)")
+        chk.grid(row=3, column=1, sticky="W")
+
         #----------------------------------------------------------------------
         # log
 
@@ -364,6 +367,7 @@ class Gui(object):
             generator.set_wemnames(self._fields['txtp_wemname'].get())
             generator.set_generate_unused(self._fields['txtp_unused'].get())
             generator.set_alt_exts(self._fields['txtp_alt_exts'].get())
+            generator.set_dupes(self._fields['txtp_dupes'].get())
 
             generator.generate()
 

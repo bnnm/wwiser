@@ -59,11 +59,12 @@ class TxtpCache(object):
         self.bnkmark = False
         self.bnkskip = False
         self.alt_exts = False
+        self.dupes = False
 
         self.x_loops = False
 
         self.created = 0
-        self.ignored = 0
+        self.duplicates = 0
         self.unused = 0
         self.multitrack = 0
         self.trims = 0
@@ -82,16 +83,12 @@ class TxtpCache(object):
         self.unused_mark = False
 
 
-    def register_txtp(self, text, name, printer):
-        hashtext = hash(text)
-
-        if hashtext in self._txtp_hashes:
-            self.ignored += 1
-            logging.debug("txtp: ignore '%s' (repeat of %s)", name, hashtext)
+    def register_txtp(self, texthash, printer):
+        if texthash in self._txtp_hashes:
+            self.duplicates += 1
             return False
-        logging.debug("txtp: saving '%s' (%s)", name, hashtext)
 
-        self._txtp_hashes[hashtext] = True
+        self._txtp_hashes[texthash] = True
         self.created += 1
         if self.unused_mark:
             self.unused += 1
@@ -175,7 +172,7 @@ class Txtp(object):
 
     #--------------------------------------------------------------------------
 
-    def _get_name(self, printer):
+    def _get_name(self, printer, is_new=True):
         node = self._node #named based on default node, usually an event
         if self._nname:
             attrs = self._nname.get_attrs()
@@ -256,6 +253,9 @@ class Txtp(object):
         #    name += " {selfloop}"
         if printer.has_unsupported():
             name += " {!}"
+        if not is_new:
+            name += " {d}"
+
         name += ".txtp"
 
         return name
@@ -298,13 +298,14 @@ class Txtp(object):
         if not printer.has_sounds():
             return
 
-        name = self._get_name(printer)
-
         #some games have many GS combos that end up being the same (ex. Nier Automata, Bayonetta 2)
-        if not self._txtpcache.register_txtp(text, name, printer):
-            #logs info inside
-            return
-
+        texthash = hash(text)
+        is_new = self._txtpcache.register_txtp(texthash, printer)
+        name = self._get_name(printer, is_new)
+        if not is_new and not self._txtpcache.dupes:
+            logging.debug("txtp: ignore '%s' (repeat of %s)", name, texthash)
+            return False
+        logging.debug("txtp: saving '%s' (%s)", name, texthash)
 
         #same name but different txtp, shouldn't happen (just in case, maybe when loading many banks?)
         if not self._txtpcache.register_name(name):

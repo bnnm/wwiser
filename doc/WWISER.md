@@ -385,9 +385,14 @@ Some list of features not simulated at the moment (also see README):
 - overlapping clips don't apply crossfades
 - generation for unusual cases may fail
 
-.txtp duplicates are ignored, but note that `.bnk` loading order matters. Two banks
-could contain different names but point to the same .wem, and only the first name is
-created, so changing the loaded order could (rarely) create different .txtp names.
+.txtp duplicates are ignored, though there is an option to allow them. Mainly for
+testing and uncommon cases where some ignored names are preferable to other (use
+the "log" setting to check dupe relations). The option may end up creating 500% more
+files, only use when needed.
+
+Note that `.bnk` loading order matters. Two banks could contain different names but
+point to the same .wem, and only the first name is created, so changing the loaded
+order could (rarely) create different .txtp names.
 
 
 ## KNOWN ISSUES

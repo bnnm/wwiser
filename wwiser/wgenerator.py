@@ -112,6 +112,11 @@ class Generator(object):
             return
         self._txtpcache.alt_exts = alt_exts
 
+    def set_dupes(self, dupes):
+        if not dupes:
+            return
+        self._txtpcache.dupes = dupes
+
     def set_x_loops(self, x_loops):
         if not x_loops:
             return
@@ -169,8 +174,8 @@ class Generator(object):
 
         #logging.info("generator: done")
         line = "created %i" % txc.created
-        if txc.ignored:
-            line += ", ignored %i repeats" % txc.ignored
+        if txc.duplicates:
+            line += ", %i duplicates" % txc.duplicates
         if self._generate_unused:
             line += ", unused %i" % txc.unused
         logging.info("generator: done (%s)" % (line))

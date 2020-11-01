@@ -54,6 +54,7 @@ class Cli(object):
         parser.add_argument('-gf', '--txtp-filter', help="Set TXTP target name/ids (default: all usable objects)", nargs='+')
         parser.add_argument('-gp', '--txtp-params', help="Set TXTP parameters (default: auto)", nargs='*')
         parser.add_argument('-go', '--txtp-outdir', help="Set TXTP output dir (default: auto)")
+        parser.add_argument('-gd', '--txtp-dupes',  help="Allow TXTP dupes (WARNING: may create a lot)", action='store_true')
         parser.add_argument('-gw', '--txtp-wemdir', help="Set TXTP .wem dir (default: auto)")
         parser.add_argument('-gl', '--txtp-wemsubdir',   help="Mark .txtp and set .wem subdir per language\n(some games put voices/songs in 'English(US)' and so on)", action='store_true')
         parser.add_argument('-gm', '--txtp-move',   help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
@@ -168,6 +169,7 @@ class Cli(object):
             generator.set_bnkskip(args.txtp_bnkskip)
             generator.set_bnkmark(args.txtp_bnkmark)
             generator.set_alt_exts(args.txtp_alt_exts)
+            generator.set_dupes(args.txtp_dupes)
             generator.set_x_loops(args.txtp_x_loops)
             generator.generate()
 

@@ -23,9 +23,6 @@ class Names(object):
     ONREPEAT_IGNORE = 2
     ONREPEAT_BEST = 3
 
-    FNV_DICT = '0123456789abcdefghijklmnopqrstuvwxyz_'
-    FNV_FORMAT = re.compile(r"^[a-z_][a-z0-9\_]*$")
-
 
     def __init__(self):
         #self._gamename = None #info txt
@@ -35,6 +32,7 @@ class Names(object):
         self._db = None
         self._loaded_banknames = {}
         self._missing = {}
+        self._fnv = Fnv()
 
     def set_gamename(self, gamename):
         self._gamename = gamename #path
@@ -62,7 +60,7 @@ class Names(object):
         id_fz = id & 0xFFFFFF00
         row_fz = self._names_fuzzy.get(id_fz)
         if row_fz and row_fz.hashname:
-            hashname_uf = self._unfuzzy_hashname(id, row_fz.hashname)
+            hashname_uf = self._fnv.unfuzzy_hashname(id, row_fz.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
                 row.hashname_used = True
@@ -82,7 +80,7 @@ class Names(object):
         # on db with a close ID
         row_df = self._db.select_by_id_fuzzy(id)
         if row_df and row_df.hashname:
-            hashname_uf = self._unfuzzy_hashname(id, row_df.hashname)
+            hashname_uf = self._fnv.unfuzzy_hashname(id, row_df.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
                 row.hashname_used = True
@@ -96,47 +94,6 @@ class Names(object):
 
         return None
 
-    # Find actual name from a close name (same up to last char) using some fuzzy searching
-    # ('bgm0' and 'bgm9' IDs only differ in the last byte, so it calcs 'bgm' + '0', '1'...)
-    def _unfuzzy_hashname(self, id, hashname):
-        if not id or not hashname:
-            return None
-
-        namebytes = bytearray(hashname.lower(), 'UTF-8')
-        basehash = self._fnv_hash(namebytes[:-1]) #up to last byte
-        for c in self.FNV_DICT: #try each last char
-            id_hash = self._fnv_fuzzy(basehash, ord(c))
-
-            if id_hash == id:
-                c = c.upper()
-                for cs in hashname: #upper only if all base name is all upper
-                    if cs.islower():
-                       c = c.lower()
-                       break
-
-                hashname = hashname[:-1] + c
-                #logging.info("names: unfuzzied name %s", hashname)
-                return hashname
-
-        return None
-
-    # Standard AK FNV-1 with 32-bit.
-    def _fnv_hash(self, namebytes):
-        hash = 2166136261 #FNV offset basis
-
-        for i in range(len(namebytes)):
-            hash = hash * 16777619 #FNV prime
-            hash = hash ^ namebytes[i] #FNV xor
-            hash = hash & 0xFFFFFFFF #python clamp
-        return hash
-
-    # Partial hashing for unfuzzy'ing.
-    def _fnv_fuzzy(self, hash, value):
-        hash = hash * 16777619 #FNV prime
-        hash = hash ^ value #FNV xor
-        hash = hash & 0xFFFFFFFF #python clamp
-        return hash
-
     # IDs come from hashed NAME (32b, where name follows rules) or hashed GUIDs (30b, where NAME is arbitrary),
     # so first we check the type. Sometimes IDs that should come from GUID (like BUS names, according to
     # AK's docs) are actually from NAMEs, so it's worth manually testing rather than trusting the caller.
@@ -149,11 +106,10 @@ class Names(object):
             return None
 
         lowname = name.lower()
-        hashable = self.FNV_FORMAT.match(lowname)
+        hashable = self._fnv.is_hashable(lowname)
         if not id and not forcehash and not hashable:
             return None
-        namebytes = bytes(lowname, 'UTF-8')
-        id_hash = self._fnv_hash(namebytes)
+        id_hash = self._fnv.get_hash(lowname)
 
         if not id:
             id = id_hash
@@ -844,3 +800,58 @@ class SqliteHandler(object):
             cx.commit()
         finally:
             cx.rollback()
+
+
+class Fnv(object):
+    FNV_DICT = '0123456789abcdefghijklmnopqrstuvwxyz_'
+    FNV_FORMAT = re.compile(r"^[a-z_][a-z0-9\_]*$")
+
+    def is_hashable(self, lowname):
+        return self.FNV_FORMAT.match(lowname)
+
+
+    # Find actual name from a close name (same up to last char) using some fuzzy searching
+    # ('bgm0' and 'bgm9' IDs only differ in the last byte, so it calcs 'bgm' + '0', '1'...)
+    def unfuzzy_hashname(self, id, hashname):
+        if not id or not hashname:
+            return None
+
+        namebytes = bytearray(hashname.lower(), 'UTF-8')
+        basehash = self._get_hash(namebytes[:-1]) #up to last byte
+        for c in self.FNV_DICT: #try each last char
+            id_hash = self._get_partial_hash(basehash, ord(c))
+
+            if id_hash == id:
+                c = c.upper()
+                for cs in hashname: #upper only if all base name is all upper
+                    if cs.islower():
+                       c = c.lower()
+                       break
+
+                hashname = hashname[:-1] + c
+                return hashname
+        # it's possible to reach here with incorrect (manually input) ids,
+        # since not all 255 values are in FNV_DICT
+        return None
+
+    # Partial hashing for unfuzzy'ing.
+    def _get_partial_hash(self, hash, value):
+        hash = hash * 16777619 #FNV prime
+        hash = hash ^ value #FNV xor
+        hash = hash & 0xFFFFFFFF #python clamp
+        return hash
+
+    # Standard AK FNV-1 with 32-bit.
+    def _get_hash(self, namebytes):
+        hash = 2166136261 #FNV offset basis
+
+        for i in range(len(namebytes)):
+            hash = hash * 16777619 #FNV prime
+            hash = hash ^ namebytes[i] #FNV xor
+            hash = hash & 0xFFFFFFFF #python clamp
+        return hash
+
+    # Standard AK FNV-1 with 32-bit.
+    def get_hash(self, lowname):
+        namebytes = bytes(lowname, 'UTF-8')
+        return self._get_hash(namebytes)

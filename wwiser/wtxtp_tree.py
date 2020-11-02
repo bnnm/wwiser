@@ -1028,7 +1028,12 @@ class TxtpPrinter(object):
         if ignored:
             line += '#'
 
-        name = self._txtpcache.wemdir
+        name = ''
+        if sound.source.plugin_wmid:
+            name += '?'
+            self._unsupported = True
+
+        name += self._txtpcache.wemdir
         if sound.source and self._txtpcache.wemsubdir:
             name += sound.source.subdir()
 
@@ -1058,6 +1063,8 @@ class TxtpPrinter(object):
                 bankname, index = media
                 name += "%s #s%s" % (bankname, index + 1)
                 info += " ##%s.%s" % (sound.source.tid, extension)
+                if sound.source.plugin_wmid:
+                    info += " ##unsupported wmid"
             else:
                 name = "?" + name + "%s.%s" % (sound.source.tid, extension)
                 info += " ##bnk?"

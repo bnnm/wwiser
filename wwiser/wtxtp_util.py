@@ -118,6 +118,12 @@ class NodeSource(object):
         else:
             self.plugin_id = None
 
+        # there is basic detection in vgmstream but not good enough
+        if plugin == 0x00100001: #MIDI
+            self.plugin_wmid = True
+        else:
+            self.plugin_wmid = None
+
     # each source may use its own extension
     def _extension(self):
         if self.plugin_id:
@@ -127,6 +133,7 @@ class NodeSource(object):
 
         version = self.nsrc.get_root().get_version()
         if version >= CODEC_EXTENSION_NEW_VERSION:
+            #wmid seem to be use .wem but also .wmid sometimes?
             self.extension = CODEC_EXTENSION_NEW
         else:
             self.extension = CODEC_EXTENSIONS_OLD.get(self.plugin_codec)

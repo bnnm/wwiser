@@ -79,10 +79,10 @@ class Generator(object):
             return
         self._txtpcache.wemdir = self._normalize_path(wemdir)
 
-    def set_wemsubdir(self, wemsubdir):
-        if not wemsubdir:
+    def set_lang(self, lang):
+        if not lang:
             return
-        self._txtpcache.wemsubdir = wemsubdir
+        self._txtpcache.lang = lang
 
     def set_wemnames(self, wemnames):
         if not wemnames:
@@ -353,7 +353,7 @@ class Generator(object):
         self._moved_sources[source.tid] = True #skip dupes
 
         dir = self.get_dir()
-        if self._txtpcache.wemsubdir:
+        if self._txtpcache.lang:
             dir += source.subdir()
 
 

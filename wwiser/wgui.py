@@ -133,7 +133,7 @@ class Gui(object):
         chk = self._chk('txtp_move', frame, "Move .wem referenced in banks to wem subdir")
         chk.grid(row=0, column=0, sticky="W")
 
-        chk = self._chk('txtp_subdir', frame, "Automatically set subdir per language")
+        chk = self._chk('txtp_lang', frame, "Mark .txtp and set .wem subdir per language")
         chk.grid(row=0, column=1, sticky="W")
 
         chk = self._chk('txtp_bnkskip', frame, "Treat internal (in .bnk) .wem as if external")
@@ -360,7 +360,7 @@ class Gui(object):
             #generator.set_outdir(self.fields['txtp_outdir'].get())
             generator.set_wemdir(self._fields['txtp_wemdir'].get())
 
-            generator.set_wemsubdir(self._fields['txtp_subdir'].get())
+            generator.set_lang(self._fields['txtp_lang'].get())
             generator.set_move(self._fields['txtp_move'].get())
             generator.set_bnkskip(self._fields['txtp_bnkskip'].get())
             generator.set_bnkmark(self._fields['txtp_bnkmark'].get())

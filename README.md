@@ -107,6 +107,8 @@ Watch out for filenames with:
 - `{m}`: uses multi-loops (multiple places may loop, some may be fixed manually)
 - `{e}`: uses "external IDs" (set at runtime so can't guess file, usually voices)
 - `{!}`: missing audio (usually needs more .bnk or uses unsupported audio plugins)
+- `{l=(lang)}`: only when flag to handle languages is set (use when multiple songs/sfx
+   per language need to coexist coexist in same dir)
 
 It's a good idea to keep the `.bnk` and companion files around in case `.txtp` need
 to be generated again when more features are added.

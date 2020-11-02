@@ -163,6 +163,7 @@ class TxtpPrinter(object):
         self._loop_groups = 0
         self._loop_sounds = 0
         # flags
+        self._lang_name = None
         self._randoms = False
         self._silences = False      # may use silences to change/crossfade songs
         self._self_loops = False    #
@@ -207,6 +208,9 @@ class TxtpPrinter(object):
 
     def has_noloops(self):
         return self._loop_groups == 0 and self._loop_sounds == 0
+
+    def get_lang_name(self):
+        return self._lang_name
 
     #--------------------------------------------------------------------------
 
@@ -1029,12 +1033,15 @@ class TxtpPrinter(object):
             line += '#'
 
         name = ''
-        if sound.source.plugin_wmid:
+        if sound.source and sound.source.plugin_wmid:
             name += '?'
             self._unsupported = True
 
         name += self._txtpcache.wemdir
-        if sound.source and self._txtpcache.wemsubdir:
+        if sound.source and self._txtpcache.lang:
+            lang = sound.source.lang()
+            if lang: #in case it's blank for some sources yet filled for others
+                self._lang_name = lang
             name += sound.source.subdir()
 
         # add source

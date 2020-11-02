@@ -55,7 +55,7 @@ class TxtpCache(object):
         self.outdir = DEFAULT_OUTDIR
         self.wemdir = DEFAULT_WEMDIR
         self.wemnames = False
-        self.wemsubdir = False
+        self.lang = False
         self.bnkmark = False
         self.bnkskip = False
         self.alt_exts = False
@@ -249,6 +249,8 @@ class Txtp(object):
             name += " {s}"
         if printer.has_internals() and self._txtpcache.bnkmark:
             name += " {b}"
+        if printer.get_lang_name():
+            name += " {l=%s}" % (printer.get_lang_name())
         #if printer.has_self_loops():
         #    name += " {selfloop}"
         if printer.has_unsupported():

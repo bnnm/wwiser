@@ -71,6 +71,132 @@ CODEC_EXTENSIONS_OLD = {
  #0x0F: "---", #ANALYSISFILE
 }
 
+LANGUAGE_IDS = {
+    0x00: "SFX",
+    0x01: "Arabic",
+    0x02: "Bulgarian",
+    0x03: "Chinese(HK)",
+    0x04: "Chinese(PRC)",
+    0x05: "Chinese(Taiwan)",
+    0x06: "Czech",
+    0x07: "Danish",
+    0x08: "Dutch",
+    0x09: "English(Australia)",
+    0x0A: "English(India)",
+    0x0B: "English(UK)",
+    0x0C: "English(US)",
+    0x0D: "Finnish",
+    0x0E: "French(Canada)",
+    0x0F: "French(France)",
+    0x10: "German",
+    0x11: "Greek",
+    0x12: "Hebrew",
+    0x13: "Hungarian",
+    0x14: "Indonesian",
+    0x15: "Italian",
+    0x16: "Japanese",
+    0x17: "Korean",
+    0x18: "Latin",
+    0x19: "Norwegian",
+    0x1A: "Polish",
+    0x1B: "Portuguese(Brazil)",
+    0x1C: "Portuguese(Portugal)",
+    0x1D: "Romanian",
+    0x1E: "Russian",
+    0x1F: "Slovenian",
+    0x20: "Spanish(Mexico)",
+    0x21: "Spanish(Spain)",
+    0x22: "Spanish(US)",
+    0x23: "Swedish",
+    0x24: "Turkish",
+    0x25: "Ukrainian",
+    0x26: "Vietnamese",
+}
+
+LANGUAGE_HASHNAMES = {
+    393239870: "SFX",
+    3254137205: "Arabic",
+    4238406668: "Bulgarian",
+    218471146: "Chinese(HK)",
+    3948448560: "Chinese(PRC)",
+    2983963595: "Chinese(Taiwan)",
+    877555794: "Czech",
+    4072223638: "Danish",
+    353026313: "Dutch",
+    144167294: "English(Australia)",
+    1103735775: "English(India)",
+    550298558: "English(UK)",
+    684519430: "English(US)",
+    50748638: "Finnish",
+    1024389618: "French(Canada)",
+    323458483: "French(France)",
+    4290373403: "German",
+    4147287991: "Greek",
+    919142012: "Hebrew",
+    370126848: "Hungarian",
+    1076167009: "Indonesian",
+    1238911111: "Italian",
+    2008704848: "Japanese",
+    3391026937: "Korean",
+    3647200089: "Latin",
+    701323259: "Norwegian",
+    559547786: "Polish",
+    960403217: "Portuguese(Brazil)",
+    3928554441: "Portuguese(Portugal)",
+    4111048996: "Romanian",
+    2577776572: "Russian",
+    3484397090: "Slovenian",
+    3671217401: "Spanish(Mexico)",
+    235381821: "Spanish(Spain)",
+    4148950150: "Spanish(US)",
+    771234336: "Swedish",
+    4036333791: "Turkish",
+    4065424201: "Ukrainian",
+    2847887552: "Vietnamese",
+}
+
+LANGUAGE_SHORTNAMES = {
+    "SFX": 'sfx',
+    "Arabic": 'ar',
+    "Bulgarian": 'bg',
+    "Chinese(HK)": 'zh-hk',
+    "Chinese(PRC)": 'zh-cn',
+    "Chinese(Taiwan)": 'zh-tw',
+    "Czech": 'cs',
+    "Danish": 'da',
+    "Dutch": 'nl',
+    "English(Australia)": 'en-au',
+    "English(India)": 'en-in', #?
+    "English(UK)": 'en', #en-gb
+    "English(US)": 'us', #en-us
+    "Finnish": 'fi',
+    "French(Canada)": 'fr-ca',
+    "French(France)": 'fr',
+    "German": 'de',
+    "Greek": 'el',
+    "Hebrew": 'he',
+    "Hungarian": 'hu',
+    "Indonesian": 'id',
+    "Italian": 'it',
+    "Japanese": 'ja',
+    "Korean": 'ko',
+    "Latin": 'la', #what
+    "Norwegian": 'no',
+    "Polish": 'pl',
+    "Portuguese(Brazil)": 'pt-br',
+    "Portuguese(Portugal)": 'pt',
+    "Romanian": 'ro',
+    "Russian": 'ru',
+    "Slovenian": 'sl',
+    "Spanish(Mexico)": 'es-mx',
+    "Spanish(Spain)": 'es',
+    "Spanish(US)": 'es-us',
+    "Swedish": 'sv',
+    "Turkish": 'tr',
+    "Ukrainian": 'uk',
+    "Vietnamese": 'vi',
+}
+
 class NodeSource(object):
     def __init__(self, node):
         self.nsrc = node
@@ -79,6 +205,7 @@ class NodeSource(object):
         self.nsourceid = node.find(name='sourceID')
         self.nfileid = node.find(name='uFileID')
         self.nlang = node.find(name='bIsLanguageSpecific')
+        self._lang_loaded = False
         #0=bnk (always), 1/2=prefetch<>stream (varies with version)
         self.internal = (self.nstreamtype.value() == 0)
 
@@ -96,7 +223,10 @@ class NodeSource(object):
 
         self._plugin()
         self._extension()
-        #self._subdir()
+        # not done by default to minimize some node finding since this option is uncommon
+        #self._load_lang()
+        self._lang_name = ''
+        self._subdir = ''
 
     # plugin info
     def _plugin(self):
@@ -147,47 +277,50 @@ class NodeSource(object):
         else:
             self.extension_alt = self.extension
 
-    #returns language subdir or nothing if source doesn't depend on subdir
-    # not done by default to minimize some node finding
+    #  language subdir or nothing if source doesn't depend on language
     def subdir(self):
-        subdir = ''
-        if not self.nlang or self.nlang.value() == 0: #default = not lang
-            return subdir
+        if not self._lang_loaded:
+            self._load_lang()
+        return self._subdir
+
+    # language short name or nothing if source doesn't depend on language
+    def lang(self):
+        if not self._lang_loaded:
+            self._load_lang()
+        return self._lang_name
+
+    def _load_lang(self):
+        self._lang_loaded = True
+
+        # bank may have language value and flag set per source (not set for internals?)
+        # - external source + flag set = use subdir
+        # - internal source + bank has language = use subdir, since banks will be names same for all languages
+        if not self.internal and (not self.nlang or self.nlang.value() == 0):
+            return
 
         nroot = self.nsrc.get_root()
         nlangid = nroot.find1(name='BankHeader').find1(name='dwLanguageID')
         version = nroot.get_version()
 
+        lang_value = nlangid.value()
         if version <= 120: #set of values
-            value = nlangid.get_attr('valuefmt')
-            pos1 = value.find('[')
-            pos2 = value.find(']')
-            if pos1 and pos2:
-                value = value[pos1+1:pos2]
-            else:
-                value = None
-
+            lang_name = LANGUAGE_IDS.get(lang_value)
         else: #set of hashed names
-            value = nlangid.get_attr('hashname')
-            if not value:
-                # a few common in case wwnames wasn't included (but languages can be anything)
-                names = {
-                    393239870: 'SFX',
-                    550298558: 'English(UK)',
-                    684519430: 'English(US)',
-                    323458483: 'French(France)',
-                    1024389618: 'French(Canada)',
-                    2008704848: 'Japanese',
-                }
-                value = names.get(nlangid.value())
+            # typical values but languages can be anything (redefined in project options)
+            lang_name = LANGUAGE_HASHNAMES.get(lang_value)
+            if not lang_name: #try loaded names
+                lang_name = nlangid.get_attr('hashname')
 
-        if not value:
-            value = "%s" % (nlangid.value())
+        if not lang_name:
+            lang_name = "language-%s" % (lang_value)
 
+        lang_short = LANGUAGE_SHORTNAMES.get(lang_name, lang_name)
+        if lang_short == 'sfx': 
+            lang_short = ''
+        self._lang_name = lang_short
 
-        if value == 'SFX': #possible?
+        if lang_name == 'SFX':
             subdir = ''
         else:
-            subdir = "%s/" % (value)
-        return subdir
-
+            subdir = "%s/" % (lang_name)
+        self._subdir = subdir

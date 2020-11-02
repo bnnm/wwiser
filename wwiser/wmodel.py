@@ -195,6 +195,9 @@ class NodeRoot(NodeElement):
     def set_names(self, names):
         self._names = names
 
+    def is_be(self):
+        return self.__r.get_endian_big()
+
 
 # logical node container of other nodes, with data reading helpers (represents a class)
 class NodeObject(NodeElement):

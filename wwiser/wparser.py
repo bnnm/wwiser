@@ -448,7 +448,7 @@ def CAkParamNodeStateAware__ReadStateChunk(obj, cls):
 def CAkParameterNodeBase__ReadFeedbackInfo(obj, cls):
     #CAkParameterNodeBase::ReadFeedbackInfo
 
-    if has_feedback(obj):
+    if has_feedback(obj): #CAkBankMgr::BankHasFeedback
         obj = obj.node('FeedbackInfo')
         obj.tid('BusId').fnv(wdefs.fnv_bus) #unused in 112>=
 
@@ -474,8 +474,8 @@ def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
         obj.u32('ulNumRTPC')
     else: #38=KOF12
         obj.u16('ulNumRTPC')
-    for elem in obj.list('pRTPCMgr', 'RTPC', obj.lastval):
 
+    for elem in obj.list('pRTPCMgr', 'RTPC', obj.lastval):
         if   cls.version <= 36: #36=UFC
             parse_plugin(elem, 'FXID')
         elif cls.version <= 48: #44=AC2
@@ -491,7 +491,6 @@ def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
         else:
             elem.U8x('rtpcType').fmt(wdefs.AkRtpcType)
             elem.U8x('rtpcAccum').fmt(wdefs.AkRtpcAccum)
-
 
         if   cls.version <= 88:
             elem.U32('ParamID').fmt(wdefs.AkRTPC_ParameterID)
@@ -635,15 +634,15 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
     fld = obj.U8x('uBitsPositioning')
     fld.bit('bPositioningInfoOverrideParent', obj.lastval, 0)
     fld.bit('bHasListenerRelativeRouting', obj.lastval, 1) #has_3d
-    if cls.version <= 112:
+    if cls.version <= 88:
         pass
-    elif cls.version <= 113:
-        fld.bit('unknown2d', obj.lastval, 2)
-        fld.bit('unknown2d', obj.lastval, 3)
+    elif cls.version <= 112:
+        fld.bit('unknown2d', obj.lastval, 2) #flag for next bit
+        fld.bit('unknown2d', obj.lastval, 3) #bPriorityOverrideParent? bIsFXOverrideParent?
         fld.bit('unknown3d', obj.lastval, 4)
         fld.bit('unknown3d', obj.lastval, 5)
-        fld.bit('unknown3d', obj.lastval, 6)
-        fld.bit('unknown3d', obj.lastval, 7)
+        fld.bit('unknown3d', obj.lastval, 6) #always set?
+        fld.bit('unknown3d', obj.lastval, 7) #always set?
     elif cls.version <= 128:
         pass
     else: 
@@ -2805,6 +2804,18 @@ def CAkBankMgr__ProcessBankHeader(obj):
     else:
         obj.u32('dwProjectID')
         gap_size = chunk_size - 0x14
+
+        # Star Fox Zero (v112) has some odd behavior in the feedback flag. All .bnk except init.bnk set it, but
+        # no .bnk has feedback info. Presumably only init.bnk (first) flag's matters, but since we can't be sure
+        # that bank was loaded, we need some crude autodetection. 
+        # Some test/remnant .bnk in SFZ use v88 and don't have the flag set, and no other 112 bnk exhibits this bug
+        # either (flag works as intended), so maybe it happened in some Wwise revision only.
+        if version == 112:
+            root = obj.get_root()
+            project_id = obj.lastval #not unique but seems unique enough for this case
+            is_be = root.is_be()
+            if project_id == 0x000004A0 and is_be:
+                obj.get_root().set_feedback(0)
 
     # rest is skipped like this (not defined/padding),
     # may be used for DATA alignment to sector size

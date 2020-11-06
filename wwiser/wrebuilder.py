@@ -447,8 +447,16 @@ class _NodeHelper(object):
 
 
     def _build_audio_config(self, node):
+        name = node.get_name()
+
+        # find songs that silence files to crossfade
+        # mainly useful on Segment/Track level b/c usually games that set silence on
+        # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
+        check_state = name in ['CAkMusicTrack', 'CAkMusicSegment']
+        check_rtpc = check_state
         nbase = node.find1(name='NodeBaseParams')
-        if nbase:
+        if nbase and check_state:
+            # state sets silence value (ex. MGR double tracks)
             nstatechunk = nbase.find1(name='StateChunk')
             if nstatechunk:
                 nstateids = nstatechunk.finds(name='ulStateInstanceID')
@@ -456,17 +464,25 @@ class _NodeHelper(object):
                     tid = nstateid.value()
                     nstate = self.builder.get_node_ref(nstateid.value())
                     bstate = self.builder._get_bnode(nstate, tid)
-                    self.silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
 
+                    self.silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
+                    if self.silences:
+                        #logging.info("generator: state silence found %s %s %s" % (self.sid, tid, node.get_name()))
+                        nstategroupid = nstatechunk.find1(name='ulStateGroupID')
+                        self.nfields.append(nstategroupid)
+
+        if nbase and check_rtpc:
+            # RTPC linked to volume (ex. DMC5 battle rank layers)
             nrtpc = nbase.find1(name='RTPC')
             if nrtpc:
                 nparam = nrtpc.find1(name='ParamID')
                 if nparam and nparam.value() == 0: #volume
+                    #logging.info("generator: RTPC silence found %s %s" % (self.sid, node.get_name()))
                     self.silences = True
                     nrptcid = nrtpc.find1(name='RTPCID')
                     self.nfields.append(nrptcid)
 
-
+        # find other parameters
         ninit = node.find1(name='NodeInitialParams')
         if not ninit:
             ninit = node.find1(name='StateInitialValues')

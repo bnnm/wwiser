@@ -531,7 +531,6 @@ class TxtpInfo(object):
                 continue
                 #raise ValueError("empty field (old version?)")
 
-
             if isinstance(nfield, tuple):
                 if   len(nfield) == 2:
                     nkey, nval = nfield
@@ -539,12 +538,18 @@ class TxtpInfo(object):
                     vattrs = nval.get_attrs()
 
                     kname = kattrs.get('name')
-                    kvalue = kattrs.get('valuefmt', kattrs.get('value'))
+                    kvalue = kattrs.get('valuefmt', kattrs.get('hashname'))
+                    if not kvalue:
+                        kvalue = kattrs.get('value')
+
                     if not kvalue:
                         key = "%s" % (kname)
                     else:
                         key = "%s %s" % (kname, kvalue)
-                    val = vattrs.get('valuefmt', vattrs.get('value'))
+
+                    val = vattrs.get('valuefmt', vattrs.get('hashname'))
+                    if not val:
+                        val = vattrs.get('value')
 
                 elif len(nfield) == 3:
                     nkey, nmin, nmax = nfield
@@ -559,7 +564,9 @@ class TxtpInfo(object):
             else:
                 attrs = nfield.get_attrs()
                 key = attrs.get('name')
-                val = attrs.get('valuefmt', attrs.get('value'))
+                val = attrs.get('valuefmt', attrs.get('hashname'))
+                if not val:
+                    val = attrs.get('value')
 
             self._info.append( '#%s* %s: %s\n' % (self.padding, key, val) )
 

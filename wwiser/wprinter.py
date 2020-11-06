@@ -23,9 +23,9 @@ class Printer(object):
     def dump(self):
         if   self._type == TYPE_TXT:
             self.write_txt()
-        elif self._type == TYPE_XSL:
-            self.write_xml()
         elif self._type == TYPE_XML:
+            self.write_xml()
+        elif self._type == TYPE_XSL:
             self.write_xsl()
         elif self._type == TYPE_EMPTY:
             self.write_empty()

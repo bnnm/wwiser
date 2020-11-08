@@ -377,7 +377,8 @@ class Generator(object):
         out_name = os.path.normpath(out_name)
 
         if os.path.exists(out_name):
-            logging.info("generator: cannot move %s (exists on output folder)" % (in_name))
+            if os.path.exists(in_name):
+                logging.info("generator: cannot move %s (exists on output folder)" % (in_name))
             return
 
         if not os.path.exists(in_name):

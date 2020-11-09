@@ -34,7 +34,7 @@ bank_versions = [
     113, #0x71 Wwise 2015.1     [Nier Automata (PC), Doom 2016 (PC), South Park: The Fractured But Whole (PC)]
     118, #0x76 Wwise 2016.1     [WipEout: Omega Collection (PS4), Coffence (PC), Mario + Rabbids Kingdom Battle (Switch)]
     120, #0x78 Wwise 2016.2     [Polyball (PC), Battle Chasers (PC)]
-    125, #0x7D Wwise 2017.1     [Devil May Cry 5 (PC)]
+    125, #0x7D Wwise 2017.1     [Devil May Cry 5 (PC), Wolfenstein II The New Colossus (PC)]
     128, #0x80 Wwise 2017.2     [Spyro Reignited Trilogy (PC/PS4), Let's Go Pikachu (Switch), Magatsu Wahrheit (Android)]
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]

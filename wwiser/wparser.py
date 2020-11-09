@@ -631,7 +631,11 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
 
     #todo 3dPositioning bits depends on version
     #cbPositioningInfoOverrideParent older
-    fld = obj.U8x('uBitsPositioning')
+    if cls.version <= 120:
+        fld = obj.U8x('uByVector')
+    else:
+        fld = obj.U8x('uBitsPositioning')
+
     fld.bit('bPositioningInfoOverrideParent', obj.lastval, 0)
     fld.bit('bHasListenerRelativeRouting', obj.lastval, 1) #has_3d
     if cls.version <= 88:
@@ -643,13 +647,20 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
         fld.bit('unknown3d', obj.lastval, 5)
         fld.bit('unknown3d', obj.lastval, 6) #always set?
         fld.bit('unknown3d', obj.lastval, 7) #always set?
+    elif cls.version <= 120:
+        fld.bit('unknown2d', obj.lastval, 1) #flag for next bit
+        fld.bit('unknown2d', obj.lastval, 2) #bPriorityOverrideParent? bIsFXOverrideParent?
+        fld.bit('cbIs3DPositioningAvailable', obj.lastval, 3)
     elif cls.version <= 128:
-        pass
-    else: 
+        fld.bit('unknown2d', obj.lastval, 1) #?
+        fld.bit('unknown2d', obj.lastval, 2) #flag for next bit
+        fld.bit('unknown2d', obj.lastval, 3) #bPriorityOverrideParent? bIsFXOverrideParent?
+        fld.bit('cbIs3DPositioningAvailable', obj.lastval, 4)
+    else:
         fld.bit('ePannerType', obj.lastval, 2, mask=3, fmt=wdefs.AkSpeakerPanningType)
         fld.bit('e3DPositionType', obj.lastval, 5, mask=3, fmt=wdefs.Ak3DPositionType)
     uBitsPositioning = obj.lastval
-    has_positioning = (uBitsPositioning >> 0) & 1
+    has_positioning = (uBitsPositioning >> 0) & 1 #override parent
 
     if has_positioning:
         if cls.version <= 56: #56=KOF13
@@ -689,7 +700,10 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             uBits3d = obj.lastval
 
             #todo bit meanings may vary more in older versions
-            fld.bit('eSpatializationMode', obj.lastval, 0, mask=3, fmt=wdefs.Ak3DSpatializationMode)
+            if   cls.version <= 125:
+                fld.bit('eSpatializationMode', obj.lastval, 0, mask=1, fmt=wdefs.Ak3DSpatializationMode)
+            else:
+                fld.bit('eSpatializationMode', obj.lastval, 0, mask=3, fmt=wdefs.Ak3DSpatializationMode)
             if   cls.version <= 132:
                 fld.bit('bHoldEmitterPosAndOrient', obj.lastval, 3)
                 fld.bit('bHoldListenerOrient', obj.lastval, 4)
@@ -724,11 +738,15 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             e3DPositionType = (uBits3d >> 0) & 3
             has_automation = (e3DPositionType != 1)
             has_dynamic = False
-        elif cls.version <= 128:
-            e3DPositionType = (uBitsPositioning >> 4) & 1
+        elif cls.version <= 125:
+            e3DPositionType = (uBits3d >> 4) & 1
             has_automation = (e3DPositionType != 1)
             has_dynamic = False
-        else: 
+        elif cls.version <= 128:
+            e3DPositionType = (uBits3d >> 6) & 1
+            has_automation = (e3DPositionType != 1)
+            has_dynamic = False
+        else:
             e3DPositionType = (uBitsPositioning >> 5) & 3
             has_automation = (e3DPositionType != 0) #(3d == 1 or 3d != 1 and 3d == 2)
             has_dynamic = False
@@ -2807,7 +2825,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
 
         # Star Fox Zero (v112) has some odd behavior in the feedback flag. All .bnk except init.bnk set it, but
         # no .bnk has feedback info. Presumably only init.bnk (first) flag's matters, but since we can't be sure
-        # that bank was loaded, we need some crude autodetection. 
+        # that bank was loaded, we need some crude autodetection.
         # Some test/remnant .bnk in SFZ use v88 and don't have the flag set, and no other 112 bnk exhibits this bug
         # either (flag works as intended), so maybe it happened in some Wwise revision only.
         if version == 112:

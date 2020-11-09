@@ -356,8 +356,8 @@ class Generator(object):
         if self._txtpcache.lang:
             dir += source.subdir()
 
-
-        in_dir = node.get_root().get_path()
+        nroot = node.get_root()
+        in_dir = nroot.get_path()
         out_dir = in_dir
         if dir:
             out_dir = os.path.join(out_dir, dir)
@@ -382,15 +382,16 @@ class Generator(object):
             return
 
         if not os.path.exists(in_name):
+            bank = nroot.get_filename()
             if self._txtpcache.alt_exts:
                 in_name = "%s.%s" % (source.tid, source.extension_alt)
                 in_name = os.path.join(in_dir, in_name)
                 in_name = os.path.normpath(in_name)
                 if not os.path.exists(in_name):
-                    logging.info("generator: cannot move %s (file not found)" % (in_name))
+                    logging.info("generator: cannot move %s (file not found) / %s" % (in_name, bank))
                     return
             else:
-                logging.info("generator: cannot move %s (file not found)" % (in_name))
+                logging.info("generator: cannot move %s (file not found) / %s" % (in_name, bank))
                 return
 
         #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)

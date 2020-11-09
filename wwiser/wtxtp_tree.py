@@ -64,6 +64,7 @@ class TxtpNode(object):
 
         # copy value as may need to simplify tree config (ex. multiple objects can set infinite loop)
         # but changing config directly is no good (Wwise objects repeat)
+        self.volume = config.volume
         self.loop = config.loop
         self.delay = config.delay
         self.idelay = config.idelay
@@ -226,6 +227,7 @@ class TxtpPrinter(object):
         self._clean_tree(self._tree)
         self._set_self_loops(self._tree)
         self._set_props(self._tree)
+        self._set_volume(self._tree)
         self._set_times(self._tree)
         self._set_ignorable(self._tree)
         self._reorder_wem(self._tree)
@@ -248,21 +250,23 @@ class TxtpPrinter(object):
         config2 = ''
 
         if post:
-            if node.loop is not None:       config1 += " L=%s" % (node.loop)
-            if node.loop_mod is not None:   config1 += " L=*"
+            if node.loop is not None:       config1 += " lpn=%s" % (node.loop)
+            if node.loop_mod is not None:   config1 += " lpn=*"
+            if node.volume is not None:     config1 += " vol=%s" % (node.volume)
             if node.ignorable:              config1 += " [i]"
 
-            if node.body_time:  config2 += ' bt={0:.5f}'.format(node.body_time)
-            if node.pad_begin:  config2 += ' pb={0:.5f}'.format(node.pad_begin)
-            if node.trim_begin: config2 += ' tb={0:.5f}'.format(node.trim_begin)
-            if node.trim_end:   config2 += ' te={0:.5f}'.format(node.trim_end)
-            if node.pad_end:    config2 += ' pb={0:.5f}'.format(node.pad_end)
+            if node.body_time:          config2 += ' bt={0:.5f}'.format(node.body_time)
+            if node.pad_begin:          config2 += ' pb={0:.5f}'.format(node.pad_begin)
+            if node.trim_begin:         config2 += ' tb={0:.5f}'.format(node.trim_begin)
+            if node.trim_end:           config2 += ' te={0:.5f}'.format(node.trim_end)
+            if node.pad_end:            config2 += ' pb={0:.5f}'.format(node.pad_end)
 
         else:
-            if node.config.loop is not None: config1 += " L=%s" % (node.config.loop)
-            if node.config.delay:   config1 += " D=%s" % (node.config.delay)
-            if node.config.idelay:  config1 += " ID=%s" % (node.config.idelay)
-            if node.transition:     config1 += " (trn)"
+            if node.config.loop is not None: config1 += " lpn=%s" % (node.config.loop)
+            if node.config.delay:       config1 += " dly=%s" % (node.config.delay)
+            if node.config.idelay:      config1 += " idl=%s" % (node.config.idelay)
+            if node.config.volume:      config1 += " vol=%s" % (node.config.volume)
+            if node.transition:         config1 += " (trn)"
 
             if node.config.entry or node.config.exit:
                 dur = '{0:.5f}'.format(node.config.duration)
@@ -318,7 +322,7 @@ class TxtpPrinter(object):
                     if loop_infs > 1:
                         subnode.loop = None
 
-        # iter over copy, since we may need to drop child
+        # iter over copy, since we may need to drop children
         for subnode in list(node.children):
             self._clean_tree(subnode)
 
@@ -418,7 +422,6 @@ class TxtpPrinter(object):
         for id, subnode in ids:
             node.children.append(subnode)
         return
-
 
     #--------------------------------------------------------------------------
 
@@ -648,11 +651,43 @@ class TxtpPrinter(object):
                     subnode.idelay = node.idelay
                     node.idelay = None
 
+
+                # move volume (closer to source to apply "volume > layering" to avoid clipping in the reverse)
+                if not subnode.volume:
+                    subnode.volume = node.volume
+                    node.volume = None
+
         for subnode in node.children:
             self._set_props(subnode)
 
         if node.type in TYPE_GROUPS:
             self._apply_group(node)
+
+        return
+
+    # simplify volume stuff
+    # volumes in wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
+    # but usually (hopefully) volumes set on object level should make the track sound fine in most cases
+    def _set_volume(self, node):
+        # some games set very low volume in the base track (ex. SFZ -14bD), probably since they'll
+        # be mixed with other stuff (also Wwise can normalize on realtime), just get rid of base volume
+
+        # don't remove slightly smaller volumes in case game is trying to normalize sounds?        
+        if node.volume:
+            if node.volume < 0 and node.volume < 6.0:
+                node.volume = None
+            return #stop on first b/c there could be positives + negatives cancelling each other?
+
+        # in some cases there are multiple segments setting the same -XdB, could be detected and
+        # removed, but usually it's done near related tracks to normalize sound
+        # might be possible to increase volume equally if all parts use the same high -dB? (ex. Nier Automata)
+
+        # volumes of multiple children are hard to predict
+        if len(node.children) > 1: #flag?
+            return
+
+        for subnode in node.children:
+            self._set_volume(subnode)
 
         return
 
@@ -689,11 +724,12 @@ class TxtpPrinter(object):
         if node.loop is not None and node.loop > 1:
             return False
 
-        if node.idelay or node.delay:
+        if node.idelay or node.delay or node.volume:
             return False
 
         return True
 
+    #--------------------------------------------------------------------------
 
     # translates Wwise clip values to TXTP config:
     # - fsd (fSrcDuration): original base file duration, for calcs (not final time)
@@ -891,7 +927,6 @@ class TxtpPrinter(object):
 
         return
 
-
     #--------------------------------------------------------------------------
 
     # prints tree as a .txtp
@@ -960,7 +995,6 @@ class TxtpPrinter(object):
             return
 
         # ex. -L2: at position N (auto), layers previous 2 files
-        config = node.config
         type = TYPE_GROUPS_TYPE[node.type]
         count = len(node.children)
         ignored = self._ignore_next #or count <= 1 #allow 1 for looping full segments
@@ -988,14 +1022,13 @@ class TxtpPrinter(object):
 
         mods += self._get_ms(' #p', node.pad_begin)
 
-        # this probably depends on all previous volumes and bus volume, left for reference
-        if config.volume is not None:
-            volume = config.volume #todo db to %
-            info += '  ##@volume %sdb' % (volume)
+        # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
+        if node.volume:
+            mods += '  #v %sdB' % (node.volume)
 
-        # wwise seems to mix to highest
+        # wwise seems to mix untouched then use volumes to tweak
         if type == TYPE_GROUP_LAYER:
-            mods += ' #@layer-e' #'e' is needed for Wwise demos
+            mods += ' #@layer-v'
 
         pad = self._get_padding()
         self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
@@ -1074,7 +1107,7 @@ class TxtpPrinter(object):
                     info += " ##unsupported wmid"
             else:
                 name = "?" + name + "%s.%s" % (sound.source.tid, extension)
-                info += " ##bnk?"
+                info += " ##other bnk?"
                 self._unsupported = True
             self._internals = True
             self._txtpcache.register_bank(bankname)
@@ -1096,10 +1129,8 @@ class TxtpPrinter(object):
         else: #CAkSound
             mods += self._get_sfx(sound, node)
 
-        # this probably depends on all previous volumes and bus volume, so maybe it isn't wanted
-        #if config.volume is not None:
-        #    volume = config.volume #todo db to %
-        #    info += '  ##@volume %sdb' % (config.volume)
+        if node.volume:
+            mods += '  #v %sdB' % (node.volume)
 
         # final .wem are padded to help understand the flow (TXTP trims whitespace filenames/groups)
         pad = self._get_padding()

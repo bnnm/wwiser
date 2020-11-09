@@ -363,11 +363,11 @@ AkTransitionRampingType = wfmt.FormatterLUT({
 
 #062~~ 065~~
 AkPropID_065 = wfmt.FormatterLUT({
-  0x0: "Volume?",
+  0x0: "Volume",
   0x1: "LFE?",
   0x2: "Pitch?",
   0x3: "LPF?",
-  0x4: "BusVolume?",
+  0x4: "BusVolume",
   0x5: "Priority?",
   0x6: "PriorityDistanceOffset?",
   0x7: "Loop?",

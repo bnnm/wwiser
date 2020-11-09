@@ -1206,7 +1206,9 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
         if self.silences:
             txtp.set_silences()
 
+        txtp.group_single(self.config) #typically useless but may have volumes
         self._process_playlist(txtp, self.items)
+        txtp.group_done()
 
     def _process_playlist(self, txtp, items):
         if not items:
@@ -1440,8 +1442,10 @@ class _CAkMusicTrack(_NodeHelper):
         if   self.type == 0: #normal (plays one subtrack, N aren't allowed)
             if len(self.subtracks) > 1:
                 raise ValueError("more than 1 track")
+            txtp.group_single(self.config)
             for subtrack in self.subtracks:
                 self._process_clips(subtrack, txtp)
+            txtp.group_done()
 
         elif self.type == 1: #random (play one subtrack)
             txtp.group_random(self.subtracks, self.config)

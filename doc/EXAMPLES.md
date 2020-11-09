@@ -10,7 +10,7 @@ Path info (`event > play > ...`) isn't meant to be complete, as most games mix t
 - musicranseqs loop parts
 
 
-## Xenoblade Definiteve Edition (Switch)
+## Xenoblade Definitive Edition (Switch)
 ```
 BGM.bnk
     event > play > sound
@@ -449,7 +449,20 @@ event > play > ...
                                                 > (key1=valA) mranseq > ...
                                                 > (key1=valB) mranseq > ...
                                                 ...
-
 ```
 - has dynamic changes (switch variables that are only accesible on change)
   - usually all point to the same thing
+
+## Tetris Effect (PC)
+```
+SB_16_HawaiiTribal_BGM_01.bnk
+[1638535919]
+    event > ... > segment > track [vorbis]
+                          > track [midi]
+                           ...
+                          > track [vorbis]
+```
+- uses wmid mixed with .wem (drums)
+
+## Nier Automata
+- uses lower volumes for extra quieter song variations (`BGM_Layer=Middle` > `BGM_Layer=Quiet`)

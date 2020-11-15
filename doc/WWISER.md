@@ -412,7 +412,7 @@ New bank versions must be manually added, but you can skip the version check.
 If you find an unsupported version, or the tool outputs "errors" (overreads)
 and "skips" (underreads) please report.
 
-Providing some missing Wwise SDKs would help development a lot: `2012.1`, `2011.1/2/3`,
+Providing some missing Wwise SDKs would help development a lot: `2012.1`, `2011.3`,
 lower or equal than `2009.2`. Any sub-version is ok (`2012.1.1` or `2012.1.2` work
 the same).
 

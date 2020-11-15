@@ -57,3 +57,47 @@ class FormatterLUT(object):
 
         return self.fmt.format(type, value) + description
 
+CHANNEL_FORMATS = {
+    (1 << 0):  "FL", # front left
+    (1 << 1):  "FR", # front right
+    (1 << 2):  "FC", # front center
+    (1 << 3):  "LFE", # low frequency effects
+    (1 << 4):  "BL", # back left
+    (1 << 5):  "BR", # back right
+    (1 << 6):  "FLC", # front left center
+    (1 << 7):  "FRC", # front right center
+    (1 << 8):  "BC", # back center
+    (1 << 9):  "SL", # side left
+    (1 << 10): "SR", # side right
+
+    (1 << 11): "TC", # top center
+    (1 << 12): "TFL", # top front left
+    (1 << 13): "TFC", # top front center
+    (1 << 14): "TFR", # top front right
+    (1 << 15): "TBL", # top back left
+    (1 << 16): "TBC", # top back center
+    (1 << 17): "TBR", # top back left
+}
+
+
+class FormatterChannelConfig(object):
+    def __init__(self):
+        self.fmt = FormatterHex()
+
+
+    def format(self, type=None, value=None):
+        if value is None:
+            raise ValueError("formatter: value not set")
+        #if type is None:
+        #    raise ValueError("formatter: type not set")
+        
+        mapping = ""
+        for i in range(0, 32):
+            bitmask = (1<<i)
+            if value & bitmask:
+                mapping += "%s " % (CHANNEL_FORMATS.get(bitmask, "?"))
+
+        if not mapping:
+            mapping = "None"
+
+        return "0x%05X [%s]" % (value, mapping.strip())

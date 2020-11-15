@@ -19,6 +19,7 @@ TYPE_U8  = 'u8'
 TYPE_VAR = 'var'
 TYPE_GAP = 'gap'
 TYPE_STR = 'str'
+TYPE_STZ = 'stz'
 
 TYPES_SIZE = {
     TYPE_D64: 8,
@@ -37,7 +38,8 @@ TYPES_SIZE = {
     TYPE_U8: 1,
     TYPE_VAR: 1, #variable, min 1
     TYPE_GAP: -1, #variable
-    TYPE_STR: -1,
+    TYPE_STR: -1, #variable
+    TYPE_STZ: -1, #variable
 }
 #not used ATM, just some (rather obvious) doc
 TYPES_INFO = {
@@ -58,6 +60,7 @@ TYPES_INFO = {
     TYPE_VAR: "variable size", #u8/u16/u32
     TYPE_GAP: "byte gap",
     TYPE_STR: "string",
+    TYPE_STZ: "string (null-terminated)",
 }
 
 
@@ -260,6 +263,9 @@ class NodeObject(NodeElement):
     def u64(self, name):
         return self.field(TYPE_U64, name)
 
+    def U64(self, name):
+        return self.u64(name).fmt(wdefs.fmt_hex)
+
     def s32(self, name):
         return self.field(TYPE_S32, name)
 
@@ -296,8 +302,8 @@ class NodeObject(NodeElement):
     def str(self, name, size):
         return self.field(TYPE_STR, name, size=size)
 
-    #def strn(self, name, size):
-    #    return self.field(TYPE_STR, name, size=size)
+    def stz(self, name):
+        return self.field(TYPE_STZ, name)
 
     def gap(self, name, size):
         return self.field(TYPE_GAP, name, size=size).fmt(wdefs.fmt_hex)
@@ -351,6 +357,19 @@ class NodeObject(NodeElement):
             elif type == TYPE_GAP:
                 r.skip(size)
                 value = size
+            elif type == TYPE_STZ:
+                # sorry...
+                string = ""
+                max = 0
+                while True:
+                    value = r.s8()
+                    if value == 0 or value < 0: #ASCII 128b only
+                        break
+                    string += chr(value)
+                    max += 1
+                    if max >= 256: #arbitary max
+                        raise ValueError("long string")
+
             elif type == TYPE_UNI:
                 #union of f32+u32, determined by Wwise subclass, do some simple guessing
                 # IEEE float uses last 9 bits for the exponent, so high values must be floats

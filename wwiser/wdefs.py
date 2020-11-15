@@ -12,24 +12,26 @@ from . import wfmt
 #
 # Versions marked with "*" were not checked against SDKs and may contain bugs for untested games
 bank_versions = [
+    #--, #0x-- Wwise 2016.1~3  *(changelog: 06.1= XMA1, 06.2=XMA2, 06.3=Blends, 07.1=Interactive music, 07.2=Dynamic dialogue, plugins)
     #14, #0x0E Wwise 2007.1/2? *[Shadowrun (X360)]
-    #26, #0x1A Wwise 2007.3/4? *[Too Human (X360)]
-     34, #0x22 Wwise 2008.1?   *[Spider-Man: Web of Shadows (X360), The Lord of The Rings: Conquest (PC)]
+    #26, #0x1A Wwise 2007.3?   *[Too Human (X360), KetnetKick 2 (PC)]
+    #--, #0x-- Wwise 2007.4?   *(07.4: removed string table, SoundBanksInfo.xml instead of .info)
+     34, #0x22 Wwise 2008.1?   *[Spider-Man: Web of Shadows (X360), The Lord of The Rings: Conquest (PC), Halo Wars (X360)]
      35, #0x23 Wwise 2008.2?   *[Jungle Speed (Wii), Punch Out!! (Wii)]
      36, #0x24 Wwise 2008.3?   *[UFC 2009 Undisputed (PS3)]
      38, #0x26 Wwise 2008.4    *[The King of Fighters XII (PS3)]
      44, #0x2C Wwise 2009.1?   *[Assassin's Creed II (X360), Mass Effect 2 (X360), The Saboteur (X360), Doc Louis's Punch Out!! (Wii)]
      45, #0x2D Wwise 2009.2?   *[Army of Two: The 40th Day (X360)--has v44/38/34 banks]
-     46, #0x2E Wwise 2009.3     [Enslaved (X360), The King of Fighters XIII (AC)]
+     46, #0x2E Wwise 2009.3     [Enslaved (X360), The King of Fighters XIII (AC), Tron Evolution (PS3)]
      48, #0x30 Wwise 2010.1     [Assassin's Creed: Brotherhood (X360), Splatterhouse (PS3), Harry Potter and the Deathly Hallows Part 1 (PS3)]
     #52, #0x34 Wwise 2010.2     (untested/no known games)
      53, #0x35 Wwise 2010.3     [Assassin's Creed: Revelations (X360), Saints Row The Third (PC), Captain America: Super Soldier (X360), inFamous 2 (PS3), Harry Potter and the Deathly Hallows Part 2 (PS3)]
-     56, #0x38 Wwise 2011.1    *[Super Stardust Delta (Vita), I Am Alive (PS3), Trine 2 (PS3), The King of Fighters XIII (PS3)]
-     62, #0x3E Wwise 2011.2?   *[Borderlands 2 (X360), Quantum Conumdrum (X360), South Park: Tenorman's Revenge (X360)]
+     56, #0x38 Wwise 2011.1     [Super Stardust Delta (Vita), I Am Alive (PS3), Trine 2 (PS3), The King of Fighters XIII (PS3)]
+     62, #0x3E Wwise 2011.2     [Borderlands 2 (X360), Quantum Conumdrum (X360), South Park: Tenorman's Revenge (X360)]
      65, #0x41 Wwise 2011.3?   *[Assassin's Creed III (X360), DmC (PC), Zone of the Enders HD (X360)]
      70, #0x46 Wwise 2012.1?   *[Metal Gear Rising (PC/X360)-some banks]
      72, #0x48 Wwise 2012.2     [Metal Gear Rising (PC/X360)-most banks, Saints Row IV (PC), South Park: The Stick of Truth (PC)]
-     88, #0x58 Wwise 2013.1/2   [Bayonetta 2 (WiiU)]
+     88, #0x58 Wwise 2013.1/2   [Bayonetta 2 (WiiU), Devil's Third (WiiU)]
     112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy]
     113, #0x71 Wwise 2015.1     [Nier Automata (PC), Doom 2016 (PC), South Park: The Fractured But Whole (PC)]
     118, #0x76 Wwise 2016.1     [WipEout: Omega Collection (PS4), Coffence (PC), Mario + Rabbids Kingdom Battle (Switch)]
@@ -48,6 +50,7 @@ bank_versions = [
 # format helpers
 fmt_hexfix = wfmt.FormatterHex(fixed=True)
 fmt_hex = wfmt.FormatterHex()
+fmt_ch = wfmt.FormatterChannelConfig()
 
 # hash types
 fnv_no = 'none' #special value, no hashname allowed
@@ -61,6 +64,7 @@ fnv_var = 'variable' #switches/states names
 fnv_val = 'value' #switches/states values
 
 chunk_type = wfmt.FormatterLUT({
+  b'AKBK': "Audiokinetic Bank",
   b'BKHD': "Bank Header",
   b'HIRC': "Hierarchy",
   b'DATA': "Data",
@@ -209,12 +213,13 @@ AkPluginType_company = wfmt.FormatterLUT({
   274: "Reserved",
   275: "Microsoft",
   276: "YAMAHA",
-  277: "Visisonics",
+  277: "VisiSonics",
 })
 
 #derived from SDK includes/xmls/docs
 # 0xPPPPCCCT (PPPP=plugin ID, CCC=company ID, T=Type)
 AkPluginType_id = wfmt.FormatterLUT({
+          -1: "None", #found in early banks with no id
   0x00000000: "None", #found in early banks with no id
 
   #AKCODECID
@@ -244,7 +249,7 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00650002: "Wwise Silence", #AkSilenceGenerator
   0x00660002: "Wwise Tone Generator", #AkToneGen
   0x00670003: "Wwise ?", #[The Lord of the Rings: Conquest (Wii)]
-  0x00680003: "Wwise ?", #[The Lord of the Rings: Conquest (Wii)]
+  0x00680003: "Wwise ?", #[KetnetKick 2 (PC), The Lord of the Rings: Conquest (Wii)]
   0x00690003: "Wwise Parametric EQ", #AkParametricEQ
   0x006A0003: "Wwise Delay", #AkDelay
   0x006C0003: "Wwise Compressor", #
@@ -278,7 +283,7 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x01950005: "Wwise Motion Generator", #
   0x01990005: "Wwise Motion Source", #
  #0x01FB0007: "Wwise Motion", #
- #0x044C1073: "Auro Headphone", #
+  0x044C1073: "Auro Headphone", #Auro
 
   #other companies (IDs can be repeated)
   0x00671003: "McDSP ML1", #McDSP
@@ -306,15 +311,15 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00020403: "Codemasters ?", #Dirt Rally (PS4)
 })
 
-#046>= 053<=
-AkCurveScaling_053 = wfmt.FormatterLUT({
+#046>= 062<=
+AkCurveScaling_062 = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "db_255", #~046<=
   0x2: "dB_96_3",
   0x3: "Frequency_20_20000",
   0x4: "dB_96_3_NoCheck",
 })
-#unknown
+#065<=
 AkCurveScaling_065 = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "db_255?",
@@ -361,7 +366,26 @@ AkTransitionRampingType = wfmt.FormatterLUT({
   0x2: "FilteringOverTime",
 })
 
-#062~~ 065~~
+#062<=
+AkPropID_062 = wfmt.FormatterLUT({
+  0x0: "Volume",
+  0x1: "LFE",
+  0x2: "Pitch",
+  0x3: "LPF",
+  0x4: "Priority",
+  0x5: "PriorityDistanceOffset",
+  0x6: "Loop",
+  0x7: "FeedbackVolume",
+  0x8: "FeedbackLPF",
+  0x9: "MuteRatio",
+  0xA: "PAN_LR",
+  0xB: "PAN_FR",
+  0xC: "CenterPCT",
+  0xD: "DelayTime",
+  0xE: "TransitionTime",
+  0xF: "Probability",
+})
+#065<=
 AkPropID_065 = wfmt.FormatterLUT({
   0x0: "Volume",
   0x1: "LFE?",
@@ -389,6 +413,7 @@ AkPropID_065 = wfmt.FormatterLUT({
   0x17: "OutputBusVolume?",
   0x18: "OutputBusLPF?",
 })
+#088<=
 AkPropID_088 = wfmt.FormatterLUT({
   0x0: "Volume",
   0x1: "LFE",
@@ -748,9 +773,12 @@ AkActionType_056 = wfmt.FormatterLUT({
   0xB0021: "Seek_ALL_O", #~052>=
   0xB0040: "Seek_AE", #~052>=
   0xB0041: "Seek_AE_O", #~052>=
-  0x13011: "SetGameParameter_E_O?", #~056>= (Rocksmith)
+  0x13010: "SetGameParameter", #~056>=
+  0x13011: "SetGameParameter_O", #~056>=
+  0x14010: "ResetGameParameter", #~056>=
+  0x14011: "ResetGameParameter_O", #~056>=
 })
-#062~~ 135<=
+#062>= 135<=
 AkActionType_062 = wfmt.FormatterLUT({
   0x0000: "None",
   0x1204: "SetState",
@@ -858,56 +886,6 @@ AkActionType_062 = wfmt.FormatterLUT({
   0x1F03: "Release_O",
 })
 AkActionType = None
-#AK only defines a handful of combos but we separate to simplify descriptions
-#AkActionType_type = wfmt.FormatterLUT({
-#  0x00: "None",
-#  0x01: "Stop",
-#  0x02: "Pause",
-#  0x03: "Resume",
-#  0x04: "Play",
-#  0x05: "Play And Continue",
-#  0x06: "Mute",
-#  0x07: "Unmute",
-#  0x08: "Set pitch",
-#  0x09: "Reset pitch",
-#  0x0A: "Set volume",
-#  0x0B: "Reset volume",
-#  0x0C: "Set Bus Volume",
-#  0x0D: "Reset Bus Volume",
-#  0x0E: "Set LPF",
-#  0x0F: "Reset LPF",
-#  0x10: "Use State",
-#  0x11: "Unuse State",
-#  0x12: "Set State",
-#  0x13: "Set Game Parameter",
-#  0x14: "Reset Game Parameter",
-#  0x15: "Stop Event",
-#  0x16: "Pause Event",
-#  0x17: "Resume Event",
-#  0x18: "Duck",
-#  0x19: "Set Switch",
-#  0x1A: "Bypass FX",
-#  0x1B: "Reset Bypass FX",
-#  0x1C: "Break",
-#  0x1D: "Trigger",
-#  0x1E: "Seek",
-#  0x1F: "Release",
-#  0x20: "Set HPF",
-#  0x21: "Play Event",
-#  0x22: "Reset Playlist",
-#  0x30: "Reset HPF",
-#})
-#AkActionType_mode = wfmt.FormatterLUT({
-#  0x00: "None",
-#  0x01: "O?", #Global? / Object?
-#  0x02: "M/E",
-#  0x03: "O/E_O", #Game object by refid?
-#  0x04: "ALL", #Game object by State?
-#  0x05: "ALL_O",
-#  0x08: "AE",
-#  0x09: "AE_O", #All except Object refid?
-#  0x11: "None2?",
-#})
 
 #046>= 088<=
 AkMusicTrackRanSeqType = wfmt.FormatterLUT({
@@ -995,7 +973,7 @@ AkBelowThresholdBehavior = wfmt.FormatterLUT({
   0x3: "KillIfOneShotElseVirtual", #later 088>>
 })
 
-#065~~ 088~~
+#065>= 088~~
 AkClipAutomationType_088 = wfmt.FormatterLUT({
   0x0: "Volume",
   0x1: "LPF",
@@ -1116,10 +1094,10 @@ AkContainerMode = wfmt.FormatterLUT({
 
 #000~~ 045~~
 AkRTPC_ParameterID_045 = wfmt.FormatterLUT({
-  0x0: "Volume?",
-  0x1: "LFE?",
-  0x2: "Pitch?",
-  0x3: "LPF?",
+  0x0: "Volume",
+  0x1: "LFE",
+  0x2: "Pitch",
+  0x3: "LPF",
   0x4: "PlayMechanismSpecialTransitionsValue?",
   0x6: "Unknown?", #AC2 (related to volume?)
   0x8: "Priority?",
@@ -1173,32 +1151,32 @@ AkRTPC_ParameterID_053 = wfmt.FormatterLUT({
 })
 #056>= 065<=
 AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
-  0x0: "Volume?",
-  0x1: "LFE?",
-  0x2: "Pitch?",
-  0x3: "LPF?",
+  0x0: "Volume",
+  0x1: "LFE",
+  0x2: "Pitch",
+  0x3: "LPF",
   0x4: "PlayMechanismSpecialTransitionsValue?",
   0x5: "Unknown?", #DmC
   0x6: "Unknown?", #DmC
-  0x8: "Priority?",
-  0x9: "MaxNumInstances?",
-  0xA: "Positioning_Radius_LPF?",
-  0xB: "Positioning_Divergence_Center_PCT?",
-  0xC: "Positioning_Cone_Attenuation_ON_OFF?",
-  0xD: "Positioning_Cone_Attenuation?",
-  0xE: "Positioning_Cone_LPF?",
-  0x14: "Position_PAN_RL?",
-  0x15: "Position_PAN_FR?",
-  0x16: "Position_Radius_SIM_ON_OFF?",
-  0x17: "Position_Radius_SIM_Attenuation?",
-  0x18: "BypassFX0?",
-  0x19: "BypassFX1?",
-  0x1A: "BypassFX2?",
-  0x1B: "BypassFX3?",
-  0x1C: "BypassAllFX?",
-  0x1D: "FeedbackVolume?",
-  0x1E: "FeedbackLowpass?",
-  0x1F: "FeedbackPitch?",
+  0x8: "Priority",
+  0x9: "MaxNumInstances",
+  0xA: "Positioning_Radius_LPF",
+  0xB: "Positioning_Divergence_Center_PCT",
+  0xC: "Positioning_Cone_Attenuation_ON_OFF",
+  0xD: "Positioning_Cone_Attenuation",
+  0xE: "Positioning_Cone_LPF",
+  0x14: "Position_PAN_RL",
+  0x15: "Position_PAN_FR",
+  0x16: "Position_Radius_SIM_ON_OFF", #056<=
+  0x17: "Position_Radius_SIM_Attenuation", #056<=
+  0x18: "BypassFX0",
+  0x19: "BypassFX1",
+  0x1A: "BypassFX2",
+  0x1B: "BypassFX3",
+  0x1C: "BypassAllFX",
+  0x1D: "FeedbackVolume",
+  0x1E: "FeedbackLowpass",
+  0x1F: "FeedbackPitch",
 
   0x3C: "Unknown?", #Quantum Conundrum (found near -96, some volume?)
   0x3D: "Unknown?", #DmC (found near -96, some volume?)
@@ -1572,7 +1550,7 @@ AkModulatorPropID = wfmt.FormatterLUT({
   0x13: "Time_InitialDelay", #132~~
 })
 
-# 53>> 135<=
+#065>> 135<=
 AkJumpToSelType = wfmt.FormatterLUT({
   0x0: "StartOfPlaylist",
   0x1: "SpecificItem",
@@ -1586,7 +1564,7 @@ AkEntryType = wfmt.FormatterLUT({
    0x1: "SameTime",
    0x2: "RandomMarker",
    0x3: "RandomUserMarker",
-   0x4: "LastExitTime", #later
+   0x4: "LastExitTime", #062>>
 })
 
 #046>= 088<=
@@ -1603,6 +1581,12 @@ AkSpeakerPanningType = wfmt.FormatterLUT({
   0x1: "BalanceFadeHeight",
 })
 
+#120>=
+AkChannelConfigType = wfmt.FormatterLUT({
+  0x0: "Anonymous",
+  0x1: "Standard",
+  0x2: "Ambisonic",
+})
 
 #maybe needed? not directly used in code AkSoundEngine, maybe other for internal engine things, some repeats
 
@@ -1636,10 +1620,10 @@ def setup(version):
     #the huge number of parameters
 
     global AkCurveScaling
-    if   version <= 53: 
-        AkCurveScaling = AkCurveScaling_053
+    if   version <= 62: 
+        AkCurveScaling = AkCurveScaling_062
     elif   version <= 65:
-        AkCurveScaling = AkCurveScaling_053
+        AkCurveScaling = AkCurveScaling_065
     else:
         AkCurveScaling = AkCurveScaling_072
 
@@ -1682,7 +1666,9 @@ def setup(version):
         AkBank__AKBKSourceType = AkBank__AKBKSourceType_112
 
     global AkPropID
-    if  version <= 65:
+    if    version <= 62:
+        AkPropID = AkPropID_062
+    elif  version <= 65:
         AkPropID = AkPropID_065
     elif  version <= 88:
         AkPropID = AkPropID_088

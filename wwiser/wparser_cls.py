@@ -221,7 +221,8 @@ def CAkAction__Create(obj, actionType):
         0x10000: CAkActionUseState,
         0x11000: CAkActionUseState,
         0x12000: CAkActionSetState,
-        0x13000: CAkActionSetGameParameter, #v056 (Rocksmith)
+        0x13000: CAkActionSetGameParameter, #v056
+        0x14000: CAkActionSetGameParameter, #v056
         0x20000: CAkActionEvent,
         0x30000: CAkActionEvent,
         0x40000: CAkActionEvent,
@@ -312,7 +313,8 @@ def CAkAction__Create(obj, actionType):
 
     if   cls.version == 56:
         CAkAction_dispatch.update({
-            CAkActionUseState: (wparser.CAkActionUseState__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
+            # extends from CAkActionSetLFE (062 from CAkActionSetAkProp and 053 from CAkAction)
+            CAkActionUseState: (wparser.CAkActionSetValue__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         })
 
     if   cls.version <= 120:

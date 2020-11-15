@@ -548,7 +548,7 @@ class _NodeHelper(object):
         return sound
 
     def _parse_source(self, node):
-        source = wtxtp_util.NodeSource(node)
+        source = wtxtp_util.NodeSource(node, self.sid)
         return source
 
     #--------------------------------------------------------------------------

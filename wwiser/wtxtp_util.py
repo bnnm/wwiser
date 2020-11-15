@@ -198,7 +198,8 @@ LANGUAGE_SHORTNAMES = {
 }
 
 class NodeSource(object):
-    def __init__(self, node):
+    def __init__(self, node, src_sid):
+        self.src_sid = src_sid
         self.nsrc = node
         self.nplugin = node.find(name='ulPluginID')
         self.nstreamtype = node.find(name='StreamType')

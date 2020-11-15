@@ -1089,7 +1089,10 @@ class TxtpPrinter(object):
                 self._unsupported = True
 
         elif sound.source.plugin_external:
-            name = "?.external-%s" % (sound.source.tid)
+            name = "?" + name
+            name += "(?).wem"
+            #tid seems fixed for all files, needs to print base class' sid to avoid being dupes
+            info += " ##external %s-%s" % (sound.source.src_sid, sound.source.tid)
             self._externals = True
 
         elif sound.source.internal and not self._txtpcache.bnkskip:

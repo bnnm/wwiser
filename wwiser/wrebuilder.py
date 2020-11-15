@@ -1349,7 +1349,12 @@ class _CAkMusicTrack(_NodeHelper):
         nloop = node.find(name='Loop')
         if nloop: #older
             self.config.loop = nloop.value()
+            self.nfields.append(nloop)
             #there is min/max too
+
+        # loops in MusicTracks are meaningless, ignore to avoid confusing the parser
+        self.config.loop = None
+
 
         ntype = node.find(name='eTrackType')
         if not ntype:

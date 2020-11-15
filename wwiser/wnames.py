@@ -102,6 +102,10 @@ class Names(object):
     def _add_name(self, id, name, objpath=None, path=None, onrepeat=ONREPEAT_INCLUDE, forcehash=False, source=None):
         if name:
             name = name.strip()
+        if objpath:
+            objpath = objpath.strip()
+        if path:
+            path = path.strip()
         if not name: #after strip
             return None
 
@@ -492,23 +496,32 @@ class Names(object):
                 for i in rng:
                     elem_fmt = elem % (i)
 
-                    if elem_fmt in processed:
-                        continue
-                    processed[elem_fmt] = True
-
-                    self._add_name(None, elem_fmt, source=NameRow.NAME_SOURCE_EXTRA)
+                    self._parse_lst_elem_add(elem_fmt, processed)
             except (ValueError, IndexError):
                 pass #meh
             return
 
+        # some odd game has names ending with _ but shouldn't
+        if elem.endswith("_"):
+            elem_cut = elem[:-1]
+            self._parse_lst_elem_add(elem_cut, processed)
+
+        # it's common to use vars that start with _ but maybe will get a few extra names
+        if elem.startswith("_"):
+            elem_cut = elem[1:]
+            self._parse_lst_elem_add(elem_cut, processed)
+
         # default
+        self._parse_lst_elem_add(elem, processed)
+        return
+
+    def _parse_lst_elem_add(self, elem, processed):
         if elem in processed:
             return
         processed[elem] = True
 
         self._add_name(None, elem, source=NameRow.NAME_SOURCE_EXTRA)
 
-        return
 
 
     #wwnames.db3

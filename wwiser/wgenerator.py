@@ -340,7 +340,7 @@ class Generator(object):
         if not node:
             return
 
-        source = wtxtp_util.NodeSource(node)
+        source = wtxtp_util.NodeSource(node, None)
         if not source or not source.tid: #?
             return
         if source.tid in self._moved_sources:

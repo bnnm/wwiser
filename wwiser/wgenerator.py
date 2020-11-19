@@ -122,6 +122,11 @@ class Generator(object):
             return
         self._txtpcache.x_loops = x_loops
 
+    def set_x_notxtp(self, flag):
+        if not flag:
+            return
+        self._txtpcache.x_notxtp = flag
+
     #--------------------------------------------------------------------------
 
     def generate(self):

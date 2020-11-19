@@ -62,6 +62,7 @@ class TxtpCache(object):
         self.dupes = False
 
         self.x_loops = False
+        self.x_notxtp = False
 
         self.created = 0
         self.duplicates = 0
@@ -334,6 +335,9 @@ class Txtp(object):
                 outname = "%s~%04i%s" % (outname[0:maxlen], self._txtpcache.created, '.txtp')
                 self._txtpcache.trims += 1
                 logging.debug("txtp: trimmed '%s'" % (outname)) #gets kinda noisy
+
+        if self._txtpcache.x_notxtp:
+            return
 
         with open(outname, 'w', encoding='utf-8') as outfile:
             outfile.write(text)

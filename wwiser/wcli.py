@@ -63,6 +63,7 @@ class Cli(object):
         parser.add_argument('-gbm','--txtp-bnkmark', help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
         parser.add_argument('-gae', '--txtp-alt-exts', help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
         parser.add_argument('-gxl', '--txtp-x-loops', help="Generator extra flag", action='store_true')
+        parser.add_argument('-gxt', '--txtp-x-notxtp', help="Generator extra flag (don't save .txtp)", action='store_true')
 
         return parser.parse_args()
 
@@ -171,6 +172,7 @@ class Cli(object):
             generator.set_alt_exts(args.txtp_alt_exts)
             generator.set_dupes(args.txtp_dupes)
             generator.set_x_loops(args.txtp_x_loops)
+            generator.set_x_notxtp(args.txtp_x_notxtp)
             generator.generate()
 
         # db manipulation

@@ -949,6 +949,18 @@ class TxtpPrinter(object):
                 line += 'loop_start_segment = %s\n' % (self._loop_position)
                 line += 'loop_end_segment = %s\n' % (self._loop_position)
             self._lines.append('%s\n' % (line))
+
+
+        # apply increasing master volume after all other volumes
+        # (lowers chances of clipping due to vgmstream's pcm16)
+        if self._txtpcache.volume_master and not self._txtpcache.volume_decrease:
+            if self._txtpcache.volume_db:
+                voltype = 'dB'
+            else:
+                voltype = ''
+            line = 'commands = #v %s%s' % (self._txtpcache.volume_master, voltype)
+            self._lines.append('%s\n' % (line))
+
         return
 
 
@@ -1131,6 +1143,15 @@ class TxtpPrinter(object):
             mods += self._get_clip(sound, node)
         else: #CAkSound
             mods += self._get_sfx(sound, node)
+
+        # apply decreasing master volume to wems and before other volumes
+        # (lowers chances of clipping due to vgmstream's pcm16)
+        if self._txtpcache.volume_master and self._txtpcache.volume_decrease:
+            if self._txtpcache.volume_db:
+                voltype = 'dB'
+            else:
+                voltype = ''
+            mods += '  #v %s%s' % (self._txtpcache.volume_master, voltype)
 
         if node.volume:
             mods += '  #v %sdB' % (node.volume)

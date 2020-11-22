@@ -56,6 +56,7 @@ class Cli(object):
         parser.add_argument('-go', '--txtp-outdir', help="Set TXTP output dir (default: auto)")
         parser.add_argument('-gd', '--txtp-dupes',  help="Allow TXTP dupes (WARNING: may create a lot)", action='store_true')
         parser.add_argument('-gw', '--txtp-wemdir', help="Set TXTP .wem dir (default: auto)")
+        parser.add_argument('-gv', '--txtp-volume', help="Set master TXTP volume (2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%)\n(negative dB needs equals: -gv=-6dB)")
         parser.add_argument('-gl', '--txtp-lang',   help="Mark .txtp and set .wem subdir per language\n(some games put voices/songs in 'English(US)' and so on)", action='store_true')
         parser.add_argument('-gm', '--txtp-move',   help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
         parser.add_argument('-gwn','--txtp-wemname', help="Add all .wem names to .txtp filename\nmay create too long filenames when many .wem are used!", action='store_true')
@@ -127,7 +128,7 @@ class Cli(object):
 
         # load names
         names = wnames.Names()
-        names.parse_files(parser.get_filenames(),
+        names.parse_files(banks, parser.get_filenames(),
                 xml=args.names_xml, txt=args.names_txt, h=args.names_h, lst=args.names_lst, db=args.names_db)
         parser.set_names(names)
 
@@ -164,6 +165,7 @@ class Cli(object):
             generator.set_params(args.txtp_params)
             generator.set_outdir(args.txtp_outdir)
             generator.set_wemdir(args.txtp_wemdir)
+            generator.set_volume(args.txtp_volume)
             generator.set_lang(args.txtp_lang)
             generator.set_move(args.txtp_move)
             generator.set_wemnames(args.txtp_wemname)

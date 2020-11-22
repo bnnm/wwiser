@@ -98,7 +98,7 @@ Main Wwise features missing in generated *TXTP* at the moment are:
 - songs with unusual features like midis/sfx plugins can't play (too complex)
 - volumes/silences: Wwise games sometimes silence or crossfade files while playing
   others, which isn't autodetected. Audio volume can also be set outside bank, so
-  some songs may sound a bit quiet (try adding `#v 3.0dB` or more  to increate volume).
+  some songs may sound a bit quiet (try using `3.0dB` to the master volume option).
 
 Watch out for filenames with:
 - `{r}`: has random `.wem` (open and change `>1` to select random parts)

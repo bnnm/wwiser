@@ -118,13 +118,21 @@ class Gui(object):
 
         box = self._box('txtp_filter', frame, "Filter:", "List of allowed HIRC IDs or names", width=50)
         box[0].grid(row=0, column=0, sticky="E")
-        box[1].grid(row=0, column=1, sticky="WE")
+        box[1].grid(row=0, column=1, sticky="W")
         box[2].grid(row=0, column=2, sticky="W")
 
         box = self._box('txtp_params', frame, "Params:", "List of '(state=value) [switch=value] ...'", width=50)
         box[0].grid(row=1, column=0, sticky="E")
-        box[1].grid(row=1, column=1, sticky="WE")
+        box[1].grid(row=1, column=1, sticky="W")
         box[2].grid(row=1, column=2, sticky="W")
+
+        frame = ttk.Frame(root)
+        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
+
+        box = self._box('txtp_volume', frame, "Volume:", "Set master TXTP volume (2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%)", width=10)
+        box[0].grid(row=2, column=0, sticky="E")
+        box[1].grid(row=2, column=1, sticky="W")
+        box[2].grid(row=2, column=2, sticky="W")
 
 
         frame = ttk.Frame(root)
@@ -261,8 +269,9 @@ class Gui(object):
         for filename in loaded_filenames:
             self.list_box.insert(END, filename)
 
+        banks = self.parser.get_banks()
         names = self.names
-        names.parse_files(loaded_filenames)
+        names.parse_files(banks, loaded_filenames)
 
 
     def _unload_banks(self):
@@ -359,7 +368,7 @@ class Gui(object):
             generator.set_params(params)
             #generator.set_outdir(self.fields['txtp_outdir'].get())
             generator.set_wemdir(self._fields['txtp_wemdir'].get())
-
+            generator.set_volume(self._fields['txtp_volume'].get())
             generator.set_lang(self._fields['txtp_lang'].get())
             generator.set_move(self._fields['txtp_move'].get())
             generator.set_bnkskip(self._fields['txtp_bnkskip'].get())

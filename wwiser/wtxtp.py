@@ -52,9 +52,13 @@ WINDOWS_MAX_PATH = 235
 
 class TxtpCache(object):
     def __init__(self):
+        # process config
         self.outdir = DEFAULT_OUTDIR
         self.wemdir = DEFAULT_WEMDIR
         self.wemnames = False
+        self.volume_master = None
+        self.volume_db = False
+        self.volume_decrease = False
         self.lang = False
         self.bnkmark = False
         self.bnkskip = False
@@ -64,6 +68,7 @@ class TxtpCache(object):
         self.x_loops = False
         self.x_notxtp = False
 
+        # process info
         self.created = 0
         self.duplicates = 0
         self.unused = 0
@@ -73,6 +78,7 @@ class TxtpCache(object):
         self.internals = 0
         self.names = 0
 
+        # other helpers
         self.is_windows = os.name == 'nt'
         self.basedir = os.getcwd()
 

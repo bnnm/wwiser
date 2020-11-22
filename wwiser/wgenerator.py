@@ -79,6 +79,33 @@ class Generator(object):
             return
         self._txtpcache.wemdir = self._normalize_path(wemdir)
 
+    def set_volume(self, volume):
+        if not volume:
+            return
+        try:
+            percent = False
+            if volume.lower().endswith('db'):
+                volume = volume[:-2]
+                self._txtpcache.volume_db = True
+            elif volume.lower().endswith('%'):
+                volume = volume[:-1]
+                percent = True
+
+            self._txtpcache.volume_master = float(volume)
+            if percent:
+                print(self._txtpcache.volume_master)
+                self._txtpcache.volume_master = self._txtpcache.volume_master / 100.0
+                print(self._txtpcache.volume_master)
+
+            if self._txtpcache.volume_db:
+                self._txtpcache.volume_decrease = (self._txtpcache.volume_master < 0)
+            else:
+                self._txtpcache.volume_decrease = (self._txtpcache.volume_master < 1.0)
+
+        except:
+            logging.info("generator: ignored incorrect volume")
+
+
     def set_lang(self, lang):
         if not lang:
             return

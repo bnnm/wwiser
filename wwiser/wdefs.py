@@ -40,7 +40,7 @@ bank_versions = [
     128, #0x80 Wwise 2017.2     [Spyro Reignited Trilogy (PC/PS4), Let's Go Pikachu (Switch), Magatsu Wahrheit (Android)]
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
-    135, #0x87 Wwise 2019.2     (no known games)
+    135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC)]
 ]
 
 
@@ -54,7 +54,7 @@ fmt_ch = wfmt.FormatterChannelConfig()
 
 # hash types
 fnv_no = 'none' #special value, no hashname allowed
-fnv_com = 'common'
+fnv_com = 'bank/common'
 fnv_gme = 'rtpc/game-variable'
 fnv_bus = 'bus'
 fnv_sfx = 'sfx'
@@ -192,6 +192,7 @@ AkPluginType_company = wfmt.FormatterLUT({
     0: "Audiokinetic",
     1: "Audiokinetic External",
    64: "Plugin", #PLUGINDEV_MIN
+  128: "Ubisoft", #unofficial?
   255: "Plugin", #PLUGINDEV_MAX
   256: "McDSP",
   257: "WaveArts",
@@ -243,6 +244,7 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00110001: "OPUSNX", # originally just OPUS
   0x00120001: "CAF", # unused?
   0x00130001: "OPUS",
+  0x00140001: "OPUS_WEM",
 
   #other types
   0x00640002: "Wwise Sine", #AkSineTone
@@ -252,7 +254,7 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00680003: "Wwise ?", #[KetnetKick 2 (PC), The Lord of the Rings: Conquest (Wii)]
   0x00690003: "Wwise Parametric EQ", #AkParametricEQ
   0x006A0003: "Wwise Delay", #AkDelay
-  0x006C0003: "Wwise Compressor", #
+  0x006C0003: "Wwise Compressor", #AkCompressor
   0x006D0003: "Wwise Expander", #
   0x006E0003: "Wwise Peak Limiter", #AkPeakLimiter
   0x006F0003: "Wwise ?", #[Tony Hawk's Shred (Wii)]
@@ -260,8 +262,8 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00730003: "Wwise Matrix Reverb", #AkMatrixReverb
   0x00740003: "SoundSeed Impact", #
   0x00760003: "Wwise RoomVerb", #AkRoomVerb
-  0x00770002: "SoundSeed Air Wind", #
-  0x00780002: "SoundSeed Air Woosh", #
+  0x00770002: "SoundSeed Air Wind", #AkSoundSeedAir
+  0x00780002: "SoundSeed Air Woosh", #AkSoundSeedAir
   0x007D0003: "Wwise Flanger", #AkFlanger
   0x007E0003: "Wwise Guitar Distortion", #AkGuitarDistortion
   0x007F0003: "Wwise Convolution Reverb", #AkConvolutionReverb
@@ -280,9 +282,12 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00B50007: "No Output", #DefaultSink
   0x00B70002: "SoundSeed Grain", #
   0x00C80002: "Wwise Audio Input", #AkAudioInput
-  0x01950005: "Wwise Motion Generator", #
-  0x01990005: "Wwise Motion Source", #
- #0x01FB0007: "Wwise Motion", #
+  0x01950002: "Wwise Motion ?", #AkMotion
+  0x01950005: "Wwise Motion Generator", #AkMotion
+  0x01990002: "Wwise Motion ?", #AkMotion
+  0x01990005: "Wwise Motion Source", #AkMotion
+  0x01FB0007: "Wwise Motion ?", #AkMotion
+
   0x044C1073: "Auro Headphone", #Auro
 
   #other companies (IDs can be repeated)
@@ -303,12 +308,18 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00720403: "Platinum EffectCollection", #PgEffectCollection
   0x00730403: "Platinum MeterWithFilter", #PgMeterWithFilter
   0x00740403: "Platinum Simple3D", #PgSimple3D
-  0x00750403: "Platinum ?", #Nier Automata
-  0x00760403: "Platinum ?", #same
-  0x00770403: "Platinum ?", #same
-  0x00780403: "Platinum ?", #same
+  0x00750403: "Platinum ? Effect", # [Nier Automata]
+  0x00760403: "Platinum ? Effect", # [same]
+  0x00770403: "Platinum ? Effect", # [same]
+  0x00780403: "Platinum ? Effect", # [same]
 
-  0x00020403: "Codemasters ?", #Dirt Rally (PS4)
+  0x00020403: "Codemasters ?", # [Dirt Rally (PS4)]
+
+  0x04F70803: "Ubisoft ? Effect", # [AC Valhalla]
+  0x04F80806: "Ubisoft ? Mixer", # [AC Valhalla]
+  0x04F90803: "Ubisoft ? Effect", # [AC Valhalla]
+
+  0x00AA1137: "Microsoft Spatial Sound", #MSSpatial
 })
 
 #046>= 062<=
@@ -1502,6 +1513,10 @@ AkRTPC_ParameterID_135 = wfmt.FormatterLUT({
   0x37: "UserAuxSendHPF3",
   0x38: "GameAuxSendLPF",
   0x39: "GameAuxSendHPF",
+
+  0x3D: "Unknown?", #AC Valhalla
+  0x3E: "Unknown?", #AC Valhalla (found near "DB" scaling, some volume?)
+  0x3F: "Unknown?", #AC Valhalla
 })
 AkRTPC_ParameterID = None
 

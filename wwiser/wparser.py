@@ -3004,6 +3004,8 @@ def CAkBankMgr__ProcessStringMappingChunk(obj):
         elem.tid('bankID').fnv(wdefs.fnv_com)
         elem.u8i('stringsize')
         elem.str('FileName', elem.lastval)
+        if elem.lastval:
+            elem.get_root().add_string(elem.lastval)
     return
 
 

@@ -1,3 +1,4 @@
+import os
 from collections import OrderedDict
 from . import wdefs, wutil
 
@@ -146,7 +147,7 @@ class NodeElement(object):
 
 # root node with special definitions (represents a bank)
 class NodeRoot(NodeElement):
-    __slots__ = ['__r', '__filename', '__path', '_version', '_feedback', '_names']
+    __slots__ = ['__r', '__filename', '__path', '_version', '_feedback', '_names', '_strings']
 
     def __init__(self, r, version=0):
         super(NodeRoot, self).__init__(None, 'root')
@@ -157,6 +158,13 @@ class NodeRoot(NodeElement):
 
         self._feedback = False
         self._names = None
+        self._strings = []
+
+        # bank is usually hashed and used as bank's sid (add after actual files)
+        base_bankname = os.path.basename(self.__filename) #[:-4] #
+        base_bankname = os.path.splitext(base_bankname)[0]
+        self._strings.append(base_bankname)
+
 
     # *** inheritance ***
 
@@ -176,6 +184,14 @@ class NodeRoot(NodeElement):
         return obj
 
     # *** other (maybe could be some generic attrs) ***
+
+    def add_string(self, string):
+        if not string:
+            return
+        self._strings.append(string)
+
+    def get_strings(self):
+        return self._strings
 
     def get_filename(self):
         return self.__filename

@@ -172,7 +172,7 @@ class Names(object):
 
     # *************************************
 
-    def parse_files(self, filenames, xml=None, txt=None, h=None, lst=None, db=None):
+    def parse_files(self, banks, filenames, xml=None, txt=None, h=None, lst=None, db=None):
         if not filenames:
             return
 
@@ -186,10 +186,11 @@ class Names(object):
             self.parse_txt(txt)
             self.parse_h(h)
 
-            # bank is usually hashed and used as bank's sid (add after actual files)
-            base_bankname = os.path.basename(self._bankname) #[:-4] #
-            base_bankname = os.path.splitext(base_bankname)[0]
-            self._add_name(None, base_bankname, source=NameRow.NAME_SOURCE_EXTRA)
+        # banks may store some extra hashname strings (rarely) plus their own name (that is also a hashname)
+        for bank in banks:
+            strings = bank.get_root().get_strings()
+            for string in strings:
+                self._add_name(None, string, source=NameRow.NAME_SOURCE_EXTRA)
 
         # extra files, after other banks or priority when generating some missing lists and stuff is off
         pathfiles = [filenames[0]] #todo fix for multiple paths in filenames, for now assumes one

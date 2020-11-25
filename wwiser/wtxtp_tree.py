@@ -1169,17 +1169,17 @@ class TxtpPrinter(object):
         #sfx are mostly pre-modified before generation, so main config is looping
         mods = ''
 
-        if node.loop is not None:
-            # we don't go parsing whole .wems to figure out loops so always write flags
-            if node.loop == 1:
-                mods += ' #i'
-            else:
-                #uses internal loops if set, or full loops otherwise
-                if not self._txtpcache.x_loops: #some games don't seem to follow this (KOF12/13)
-                    mods += ' #e'
-                # 0=infinite
-                if node.loop > 1:
-                    mods += ' #l %s.0' % (node.loop)
+        # we don't go parsing whole .wems to figure out loops so always write flags
+        # (rarely .wem has loop points while loop is not set at all, but must not loop to play ok)
+        if node.loop is None or node.loop == 1:
+            mods += ' #i'
+        else:
+            #uses internal loops if set, or full loops otherwise
+            if not self._txtpcache.x_noloops: #force disable as some games don't seem to follow this (KOF12/13)
+                mods += ' #e'
+            # 0=infinite
+            if node.loop > 1:
+                mods += ' #l %s.0' % (node.loop)
 
         mods += self._get_ms(' #p', node.pad_begin)
         #mods += self._get_ms(' #b', node.body_time)

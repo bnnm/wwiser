@@ -160,11 +160,6 @@ class NodeRoot(NodeElement):
         self._names = None
         self._strings = []
 
-        # bank is usually hashed and used as bank's sid (add after actual files)
-        base_bankname = os.path.basename(self.__filename) #[:-4] #
-        base_bankname = os.path.splitext(base_bankname)[0]
-        self._strings.append(base_bankname)
-
 
     # *** inheritance ***
 
@@ -184,6 +179,12 @@ class NodeRoot(NodeElement):
         return obj
 
     # *** other (maybe could be some generic attrs) ***
+
+    def get_bankname(self):
+        # bank is usually hashed and used as bank's sid
+        bankname = os.path.basename(self.__filename) #[:-4] #
+        bankname = os.path.splitext(bankname)[0]
+        return bankname
 
     def add_string(self, string):
         if not string:

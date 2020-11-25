@@ -176,6 +176,11 @@ class Names(object):
         if not filenames:
             return
 
+        # add banks names (double as hashname), first since it looks a bit nicer in list output
+        for bank in banks:
+            bankname = bank.get_root().get_bankname()
+            self._add_name(None, bankname, source=NameRow.NAME_SOURCE_EXTRA)
+
         # parse files for a single bank
         for filename in filenames:
             # update current bank name (in case of mixed bank dirs; repeats aren't parsed again)
@@ -186,7 +191,7 @@ class Names(object):
             self.parse_txt(txt)
             self.parse_h(h)
 
-        # banks may store some extra hashname strings (rarely) plus their own name (that is also a hashname)
+        # banks may store some extra hashname strings (rarely)
         for bank in banks:
             strings = bank.get_root().get_strings()
             for string in strings:

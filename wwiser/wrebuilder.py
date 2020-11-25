@@ -985,9 +985,17 @@ class _CAkLayerCntr(_NodeHelper):
         self.ntids = node.find(name='Children').finds(type='tid')
 
         # usually found with RTPCs (ex. RPMs) + pLayers that define when layers are played
-        #nlayers = node.finds(name='ulLayerID')
-        #if nlayers:
-        #    self._barf("multilayer found")
+        nlayers = node.find1(name='pLayers')
+        if nlayers:
+            # RTPC linked to volume (ex. AC2 bgm+crowds)
+            nrtpcs = nlayers.finds(name='InitialRTPC')
+            for nrtpc in nrtpcs:
+                nparam = nrtpc.find1(name='ParamID')
+                if nparam and nparam.value() == 0: #volume
+                    logging.info("generator: layer silence found %s %s" % (self.sid, node.get_name()))
+                    self.silences = True
+                    nrptcid = nrtpc.find1(name='RTPCID')
+                    self.nfields.append(nrptcid)
 
         if nmode:
             self.nfields.append(nmode)

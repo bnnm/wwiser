@@ -65,8 +65,9 @@ class TxtpCache(object):
         self.alt_exts = False
         self.dupes = False
 
-        self.x_loops = False
+        self.x_noloops = False
         self.x_notxtp = False
+        self.x_nameid = False
 
         # process info
         self.created = 0
@@ -228,6 +229,7 @@ class Txtp(object):
                     info = self._ntid.value() #?
                 else:
                     info = "%04u" % (int(index))
+                    
 
             if self._txtpcache.unused_mark:
                 info += '~unused'
@@ -240,6 +242,9 @@ class Txtp(object):
                 name = "%s-%s-%s" % (name, info, subname)
             else:
                 name = "%s-%s" % (name, info)
+
+            if self._txtpcache.x_nameid and self._ntid and self._ntid.value():
+                name += "-%s" % (self._ntid.value())
 
         # for stingers, where the same id/name can trigger different segments
         if is_stinger:
@@ -265,7 +270,7 @@ class Txtp(object):
         if not is_new:
             name += " {d}"
 
-        name += ".txtp"
+        #name += ".txtp"
 
         return name
 
@@ -314,21 +319,23 @@ class Txtp(object):
         if not is_new and not self._txtpcache.dupes:
             logging.debug("txtp: ignore '%s' (repeat of %s)", name, texthash)
             return False
-        logging.debug("txtp: saving '%s' (%s)", name, texthash)
 
         #same name but different txtp, shouldn't happen (just in case, maybe when loading many banks?)
         if not self._txtpcache.register_name(name):
             logging.debug("txtp: renaming to '%s'", name)
             name += '#%03i' % (self._txtpcache.names)
 
-        outdir = self._txtpcache.outdir
+        for rpl in ['*','?',':','<','>','|']: #'\\','/'
+            name = name.replace(rpl, "_")
+        name += ".txtp"
+        logging.debug("txtp: saving '%s' (%s)", name, texthash)
 
+        outdir = self._txtpcache.outdir
         if outdir:
             basepath = self._node.get_root().get_path()
             outdir = os.path.join(basepath, outdir)
             os.makedirs(outdir, exist_ok=True)
-        for rpl in ['*','?',':','<','>','|']: #'\\','/'
-            name = name.replace(rpl, "_")
+
         outname = outdir + name
 
         info = self._get_info(name)

@@ -144,15 +144,14 @@ class Generator(object):
             return
         self._txtpcache.dupes = dupes
 
-    def set_x_loops(self, x_loops):
-        if not x_loops:
-            return
-        self._txtpcache.x_loops = x_loops
+    def set_x_noloops(self, flag):
+        self._txtpcache.x_noloops = flag
 
     def set_x_notxtp(self, flag):
-        if not flag:
-            return
         self._txtpcache.x_notxtp = flag
+
+    def set_x_nameid(self, flag):
+        self._txtpcache.x_nameid = flag
 
     #--------------------------------------------------------------------------
 

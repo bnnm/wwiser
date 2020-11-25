@@ -56,15 +56,16 @@ class Cli(object):
         parser.add_argument('-go', '--txtp-outdir', help="Set TXTP output dir (default: auto)")
         parser.add_argument('-gd', '--txtp-dupes',  help="Allow TXTP dupes (WARNING: may create a lot)", action='store_true')
         parser.add_argument('-gw', '--txtp-wemdir', help="Set TXTP .wem dir (default: auto)")
-        parser.add_argument('-gv', '--txtp-volume', help="Set master TXTP volume (2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%)\n(negative dB needs equals: -gv=-6dB)")
-        parser.add_argument('-gl', '--txtp-lang',   help="Mark .txtp and set .wem subdir per language\n(some games put voices/songs in 'English(US)' and so on)", action='store_true')
+        parser.add_argument('-gv', '--txtp-volume', help="Set master TXTP volume, in percent or decibels\nexamples: 2.0=200%%, 0.5=50%%, -6dB=50%%, 6dB=200%%\n(negative dB needs equals: -gv=-6dB)")
+        parser.add_argument('-gl', '--txtp-lang',   help="Mark .txtp and set .wem subdir per language\n(some games put voices/songs in 'English(US)' and such)", action='store_true')
         parser.add_argument('-gm', '--txtp-move',   help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
         parser.add_argument('-gwn','--txtp-wemname', help="Add all .wem names to .txtp filename\nmay create too long filenames when many .wem are used!", action='store_true')
         parser.add_argument('-gbs','--txtp-bnkskip', help="Treat internal (in .bnk) .wem as if external", action='store_true')
         parser.add_argument('-gbm','--txtp-bnkmark', help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
-        parser.add_argument('-gae', '--txtp-alt-exts', help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
-        parser.add_argument('-gxl', '--txtp-x-loops', help="Generator extra flag", action='store_true')
-        parser.add_argument('-gxt', '--txtp-x-notxtp', help="Generator extra flag (don't save .txtp)", action='store_true')
+        parser.add_argument('-gae','--txtp-alt-exts', help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
+        parser.add_argument('-gxnl','--txtp-x-noloops', help="Extra: don't loop sounds", action='store_true')
+        parser.add_argument('-gxnt','--txtp-x-notxtp',  help="Extra: don't save .txtp", action='store_true')
+        parser.add_argument('-gxni','--txtp-x-nameid',  help="Extra: add ID to generic names", action='store_true')
 
         return parser.parse_args()
 
@@ -173,8 +174,9 @@ class Cli(object):
             generator.set_bnkmark(args.txtp_bnkmark)
             generator.set_alt_exts(args.txtp_alt_exts)
             generator.set_dupes(args.txtp_dupes)
-            generator.set_x_loops(args.txtp_x_loops)
+            generator.set_x_noloops(args.txtp_x_noloops)
             generator.set_x_notxtp(args.txtp_x_notxtp)
+            generator.set_x_nameid(args.txtp_x_nameid)
             generator.generate()
 
         # db manipulation

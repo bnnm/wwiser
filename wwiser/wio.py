@@ -15,10 +15,16 @@ class FileReader(object):
     #    elem = self.buf[offset:offset+size]
     #    return struct.unpack(type, elem)[0]
 
+    def _check(self, elem, size):
+        if not elem or len(elem) != size:
+            raise ReaderError("can't read requested bytes (corrupted file?)")
+
     def __read(self, offset, type, size):
         if offset is not None:
             self.file.seek(offset, os.SEEK_SET)
         elem = self.file.read(size)
+        self._check(elem, size)
+
         return struct.unpack(type, elem)[0]
 
     def __read_string(self, offset, size):
@@ -27,6 +33,8 @@ class FileReader(object):
         if size == 0:
             return ""
         elem = self.file.read(size)
+        self._check(elem, size)
+
         elem = bytes(elem) #force
         #remove c-string null terminator, .decode() retains it
         if elem[-1] == 0:
@@ -38,6 +46,8 @@ class FileReader(object):
         if offset is not None:
             self.file.seek(offset, os.SEEK_SET)
         elem = self.file.read(size)
+        self._check(elem, size)
+
         elem = bytes(elem) #force
         return elem
 
@@ -187,3 +197,7 @@ class FileReader(object):
 
     def get_filename(self):
         return os.path.basename(self.file.name)
+
+class ReaderError(Exception):
+    def __init__(self, msg):
+        super(ReaderError, self).__init__(msg)

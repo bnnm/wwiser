@@ -3332,6 +3332,8 @@ class Parser(object):
             logging.info("parser: done")
             return filename
 
+        except wio.ReaderError as e:
+            logging.error("parser: error parsing %s (corrupted file?)" % (filename))
         except Exception as e:
             logging.error("parser: error parsing " + filename, e)
 

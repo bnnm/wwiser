@@ -337,7 +337,7 @@ class NodeObject(NodeElement):
             else:
                 read_size = TYPES_SIZE.get(type, 0)
             if offset + read_size > self._omax:
-                raise ParseError("reading bytes over object's size", self)
+                raise ParseError("error reading past object", self)
 
         if value is None:
             if   type == TYPE_4CC:

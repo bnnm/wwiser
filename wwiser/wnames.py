@@ -431,8 +431,8 @@ class Names(object):
         # list of processed names to quickly skips repeats
         processed = {}
 
-        # catch: "name(thing) = id"
-        pattern_1 = re.compile(r"^[\t]*([a-zA-Z_][a-zA-Z0-9()_ ]*)(\t| = | - )([0-9]+)[ ]*$")
+        # catch: "name(thing) = id" (ex. "8bit", "English(US)")
+        pattern_1 = re.compile(r"^[\t]*([a-zA-Z_0-9][a-zA-Z0-9()_ ]*)( = )([0-9]+)[ ]*$")
 
         # catch "name"
         #pattern_2 = re.compile(r"^[\t]*([a-zA-Z_][a-zA-Z0-9_]*)[ ]*$")
@@ -445,14 +445,14 @@ class Names(object):
             match = pattern_1.match(line)
             if match:
                 name, __, id = match.groups()
-
                 if name in processed:
                     continue
-                processed[name] = True
 
-                forcehash = id == 0
-                self._add_name(id, name, forcehash=forcehash, source=NameRow.NAME_SOURCE_EXTRA)
-                continue
+                #special meaning of "hash this anyway" (for objects like buses that use extende FNV dict)
+                if id == '0':
+                    processed[name] = True
+                    self._add_name(None, name, forcehash=True, source=NameRow.NAME_SOURCE_EXTRA)
+                    continue
 
             #match = pattern_2.match(line)
             #if match:

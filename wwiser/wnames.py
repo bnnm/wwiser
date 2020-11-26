@@ -37,6 +37,20 @@ class Names(object):
     def set_gamename(self, gamename):
         self._gamename = gamename #path
 
+    def _mark_used(self, row):
+        #if row.hashname_used:
+        #    return
+        row.hashname_used = True
+
+        # log this first time it's marked as used
+        if not row.multiple_marked and row.hashnames:
+            old = row.hashname
+            new = row.hashnames[0]
+            # could show more but not too interesting
+            logging.info("names: alt hashnames (using old), old=%s vs new=%s" % (old, new))
+            row.multiple_marked = True
+
+
     def get_namerow(self, id, hashtype=None):
         if not id or id == -1: #including id=0, that is used as "none"
             return None
@@ -48,7 +62,7 @@ class Names(object):
         if row:
             # in case of guidnames don't mark but allow row
             if not (row.hashname and no_hash):
-                row.hashname_used = True
+                self._mark_used(row)
             return row
 
         # hashnames not allowed
@@ -63,7 +77,7 @@ class Names(object):
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_fz.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
-                row.hashname_used = True
+                self._mark_used(row)
                 return row
 
         if not self._db:
@@ -74,7 +88,7 @@ class Names(object):
         if row_db:
             row = self._add_name(id, row_db.hashname, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
-                row.hashname_used = True
+                self._mark_used(row)
                 return row
 
         # on db with a close ID
@@ -83,7 +97,7 @@ class Names(object):
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_df.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
-                row.hashname_used = True
+                self._mark_used(row)
                 return row
 
         # groups missing ids by types (uninteresting ids like AkSound don't pass type)
@@ -129,8 +143,8 @@ class Names(object):
 
             if is_hashname and row.hashname:
                 if row.hashname.lower() != name.lower():
-                    logging.info("names: alt hashname (using old), old=%s vs new=%s" % (row.hashname, name))
-                    #return None #allow to add as alt
+                    #logging.info("names: alt hashname (using old), old=%s vs new=%s" % (row.hashname, name))
+                    #return None #allow to add as alt, logged once used
                     pass
                 # ignore new name if all uppercase (favors lowercase names)
                 if onrepeat == self.ONREPEAT_BEST and name.isupper():
@@ -624,7 +638,7 @@ class Names(object):
 
 # helper containing a single name
 class NameRow(object):
-    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'source']
+    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'multiple_marked', 'source']
 
     NAME_SOURCE_COMPANION = 0 #XML/TXT/H
     NAME_SOURCE_EXTRA = 1 #LST/DB
@@ -634,11 +648,12 @@ class NameRow(object):
 
         self.hashname = hashname
         self.guidname = None
-        self.hashnames = [] #for list generation
+        self.hashnames = [] #for list generation (contains only extra names, main is in "hashname")
         self.guidnames = [] #possible but useful?
         self.path = None
         self.objpath = None
         self.hashname_used = False
+        self.multiple_marked = False
         self.source = None
 
     def _exists(self, name, list):

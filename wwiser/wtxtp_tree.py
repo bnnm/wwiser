@@ -6,7 +6,6 @@ DEBUG_PRINT_TREE_PRE = False
 DEBUG_PRINT_TREE_POST = False
 DEBUG_PRINT_IGNORABLE = False
 DEBUG_PRINT_GROUP_HEADER = False
-DEBUG_PRINT_DISABLE_RANDOMS = False
 
 TYPE_SOUND_LEAF = 'snd'
 TYPE_GROUP_ROOT = '.'
@@ -68,6 +67,7 @@ class TxtpNode(object):
         self.loop = config.loop
         self.delay = config.delay
         self.idelay = config.idelay
+        self.crossfaded = config.crossfaded
         #clip loops are handled a bit differently
         if sound and sound.clip:
             self.loop = None
@@ -156,7 +156,6 @@ class TxtpPrinter(object):
         self._rebuilder = rebuilder
         self._lines = []
         self.depth = 0
-        self._ignore_next = False
 
         self._loop_position = None
         self._sound_count = 0
@@ -657,6 +656,12 @@ class TxtpPrinter(object):
                     subnode.volume = node.volume
                     node.volume = None
 
+                # move crossfade flag (similar to volume)
+                if not subnode.crossfaded:
+                    subnode.crossfaded = node.crossfaded
+                    node.crossfaded = None
+
+
         for subnode in node.children:
             self._set_props(subnode)
 
@@ -973,20 +978,10 @@ class TxtpPrinter(object):
         elif node.type in TYPE_GROUPS:
             self._write_group_header(node)
 
-        pos = 0 #todo preprocess?
         for subnode in node.children:
-            if DEBUG_PRINT_DISABLE_RANDOMS and pos > 0 and node.type == TYPE_GROUP_RANDOM:
-                self._ignore_next_default = self._ignore_next
-                self._ignore_next = True
-
             self._write_node(subnode)
 
-            if DEBUG_PRINT_DISABLE_RANDOMS and pos > 0 and node.type == TYPE_GROUP_RANDOM:
-                self._ignore_next = self._ignore_next_default
-
-            pos += 1
-
-        #TXTP groups need to go to the end
+        # TXTP groups need to go to the end
         if node.type in TYPE_GROUPS:
             self._write_group(node)
 
@@ -996,7 +991,7 @@ class TxtpPrinter(object):
         # set flag with final tree since randoms of a single file can be simplified
         if node.type == TYPE_GROUP_RANDOM and len(node.children) > 1:
             self._randoms = True
-        if node.config.volume == -96.0:
+        if node.config.volume == -96.0 or node.crossfaded:
             self._silences = True
 
 
@@ -1009,10 +1004,8 @@ class TxtpPrinter(object):
         # ex. -L2: at position N (auto), layers previous 2 files
         type = TYPE_GROUPS_TYPE[node.type]
         count = len(node.children)
-        ignored = self._ignore_next #or count <= 1 #allow 1 for looping full segments
-        if DEBUG_PRINT_DISABLE_RANDOMS and type == TYPE_GROUP_RANDOM:
-            ignored = True
-
+        ignored = False #self._ignore_next #or count <= 1 #allow 1 for looping full segments
+        
         line = ''
         mods = ''
         info = ''
@@ -1037,6 +1030,8 @@ class TxtpPrinter(object):
         # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
         if node.volume:
             mods += '  #v %sdB' % (node.volume)
+        if node.crossfaded and self._txtpcache.x_nocrossfade:
+            mods += '  #v 0'
 
         # wwise seems to mix untouched then use volumes to tweak
         if type == TYPE_GROUP_LAYER:
@@ -1069,7 +1064,7 @@ class TxtpPrinter(object):
     # write a TXTP sound wem
     def _write_sound(self, node):
         sound = node.sound
-        ignored = self._ignore_next
+        ignored = False #self._ignore_next
 
         line = ''
         mods = ''
@@ -1155,6 +1150,8 @@ class TxtpPrinter(object):
 
         if node.volume:
             mods += '  #v %sdB' % (node.volume)
+        if node.crossfaded and self._txtpcache.x_nocrossfade:
+            mods += '  #v 0'
 
         # final .wem are padded to help understand the flow (TXTP trims whitespace filenames/groups)
         pad = self._get_padding()

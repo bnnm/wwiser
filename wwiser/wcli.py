@@ -63,6 +63,7 @@ class Cli(object):
         parser.add_argument('-gbs','--txtp-bnkskip', help="Treat internal (in .bnk) .wem as if external", action='store_true')
         parser.add_argument('-gbm','--txtp-bnkmark', help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
         parser.add_argument('-gae','--txtp-alt-exts', help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
+        parser.add_argument('-gxnc','--txtp-x-nocrossfade', help="Extra: silence crossfaded parts", action='store_true')
         parser.add_argument('-gxnl','--txtp-x-noloops', help="Extra: don't loop sounds", action='store_true')
         parser.add_argument('-gxnt','--txtp-x-notxtp',  help="Extra: don't save .txtp", action='store_true')
         parser.add_argument('-gxni','--txtp-x-nameid',  help="Extra: add ID to generic names", action='store_true')
@@ -174,6 +175,8 @@ class Cli(object):
             generator.set_bnkmark(args.txtp_bnkmark)
             generator.set_alt_exts(args.txtp_alt_exts)
             generator.set_dupes(args.txtp_dupes)
+            
+            generator.set_x_nocrossfade(args.txtp_x_nocrossfade)
             generator.set_x_noloops(args.txtp_x_noloops)
             generator.set_x_notxtp(args.txtp_x_notxtp)
             generator.set_x_nameid(args.txtp_x_nameid)

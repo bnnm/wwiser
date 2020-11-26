@@ -144,6 +144,9 @@ class Generator(object):
             return
         self._txtpcache.dupes = dupes
 
+    def set_x_nocrossfade(self, flag):
+        self._txtpcache.x_nocrossfade = flag
+
     def set_x_noloops(self, flag):
         self._txtpcache.x_noloops = flag
 

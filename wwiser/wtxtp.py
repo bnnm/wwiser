@@ -65,6 +65,7 @@ class TxtpCache(object):
         self.alt_exts = False
         self.dupes = False
 
+        self.x_nocrossfade = True
         self.x_noloops = False
         self.x_notxtp = False
         self.x_nameid = False
@@ -175,7 +176,6 @@ class Txtp(object):
 
         self._basename = ''         # final name
         self._ninfo = []            # node info to add in output as comment
-        self._silences = False
         return
 
     #--------------------------------------------------------------------------
@@ -257,7 +257,7 @@ class Txtp(object):
             name += " {e}"
         if printer.has_multiloops():
             name += " {m}"
-        if printer.has_silences() or self._silences:
+        if printer.has_silences():
             name += " {s}"
         if printer.has_internals() and self._txtpcache.bnkmark:
             name += " {b}"
@@ -290,6 +290,15 @@ class Txtp(object):
         info += '# %s\n' % (name)
         for bank in banks:
             info += '# - %s\n' % (bank)
+
+        if self._txtpcache.volume_master:
+            type = ''
+            if self._txtpcache.volume_db:
+                type = 'dB'
+            info += '# ~ master volume %s%s\n' % (self._txtpcache.volume_master, type)
+        #if self._txtpcache.x_nocrossfade:
+        #    info += '# ~ no crossfade\n'
+
         info += '#\n'
         info += ''.join(lines)
         return info
@@ -401,10 +410,6 @@ class Txtp(object):
         self._current.append(node)
         #self._current = node
         return self._current
-
-    def set_silences(self):
-        self._silences = True
-        return
 
     #--------------------------------------------------------------------------
 

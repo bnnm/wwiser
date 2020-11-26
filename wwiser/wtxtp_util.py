@@ -11,9 +11,11 @@ class NodeConfig(object):
         self.volume = None
         self.delay = None
         self.idelay = None
+        self.crossfaded = False #RPTC/state controlled silence
         #markers
         self.duration = None
         self.entry = None
+        self.exit = None
         self.exit = None
 
 #common audio object with config

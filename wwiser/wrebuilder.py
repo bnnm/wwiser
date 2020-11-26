@@ -313,7 +313,6 @@ class _NodeHelper(object):
             self.sid = self.nsid.value()
 
         self.config = wtxtp_util.NodeConfig()
-        self.silences = None
         self.nfields = []   #main node fields, for printing (tuples for composite info)
         self.nattrs = []    #node attributes, in generic (key,value) form
         self.stingers = []
@@ -465,8 +464,9 @@ class _NodeHelper(object):
                     nstate = self.builder.get_node_ref(nstateid.value())
                     bstate = self.builder._get_bnode(nstate, tid)
 
-                    self.silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
-                    if self.silences:
+                    silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
+                    if silences:
+                        self.config.crossfaded = True
                         #logging.info("generator: state silence found %s %s %s" % (self.sid, tid, node.get_name()))
                         nstategroupid = nstatechunk.find1(name='ulStateGroupID')
                         self.nfields.append(nstategroupid)
@@ -477,8 +477,8 @@ class _NodeHelper(object):
             if nrtpc:
                 nparam = nrtpc.find1(name='ParamID')
                 if nparam and nparam.value() == 0: #volume
+                    self.config.crossfaded = True
                     #logging.info("generator: RTPC silence found %s %s" % (self.sid, node.get_name()))
-                    self.silences = True
                     nrptcid = nrtpc.find1(name='RTPCID')
                     self.nfields.append(nrptcid)
 
@@ -746,9 +746,6 @@ class _CAkDialogueEvent(_NodeHelper):
             self._build_tree(node, ntree)
 
     def _process_txtp(self, txtp):
-        if self.silences:
-            txtp.set_silences()
-
         # set all gamesyncs
         if txtp.params.empty:
             for path, ntid in self.paths:
@@ -866,9 +863,6 @@ class _CAkSwitchCntr(_NodeHelper):
         return
 
     def _process_txtp(self, txtp):
-        if self.silences:
-            txtp.set_silences()
-
         gtype = self.gtype
         gname = self.ngname.value()
 
@@ -947,9 +941,6 @@ class _CAkRanSeqCntr(_NodeHelper):
         return
 
     def _process_txtp(self, txtp):
-        if self.silences:
-            txtp.set_silences()
-
         if   self.mode == 0: #random
             txtp.group_random(self.ntids, self.config)
             for ntid in self.ntids:
@@ -992,8 +983,8 @@ class _CAkLayerCntr(_NodeHelper):
             for nrtpc in nrtpcs:
                 nparam = nrtpc.find1(name='ParamID')
                 if nparam and nparam.value() == 0: #volume
-                    logging.info("generator: layer silence found %s %s" % (self.sid, node.get_name()))
-                    self.silences = True
+                    self.config.crossfaded = True
+                    #logging.info("generator: layer silence found %s %s" % (self.sid, node.get_name()))
                     nrptcid = nrtpc.find1(name='RTPCID')
                     self.nfields.append(nrptcid)
 
@@ -1002,9 +993,6 @@ class _CAkLayerCntr(_NodeHelper):
         return
 
     def _process_txtp(self, txtp):
-        if self.silences:
-            txtp.set_silences()
-
         txtp.group_layer(self.ntids, self.config)
         for ntid in self.ntids:
             self._process_next(ntid, txtp)
@@ -1040,9 +1028,6 @@ class _CAkSound(_NodeHelper):
         return
 
     def _process_txtp(self, txtp):
-        if self.silences:
-            txtp.set_silences()
-
         txtp.info_source(self.sound.nsrc, self.sound.source)
         txtp.source_sound(self.sound, self.config)
         return
@@ -1094,9 +1079,6 @@ class _CAkMusicSwitchCntr(_NodeHelper):
                 self.gvalue_ntid[gvalue] = (ntid, ngvalue)
 
     def _process_txtp(self, txtp):
-        if self.silences:
-            txtp.set_silences()
-
         if self.has_tree:
             # set all gamesyncs
             if txtp.params.empty:
@@ -1211,9 +1193,6 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
         if txtp.params.empty:
             txtp.ppaths.add_stingers(self.stingers)
 
-        if self.silences:
-            txtp.set_silences()
-
         txtp.group_single(self.config) #typically useless but may have volumes
         self._process_playlist(txtp, self.items)
         txtp.group_done()
@@ -1319,9 +1298,6 @@ class _CAkMusicSegment(_NodeHelper):
         return
 
     def _process_txtp(self, txtp):
-        if self.silences:
-            txtp.set_silences()
-
         # empty segments are allowed as silence
         if not self.ntids:
             #logging.info("generator: found empty segment %s" % (self.sid))
@@ -1446,9 +1422,6 @@ class _CAkMusicTrack(_NodeHelper):
         return clip
 
     def _process_txtp(self, txtp):
-        if self.silences:
-            txtp.set_silences()
-
         if not self.subtracks: #empty / no clips
             return
 

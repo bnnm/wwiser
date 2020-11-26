@@ -304,6 +304,7 @@ class TxtpPrinter(object):
 
     #--------------------------------------------------------------------------
 
+    # removes and simplifies nodes that aren't directly usable
     def _clean_tree(self, node):
 
         # test if children have loop infinite
@@ -359,7 +360,6 @@ class TxtpPrinter(object):
 
         return True
 
-
     # parent's infinite loops can be removed in favor of children (since wwise loops innermost object)
     # to make txtp loop calcs a bit simpler, ex.
     # - S2 (l=0) > N1 (l=0) > ..
@@ -388,6 +388,256 @@ class TxtpPrinter(object):
         if len(node.children) != 1:
             return None
         return self._tree_get_id(node.children[0])
+
+    #--------------------------------------------------------------------------
+
+    # Hack for objects that loops to itself like: mranseq (loop=0) > item [transitions] > segment
+    # There are 2 transitions used: "nothing to segment start" and "segment to segment",
+    # so we need a segment that plays "play_before" and loop that doesn't (since overlapped
+    # transitions don't work ATM)
+    def _set_self_loops(self, node):
+
+        if self._make_self_loop(node):
+            pass #?
+
+        for subnode in node.children:
+            self._set_self_loops(subnode)
+
+        return
+
+    def _make_self_loop(self, node):
+        if node.loop is None or node.loop == 1: #must loop
+            return False
+
+        if len(node.children) != 1: #loops to itself
+            return False
+
+        subnode = node.children[0]
+        if not subnode.transition: #next part is a transition
+            return False
+
+        if len(subnode.children) != 1: #loops to itself
+            return False
+
+        subsubnode = subnode.children[0]
+        if not subsubnode.config.duration or subsubnode.config.entry == 0: #next part must be a segment
+            return False
+
+        threshold = 1 / 48000.0
+        if subsubnode.config.entry <= threshold: #min len
+            return False
+
+
+        # self loop: make a clone branch (new loop), then mark the original, so clone goes
+        # from 0..entry, and original from entry..exit
+        node.type = TYPE_GROUP_SEQUENCE
+        new_subnode = self._make_copy(node, subnode)
+
+        subnode.self_loop = True #mark transition node
+        new_subnode.loop = node.loop #mark loop node
+        node.loop = None
+
+        return True
+
+    def _make_copy(self, new_parent, node):
+        # semi-shallow copy (since some nodes have parser nodes that shouldn't be copied)
+
+        # todo maybe implement __copy__
+        new_config = copy.copy(node.config)
+        new_sound = copy.copy(node.sound)
+        new_transition = copy.copy(node.transition)
+
+        #new_node = copy.copy(node)
+        new_node = TxtpNode(new_parent, sound=new_sound, config=new_config)
+        new_node.type = node.type
+        new_node.transition = new_transition
+
+        new_parent.append(new_node)
+
+        for subnode in node.children:
+            self._make_copy(new_node, subnode)
+
+        return new_node
+
+    #--------------------------------------------------------------------------
+
+    # simplify props by moving them out from single groups to child, to minimize total groups
+    def _set_props(self, node):
+
+        if node.type in TYPE_GROUPS:
+            is_single = len(node.children) == 1
+            if is_single:
+                # simplify
+                if node.type == TYPE_GROUP_RANDOM or node.type == TYPE_GROUP_LAYER:
+                    node.type = TYPE_GROUP_SINGLE
+
+                subnode = node.children[0]
+
+                # move loop (not to sounds since loop is applied over finished track)
+                # todo maybe can apply on some sounds
+                # ex. S1 l=0 > L2 --- = S1 --- > L2 l=0
+                if subnode.type in TYPE_GROUPS:
+                    is_noloop_subnode = subnode.loop is None or subnode.loop == 1
+                    is_bothloop = node.loop == 0 and subnode.loop == 0
+                    if is_noloop_subnode or is_bothloop:
+                        subnode.loop = node.loop
+                        node.loop = None
+
+                # move delay (ok in sounds, ignore in clips)
+                is_noloop_node = node.loop is None or node.loop == 1
+                is_clip_subnode = subnode.sound and subnode.sound.clip #probably ok, but may mess-up transition calcs
+                if not subnode.delay and is_noloop_node and not is_clip_subnode:
+                    subnode.delay = node.delay
+                    node.delay = None
+                if not subnode.idelay and is_noloop_node and not is_clip_subnode:
+                    subnode.idelay = node.idelay
+                    node.idelay = None
+
+
+                # move volume (closer to source to apply "volume > layering" to avoid clipping in the reverse)
+                if not subnode.volume:
+                    subnode.volume = node.volume
+                    node.volume = None
+
+                # move crossfade flag (similar to volume)
+                if not subnode.crossfaded:
+                    subnode.crossfaded = node.crossfaded
+                    node.crossfaded = None
+
+
+        for subnode in node.children:
+            self._set_props(subnode)
+
+        if node.type in TYPE_GROUPS:
+            self._apply_group(node)
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    # simplify volume stuff
+    # volumes in wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
+    # but usually (hopefully) volumes set on object level should make the track sound fine in most cases
+    def _set_volume(self, node):
+        # some games set very low volume in the base track (ex. SFZ -14bD), probably since they'll
+        # be mixed with other stuff (also Wwise can normalize on realtime), just get rid of base volume
+
+        # don't remove slightly smaller volumes in case game is trying to normalize sounds?        
+        if node.volume:
+            if node.volume < 0 and node.volume < 6.0:
+                node.volume = None
+            return #stop on first b/c there could be positives + negatives cancelling each other?
+
+        # in some cases there are multiple segments setting the same -XdB, could be detected and
+        # removed, but usually it's done near related tracks to normalize sound
+        # might be possible to increase volume equally if all parts use the same high -dB? (ex. Nier Automata)
+
+        # volumes of multiple children are hard to predict
+        if len(node.children) > 1: #flag?
+            return
+
+        for subnode in node.children:
+            self._set_volume(subnode)
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    # applies clip and transition times to nodes
+    def _set_times(self, node):
+        # find leaf clips and set duration
+        if node.type in TYPE_SOUNDS:
+            if not node.sound.silent:
+                self._sound_count += 1
+
+            # convert musictrack's clip values to TXTP flags
+            if node.sound.clip:
+                self._apply_clip(node)
+            else:
+                self._apply_sfx(node)
+
+        for subnode in node.children:
+            self._set_times(subnode)
+
+        if node.config.duration:
+            self._set_duration(node, node)
+
+        if node.transition:
+            self._set_transition(node, node, None)
+        return
+
+    def _set_duration(self, node, snode):
+        if node != snode and node.config.duration:
+            logging.info("txtp: found duration inside duration")
+            return
+
+        if node.sound and node.sound.clip:
+            self._apply_duration(node, snode.config)
+
+        for subnode in node.children:
+            self._set_duration(subnode, snode)
+
+    def _set_transition(self, node, tnode, snode):
+
+        if node != tnode and node.transition:
+            #logging.info("txtp: transition inside transition")
+            #this is possible in stuff like: switch (tnode) > mranseq (node)
+            return
+
+        is_segment = node.config.duration is not None #(node.config.exit or node.config.entry)
+        if is_segment and snode:
+            logging.info("txtp: double segment")
+            return
+
+        if is_segment:
+            snode = node
+            self._transition_count += 1
+
+        if node.sound and node.sound.clip:
+            self._apply_transition(node, tnode, snode)
+
+        for subnode in node.children:
+            self._set_transition(subnode, tnode, snode)
+
+    #--------------------------------------------------------------------------
+
+    # marks nodes that don't contribute to final .txtp so they don't need to be written
+    # also loads some values 
+    def _set_ignorable(self, node):
+        if self._is_ignorable(node):
+            node.ignorable = True
+
+        for subnode in node.children:
+            self._set_ignorable(subnode)
+
+        return
+
+    def _is_ignorable(self, node, ignoreloop=False):
+        if not ignoreloop and node.loop == 0:
+            if node.type in TYPE_GROUPS:
+                self._loop_groups += 1
+            elif not node.sound.clip:
+                self._loop_sounds += 1
+            #clips can't loop forever, flag just means intra-loop
+
+            return False
+
+        if DEBUG_PRINT_IGNORABLE:
+            return False
+
+        if node.type in TYPE_SOUNDS:
+            return False
+
+        if len(node.children) > 1:
+            return False
+
+        if node.loop is not None and node.loop > 1:
+            return False
+
+        if node.idelay or node.delay or node.volume:
+            return False
+
+        return True
 
     #--------------------------------------------------------------------------
 
@@ -489,250 +739,6 @@ class TxtpPrinter(object):
             if loop:
                 return loop
         return None
-
-    #--------------------------------------------------------------------------
-
-    # Hack for objects that loops to itself like: mranseq (loop=0) > item [transitions] > segment
-    # There are 2 transitions used: "nothing to segment start" and "segment to segment",
-    # so we need a segment that plays "play_before" and loop that doesn't (since overlapped
-    # transitions don't work ATM)
-    def _set_self_loops(self, node):
-
-        if self._make_self_loop(node):
-            pass #?
-
-        for subnode in node.children:
-            self._set_self_loops(subnode)
-
-        return
-
-    def _make_self_loop(self, node):
-        if node.loop is None or node.loop == 1: #must loop
-            return False
-
-        if len(node.children) != 1: #loops to itself
-            return False
-
-        subnode = node.children[0]
-        if not subnode.transition: #next part is a transition
-            return False
-
-        if len(subnode.children) != 1: #loops to itself
-            return False
-
-        subsubnode = subnode.children[0]
-        if not subsubnode.config.duration or subsubnode.config.entry == 0: #next part must be a segment
-            return False
-
-        threshold = 1 / 48000.0
-        if subsubnode.config.entry <= threshold: #min len
-            return False
-
-
-        # self loop: make a clone branch (new loop), then mark the original, so clone goes
-        # from 0..entry, and original from entry..exit
-        node.type = TYPE_GROUP_SEQUENCE
-        new_subnode = self._make_copy(node, subnode)
-
-        subnode.self_loop = True #mark transition node
-        new_subnode.loop = node.loop #mark loop node
-        node.loop = None
-
-        return True
-
-
-    def _make_copy(self, new_parent, node):
-        # semi-shallow copy (since some nodes have parser nodes that shouldn't be copied)
-
-        # todo maybe implement __copy__
-        new_config = copy.copy(node.config)
-        new_sound = copy.copy(node.sound)
-        new_transition = copy.copy(node.transition)
-
-        #new_node = copy.copy(node)
-        new_node = TxtpNode(new_parent, sound=new_sound, config=new_config)
-        new_node.type = node.type
-        new_node.transition = new_transition
-
-        new_parent.append(new_node)
-
-        for subnode in node.children:
-            self._make_copy(new_node, subnode)
-
-        return new_node
-
-    #--------------------------------------------------------------------------
-
-    def _set_times(self, node):
-        # find leaf clips and set duration
-        if node.type in TYPE_SOUNDS:
-            if not node.sound.silent:
-                self._sound_count += 1
-
-            # convert musictrack's clip values to TXTP flags
-            if node.sound.clip:
-                self._apply_clip(node)
-            else:
-                self._apply_sfx(node)
-
-        for subnode in node.children:
-            self._set_times(subnode)
-
-        if node.config.duration:
-            self._set_duration(node, node)
-
-        if node.transition:
-            self._set_transition(node, node, None)
-        return
-
-    def _set_duration(self, node, snode):
-        if node != snode and node.config.duration:
-            logging.info("txtp: found duration inside duration")
-            return
-
-        if node.sound and node.sound.clip:
-            self._apply_duration(node, snode.config)
-
-        for subnode in node.children:
-            self._set_duration(subnode, snode)
-
-    def _set_transition(self, node, tnode, snode):
-
-        if node != tnode and node.transition:
-            #logging.info("txtp: transition inside transition")
-            #this is possible in stuff like: switch (tnode) > mranseq (node)
-            return
-
-        is_segment = node.config.duration is not None #(node.config.exit or node.config.entry)
-        if is_segment and snode:
-            logging.info("txtp: double segment")
-            return
-
-        if is_segment:
-            snode = node
-            self._transition_count += 1
-
-        if node.sound and node.sound.clip:
-            self._apply_transition(node, tnode, snode)
-
-        for subnode in node.children:
-            self._set_transition(subnode, tnode, snode)
-
-    # simplify props by moving them out from single groups to child, to minimize total groups
-    def _set_props(self, node):
-
-        if node.type in TYPE_GROUPS:
-            is_single = len(node.children) == 1
-            if is_single:
-                # simplify
-                if node.type == TYPE_GROUP_RANDOM or node.type == TYPE_GROUP_LAYER:
-                    node.type = TYPE_GROUP_SINGLE
-
-                subnode = node.children[0]
-
-                # move loop (not to sounds since loop is applied over finished track)
-                # todo maybe can apply on some sounds
-                # ex. S1 l=0 > L2 --- = S1 --- > L2 l=0
-                if subnode.type in TYPE_GROUPS:
-                    is_noloop_subnode = subnode.loop is None or subnode.loop == 1
-                    is_multiloop = node.loop == 0 and subnode.loop == 0 #todo not too sure?
-                    if is_noloop_subnode or is_multiloop:
-                        subnode.loop = node.loop
-                        node.loop = None
-
-                # move delay (ok in sounds, ignore in clips)
-                is_noloop_node = node.loop is None or node.loop == 1
-                is_clip_subnode = subnode.sound and subnode.sound.clip #probably ok, but may mess-up transition calcs
-                if not subnode.delay and is_noloop_node and not is_clip_subnode:
-                    subnode.delay = node.delay
-                    node.delay = None
-                if not subnode.idelay and is_noloop_node and not is_clip_subnode:
-                    subnode.idelay = node.idelay
-                    node.idelay = None
-
-
-                # move volume (closer to source to apply "volume > layering" to avoid clipping in the reverse)
-                if not subnode.volume:
-                    subnode.volume = node.volume
-                    node.volume = None
-
-                # move crossfade flag (similar to volume)
-                if not subnode.crossfaded:
-                    subnode.crossfaded = node.crossfaded
-                    node.crossfaded = None
-
-
-        for subnode in node.children:
-            self._set_props(subnode)
-
-        if node.type in TYPE_GROUPS:
-            self._apply_group(node)
-
-        return
-
-    # simplify volume stuff
-    # volumes in wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
-    # but usually (hopefully) volumes set on object level should make the track sound fine in most cases
-    def _set_volume(self, node):
-        # some games set very low volume in the base track (ex. SFZ -14bD), probably since they'll
-        # be mixed with other stuff (also Wwise can normalize on realtime), just get rid of base volume
-
-        # don't remove slightly smaller volumes in case game is trying to normalize sounds?        
-        if node.volume:
-            if node.volume < 0 and node.volume < 6.0:
-                node.volume = None
-            return #stop on first b/c there could be positives + negatives cancelling each other?
-
-        # in some cases there are multiple segments setting the same -XdB, could be detected and
-        # removed, but usually it's done near related tracks to normalize sound
-        # might be possible to increase volume equally if all parts use the same high -dB? (ex. Nier Automata)
-
-        # volumes of multiple children are hard to predict
-        if len(node.children) > 1: #flag?
-            return
-
-        for subnode in node.children:
-            self._set_volume(subnode)
-
-        return
-
-    #--------------------------------------------------------------------------
-
-    def _set_ignorable(self, node):
-        if self._is_ignorable(node):
-            node.ignorable = True
-
-        for subnode in node.children:
-            self._set_ignorable(subnode)
-
-        return
-
-    def _is_ignorable(self, node, ignoreloop=False):
-        if not ignoreloop and node.loop == 0:
-            if node.type in TYPE_GROUPS:
-                self._loop_groups += 1
-            elif not node.sound.clip:
-                self._loop_sounds += 1
-            #clips can't loop forever, flag just means intra-loop
-
-            return False
-
-        if DEBUG_PRINT_IGNORABLE:
-            return False
-
-        if node.type in TYPE_SOUNDS:
-            return False
-
-        if len(node.children) > 1:
-            return False
-
-        if node.loop is not None and node.loop > 1:
-            return False
-
-        if node.idelay or node.delay or node.volume:
-            return False
-
-        return True
 
     #--------------------------------------------------------------------------
 

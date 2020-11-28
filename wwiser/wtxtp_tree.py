@@ -305,6 +305,10 @@ class TxtpPrinter(object):
             if self._has_iloops(node, node):
                 node.loop = None
 
+        if node.type in TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_ignorable:
+            self._kill_node(node)
+            return
+
         # if multiple children in a sequence have loop infinite, only first one will play
         # todo check if needed
         #if node.type == TYPE_GROUP_SEQUENCE and len(node.children) > 1:
@@ -329,13 +333,16 @@ class TxtpPrinter(object):
             is_nosound = node.config.duration == 0 or node.config.exit == 0
 
             if is_empty or is_nosound:
-                node.parent.children.remove(node)
+                self._kill_node(node)
 
         # find random with all options the same (ex. No Straight Roads)
         if self._has_random_repeats(node):
             subnode = node.children[0] #use first only
             node.children = [subnode]
         return
+
+    def _kill_node(self, node):
+        node.parent.children.remove(node)        
 
     def _has_random_repeats(self, node):
         if node.type != TYPE_GROUP_RANDOM or len(node.children) <= 1:

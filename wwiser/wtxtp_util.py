@@ -199,6 +199,11 @@ LANGUAGE_SHORTNAMES = {
     "Vietnamese": 'vi',
 }
 
+PLUGIN_IGNORABLE = set([
+    0x01950002,
+    0x01990002,
+])
+
 class NodeSource(object):
     def __init__(self, node, src_sid):
         self.src_sid = src_sid
@@ -252,10 +257,11 @@ class NodeSource(object):
             self.plugin_id = None
 
         # there is basic detection in vgmstream but not good enough
-        if plugin == 0x00100001: #MIDI
-            self.plugin_wmid = True
-        else:
-            self.plugin_wmid = None
+        self.plugin_wmid = (plugin == 0x00100001) #MIDI
+        
+        # plugins for internal use only and don't generate sound
+        self.plugin_ignorable = (plugin in PLUGIN_IGNORABLE)
+
 
     # each source may use its own extension
     def _extension(self):

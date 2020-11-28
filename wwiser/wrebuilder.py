@@ -70,12 +70,12 @@ class Rebuilder(object):
             #CAkAction*
             #CAkBus
             #CAkAuxBus
-            #CAkFeedbackBus
-            #CAkFeedbackNode
+            #CAkFeedbackBus: accepts audio from regular sounds + creates rumble
+            #CAkFeedbackNode: played like audio (play action) and has source ID, but it's simply a rumble generator
             #CAkAttenuation
             #CAkAudioDevice
             #CAkFxShareSet
-            #CAkFxCustom
+            #CAkFxCustom: similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
             #CAkLFOModulator
             #CAkEnvelopeModulator
             #CAkTimeModulator

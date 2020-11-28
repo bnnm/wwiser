@@ -2,7 +2,7 @@
 
 # common config from all nodes to pass around
 #
-# loop_flag = 0 in Wwise means "full loop or use loop points of file has",
+# loop_flag = 0 in Wwise means "full loop or use loop points of file has (if file is sfx)",
 # and 1 means "don't loop even if the file has loop points" (like xma/dsp)
 # (>N also means "loop N times", but sounds shouldn't use this, only groups)
 class NodeConfig(object):
@@ -204,15 +204,21 @@ PLUGIN_IGNORABLE = set([
     0x01990002,
 ])
 
+PLUGIN_NAME = {
+    0x00640002: 'sine',
+    0x00650002: 'silence',
+    0x00650002: 'silence',
+}
+
 class NodeSource(object):
-    def __init__(self, node, src_sid):
+    def __init__(self, nbnksrc, src_sid):
         self.src_sid = src_sid
-        self.nsrc = node
-        self.nplugin = node.find(name='ulPluginID')
-        self.nstreamtype = node.find(name='StreamType')
-        self.nsourceid = node.find(name='sourceID')
-        self.nfileid = node.find(name='uFileID')
-        self.nlang = node.find(name='bIsLanguageSpecific')
+        self.nsrc = nbnksrc
+        self.nplugin = nbnksrc.find(name='ulPluginID')
+        self.nstreamtype = nbnksrc.find(name='StreamType')
+        self.nsourceid = nbnksrc.find(name='sourceID')
+        self.nfileid = nbnksrc.find(name='uFileID')
+        self.nlang = nbnksrc.find(name='bIsLanguageSpecific')
         self._lang_loaded = False
         #0=bnk (always), 1/2=prefetch<>stream (varies with version)
         self.internal = (self.nstreamtype.value() == 0)
@@ -252,15 +258,20 @@ class NodeSource(object):
             self.plugin_external = False
 
         if self.plugin_type != 0x01: #codec
-            self.plugin_id = "%08x" % (plugin) #maybe should pass params
+            self.plugin_id = plugin
+            self.plugin_name = PLUGIN_NAME.get(plugin, "%08x" % (plugin))
         else:
             self.plugin_id = None
+            self.plugin_name = None
 
         # there is basic detection in vgmstream but not good enough
         self.plugin_wmid = (plugin == 0x00100001) #MIDI
-        
+
         # plugins for internal use only and don't generate sound
         self.plugin_ignorable = (plugin in PLUGIN_IGNORABLE)
+
+        # config loaded later
+        self.plugin_fx = None
 
 
     # each source may use its own extension
@@ -333,3 +344,16 @@ class NodeSource(object):
         else:
             subdir = "%s/" % (lang_name)
         self._subdir = subdir
+
+
+class NodeFx(object):
+    def __init__(self, node, plugin_id):
+        self.duration = 1.0 * 1000.0
+
+        if not node:
+            return
+
+        if plugin_id == 0x00650002: #silence
+            nparams = node.find1(name='AkFXSrcSilenceParams')
+            ndur = nparams.find(name='fDuration')
+            self.duration = ndur.value()  * 1000.0 #to ms for consistency

@@ -1067,9 +1067,10 @@ class TxtpPrinter(object):
 
         elif sound.source.plugin_id:
             # generator plugin 
-            name = "?.plugin-%s" % (sound.source.plugin_id)
-            if sound.source.plugin_id == "00650002":
-                name += "-silence"
+            name = "?.plugin-%s" % (sound.source.plugin_name)
+
+            if sound.source.plugin_id == 0x00650002: #silence
+                mods += self._get_ms(' #B', sound.source.plugin_fx.duration)
             else:
                 self._unsupported = True
 

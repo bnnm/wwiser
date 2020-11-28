@@ -63,6 +63,8 @@ class Rebuilder(object):
             #others
             'CAkStinger': _CAkStinger,
             'CAkState': _CAkState,
+            'CAkFxCustom': _CAkFxCustom, #similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
+
 
             #not useful
             #CAkActorMixer
@@ -75,7 +77,6 @@ class Rebuilder(object):
             #CAkAttenuation
             #CAkAudioDevice
             #CAkFxShareSet
-            #CAkFxCustom: similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
             #CAkLFOModulator
             #CAkEnvelopeModulator
             #CAkTimeModulator
@@ -461,7 +462,7 @@ class _NodeHelper(object):
                 nstateids = nstatechunk.finds(name='ulStateInstanceID')
                 for nstateid in nstateids:
                     tid = nstateid.value()
-                    nstate = self.builder.get_node_ref(nstateid.value())
+                    nstate = self.builder.get_node_ref(tid)
                     bstate = self.builder._get_bnode(nstate, tid)
 
                     silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
@@ -547,9 +548,27 @@ class _NodeHelper(object):
         sound.clip = clip
         return sound
 
-    def _parse_source(self, node):
-        source = wtxtp_util.NodeSource(node, self.sid)
+    def _parse_source(self, nbnksrc):
+        source = wtxtp_util.NodeSource(nbnksrc, self.sid)
+
+        if source.plugin_id == 0x00650002: #silence
+            nsize = nbnksrc.find(name='uSize')
+            if nsize and nsize.value():
+                # older games have inline plugin info
+                source.plugin_fx = self._parse_sfx(nbnksrc, source.plugin_id)
+            else:
+                # newer games use another CAkFxCustom (though in theory could inline)
+                tid = source.tid
+                nfxcustom = self.builder.get_node_ref(tid)
+                bfxcustom = self.builder._get_bnode(nfxcustom, tid)
+                if bfxcustom:
+                    source.plugin_fx = bfxcustom.fx
+
         return source
+
+    def _parse_sfx(self, node, plugin_id):
+        fx = wtxtp_util.NodeFx(node, plugin_id)
+        return fx
 
     #--------------------------------------------------------------------------
 
@@ -703,6 +722,24 @@ class _CAkState(_NodeHelper):
     def _build(self, node):
         self._build_audio_config(node)
         #save config (used to check silences)
+        return
+
+    def make_txtp(self, txtp):
+        #don't print node info in txtp
+        return
+
+#plugin parameters, sometimes needed
+class _CAkFxCustom(_NodeHelper):
+    def __init__(self):
+        super(_CAkFxCustom, self).__init__()
+        self.fx = None
+
+    def _build(self, node):
+        #save config (used for sources)
+        nfxid = node.find1(name='fxID')
+        plugin_id = nfxid.value()
+
+        self.fx = self._parse_sfx(node, plugin_id)
         return
 
     def make_txtp(self, txtp):

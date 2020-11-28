@@ -134,6 +134,7 @@ class Names(object):
         else:
             id = int(id)
         is_hashname = id == id_hash
+        forced = is_hashname and not hashable and forcehash
 
         row = self._names.get(id)
         if row:
@@ -157,7 +158,7 @@ class Names(object):
             self._names[id] = row
 
         if is_hashname:
-            row.add_hashname(name)
+            row.add_hashname(name, forced=forced)            
             #logging.info("names: added id=%i, hashname=%s" % (id, name))
         else:
             row.add_guidname(name)
@@ -587,11 +588,18 @@ class Names(object):
                     continue
 
                 #logging.debug("names: using '%s'", row.hashname)
-                outfile.write('%s\n' % (row.hashname))
+                forced = ''
+                if row.forced:
+                    forced = ' = 0' #allow names with special chars
+                outfile.write('%s%s\n' % (row.hashname, forced))
 
                 # log alts too (list should be cleaned up manually)
                 for hashname in row.hashnames:
-                    outfile.write('%s #alt\n' % (hashname))
+                    if forced: #todo improve
+                        outfile.write('#alt\n')
+                        outfile.write('%s%s\n' % (row.hashname, forced))
+                    else:
+                        outfile.write('%s #alt\n' % (hashname)) #todo not read ok?
 
             # write IDs that don't should have hashnames but don't
             if save_missing:
@@ -638,7 +646,7 @@ class Names(object):
 
 # helper containing a single name
 class NameRow(object):
-    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'multiple_marked', 'source']
+    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'multiple_marked', 'source', 'forced']
 
     NAME_SOURCE_COMPANION = 0 #XML/TXT/H
     NAME_SOURCE_EXTRA = 1 #LST/DB
@@ -655,13 +663,14 @@ class NameRow(object):
         self.hashname_used = False
         self.multiple_marked = False
         self.source = None
+        self.forced = False
 
     def _exists(self, name, list):
         if name.lower() in (listname.lower() for listname in list):
             return True
         return False
 
-    def add_hashname(self, name):
+    def add_hashname(self, name, forced=False):
         if not name:
             return
         if not self.hashname: #base
@@ -672,6 +681,7 @@ class NameRow(object):
             if name.lower() in (hashname.lower() for hashname in self.hashnames):
                 return
             self.hashnames.append(name) #alts
+        self.forced = forced
 
     def add_guidname(self, name):
         if not name:

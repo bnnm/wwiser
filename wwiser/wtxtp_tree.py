@@ -68,10 +68,12 @@ class TxtpNode(object):
         self.delay = config.delay
         self.idelay = config.idelay
         self.crossfaded = config.crossfaded
+
+        self.loop_end = False #flag to detect loop traps
+
         #clip loops are handled a bit differently
         if sound and sound.clip:
             self.loop = None
-        self.loop_mod = None
 
         # allowed to separate "loop not set" and "loop set but not looping"
         #if self.loop == 1:
@@ -144,11 +146,6 @@ class TxtpNode(object):
 # it's ignored.
 
 class TxtpPrinter(object):
-    LOOP_ALL  = -1  #signals "must loop the whole thing (auto not ok)"
-    LOOP_AUTO = 0  #signals "may loop last segment (auto ok)"
-   #LOOP_POS  = n  #signals "must loop this exact segment and no others after"
-
-
     def __init__(self, txtp, tree, txtpcache, rebuilder):
         self._tree = tree
         self._txtp = txtp
@@ -157,7 +154,6 @@ class TxtpPrinter(object):
         self._lines = []
         self.depth = 0
 
-        self._loop_position = None
         self._sound_count = 0
         self._transition_count = 0
         self._loop_groups = 0
@@ -171,7 +167,7 @@ class TxtpPrinter(object):
         self._externals = False     # special "external sources"
         self._internals = False     # internal .wem (inside .bnk)
         self._unsupported = False   # missing audio/unsupported plugins
-
+        self._multiloops = False    # multiple layers have infinite loops
 
     def process(self):
         self._modify()
@@ -203,8 +199,7 @@ class TxtpPrinter(object):
         return self._silences
 
     def has_multiloops(self):
-        #groups and sounds loop independently
-        return self._loop_groups > 0 and self._loop_sounds > 0 or self._loop_groups > 1 or self._loop_sounds > 1
+        return self._multiloops
 
     def has_noloops(self):
         return self._loop_groups == 0 and self._loop_sounds == 0
@@ -231,13 +226,12 @@ class TxtpPrinter(object):
         self._set_ignorable(self._tree)
         self._reorder_wem(self._tree)
         self._find_loops(self._tree)
+        
 
         if DEBUG_PRINT_TREE_POST:
             logging.info("*** tree post:")
             self._mdepth = 0
             self._print_tree(self._tree, True)
-            if self._loop_position is not None:
-                logging.info(" (loop pos=%s)", self._loop_position)
             logging.info("")
         return
 
@@ -250,7 +244,6 @@ class TxtpPrinter(object):
 
         if post:
             if node.loop is not None:       config1 += " lpn=%s" % (node.loop)
-            if node.loop_mod is not None:   config1 += " lpn=*"
             if node.volume is not None:     config1 += " vol=%s" % (node.volume)
             if node.ignorable:              config1 += " [i]"
 
@@ -313,14 +306,14 @@ class TxtpPrinter(object):
                 node.loop = None
 
         # if multiple children in a sequence have loop infinite, only first one will play
-        # todo check subchildren in  they are sequences
-        if node.type == TYPE_GROUP_SEQUENCE and len(node.children) > 1:
-            loop_infs = 0
-            for subnode in node.children:
-                if subnode.type in TYPE_GROUPS and subnode.loop == 0:
-                    loop_infs += 1
-                    if loop_infs > 1:
-                        subnode.loop = None
+        # todo check if needed
+        #if node.type == TYPE_GROUP_SEQUENCE and len(node.children) > 1:
+        #    loop_infs = 0
+        #    for subnode in node.children:
+        #        if subnode.type in TYPE_GROUPS and subnode.loop == 0:
+        #            loop_infs += 1
+        #            if loop_infs > 1:
+        #                subnode.loop = None
 
         # iter over copy, since we may need to drop children
         for subnode in list(node.children):
@@ -674,70 +667,53 @@ class TxtpPrinter(object):
 
     #--------------------------------------------------------------------------
 
-    # find exact loop group and simplify some in the process
+    # handle some loop cases
+    # - multiloops: layered groups with children that loop independently not in sync.
+    #   Wwise internally sets "playlists" with loops that are more like "repeats" (item ends > play item again).
+    #   If one layer has 2 playlists that loop, items may have different loop end times = multiloop.
+    # - loop traps: when N segment items set loop first one "traps" the playlist and repeats forever, never reaching others.
+
     def _find_loops(self, node):
-        if self.has_multiloops() or self.has_noloops():
+        if  self.has_noloops():
             return
-        # single sounds (sfx) loop by txtp flags (clips use loop groups)
+        # single sounds (sfx) loop by txtp config flags (clips use loop groups)
         if self._loop_groups == 0 and self._loop_sounds == 1:
             return
 
-        # find first non-ignorable node
-        start = self._find_start(node)
-        if not start:
-            return #?
+        self._find_loops_internal(node)
 
-        count = len(start.children)
+    def _find_loops_internal(self, node):
+        # multiloops: find if layer has multiple children and at least 1 infinite loops (vgmstream can't replicate ATM)
+        if node.type == TYPE_GROUP_LAYER and len(node.children) > 1 and not self._multiloops:
+            for subnode in node.children:
+                if self._has_iloops(subnode, subnode):
+                    self._multiloops = True
+                    break
 
-        # start node loops: must loop the whole thing
-        if start.loop == 0:
-            if   count == 1 or start.type != TYPE_GROUP_SEQUENCE:
-                self._loop_position = self.LOOP_AUTO
-            else:
-                self._loop_position = self.LOOP_ALL
-            return
+        # loop traps: find if segment has multiple children and loops before last children (add mark)
+        if node.type == TYPE_GROUP_SEQUENCE and len(node.children) > 1:
+            i = 0
+            for subnode in node.children:
+                child = self._get_first_child(subnode)
+                i += 1
+                if child and child.loop == 0 and i < len(node.children):
+                    child.loop_end = True
 
-        # child node loops: find node (if all went correctly only one direct child must be loop)
-        pos = 1
-        child = None
-        for subnode in start.children:
-            child = self._find_loop(subnode)
-            if child:
-                break
-            pos += 1
-        if not child:
-            #???
-            return
+        for subnode in node.children:
+            self._find_loops(subnode)
+        return
 
-        if pos == count:
-            self._loop_position = self.LOOP_AUTO
-        else:
-            self._loop_position = pos
-
-        #group may be ignorable now we have set loop
-        if self._is_ignorable(child, ignoreloop=True):
-            child.ignorable = True
-        child.loop = None
-        child.loop_mod = True
-
-    def _find_start(self, node):
+    # get first non-ignorable children
+    # todo: simplify by removing all ignorable first
+    def _get_first_child(self, node):
         if not node.ignorable:
             return node
 
         for subnode in node.children:
-            start = self._find_start(subnode)
-            if start:
-                return start
-        return None
+            child = self._get_first_child(subnode)
+            if child:
+                return child
 
-    def _find_loop(self, node):
-        if node.loop == 0:
-            return node
-
-        for subnode in node.children:
-            loop = self._find_loop(subnode)
-            if loop:
-                return loop
         return None
 
     #--------------------------------------------------------------------------
@@ -946,22 +922,6 @@ class TxtpPrinter(object):
         self._write_node(self._tree)
         self._lines.append('\n')
 
-        # final commands
-        if self._loop_position is not None:
-            line = ''
-            if self._loop_position == self.LOOP_AUTO:
-                # must loop the last segment (also loops if only 1 segment)
-                line += 'loop_mode = auto'
-            elif self._loop_position == self.LOOP_ALL:
-                # must loop the whole thing
-                line += 'loop_start_segment = 1\n'
-            else:
-                # must loop one exact segment
-                line += 'loop_start_segment = %s\n' % (self._loop_position)
-                line += 'loop_end_segment = %s\n' % (self._loop_position)
-            self._lines.append('%s\n' % (line))
-
-
         # apply increasing master volume after all other volumes
         # (lowers chances of clipping due to vgmstream's pcm16)
         if self._txtpcache.volume_master and not self._txtpcache.volume_decrease:
@@ -1022,16 +982,7 @@ class TxtpPrinter(object):
         line += 'group = -%s%s' % (type, count)
         if type == TYPE_GROUP_RANDOM:
             line += '>1'
-            info += '  ##select >N of %i' % (count)
-
-        # add config
-        if node.loop is not None:
-            if   node.loop == 0 and self.has_multiloops():
-                info += ' ##loop'
-            elif node.loop > 1:
-                mods += ' #E #l %i.0' % (node.loop)
-
-        mods += self._get_ms(' #p', node.pad_begin)
+            #info += "  ##select >N of %i" % (count)
 
         # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
         if node.volume:
@@ -1042,6 +993,18 @@ class TxtpPrinter(object):
         # wwise seems to mix untouched then use volumes to tweak
         if type == TYPE_GROUP_LAYER:
             mods += ' #@layer-v'
+
+        # add config
+        mods += self._get_ms(' #p', node.pad_begin)
+
+        # add loops
+        if node.loop is not None:
+            if   node.loop == 0:
+                mods += ' #@loop'
+                if node.loop_end:
+                    mods += ' #@loop-end'
+            elif node.loop > 1:
+                mods += ' #E #l %i.0' % (node.loop)
 
         pad = self._get_padding()
         self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
@@ -1092,23 +1055,27 @@ class TxtpPrinter(object):
 
         # add source
         if   sound.silent:
+            #silent/empty subtrack (ignored)
             name = "?.silent"
 
         elif sound.source.plugin_id:
+            # generator plugin 
             name = "?.plugin-%s" % (sound.source.plugin_id)
             if sound.source.plugin_id == "00650002":
-                info += " ##silence"
+                name += "-silence"
             else:
                 self._unsupported = True
 
         elif sound.source.plugin_external:
+            # "external" ID (set at runtime)
             name = "?" + name
             name += "(?).wem"
-            #tid seems fixed for all files, needs to print base class' sid to avoid being dupes
-            info += " ##external %s-%s" % (sound.source.src_sid, sound.source.tid)
+            # tid seems fixed for all files, needs to print base class' sid to avoid being dupes
+            info += "  ##external %s-%s" % (sound.source.src_sid, sound.source.tid)
             self._externals = True
 
         elif sound.source.internal and not self._txtpcache.bnkskip:
+            # internal/memory stream
             bankname = sound.nsrc.get_root().get_filename()
             media = self._rebuilder.get_media_index(bankname, sound.source.tid)
             extension = sound.source.extension
@@ -1118,17 +1085,18 @@ class TxtpPrinter(object):
             if media:
                 bankname, index = media
                 name += "%s #s%s" % (bankname, index + 1)
-                info += " ##%s.%s" % (sound.source.tid, extension)
+                info += "  ##%s.%s" % (sound.source.tid, extension)
                 if sound.source.plugin_wmid:
                     info += " ##unsupported wmid"
             else:
                 name = "?" + name + "%s.%s" % (sound.source.tid, extension)
-                info += " ##other bnk?"
+                info += "  ##other bnk?"
                 self._unsupported = True
             self._internals = True
             self._txtpcache.register_bank(bankname)
 
         else:
+            # regular stream
             extension = sound.source.extension
             if self._txtpcache.alt_exts:
                 extension = sound.source.extension_alt
@@ -1197,17 +1165,20 @@ class TxtpPrinter(object):
         # final body time goes over 1 loop (not using loop flag since it seems to depend on final trim, see examples)
         # some files slightly over duration (ex. 5000 samples) and are meant to be looped as segments, it's normal
 
+        loops = not sound.silent and node.body_time - node.trim_end > sound.fsd  # trim_begin not included
+
         if sound.silent:
             pass
-        elif node.body_time - node.trim_end > sound.fsd: # trim_begin not included
+        elif loops:
             mods += ' #E' #clips only do full loops
-            if self._sound_count == 1:
-                mods += ' #f 0.0 #d 0.0' #for single wems so fade isn't added to body time
         else:
             mods += ' #i' #just in case
 
         mods += self._get_ms(' #p', node.pad_begin)
-        mods += self._get_ms(' #b', node.body_time)
+        if loops: #forces disabling fades, that get in the way when playing separate music tracks
+            mods += self._get_ms(' #B', node.body_time)
+        else:
+            mods += self._get_ms(' #b', node.body_time)
         mods += self._get_ms(' #r', node.trim_begin)
         mods += self._get_ms(' #R', node.trim_end)
         mods += self._get_ms(' #P', node.pad_end)

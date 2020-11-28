@@ -18,8 +18,9 @@ HEX_FORMATS = {
 }
 
 class FormatterHex(object):
-    def __init__(self, fixed=False):
+    def __init__(self, fixed=False, zeropad=None):
         self.fixed = fixed
+        self.zeropad = zeropad
 
     def format(self, type=None, value=None):
         if value is None:
@@ -27,24 +28,25 @@ class FormatterHex(object):
         if type is None:
             raise ValueError("formatter: type not set")
 
-        format = HEX_FORMATS.get(type, None)
+        format = HEX_FORMATS.get(type, None) #doubles as a "is int" check
         if format is None:
             return str(value)
 
         if value < 0:
             return "%i" % (value)
 
-        if not self.fixed:
+        if not self.fixed and not self.zeropad:
             return "0x%02X" % (value)
 
-        format = HEX_FORMATS.get(type, None)
+        if self.zeropad:
+            format = "0x%0" + str(self.zeropad) + "X"
+
         return format % (value)
 
-
 class FormatterLUT(object):
-    def __init__(self, enum):
+    def __init__(self, enum, zeropad=None):
         self.enum = enum
-        self.fmt = FormatterHex()
+        self.fmt = FormatterHex(zeropad=zeropad)
 
 
     def format(self, type=None, value=None):
@@ -56,6 +58,7 @@ class FormatterLUT(object):
         description = " [%s]" % self.enum.get(value, "?")
 
         return self.fmt.format(type, value) + description
+
 
 CHANNEL_FORMATS = {
     (1 << 0):  "FL", # front left
@@ -78,7 +81,6 @@ CHANNEL_FORMATS = {
     (1 << 16): "TBC", # top back center
     (1 << 17): "TBR", # top back left
 }
-
 
 class FormatterChannelConfig(object):
     def __init__(self):

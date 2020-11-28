@@ -32,7 +32,7 @@ bank_versions = [
      70, #0x46 Wwise 2012.1?   *[Metal Gear Rising (PC/X360)-some banks]
      72, #0x48 Wwise 2012.2     [Metal Gear Rising (PC/X360)-most banks, Saints Row IV (PC), South Park: The Stick of Truth (PC)]
      88, #0x58 Wwise 2013.1/2   [Bayonetta 2 (WiiU), Devil's Third (WiiU)]
-    112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy]
+    112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy, Plants vs Zombies 2 (Android)]
     113, #0x71 Wwise 2015.1     [Nier Automata (PC), Doom 2016 (PC), South Park: The Fractured But Whole (PC)]
     118, #0x76 Wwise 2016.1     [WipEout: Omega Collection (PS4), Coffence (PC), Mario + Rabbids Kingdom Battle (Switch)]
     120, #0x78 Wwise 2016.2     [Polyball (PC), Battle Chasers (PC)]
@@ -282,10 +282,10 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00B50007: "No Output", #DefaultSink
   0x00B70002: "SoundSeed Grain", #
   0x00C80002: "Wwise Audio Input", #AkAudioInput
-  0x01950002: "Wwise Motion ?", #AkMotion
-  0x01950005: "Wwise Motion Generator", #AkMotion
-  0x01990002: "Wwise Motion ?", #AkMotion
-  0x01990005: "Wwise Motion Source", #AkMotion
+  0x01950002: "Wwise Motion Generator", #AkMotion (used in CAkSound, v128>= / v130<=?)
+  0x01950005: "Wwise Motion Generator", #AkMotion (used in CAkFeedbackNode, v125<=)
+  0x01990002: "Wwise Motion Source", #AkMotion (used in CAkSound, v132>=)
+  0x01990005: "Wwise Motion Source?", #AkMotion
   0x01FB0007: "Wwise Motion ?", #AkMotion
 
   0x044C1073: "Auro Headphone", #Auro
@@ -308,7 +308,7 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00720403: "Platinum EffectCollection", #PgEffectCollection
   0x00730403: "Platinum MeterWithFilter", #PgMeterWithFilter
   0x00740403: "Platinum Simple3D", #PgSimple3D
-  0x00750403: "Platinum ? Effect", # [Nier Automata]
+  0x00750403: "Platinum ? Effect", # [Nier Automata] (PgKverb? PgFlex?)
   0x00760403: "Platinum ? Effect", # [same]
   0x00770403: "Platinum ? Effect", # [same]
   0x00780403: "Platinum ? Effect", # [same]
@@ -320,7 +320,7 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x04F90803: "Ubisoft ? Effect", # [AC Valhalla]
 
   0x00AA1137: "Microsoft Spatial Sound", #MSSpatial
-})
+}, zeropad=8)
 
 #046>= 062<=
 AkCurveScaling_062 = wfmt.FormatterLUT({
@@ -788,7 +788,7 @@ AkActionType_056 = wfmt.FormatterLUT({
   0x13011: "SetGameParameter_O", #~056>=
   0x14010: "ResetGameParameter", #~056>=
   0x14011: "ResetGameParameter_O", #~056>=
-})
+}, zeropad=5)
 #062>= 135<=
 AkActionType_062 = wfmt.FormatterLUT({
   0x0000: "None",
@@ -895,7 +895,7 @@ AkActionType_062 = wfmt.FormatterLUT({
   0x1403: "ResetGameParameter_O",
   0x1F02: "Release",
   0x1F03: "Release_O",
-})
+}, zeropad=4)
 AkActionType = None
 
 #046>= 088<=
@@ -1712,10 +1712,4 @@ def setup(version):
     else:
         AkClipAutomationType = AkClipAutomationType_112
 
-
     return
-
-
-# notepad++ enum-to-dict regex (fails with multi _ tho)
-#  what:  ([a-zA-Z]+)_(.+) = (.+),
-#  with:  \3: "\2",

@@ -37,11 +37,55 @@ def parse_plugin(obj, name='ulPluginID'):
     fld = obj.U32(name).fmt(wdefs.AkPluginType_id)
     if obj.lastval == -1:
         return
-    
+
     fld.U16('type',    (obj.lastval >>  0) & 0x000F).fmt(wdefs.AkPluginType)
     fld.U16('company', (obj.lastval >>  4) & 0x03FF).fmt(wdefs.AkPluginType_company)
     #ids can repeat in different companies
     #fld.U16('id',      (obj.lastval >> 16) & 0xFFFF).fmt(wdefs.AkPluginType_id)
+
+    #plugin_id = obj.lastval
+    #if plugin_id == 0x01990005 or plugin_id == 0x00640002:
+    #    logging.info("parser: found plugin 0x%08X (already parsed)", plugin_id)
+    return
+
+def parse_plugin_params(obj, plugin_id, size_name, params_name):
+    if not plugin_id or plugin_id < 0:
+        return
+    #version = get_version(obj)
+
+    #todo
+    # SetFX calls on vtable, possibly CAkFxBase::SetFXParam, whick in turn calls
+    # another thing, treats param as a float if size==4, or calls PluginRTPCSub::SetPluginParam
+    #if fxID != -1:
+    #   CAkFxBase::SetFX()
+
+    obj.U32(size_name)
+    size = obj.lastval
+    if size == 0:
+        return
+
+    if plugin_id == 0x00650002: #silence
+        obj = obj.node('AkFXSrcSilenceParams')
+        obj.omax(size)
+
+        obj.f32('fDuration')
+        obj.f32('fRandomizedLengthMinus')
+        obj.f32('fRandomizedLengthPlus')
+
+    elif plugin_id == 0x00640002: #tone #v056>=?
+        obj = obj.node('AkSineFXParams')
+        obj.omax(size)
+
+        obj.f32('fFrequency')
+        obj.f32('fGain')
+        obj.f32('fDuration')
+        obj.U32('uChannelMask').fmt(wdefs.fmt_ch)
+    else:
+        # examples:
+        # - Motion Source (0x01990002): rumble/force feedback config (x8 floats? + u16 count + u16 channels?)
+        # - RoomVerb (0x00760003): reverb (x20 floats + counts + floats)
+        obj.gap(params_name, size)
+
     return
 
 #helper
@@ -152,7 +196,8 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
         obj = obj.node('AkBankSourceData')
 
     parse_plugin(obj)
-    PluginType = (obj.lastval & 0x0F)
+    plugin_id = obj.lastval
+    PluginType = (plugin_id & 0x0F)
 
     if   cls.version <= 88:
         obj.U32('StreamType').fmt(wdefs.AkBank__AKBKSourceType)
@@ -209,8 +254,9 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
         has_param = (PluginType == 2)
 
     if has_param:
-        obj.U32('uSize')
-        obj.gap('pParam', obj.lastval)
+        parse_plugin_params(obj, plugin_id,  'uSize', 'pParam')
+        #obj.U32('uSize')
+        #obj.gap('pParam', obj.lastval)
     return
 
 #046>=
@@ -2511,7 +2557,7 @@ def CAkBankMgr__StdBankRead_CAkFeedbackBus_CAkParameterNodeBase_(obj):
 #******************************************************************************
 # HIRC: Feedback Node
 
-#046>=
+#046>= 125<=
 def CAkFeedbackNode__SetInitialValues(obj, cls):
     #CAkFeedbackNode::SetInitialValues
     obj = obj.node('FeedbackInitialValues')
@@ -2545,7 +2591,6 @@ def CAkBankMgr__ReadSourceParent_CAkFeedbackNode_(obj):
     return
 
 
-
 #******************************************************************************
 # HIRC: Fx Share Set
 
@@ -2555,14 +2600,11 @@ def CAkFxBase__SetInitialValues(obj, cls):
     obj = obj.node('FxBaseInitialValues')
 
     parse_plugin(obj, name='fxID') #obj.U32('fxID')
-    obj.U32('uSize')
+    plugin_id = obj.lastval
 
-    #todo
-    #SetFX calls on vtable, possibly CAkFxBase::SetFXParam, whick in turn calls
-    #another thing, treats param as a float if size==4, or calls PluginRTPCSub::SetPluginParam
-    #if fxID != -1:
-    #   CAkFxBase::SetFX()
-    obj.gap('pParamBlock', obj.lastval)
+    parse_plugin_params(obj, plugin_id, 'uSize', 'pParamBlock')
+    #obj.U32('uSize')
+    #obj.gap('pParamBlock', obj.lastval)
 
     obj.u8i('uNumBankData')
     for elem in obj.list('media', 'AkMediaMap', obj.lastval):
@@ -2930,8 +2972,10 @@ def CAkBankMgr__ProcessFxParamsChunk(obj):
     for elem in obj.list('pParams', 'FXParameterSet', obj.lastval):
         elem.tid('EnvID')
         parse_plugin(elem, 'FXID')
-        elem.U32('ulPresetSize')
-        elem.gap('pDataBloc', elem.lastval)
+        plugin_id = elem.lastval
+        parse_plugin_params(elem, plugin_id, 'ulPresetSize', 'pDataBlock')
+        #elem.U32('ulPresetSize')
+        #elem.gap('pDataBlock', elem.lastval)
 
         if version <= 46:
             pass

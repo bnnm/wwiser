@@ -84,9 +84,10 @@ class Names(object):
             return None
 
         # on db (add to names for easier access and saving list of wwnames)
+        # when using db always set extended hash to allow bus names (and maybe guidnames?)
         row_db = self._db.select_by_id(id)
         if row_db:
-            row = self._add_name(id, row_db.hashname, source=NameRow.NAME_SOURCE_EXTRA)
+            row = self._add_name(id, row_db.hashname, source=NameRow.NAME_SOURCE_EXTRA, exhash=True)
             if row:
                 self._mark_used(row)
                 return row
@@ -95,7 +96,7 @@ class Names(object):
         row_df = self._db.select_by_id_fuzzy(id)
         if row_df and row_df.hashname:
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_df.hashname)
-            row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
+            row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA, exhash=True)
             if row:
                 self._mark_used(row)
                 return row
@@ -113,7 +114,7 @@ class Names(object):
     # AK's docs) are actually from NAMEs, so it's worth manually testing rather than trusting the caller.
     # Multiple GUIDNAMEs for an ID are possible, so we can update the results, and we can also add Wwise's
     # "Path/ObjectPath" for extra info (never hashnames, considered separate).
-    def _add_name(self, id, name, objpath=None, path=None, onrepeat=ONREPEAT_INCLUDE, forcehash=False, source=None):
+    def _add_name(self, id, name, objpath=None, path=None, onrepeat=ONREPEAT_INCLUDE, exhash=False, source=None):
         if name:
             name = name.strip()
         if objpath:
@@ -125,7 +126,12 @@ class Names(object):
 
         lowname = name.lower()
         hashable = self._fnv.is_hashable(lowname)
-        if not id and not forcehash and not hashable:
+        extended = False
+        if not hashable and exhash:
+            hashable = self._fnv.is_hashable_extended(lowname)
+            extended = hashable
+
+        if not id and not hashable:
             return None
         id_hash = self._fnv.get_hash(lowname)
 
@@ -134,7 +140,6 @@ class Names(object):
         else:
             id = int(id)
         is_hashname = id == id_hash
-        forced = is_hashname and not hashable and forcehash
 
         row = self._names.get(id)
         if row:
@@ -158,7 +163,7 @@ class Names(object):
             self._names[id] = row
 
         if is_hashname:
-            row.add_hashname(name, forced=forced)            
+            row.add_hashname(name, extended=extended)
             #logging.info("names: added id=%i, hashname=%s" % (id, name))
         else:
             row.add_guidname(name)
@@ -310,7 +315,7 @@ class Names(object):
     # Ultimately we only need \t(id)\t(name). Extra fields usually include the editor's
     # object path (like "\Events\Default Work Unit\Pause_All" for event "Pause_All", or
     # full giant .wem path like D:\Jenkins\ws\wwise_v2019.2\.....\Bass160 Fight3_2D88AD03.wem)
-    # Consistently Paths go after 3 tabs (except for wem paths), while other sections use 1 tab.
+    # Paths go after 3 tabs (except for wem paths), while other sections use 1 tab.
     # "State" (not "State Groups")'s path is actually the state group (could be separated)
     # Wem names can be anything, so we want to capture any text
     #
@@ -325,14 +330,53 @@ class Names(object):
 
     def _parse_txt(self, infile):
         #catch: "	1234155799	Play_Thing			\Default Work Unit\Play_Thing	" (with path being optional)
+        # must also catch buses like "3D-Submix_Bus"
         #pattern_ph = re.compile("^\t([0-9]+)\t([a-zA-Z_][a-zA-Z0-9_ ]*)(\t\t\t([^\t]+))?.*")
-        pattern_ph = re.compile(r"^\t([0-9]+)\t([^\t]+)(\t\t*?\t*?([^\t]+))?.*")
+        #pattern_ph = re.compile(r"^\t([0-9]+)\t([^\t]+)(\t\t*?\t*?([^\t]+))?.*")
+        bus_starts = ['Bus', 'Audio Bus', 'Auxiliary Bus']
+        pattern_ph = re.compile(r"^\t([0-9]+)\t([^\t]+)[\t ]*([^\t]*)[\t ]*([^\t]*)")
 
+        bus_hash = False
         for line in infile:
+            if not line:
+                continue
+            # reset+test bus flag in new sectiona
+            if not line.startswith('\t'):
+                bus_hash = False
+                for bus_start in bus_starts:
+                    if line.startswith(bus_start):
+                        bus_hash = True #next names will be buses, and may use extended hash
+                        break
+
             match = pattern_ph.match(line)
             if match:
-                id, name, dummy, objpath = match.groups()
-                self._add_name(id, name, objpath=objpath)
+                id, name, info1, info2 = match.groups()
+                path, objpath = self._parse_txt_info(info1, info2)
+
+                self._add_name(id, name, objpath=objpath, path=path, exhash=bus_hash)
+
+    # After name there can be comments, paths or objpaths. Not very consistent so do some autodetection
+    def _parse_txt_info(self, info1, info2):
+        path = ''
+        objpath = ''
+
+        if self._is_objpath(info1):
+            objpath = info1
+        elif self._is_path(info1):
+            path = info1
+
+        if self._is_objpath(info2):
+            objpath = info2
+        elif self._is_path(info2):
+            path = info2
+
+        return (path, objpath)
+
+    def _is_objpath(self, info):
+        return info and (info.startswith('\\') or info.startswith('//'))
+
+    def _is_path(self, info):
+        return info and len(info) > 2 and info[1] == ':' and info[2] == '\\'
 
 
     #SoundbanksInfo.xml
@@ -432,8 +476,8 @@ class Names(object):
         # list of processed names to quickly skips repeats
         processed = {}
 
-        # catch: "name(thing) = id" (ex. "8bit", "English(US)")
-        pattern_1 = re.compile(r"^[\t]*([a-zA-Z_0-9][a-zA-Z0-9()_ ]*)( = )([0-9]+)[ ]*$")
+        # catch: "name(thing) = id" (ex. "8bit", "English(US)", "3D-Submix_Bus")
+        pattern_1 = re.compile(r"^[\t]*([a-zA-Z_0-9][a-zA-Z0-9_()\- ]*)( = )([0-9]+)[ ]*$")
 
         # catch "name"
         #pattern_2 = re.compile(r"^[\t]*([a-zA-Z_][a-zA-Z0-9_]*)[ ]*$")
@@ -449,10 +493,10 @@ class Names(object):
                 if name in processed:
                     continue
 
-                #special meaning of "hash this anyway" (for objects like buses that use extende FNV dict)
+                #special meaning of "extended hash" (for objects like buses)
                 if id == '0':
                     processed[name] = True
-                    self._add_name(None, name, forcehash=True, source=NameRow.NAME_SOURCE_EXTRA)
+                    self._add_name(None, name, exhash=True, source=NameRow.NAME_SOURCE_EXTRA)
                     continue
 
             #match = pattern_2.match(line)
@@ -588,16 +632,16 @@ class Names(object):
                     continue
 
                 #logging.debug("names: using '%s'", row.hashname)
-                forced = ''
-                if row.forced:
-                    forced = ' = 0' #allow names with special chars
-                outfile.write('%s%s\n' % (row.hashname, forced))
+                extended = ''
+                if row.extended:
+                    extended = ' = 0' #allow names with special chars
+                outfile.write('%s%s\n' % (row.hashname, extended))
 
                 # log alts too (list should be cleaned up manually)
                 for hashname in row.hashnames:
-                    if forced: #todo improve
+                    if extended: #todo improve
                         outfile.write('#alt\n')
-                        outfile.write('%s%s\n' % (row.hashname, forced))
+                        outfile.write('%s%s\n' % (row.hashname, extended))
                     else:
                         outfile.write('%s #alt\n' % (hashname)) #todo not read ok?
 
@@ -646,7 +690,7 @@ class Names(object):
 
 # helper containing a single name
 class NameRow(object):
-    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'multiple_marked', 'source', 'forced']
+    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'multiple_marked', 'source', 'extended']
 
     NAME_SOURCE_COMPANION = 0 #XML/TXT/H
     NAME_SOURCE_EXTRA = 1 #LST/DB
@@ -663,14 +707,14 @@ class NameRow(object):
         self.hashname_used = False
         self.multiple_marked = False
         self.source = None
-        self.forced = False
+        self.extended = False
 
     def _exists(self, name, list):
         if name.lower() in (listname.lower() for listname in list):
             return True
         return False
 
-    def add_hashname(self, name, forced=False):
+    def add_hashname(self, name, extended=False):
         if not name:
             return
         if not self.hashname: #base
@@ -681,7 +725,7 @@ class NameRow(object):
             if name.lower() in (hashname.lower() for hashname in self.hashnames):
                 return
             self.hashnames.append(name) #alts
-        self.forced = forced
+        self.extended = extended
 
     def add_guidname(self, name):
         if not name:
@@ -849,9 +893,13 @@ class SqliteHandler(object):
 class Fnv(object):
     FNV_DICT = '0123456789abcdefghijklmnopqrstuvwxyz_'
     FNV_FORMAT = re.compile(r"^[a-z_][a-z0-9\_]*$")
+    FNV_FORMAT_EX = re.compile(r"^[a-z_0-9][a-z0-9_()\- ]*$")
 
     def is_hashable(self, lowname):
         return self.FNV_FORMAT.match(lowname)
+
+    def is_hashable_extended(self, lowname):
+        return self.FNV_FORMAT_EX.match(lowname)
 
 
     # Find actual name from a close name (same up to last char) using some fuzzy searching

@@ -269,6 +269,8 @@ class Txtp(object):
             name += " {!}"
         if not is_new:
             name += " {d}"
+        if printer.has_debug():
+            name += " {debug}"
 
         #name += ".txtp"
 

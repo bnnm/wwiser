@@ -69,7 +69,8 @@ class TxtpNode(object):
         self.idelay = config.idelay
         self.crossfaded = config.crossfaded
 
-        self.loop_end = False #flag to detect loop traps
+        self.loop_anchor = False #flag to force anchors in sound
+        self.loop_end = False #flag to force loop end anchors
 
         #clip loops are handled a bit differently
         if sound and sound.clip:
@@ -168,6 +169,7 @@ class TxtpPrinter(object):
         self._internals = False     # internal .wem (inside .bnk)
         self._unsupported = False   # missing audio/unsupported plugins
         self._multiloops = False    # multiple layers have infinite loops
+        self._debug = False         # special mark for testing
 
     def process(self):
         self._modify()
@@ -203,6 +205,9 @@ class TxtpPrinter(object):
 
     def has_noloops(self):
         return self._loop_groups == 0 and self._loop_sounds == 0
+
+    def has_debug(self):
+        return self._debug
 
     def get_lang_name(self):
         return self._lang_name
@@ -619,9 +624,17 @@ class TxtpPrinter(object):
             elif not node.sound.clip:
                 self._loop_sounds += 1
             #clips can't loop forever, flag just means intra-loop
-
             return False
 
+        if not self._is_ignorable_noloop(node):
+            return False
+
+        if node.loop is not None and node.loop > 1:
+            return False
+
+        return True
+
+    def _is_ignorable_noloop(self, node):
         if DEBUG_PRINT_IGNORABLE:
             return False
 
@@ -653,7 +666,7 @@ class TxtpPrinter(object):
             self._reorder_wem(subnode)
 
         # *after*
-        if node.type == TYPE_GROUP_SEQUENCE or len(node.children) <= 1:
+        if node.type != TYPE_GROUP_LAYER or len(node.children) <= 1:
             return
 
         # find children ID
@@ -674,12 +687,7 @@ class TxtpPrinter(object):
 
     #--------------------------------------------------------------------------
 
-    # handle some loop cases
-    # - multiloops: layered groups with children that loop independently not in sync.
-    #   Wwise internally sets "playlists" with loops that are more like "repeats" (item ends > play item again).
-    #   If one layer has 2 playlists that loop, items may have different loop end times = multiloop.
-    # - loop traps: when N segment items set loop first one "traps" the playlist and repeats forever, never reaching others.
-
+    # handle some complex loop cases
     def _find_loops(self, node):
         if  self.has_noloops():
             return
@@ -690,28 +698,53 @@ class TxtpPrinter(object):
         self._find_loops_internal(node)
 
     def _find_loops_internal(self, node):
-        # multiloops: find if layer has multiple children and at least 1 infinite loops (vgmstream can't replicate ATM)
+
+        # multiloops: layered groups with children that loop independently not in sync.
+        # Wwise internally sets "playlists" with loops that are more like "repeats" (item ends > play item again).
+        # If one layer has 2 playlists that loop, items may have different loop end times = multiloop.
+        # * find if layer has multiple children and at least 1 infinite loops (vgmstream can't replicate ATM)
         if node.type == TYPE_GROUP_LAYER and len(node.children) > 1 and not self._multiloops:
             for subnode in node.children:
                 if self._has_iloops(subnode, subnode):
                     self._multiloops = True
                     break
 
-        # loop traps: find if segment has multiple children and loops before last children (add mark)
+        # tweak sequences
         if node.type == TYPE_GROUP_SEQUENCE and len(node.children) > 1:
             i = 0
+            loop_ends = 0
             for subnode in node.children:
                 child = self._get_first_child(subnode)
                 i += 1
-                if child and child.loop == 0 and i < len(node.children):
+
+                if not child:
+                    continue
+
+                # loop resequences: sometimes a sequence mixes simple sounds with groups, that can be simplified (ex. Mario Rabbids)
+                # * S2 > sound1, N1 (> sound2) == S2 > sound1, sound2
+                if child.loop == 0 and child.type == TYPE_GROUP_SINGLE and self._is_ignorable_noloop(child):
+                    subchild = self._get_first_child(child.children[0])
+                    if subchild and subchild.loop is None:
+                        subchild.loop = child.loop
+                        if subchild.type in TYPE_SOUNDS:
+                            subchild.loop_anchor = True
+                        child.loop = None
+                        child.ignorable = True
+                        child = subchild
+
+                # loop traps: when N segment items set loop first one "traps" the playlist and repeats forever, never reaching others.
+                # * find if segment has multiple children and loops before last children (add mark)
+                if child.loop == 0 and (i < len(node.children) or loop_ends > 0):
+                    loop_ends += 1 #last segment is only marked if there are other segments with loop end first
                     child.loop_end = True
+
 
         for subnode in node.children:
             self._find_loops(subnode)
         return
 
     # get first non-ignorable children
-    # todo: simplify by removing all ignorable first
+    # todo maybe add a .children list that only points to non-ignorable
     def _get_first_child(self, node):
         if not node.ignorable:
             return node
@@ -1004,8 +1037,8 @@ class TxtpPrinter(object):
         # add config
         mods += self._get_ms(' #p', node.pad_begin)
 
-        # add loops
-        if node.loop is not None:
+        # add loops/anchors
+        if node.loop is not None: #and node.loop_anchor: #groups always use anchors
             if   node.loop == 0:
                 mods += ' #@loop'
                 if node.loop_end:
@@ -1093,7 +1126,7 @@ class TxtpPrinter(object):
             if media:
                 bankname, index = media
                 name += "%s #s%s" % (bankname, index + 1)
-                info += "  ##%s.%s" % (sound.source.tid, extension)
+                #info += "  ##%s.%s" % (sound.source.tid, extension)
                 if sound.source.plugin_wmid:
                     info += " ##unsupported wmid"
             else:
@@ -1134,6 +1167,13 @@ class TxtpPrinter(object):
             mods += '  #v %sdB' % (node.volume)
         if node.crossfaded and self._txtpcache.x_nocrossfade:
             mods += '  #v 0'
+
+        # add anchors
+        if node.loop_anchor:
+            mods += ' #@loop'
+            if node.loop_end:
+                mods += ' #@loop-end'
+
 
         # final .wem are padded to help understand the flow (TXTP trims whitespace filenames/groups)
         pad = self._get_padding()

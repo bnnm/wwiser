@@ -10,25 +10,45 @@ DEBUG_PRINT_GROUP_HEADER = False
 TYPE_SOUND_LEAF = 'snd'
 TYPE_GROUP_ROOT = '.'
 TYPE_GROUP_SINGLE = 'N'
-TYPE_GROUP_SEQUENCE = 'S'
-TYPE_GROUP_RANDOM = 'R'
+TYPE_GROUP_SEQUENCE_CONTINUOUS = 'SC'
+TYPE_GROUP_SEQUENCE_STEP = 'SS'
+TYPE_GROUP_RANDOM_CONTINUOUS = 'RC'
+TYPE_GROUP_RANDOM_STEP = 'RS'
 TYPE_GROUP_LAYER = 'L'
 TYPE_GROUPS = {
     TYPE_GROUP_SINGLE,
-    TYPE_GROUP_SEQUENCE,
-    TYPE_GROUP_RANDOM,
+    TYPE_GROUP_SEQUENCE_CONTINUOUS,
+    TYPE_GROUP_SEQUENCE_STEP,
+    TYPE_GROUP_RANDOM_CONTINUOUS,
+    TYPE_GROUP_RANDOM_STEP,
     TYPE_GROUP_LAYER,
 }
+TYPE_GROUPS_CONTINUOUS = {
+    TYPE_GROUP_SEQUENCE_CONTINUOUS,
+    TYPE_GROUP_RANDOM_CONTINUOUS,
+}
+TYPE_GROUPS_STEPS = {
+    TYPE_GROUP_SEQUENCE_STEP,
+    TYPE_GROUP_RANDOM_STEP,
+}
+TYPE_GROUPS_LAYERS = {
+    TYPE_GROUP_LAYER,
+}
+
 TYPE_GROUPS_TYPE = {
     TYPE_GROUP_SINGLE: 'S',
-    TYPE_GROUP_SEQUENCE: 'S',
-    TYPE_GROUP_RANDOM: 'R',
+    TYPE_GROUP_SEQUENCE_CONTINUOUS: 'S',
+    TYPE_GROUP_SEQUENCE_STEP: 'S',
+    TYPE_GROUP_RANDOM_CONTINUOUS: 'R',
+    TYPE_GROUP_RANDOM_STEP: 'R',
     TYPE_GROUP_LAYER: 'L',
 }
 TYPE_GROUPS_INFO = {
     TYPE_GROUP_SINGLE: 'single',
-    TYPE_GROUP_SEQUENCE: 'sequence',
-    TYPE_GROUP_RANDOM: 'random',
+    TYPE_GROUP_SEQUENCE_CONTINUOUS: 'sequence-continuous',
+    TYPE_GROUP_SEQUENCE_STEP: 'sequence-step',
+    TYPE_GROUP_RANDOM_CONTINUOUS: 'random-continuous',
+    TYPE_GROUP_RANDOM_STEP: 'random-step',
     TYPE_GROUP_LAYER: 'layer',
 }
 
@@ -52,9 +72,8 @@ class TxtpNode(object):
         if sound:
             self.type = TYPE_SOUND_LEAF
         self.children = []
-        self.ignorable = False
 
-        #config
+        # config
         self.pad_begin = None
         self.trim_begin = None
         self.body_time = None
@@ -71,15 +90,15 @@ class TxtpNode(object):
 
         self.loop_anchor = False #flag to force anchors in sound
         self.loop_end = False #flag to force loop end anchors
+        self.loop_killed = False #flag to show which nodes had loop killed due to trapping
 
-        #clip loops are handled a bit differently
+        # clip loop meaning is a bit different and handled automatically
         if sound and sound.clip:
             self.loop = None
 
         # allowed to separate "loop not set" and "loop set but not looping"
         #if self.loop == 1:
         #    self.loop = None
-
         self.self_loop = False
 
 
@@ -88,12 +107,20 @@ class TxtpNode(object):
         self.transition = transition
         return self
 
-    def sequence(self):
-        self.type = TYPE_GROUP_SEQUENCE
+    def sequence_continuous(self):
+        self.type = TYPE_GROUP_SEQUENCE_CONTINUOUS
         return self
 
-    def random(self):
-        self.type = TYPE_GROUP_RANDOM
+    def sequence_step(self):
+        self.type = TYPE_GROUP_SEQUENCE_STEP
+        return self
+
+    def random_continuous(self):
+        self.type = TYPE_GROUP_RANDOM_CONTINUOUS
+        return self
+
+    def random_step(self):
+        self.type = TYPE_GROUP_RANDOM_STEP
         return self
 
     def layer(self):
@@ -102,6 +129,30 @@ class TxtpNode(object):
 
     def append(self, tnode):
         self.children.append(tnode)
+
+    # nodes that don't contribute to final .txtp so they don't need to be written
+    # also loads some values 
+    def ignorable(self, skiploop=False):
+        if not skiploop: #sometimes gets in the way of calcs
+            if self.loop == 0: #infinite loop
+                return False
+
+        if self.loop is not None and self.loop > 1: #finite loop
+            return False
+
+        if self.type in TYPE_SOUNDS:
+            return False
+
+        if len(self.children) > 1:
+            return False
+
+        if self.idelay or self.delay or self.volume:
+            return False
+
+        if DEBUG_PRINT_IGNORABLE:
+            return False
+
+        return True
 
 #******************************************************************************
 
@@ -161,7 +212,8 @@ class TxtpPrinter(object):
         self._loop_sounds = 0
         # flags
         self._lang_name = None
-        self._randoms = False
+        self._random_continuous = False
+        self._random_steps = False
         self._silences = False      # may use silences to change/crossfade songs
         self._self_loops = False    #
         self._streams = False       # has regular files
@@ -171,16 +223,21 @@ class TxtpPrinter(object):
         self._multiloops = False    # multiple layers have infinite loops
         self._debug = False         # special mark for testing
 
-    def process(self):
+    def prepare(self):
         self._modify()
+
+    def generate(self):
         self._write()
         return ''.join(self._lines)
 
     def has_sounds(self):
         return self._sound_count > 0
 
-    def has_randoms(self):
-        return self._randoms
+    def has_random_continuous(self):
+        return self._random_continuous
+
+    def has_random_steps(self):
+        return self._random_steps
 
     def has_unsupported(self):
         return self._unsupported
@@ -228,7 +285,6 @@ class TxtpPrinter(object):
         self._set_props(self._tree)
         self._set_volume(self._tree)
         self._set_times(self._tree)
-        self._set_ignorable(self._tree)
         self._reorder_wem(self._tree)
         self._find_loops(self._tree)
         
@@ -250,20 +306,20 @@ class TxtpPrinter(object):
         if post:
             if node.loop is not None:       config1 += " lpn=%s" % (node.loop)
             if node.volume is not None:     config1 += " vol=%s" % (node.volume)
-            if node.ignorable:              config1 += " [i]"
+            if node.ignorable():            config1 += " [i]"
 
-            if node.body_time:          config2 += ' bt={0:.5f}'.format(node.body_time)
-            if node.pad_begin:          config2 += ' pb={0:.5f}'.format(node.pad_begin)
-            if node.trim_begin:         config2 += ' tb={0:.5f}'.format(node.trim_begin)
-            if node.trim_end:           config2 += ' te={0:.5f}'.format(node.trim_end)
-            if node.pad_end:            config2 += ' pb={0:.5f}'.format(node.pad_end)
+            if node.body_time:              config2 += ' bt={0:.5f}'.format(node.body_time)
+            if node.pad_begin:              config2 += ' pb={0:.5f}'.format(node.pad_begin)
+            if node.trim_begin:             config2 += ' tb={0:.5f}'.format(node.trim_begin)
+            if node.trim_end:               config2 += ' te={0:.5f}'.format(node.trim_end)
+            if node.pad_end:                config2 += ' pb={0:.5f}'.format(node.pad_end)
 
         else:
             if node.config.loop is not None: config1 += " lpn=%s" % (node.config.loop)
-            if node.config.delay:       config1 += " dly=%s" % (node.config.delay)
-            if node.config.idelay:      config1 += " idl=%s" % (node.config.idelay)
-            if node.config.volume:      config1 += " vol=%s" % (node.config.volume)
-            if node.transition:         config1 += " (trn)"
+            if node.config.delay:           config1 += " dly=%s" % (node.config.delay)
+            if node.config.idelay:          config1 += " idl=%s" % (node.config.idelay)
+            if node.config.volume:          config1 += " vol=%s" % (node.config.volume)
+            if node.transition:             config1 += " (trn)"
 
             if node.config.entry or node.config.exit:
                 dur = '{0:.5f}'.format(node.config.duration)
@@ -305,32 +361,20 @@ class TxtpPrinter(object):
     # removes and simplifies nodes that aren't directly usable
     def _clean_tree(self, node):
 
-        # test if children have loop infinite
-        if node.loop == 0:
-            if self._has_iloops(node, node):
-                node.loop = None
-
-        if node.type in TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_ignorable:
-            self._kill_node(node)
-            return
-
-        # if multiple children in a sequence have loop infinite, only first one will play
-        # todo check if needed
-        #if node.type == TYPE_GROUP_SEQUENCE and len(node.children) > 1:
-        #    loop_infs = 0
-        #    for subnode in node.children:
-        #        if subnode.type in TYPE_GROUPS and subnode.loop == 0:
-        #            loop_infs += 1
-        #            if loop_infs > 1:
-        #                subnode.loop = None
-
         # iter over copy, since we may need to drop children
         for subnode in list(node.children):
             self._clean_tree(subnode)
 
-        # goes *after* cleaning children
+        # kill nodes *after* iterating (bottom to top)
+
+
+        # kill sound nodes that don't actually play anything, like rumble helpers (seen in AC2, MK Home Circuit)
+        if node.type in TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_ignorable:
+            self._kill_node(node)
+            return
+
+        # kill group nodes that don't have children since they mess up some calcs
         if node.type in TYPE_GROUPS and node.parent:
-            # kill group nodes that don't have children since they mess up some calcs
             is_empty = len(node.children) == 0
 
             # kill segments that don't play (would generate empty silence), 
@@ -350,7 +394,7 @@ class TxtpPrinter(object):
         node.parent.children.remove(node)        
 
     def _has_random_repeats(self, node):
-        if node.type != TYPE_GROUP_RANDOM or len(node.children) <= 1:
+        if node.type not in TYPE_GROUPS_STEPS or len(node.children) <= 1:
             return False
 
         prev_id = None
@@ -435,7 +479,7 @@ class TxtpPrinter(object):
 
         # self loop: make a clone branch (new loop), then mark the original, so clone goes
         # from 0..entry, and original from entry..exit
-        node.type = TYPE_GROUP_SEQUENCE
+        node.type = TYPE_GROUP_SEQUENCE_CONTINUOUS
         new_subnode = self._make_copy(node, subnode)
 
         subnode.self_loop = True #mark transition node
@@ -447,7 +491,7 @@ class TxtpPrinter(object):
     def _make_copy(self, new_parent, node):
         # semi-shallow copy (since some nodes have parser nodes that shouldn't be copied)
 
-        # todo maybe implement __copy__
+        #todo maybe implement __copy__
         new_config = copy.copy(node.config)
         new_sound = copy.copy(node.sound)
         new_transition = copy.copy(node.transition)
@@ -472,15 +516,13 @@ class TxtpPrinter(object):
         if node.type in TYPE_GROUPS:
             is_single = len(node.children) == 1
             if is_single:
-                # simplify
-                if node.type == TYPE_GROUP_RANDOM or node.type == TYPE_GROUP_LAYER:
-                    node.type = TYPE_GROUP_SINGLE
+                # simplify any type (done here rather than on clean tree after self-loops)
+                node.type = TYPE_GROUP_SINGLE
 
                 subnode = node.children[0]
 
                 # move loop (not to sounds since loop is applied over finished track)
-                # todo maybe can apply on some sounds
-                # ex. S1 l=0 > L2 --- = S1 --- > L2 l=0
+                #todo maybe can apply on some sounds (ex. S1 l=0 > L2 --- = S1 --- > L2 l=0)
                 if subnode.type in TYPE_GROUPS:
                     is_noloop_subnode = subnode.loop is None or subnode.loop == 1
                     is_bothloop = node.loop == 0 and subnode.loop == 0
@@ -513,8 +555,16 @@ class TxtpPrinter(object):
         for subnode in node.children:
             self._set_props(subnode)
 
+        # whole group config
         if node.type in TYPE_GROUPS:
             self._apply_group(node)
+
+        # info
+        if node.loop == 0:
+            if node.type in TYPE_GROUPS:
+                self._loop_groups += 1
+            elif node.type in TYPE_SOUNDS and not node.sound.clip: #clips can't loop forever, flag just means intra-loop
+                self._loop_sounds += 1
 
         return
 
@@ -583,7 +633,6 @@ class TxtpPrinter(object):
             self._set_duration(subnode, snode)
 
     def _set_transition(self, node, tnode, snode):
-
         if node != tnode and node.transition:
             #logging.info("txtp: transition inside transition")
             #this is possible in stuff like: switch (tnode) > mranseq (node)
@@ -606,67 +655,20 @@ class TxtpPrinter(object):
 
     #--------------------------------------------------------------------------
 
-    # marks nodes that don't contribute to final .txtp so they don't need to be written
-    # also loads some values 
-    def _set_ignorable(self, node):
-        if self._is_ignorable(node):
-            node.ignorable = True
-
-        for subnode in node.children:
-            self._set_ignorable(subnode)
-
-        return
-
-    def _is_ignorable(self, node, ignoreloop=False):
-        if not ignoreloop and node.loop == 0:
-            if node.type in TYPE_GROUPS:
-                self._loop_groups += 1
-            elif not node.sound.clip:
-                self._loop_sounds += 1
-            #clips can't loop forever, flag just means intra-loop
-            return False
-
-        if not self._is_ignorable_noloop(node):
-            return False
-
-        if node.loop is not None and node.loop > 1:
-            return False
-
-        return True
-
-    def _is_ignorable_noloop(self, node):
-        if DEBUG_PRINT_IGNORABLE:
-            return False
-
-        if node.type in TYPE_SOUNDS:
-            return False
-
-        if len(node.children) > 1:
-            return False
-
-        if node.loop is not None and node.loop > 1:
-            return False
-
-        if node.idelay or node.delay or node.volume:
-            return False
-
-        return True
-
-    #--------------------------------------------------------------------------
-
     # in layered groups .wem is ordered by segment/track ids but final wem ID can move around,
     # reorder to make modding .txtp a bit easier. ex:
     # S2 > L2 > 123.wem
     #    |    > 321.wem
-    #    \ L2 > 321.wem !!reorder
+    #    \ L2 > 321.wem  !! (reorder to match the above)
     #         > 123.wem
     def _reorder_wem(self, node):
 
         for subnode in node.children:
             self._reorder_wem(subnode)
 
-        # *after*
-        if node.type != TYPE_GROUP_LAYER or len(node.children) <= 1:
+        # must only reorder layers
+        # (check *after* subnode loops since this goes bottom to top)
+        if node.type not in TYPE_GROUPS_LAYERS:
             return
 
         # find children ID
@@ -688,6 +690,7 @@ class TxtpPrinter(object):
     #--------------------------------------------------------------------------
 
     # handle some complex loop cases
+    # (assumes groups have been simplifies when no children are present)
     def _find_loops(self, node):
         if  self.has_noloops():
             return
@@ -699,22 +702,46 @@ class TxtpPrinter(object):
 
     def _find_loops_internal(self, node):
 
+        for subnode in node.children:
+            self._find_loops(subnode)
+
+        #try bottom-to-top
+
         # multiloops: layered groups with children that loop independently not in sync.
         # Wwise internally sets "playlists" with loops that are more like "repeats" (item ends > play item again).
         # If one layer has 2 playlists that loop, items may have different loop end times = multiloop.
         # * find if layer has multiple children and at least 1 infinite loops (vgmstream can't replicate ATM)
-        if node.type == TYPE_GROUP_LAYER and len(node.children) > 1 and not self._multiloops:
+        if node.type in TYPE_GROUPS_LAYERS and not self._multiloops:
             for subnode in node.children:
                 if self._has_iloops(subnode, subnode):
                     self._multiloops = True
                     break
 
+        # looping steps behave like continuous, since they get "trapped" repeating at this level (ex. Nier Automata)
+        if node.loop == 0:
+            #if node.type == TYPE_GROUP_RANDOM_STEP:
+            #    node.type = TYPE_GROUP_RANDOM_CONTINUOUS
+            if node.type == TYPE_GROUP_SEQUENCE_STEP:
+                node.type = TYPE_GROUP_SEQUENCE_CONTINUOUS
+
+        # normal (or looping) continuous with all looping children can be treated as steps (ex. Nier Automata)
+        if node.type == TYPE_GROUP_RANDOM_CONTINUOUS: #looping sequences are handled below
+            iloops = 0
+            for subnode in node.children:
+                if self._has_iloops(node, node):
+                    iloops += 1
+
+            if iloops == len(node.children): #N iloops = children are meant to be shuffled songs
+                node.type = TYPE_GROUP_RANDOM_STEP
+                node.loop = None # plus removes on looping on higher level to simplify behavior
+        
+
         # tweak sequences
-        if node.type == TYPE_GROUP_SEQUENCE and len(node.children) > 1:
+        if node.type in TYPE_GROUPS_CONTINUOUS:
             i = 0
             loop_ends = 0
             for subnode in node.children:
-                child = self._get_first_child(subnode)
+                child = self._get_first_child(subnode) #may include subnode
                 i += 1
 
                 if not child:
@@ -722,31 +749,30 @@ class TxtpPrinter(object):
 
                 # loop resequences: sometimes a sequence mixes simple sounds with groups, that can be simplified (ex. Mario Rabbids)
                 # * S2 > sound1, N1 (> sound2) == S2 > sound1, sound2
-                if child.loop == 0 and child.type == TYPE_GROUP_SINGLE and self._is_ignorable_noloop(child):
+                if child.loop == 0 and child.type == TYPE_GROUP_SINGLE and child.ignorable(skiploop=True):
                     subchild = self._get_first_child(child.children[0])
                     if subchild and subchild.loop is None:
                         subchild.loop = child.loop
                         if subchild.type in TYPE_SOUNDS:
                             subchild.loop_anchor = True
                         child.loop = None
-                        child.ignorable = True
                         child = subchild
 
-                # loop traps: when N segment items set loop first one "traps" the playlist and repeats forever, never reaching others.
+                # loop traps: when N segment items set loop first one "traps" the playlist and repeats forever, never reaching others (ex. Magatsu Wahrheit)
                 # * find if segment has multiple children and loops before last children (add mark)
-                if child.loop == 0 and (i < len(node.children) or loop_ends > 0):
-                    loop_ends += 1 #last segment is only marked if there are other segments with loop end first
-                    child.loop_end = True
+                if child.loop == 0:
+                    if (i < len(node.children) or loop_ends > 0):
+                        loop_ends += 1 #last segment is only marked if there are other segments with loop end first
+                        child.loop_end = True
+                    # todo maybe only if node is first usable node
+                    node.loop = None #remove parent loop to simulate trapping
+                    node.loop_killed = True
 
-
-        for subnode in node.children:
-            self._find_loops(subnode)
         return
 
     # get first non-ignorable children
-    # todo maybe add a .children list that only points to non-ignorable
     def _get_first_child(self, node):
-        if not node.ignorable:
+        if not node.ignorable():
             return node
 
         for subnode in node.children:
@@ -976,7 +1002,7 @@ class TxtpPrinter(object):
 
 
     def _write_node(self, node):
-        if not node.ignorable:
+        if not node.ignorable():
             self.depth += 1
 
         if   node.type in TYPE_SOUNDS:
@@ -991,12 +1017,14 @@ class TxtpPrinter(object):
         if node.type in TYPE_GROUPS:
             self._write_group(node)
 
-        if not node.ignorable:
+        if not node.ignorable():
             self.depth -= 1
 
         # set flag with final tree since randoms of a single file can be simplified
-        if node.type == TYPE_GROUP_RANDOM and len(node.children) > 1:
-            self._randoms = True
+        if node.type == TYPE_GROUP_RANDOM_CONTINUOUS and len(node.children) > 1:
+            self._random_continuous = True
+        if node.type in TYPE_GROUPS_STEPS and len(node.children) > 1:
+            self._random_steps = True
         if node.config.volume == -96.0 or node.crossfaded:
             self._silences = True
 
@@ -1004,11 +1032,11 @@ class TxtpPrinter(object):
     # make a TXTP group
     def _write_group(self, node):
         #ignore dumb nodes that don't contribute (children are output though)
-        if node.ignorable:
+        if node.ignorable():
             return
 
         # ex. -L2: at position N (auto), layers previous 2 files
-        type = TYPE_GROUPS_TYPE[node.type]
+        type_text = TYPE_GROUPS_TYPE[node.type]
         count = len(node.children)
         ignored = False #self._ignore_next #or count <= 1 #allow 1 for looping full segments
         
@@ -1019,10 +1047,12 @@ class TxtpPrinter(object):
             line += '#'
 
         # add base group
-        line += 'group = -%s%s' % (type, count)
-        if type == TYPE_GROUP_RANDOM:
+        line += 'group = -%s%s' % (type_text, count)
+        if    node.type in TYPE_GROUPS_STEPS:
             line += '>1'
             #info += "  ##select >N of %i" % (count)
+        elif node.type == TYPE_GROUP_RANDOM_CONTINUOUS: #in TYPE_GROUPS_CONTINUOUS: #not for sequence since it's looks a bit strange
+            line += '>-'
 
         # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
         if node.volume:
@@ -1031,7 +1061,7 @@ class TxtpPrinter(object):
             mods += '  #v 0'
 
         # wwise seems to mix untouched then use volumes to tweak
-        if type == TYPE_GROUP_LAYER:
+        if node.type in TYPE_GROUPS_LAYERS:
             mods += ' #@layer-v'
 
         # add config
@@ -1045,6 +1075,11 @@ class TxtpPrinter(object):
                     mods += ' #@loop-end'
             elif node.loop > 1:
                 mods += ' #E #l %i.0' % (node.loop)
+        # extra info since loop simplification is brittle
+        if node.loop_killed:
+            info += '  ##@loop'
+            if node.loop_end:
+                info += ' #@loop-end'
 
         pad = self._get_padding()
         self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
@@ -1054,7 +1089,7 @@ class TxtpPrinter(object):
     def _write_group_header(self, node):
         if not DEBUG_PRINT_GROUP_HEADER:
             return #not too useful
-        if node.ignorable:
+        if node.ignorable():
             return
 
         line = ''
@@ -1173,15 +1208,16 @@ class TxtpPrinter(object):
             mods += ' #@loop'
             if node.loop_end:
                 mods += ' #@loop-end'
+        # extra info since loop simplification is brittle
+        if node.loop_killed:
+            info += '  ##@loop'
+            if node.loop_end:
+                info += ' #@loop-end'
 
 
         # final .wem are padded to help understand the flow (TXTP trims whitespace filenames/groups)
         pad = self._get_padding()
         self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
-
-        #todo extra line to mimic groups
-        #if node.parent and node.parent.ignorable and len(node.parent.children) == 1:
-        #    self._lines.append('\n')
 
 
     def _get_sfx(self, sound, node):

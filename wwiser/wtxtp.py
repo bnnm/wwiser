@@ -251,8 +251,10 @@ class Txtp(object):
             name += "-{stinger=~%s}" % (self._ntidsub.value())
 
         name += self._basename
-        if printer.has_randoms():
+        if printer.has_random_steps():
             name += " {r}"
+        #if printer.has_random_continuous():
+        #    name += " {rc}"
         if printer.has_externals():
             name += " {e}"
         if printer.has_multiloops():
@@ -317,7 +319,8 @@ class Txtp(object):
 
     def write(self):
         printer = wtxtp_tree.TxtpPrinter(self, self._root, self._txtpcache, self._rebuilder)
-        text = printer.process()
+        printer.prepare()
+        text = printer.generate()
 
         # may have files but all silent
         if not printer.has_sounds():
@@ -370,22 +373,29 @@ class Txtp(object):
 
     #--------------------------------------------------------------------------
 
-    def group_random(self, elems, config):
+    def group_random_continuous(self, elems, config):
         if not elems:
             return
-        #self._basename += ' {r~%i}' % (len(elems))
-        return self._group_add(config).random()
+        return self._group_add(config).random_continuous()
 
-    def group_sequence(self, elems, config):
+    def group_random_step(self, elems, config):
         if not elems:
             return
-        #self._basename += ' {s~%i}' % (len(elems))
-        return self._group_add(config).sequence()
+        return self._group_add(config).random_step()
+
+    def group_sequence_continuous(self, elems, config):
+        if not elems:
+            return
+        return self._group_add(config).sequence_continuous()
+
+    def group_sequence_step(self, elems, config):
+        if not elems:
+            return
+        return self._group_add(config).sequence_step()
 
     def group_layer(self, elems, config):
         if not elems:
             return
-        #self._basename += ' {l~%i}' % (len(elems))
         return self._group_add(config).layer()
 
     def group_single(self, config, transition=None):
@@ -410,7 +420,6 @@ class Txtp(object):
     def _source_add(self, sound, config):
         node = wtxtp_tree.TxtpNode(self._current, sound=sound, config=config)
         self._current.append(node)
-        #self._current = node
         return self._current
 
     #--------------------------------------------------------------------------

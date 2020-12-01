@@ -357,6 +357,9 @@ class _NodeHelper(object):
         "[LoopStart]", "[LoopEnd]",
         "[FadeInTime]", "[FadeOutTime]", "[LoopCrossfadeDuration]",
         "[CrossfadeUpCurve]", "[CrossfadeDownCurve]",
+        #"[MakeUpGain]", #seems to be used when "auto normalize" is on (ex. Magatsu Wahrheit, MK Home Circuit)
+        #"[BusVolume]", #percent of max? (ex. DmC)
+        #"[OutputBusVolume]"
     ]
     OLD_AUDIO_PROPS = [
         'Volume', 'Volume.min', 'Volume.max', 'LFE', 'LFE.min', 'LFE.max', 
@@ -946,11 +949,13 @@ class _CAkRanSeqCntr(_NodeHelper):
         nrandom = node.find(name='eRandomMode')  #0=normal (repeatable), 1=shuffle (no repeatable)
         nloop = node.find(name='sLoopCount')  #1=once, 0=infinite, >1=N times
         ncontinuous = node.find(name='bIsContinuous')  #play one of the objects each time this is played, else play all
+        navoidrepeat = node.find(name='wAvoidRepeatCount')  #excludes last played object from available list until N are played
 
         self.mode = nmode.value()
         self.random = nrandom.value()
         self.config.loop = nloop.value()
         self.continuous = ncontinuous.value()
+        self.avoidrepeat = navoidrepeat.value()
 
         #sLoopModMin/sLoopModMax: random loop modifiers (loop -min +max)
 
@@ -974,21 +979,35 @@ class _CAkRanSeqCntr(_NodeHelper):
             #bIsRestartBackward: once done, play item from last to first
             self.ntids = node.find(name='Children').finds(type='tid') #not actually ordered?
 
-        self.nfields.extend([nmode, nrandom, nloop, ncontinuous])
+        self.nfields.extend([nmode, nrandom, nloop, ncontinuous, navoidrepeat])
         return
 
     def _process_txtp(self, txtp):
-        if   self.mode == 0: #random
-            txtp.group_random(self.ntids, self.config)
-            for ntid in self.ntids:
-                self._process_next(ntid, txtp)
-            txtp.group_done(self.ntids)
 
-        elif self.mode == 1: #sequence
-            txtp.group_sequence(self.ntids, self.config)
-            for ntid in self.ntids:
-                self._process_next(ntid, txtp)
-            txtp.group_done(self.ntids)
+        if   self.mode == 0 and self.continuous: #random + continuous (plays all objects randomly, on loop/next call restarts)
+            txtp.group_random_continuous(self.ntids, self.config)
+
+        elif self.mode == 0: #random + step (plays one object at random, on next call plays another object / cannot loop)
+            txtp.group_random_step(self.ntids, self.config)
+            if self.config.loop == 0 and not self.avoidrepeat:
+                self._barf("unknown loop mode in ranseq rnd step")
+            self.config.loop = None #ignored by Wwise, simplify
+
+        elif self.mode == 1 and self.continuous: #sequence + continuous (plays all objects in sequence, on loop/next call restarts)
+            txtp.group_sequence_continuous(self.ntids, self.config)
+
+        elif self.mode == 1: #sequence + step (plays one object from first, on next call plays next object / cannot loop)
+            txtp.group_sequence_step(self.ntids, self.config)
+            if self.config.loop == 0 and not self.avoidrepeat:
+                self._barf("unknown loop mode in ranseq seq step")
+            self.config.loop = None #ignored by Wwise, simplify
+
+        else:
+            self._barf('unknown ranseq mode')
+
+        for ntid in self.ntids:
+            self._process_next(ntid, txtp)
+        txtp.group_done(self.ntids)
 
         return
 
@@ -1252,16 +1271,21 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
                 self._process_next(item.ntid, txtp)
                 txtp.group_done()
             else:
-                if   type == 0: #0: ContinuousSequence (plays all objects, one after other)
-                    txtp.group_sequence(subitems, item.config)
-                elif type == 1: #1: StepSequence (picks one object, on next play/loop picks another)
-                    txtp.group_random(subitems, item.config) #simulate
-                elif type == 2: #2: ContinuousRandom (plays randoms until all objects are covered)
-                    txtp.group_sequence(subitems, item.config) #simulate
-                elif type == 3: #3: StepRandom (plays one random)
-                    txtp.group_random(subitems, item.config)
+                if   type == 0: #0: ContinuousSequence (plays all objects in sequence, on loop/next call restarts)
+                    txtp.group_sequence_continuous(subitems, item.config)
+
+                elif type == 1: #1: StepSequence (plays one object from first, on loop/next call plays next object)
+                    txtp.group_sequence_step(subitems, item.config)
+
+                elif type == 2: #2: ContinuousRandom (plays all objects randomly, on loop/next call restarts)
+                    txtp.group_random_continuous(subitems, item.config)
+
+                elif type == 3: #3: StepRandom (plays one object at random, on loop/next call plays another object)
+                    txtp.group_random_step(subitems, item.config)
+
                 else:
                     self._barf('unknown type')
+
                 self._process_playlist(txtp, item.items)
                 txtp.group_done(subitems)
             txtp.info_done()
@@ -1470,14 +1494,14 @@ class _CAkMusicTrack(_NodeHelper):
                 self._process_clips(subtrack, txtp)
             txtp.group_done()
 
-        elif self.type == 1: #random (play one subtrack)
-            txtp.group_random(self.subtracks, self.config)
+        elif self.type == 1: #random (plays random subtrack, on next call plays another)
+            txtp.group_random_step(self.subtracks, self.config)
             for subtrack in self.subtracks:
                 self._process_clips(subtrack, txtp)
             txtp.group_done(self.subtracks)
 
-        elif self.type == 2: #sequence (plays one subtrack, next time play another)
-            txtp.group_random(self.subtracks, self.config)
+        elif self.type == 2: #sequence (plays first subtrack, on next call plays next)
+            txtp.group_sequence_step(self.subtracks, self.config)
             for subtrack in self.subtracks:
                 self._process_clips(subtrack, txtp)
             txtp.group_done(self.subtracks)

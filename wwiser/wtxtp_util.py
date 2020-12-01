@@ -9,6 +9,8 @@ class NodeConfig(object):
     def __init__(self):
         self.loop = None
         self.volume = None
+        self.makeupgain = None
+        self.pitch = None
         self.delay = None
         self.idelay = None
         self.crossfaded = False #RPTC/state controlled silence

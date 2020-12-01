@@ -269,8 +269,10 @@ class Txtp(object):
         #    name += " {selfloop}"
         if printer.has_unsupported():
             name += " {!}"
-        if not is_new:
+        if not is_new: #dupe
             name += " {d}"
+        #if printer.has_others():
+        #    name += " {o}"
         if printer.has_debug():
             name += " {debug}"
 

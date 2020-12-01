@@ -387,21 +387,26 @@ class _NodeHelper(object):
                     #self._barf('found prop %s' % (valuefmt))
                     self.builder._unknown_props[valuefmt] = True
 
-                if "[Loop]" in valuefmt:
+                elif "[Loop]" in valuefmt:
                     self.config.loop = value
 
-                if "[Volume]" in valuefmt:
+                elif "[Volume]" in valuefmt:
                     self.config.volume = value
 
-                if "[DelayTime]" in valuefmt:
+                elif "[MakeUpGain]" in valuefmt:
+                    self.config.makeupgain = value
+
+                elif "[Pitch]" in valuefmt:
+                    self.config.pitch = value
+
+                elif "[DelayTime]" in valuefmt:
                     self.config.delay = value
 
-                if "[InitialDelay]" in valuefmt:
+                elif "[InitialDelay]" in valuefmt:
                     self.config.idelay = value * 1000.0 #float in seconds to ms
 
                 #missing useful effects:
                 #TransitionTime: used in play events to fade-in event
-                #Pitch: changes pitch
 
                 self.nfields.append((nkey, nval))
 
@@ -979,6 +984,13 @@ class _CAkRanSeqCntr(_NodeHelper):
             #bIsRestartBackward: once done, play item from last to first
             self.ntids = node.find(name='Children').finds(type='tid') #not actually ordered?
 
+
+        #ignored by Wwise but sometimes set, simplify
+        if self.config.loop == 0 and not self.continuous:
+            #if not self.avoidrepeat:
+            #    self._barf("unknown loop mode in ranseq seq step")
+            self.config.loop = None
+
         self.nfields.extend([nmode, nrandom, nloop, ncontinuous, navoidrepeat])
         return
 
@@ -989,18 +1001,12 @@ class _CAkRanSeqCntr(_NodeHelper):
 
         elif self.mode == 0: #random + step (plays one object at random, on next call plays another object / cannot loop)
             txtp.group_random_step(self.ntids, self.config)
-            if self.config.loop == 0 and not self.avoidrepeat:
-                self._barf("unknown loop mode in ranseq rnd step")
-            self.config.loop = None #ignored by Wwise, simplify
 
         elif self.mode == 1 and self.continuous: #sequence + continuous (plays all objects in sequence, on loop/next call restarts)
             txtp.group_sequence_continuous(self.ntids, self.config)
 
         elif self.mode == 1: #sequence + step (plays one object from first, on next call plays next object / cannot loop)
             txtp.group_sequence_step(self.ntids, self.config)
-            if self.config.loop == 0 and not self.avoidrepeat:
-                self._barf("unknown loop mode in ranseq seq step")
-            self.config.loop = None #ignored by Wwise, simplify
 
         else:
             self._barf('unknown ranseq mode')

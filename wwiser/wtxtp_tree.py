@@ -83,11 +83,22 @@ class TxtpNode(object):
         # copy value as may need to simplify tree config (ex. multiple objects can set infinite loop)
         # but changing config directly is no good (Wwise objects repeat)
         self.volume = config.volume
+        self.makeupgain = config.makeupgain
+        self.pitch = config.pitch
         self.loop = config.loop
         self.delay = config.delay
         self.idelay = config.idelay
-        self.crossfaded = config.crossfaded
 
+        self.crossfaded = config.crossfaded
+        self.silenced = False
+
+        if self.volume and self.volume <= -96.0:
+            self.volume = None
+            self.silenced = True
+
+        # allowed to separate "loop not set" and "loop set but not looping"
+        #if self.loop == 1:
+        #    self.loop = None
         self.loop_anchor = False #flag to force anchors in sound
         self.loop_end = False #flag to force loop end anchors
         self.loop_killed = False #flag to show which nodes had loop killed due to trapping
@@ -96,9 +107,6 @@ class TxtpNode(object):
         if sound and sound.clip:
             self.loop = None
 
-        # allowed to separate "loop not set" and "loop set but not looping"
-        #if self.loop == 1:
-        #    self.loop = None
         self.self_loop = False
 
 
@@ -148,6 +156,8 @@ class TxtpNode(object):
 
         if self.idelay or self.delay or self.volume:
             return False
+        
+        #makeupgain, pitch: ignored
 
         if DEBUG_PRINT_IGNORABLE:
             return False
@@ -221,6 +231,7 @@ class TxtpPrinter(object):
         self._internals = False     # internal .wem (inside .bnk)
         self._unsupported = False   # missing audio/unsupported plugins
         self._multiloops = False    # multiple layers have infinite loops
+        self._others = False        # misc marks
         self._debug = False         # special mark for testing
 
     def prepare(self):
@@ -262,6 +273,9 @@ class TxtpPrinter(object):
 
     def has_noloops(self):
         return self._loop_groups == 0 and self._loop_sounds == 0
+
+    def has_others(self):
+        return self._others
 
     def has_debug(self):
         return self._debug
@@ -418,12 +432,12 @@ class TxtpPrinter(object):
     #                       \ N1 (l=0) > ..
     # - L2 (l=0) > N1 (l=0)
     #            \ N1 (l=0)
-    def _has_iloops(self, node, pnode):
-        if pnode != node and node.loop == 0:
+    def _has_iloops(self, node):
+        if node.loop == 0:
             return True
 
         for subnode in node.children:
-            if self._has_iloops(subnode, pnode):
+            if self._has_iloops(subnode):
                 return True
         return False
 
@@ -512,48 +526,80 @@ class TxtpPrinter(object):
 
     # simplify props by moving them out from single groups to child, to minimize total groups
     def _set_props(self, node):
+        # do 2 passes because sometimes when moving props down it stops when same prop exists right below,
+        # but after all subnodes have been processes (and props were moved down) prop can be moved again
+        #todo improve (ex. Detroit  129941368 + (C05_Music_State=C05_OnNest))
+        self._set_props_move(node)
+        self._set_props_move(node)
+
+        self._set_props_config(node)
+
+    def _set_props_move(self, node):
 
         if node.type in TYPE_GROUPS:
             is_single = len(node.children) == 1
             if is_single:
-                # simplify any type (done here rather than on clean tree after self-loops)
-                node.type = TYPE_GROUP_SINGLE
-
-                subnode = node.children[0]
-
-                # move loop (not to sounds since loop is applied over finished track)
-                #todo maybe can apply on some sounds (ex. S1 l=0 > L2 --- = S1 --- > L2 l=0)
-                if subnode.type in TYPE_GROUPS:
-                    is_noloop_subnode = subnode.loop is None or subnode.loop == 1
-                    is_bothloop = node.loop == 0 and subnode.loop == 0
-                    if is_noloop_subnode or is_bothloop:
-                        subnode.loop = node.loop
-                        node.loop = None
-
-                # move delay (ok in sounds, ignore in clips)
-                is_noloop_node = node.loop is None or node.loop == 1
-                is_clip_subnode = subnode.sound and subnode.sound.clip #probably ok, but may mess-up transition calcs
-                if not subnode.delay and is_noloop_node and not is_clip_subnode:
-                    subnode.delay = node.delay
-                    node.delay = None
-                if not subnode.idelay and is_noloop_node and not is_clip_subnode:
-                    subnode.idelay = node.idelay
-                    node.idelay = None
-
-
-                # move volume (closer to source to apply "volume > layering" to avoid clipping in the reverse)
-                if not subnode.volume:
-                    subnode.volume = node.volume
-                    node.volume = None
-
-                # move crossfade flag (similar to volume)
-                if not subnode.crossfaded:
-                    subnode.crossfaded = node.crossfaded
-                    node.crossfaded = None
-
+                self._move_group_props(node)
 
         for subnode in node.children:
-            self._set_props(subnode)
+            self._set_props_move(subnode)
+
+        return
+
+    def _move_group_props(self, node):
+        # for single groups only
+
+        # simplify any type (done here rather than on clean tree after self-loops)
+        node.type = TYPE_GROUP_SINGLE
+
+        subnode = node.children[0]
+
+        # move loop (not to sounds since loop is applied over finished track)
+        #todo maybe can apply on some sounds (ex. S1 l=0 > L2 --- = S1 --- > L2 l=0)
+        if subnode.type in TYPE_GROUPS:
+            is_noloop_subnode = subnode.loop is None or subnode.loop == 1
+            is_bothloop = node.loop == 0 and subnode.loop == 0
+            if is_noloop_subnode or is_bothloop:
+                subnode.loop = node.loop
+                node.loop = None
+
+        # move delay (ok in sounds, ignore in clips)
+        is_noloop_node = node.loop is None or node.loop == 1
+        is_clip_subnode = subnode.sound and subnode.sound.clip #probably ok, but may mess-up transition calcs
+        if not subnode.delay and is_noloop_node and not is_clip_subnode:
+            subnode.delay = node.delay
+            node.delay = None
+
+        if not subnode.idelay and is_noloop_node and not is_clip_subnode:
+            subnode.idelay = node.idelay
+            node.idelay = None
+
+
+        # move various props closer to source = better (less txtp groups)
+
+        if not subnode.volume:
+            subnode.volume = node.volume
+            node.volume = None
+
+        if not subnode.crossfaded:
+            subnode.crossfaded = node.crossfaded
+            node.crossfaded = None
+
+        if not subnode.silenced:
+            subnode.silenced = node.silenced
+            node.silenced = None
+
+        if not subnode.makeupgain:
+            subnode.makeupgain = node.makeupgain
+            node.makeupgain = None
+
+        if not subnode.pitch:
+            subnode.pitch = node.pitch
+            node.pitch = None
+
+    def _set_props_config(self, node):
+        for subnode in node.children:
+            self._set_props_config(subnode)
 
         # whole group config
         if node.type in TYPE_GROUPS:
@@ -694,9 +740,6 @@ class TxtpPrinter(object):
     def _find_loops(self, node):
         if  self.has_noloops():
             return
-        # single sounds (sfx) loop by txtp config flags (clips use loop groups)
-        if self._loop_groups == 0 and self._loop_sounds == 1:
-            return
 
         self._find_loops_internal(node)
 
@@ -711,16 +754,17 @@ class TxtpPrinter(object):
         # Wwise internally sets "playlists" with loops that are more like "repeats" (item ends > play item again).
         # If one layer has 2 playlists that loop, items may have different loop end times = multiloop.
         # * find if layer has multiple children and at least 1 infinite loops (vgmstream can't replicate ATM)
+        # * one layer not looping while other does it's considered multiloop
         if node.type in TYPE_GROUPS_LAYERS and not self._multiloops:
             for subnode in node.children:
-                if self._has_iloops(subnode, subnode):
+                if self._has_iloops(subnode):
                     self._multiloops = True
                     break
 
         # looping steps behave like continuous, since they get "trapped" repeating at this level (ex. Nier Automata)
         if node.loop == 0:
-            #if node.type == TYPE_GROUP_RANDOM_STEP:
-            #    node.type = TYPE_GROUP_RANDOM_CONTINUOUS
+            if node.type == TYPE_GROUP_RANDOM_STEP:
+                node.type = TYPE_GROUP_RANDOM_CONTINUOUS
             if node.type == TYPE_GROUP_SEQUENCE_STEP:
                 node.type = TYPE_GROUP_SEQUENCE_CONTINUOUS
 
@@ -728,7 +772,7 @@ class TxtpPrinter(object):
         if node.type == TYPE_GROUP_RANDOM_CONTINUOUS: #looping sequences are handled below
             iloops = 0
             for subnode in node.children:
-                if self._has_iloops(node, node):
+                if self._has_iloops(subnode):
                     iloops += 1
 
             if iloops == len(node.children): #N iloops = children are meant to be shuffled songs
@@ -1025,7 +1069,7 @@ class TxtpPrinter(object):
             self._random_continuous = True
         if node.type in TYPE_GROUPS_STEPS and len(node.children) > 1:
             self._random_steps = True
-        if node.config.volume == -96.0 or node.crossfaded:
+        if node.silenced or node.crossfaded:
             self._silences = True
 
 
@@ -1057,8 +1101,6 @@ class TxtpPrinter(object):
         # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
         if node.volume:
             mods += '  #v %sdB' % (node.volume)
-        if node.crossfaded and self._txtpcache.x_nocrossfade:
-            mods += '  #v 0'
 
         # wwise seems to mix untouched then use volumes to tweak
         if node.type in TYPE_GROUPS_LAYERS:
@@ -1075,13 +1117,32 @@ class TxtpPrinter(object):
                     mods += ' #@loop-end'
             elif node.loop > 1:
                 mods += ' #E #l %i.0' % (node.loop)
-        # extra info since loop simplification is brittle
-        if node.loop_killed:
-            info += '  ##@loop'
-            if node.loop_end:
-                info += ' #@loop-end'
 
-        pad = self._get_padding()
+
+        # extra info
+        if node.loop_killed:
+            info += '  ##loop'
+            if node.loop_end:
+                info += ' #loop-end'
+
+        if node.crossfaded or node.silenced:
+            if self._txtpcache.x_nocrossfade:
+                mods += '  #v 0'
+            else:
+                info += '  ##fade'
+            self._others = True
+
+        if node.makeupgain:
+            info += '  ##gain'
+            self._others = True
+
+        if node.pitch:
+            info += '  ##pitch'
+            self._others = True
+
+
+        # final result
+        pad = self._get_padding() #padded for clarity
         self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
 
 
@@ -1200,23 +1261,38 @@ class TxtpPrinter(object):
 
         if node.volume:
             mods += '  #v %sdB' % (node.volume)
-        if node.crossfaded and self._txtpcache.x_nocrossfade:
-            mods += '  #v 0'
 
         # add anchors
         if node.loop_anchor:
             mods += ' #@loop'
             if node.loop_end:
                 mods += ' #@loop-end'
-        # extra info since loop simplification is brittle
+
+
+        # extra info
         if node.loop_killed:
-            info += '  ##@loop'
+            info += '  ##loop'
             if node.loop_end:
-                info += ' #@loop-end'
+                info += ' #loop-end'
+
+        if node.crossfaded or node.silenced:
+            if self._txtpcache.x_nocrossfade:
+                mods += '  #v 0'
+            else:
+                info += '  ##fade'
+            self._others = True
+
+        if node.makeupgain:
+            info += '  ##gain'
+            self._others = True
+
+        if node.pitch:
+            info += '  ##pitch'
+            self._others = True
 
 
-        # final .wem are padded to help understand the flow (TXTP trims whitespace filenames/groups)
-        pad = self._get_padding()
+        # final result
+        pad = self._get_padding() #padded for clarity
         self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
 
 

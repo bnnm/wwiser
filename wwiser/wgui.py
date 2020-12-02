@@ -116,7 +116,7 @@ class Gui(object):
         frame = ttk.Frame(root)
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
 
-        box = self._box('txtp_filter', frame, "Filter:", "List of allowed HIRC IDs or names", width=50)
+        box = self._box('txtp_filter', frame, "Filter:", "List of allowed HIRCs ID/name/classnames", width=50)
         box[0].grid(row=0, column=0, sticky="E")
         box[1].grid(row=0, column=1, sticky="W")
         box[2].grid(row=0, column=2, sticky="W")

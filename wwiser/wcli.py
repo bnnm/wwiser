@@ -51,7 +51,7 @@ class Cli(object):
         parser.add_argument('-sa', '--save-all', help="Include all loaded names, rather than only used names", action='store_true')
         parser.add_argument('-g',  '--txtp',        help="Generate TXTP", action='store_true')
         parser.add_argument('-gu', '--txtp-unused', help="Generate TXTP for unused nodes too\n(try loading other banks first)", action='store_true')
-        parser.add_argument('-gf', '--txtp-filter', help="Set TXTP target name/ids (default: all usable objects)", nargs='+')
+        parser.add_argument('-gf', '--txtp-filter', help="Set TXTP targets name/id/classname (default: all usable objects)", nargs='+')
         parser.add_argument('-gp', '--txtp-params', help="Set TXTP parameters (default: auto)", nargs='*')
         parser.add_argument('-go', '--txtp-outdir', help="Set TXTP output dir (default: auto)")
         parser.add_argument('-gd', '--txtp-dupes',  help="Allow TXTP dupes (WARNING: may create a lot)", action='store_true')

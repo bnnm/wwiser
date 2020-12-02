@@ -39,7 +39,9 @@ class Generator(object):
     def set_filter(self, filter):
         if not filter:
             return
-        self._filter += filter
+        for item in filter:
+            if item is not None:
+                self._filter.append(item.lower())
 
     def set_generate_unused(self, generate_unused):
         if not generate_unused:
@@ -101,9 +103,7 @@ class Generator(object):
 
             self._txtpcache.volume_master = float(volume)
             if percent:
-                print(self._txtpcache.volume_master)
                 self._txtpcache.volume_master = self._txtpcache.volume_master / 100.0
-                print(self._txtpcache.volume_master)
 
             if self._txtpcache.volume_db:
                 self._txtpcache.volume_decrease = (self._txtpcache.volume_master < 0)
@@ -256,18 +256,23 @@ class Generator(object):
                 continue
 
             for node in items.get_children():
-                name = node.get_name()
+                classname = node.get_name()
 
                 #filter list
                 generate = False
                 if self._filter:
-                    sid = node.find1(type='sid').value()
+                    nsid = node.find1(type='sid')
+                    sid = nsid.value()
                     if   str(sid) in self._filter:
                         generate = True
-                    elif name in self._filter:
+                    elif classname.lower() in self._filter:
                         generate = True
+                    else:
+                        hashname = nsid.get_attr('hashname')
+                        if hashname and hashname.lower() in self._filter:
+                            generate = True
                 else:
-                    if name in default_hircs:
+                    if classname in default_hircs:
                         generate = True
 
                 if not generate:

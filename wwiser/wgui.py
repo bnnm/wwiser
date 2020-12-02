@@ -37,7 +37,7 @@ class Gui(object):
         # base
 
         root = Tk()
-        root.geometry('700x700')
+        root.geometry('700x800')
         #root.resizable(width=False,height=False)
         #root.iconbitmap(wutil.Loader.get_resource('/resources/wwiser.ico'))
 
@@ -161,6 +161,12 @@ class Gui(object):
 
         chk = self._chk('txtp_dupes', frame, "Allow TXTP dupes (WARNING: may create a lot)")
         chk.grid(row=3, column=1, sticky="W")
+
+        chk = self._chk('txtp_random_all', frame, "Make multiple .txtp per base 'random' section")
+        chk.grid(row=4, column=0, sticky="W")
+
+        chk = self._chk('txtp_random_force', frame, "Force base section to be selectable like a 'random' section")
+        chk.grid(row=4, column=1, sticky="W")
 
         #----------------------------------------------------------------------
         # log
@@ -377,6 +383,8 @@ class Gui(object):
             generator.set_generate_unused(self._fields['txtp_unused'].get())
             generator.set_alt_exts(self._fields['txtp_alt_exts'].get())
             generator.set_dupes(self._fields['txtp_dupes'].get())
+            generator.set_random_all(self._fields['txtp_random_all'].get())
+            generator.set_random_force(self._fields['txtp_random_force'].get())
 
             generator.generate()
 

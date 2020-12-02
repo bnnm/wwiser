@@ -291,7 +291,7 @@ class NodeSource(object):
             self.extension = CODEC_EXTENSIONS_OLD.get(self.plugin_codec)
             if not self.extension:
                 raise ValueError("extension not found for old version codec %s (report)" % (self.plugin_codec))
-        
+
         if   self.extension == 'ogg':
             self.extension_alt = 'logg'
         elif self.extension == 'wav':

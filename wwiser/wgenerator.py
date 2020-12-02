@@ -59,6 +59,14 @@ class Generator(object):
 
     #--------------------------------------------------------------------------
 
+    def get_dir(self):
+        dir = ''
+        if self._txtpcache.outdir:
+            dir += self._txtpcache.outdir
+        if self._txtpcache.wemdir:
+            dir += self._txtpcache.wemdir
+        return dir
+
     def _normalize_path(self, path):
         #path = path or '' #better?
         if path is None:
@@ -106,43 +114,29 @@ class Generator(object):
             logging.info("generator: ignored incorrect volume")
 
 
-    def set_lang(self, lang):
-        if not lang:
-            return
-        self._txtpcache.lang = lang
+    def set_lang(self, flag):
+        self._txtpcache.lang = flag
 
-    def set_wemnames(self, wemnames):
-        if not wemnames:
-            return
-        self._txtpcache.wemnames = wemnames
+    def set_wemnames(self, flag):
+        self._txtpcache.wemnames = flag
 
-    def set_bnkskip(self, bnkskip):
-        if not bnkskip:
-            return
-        self._txtpcache.bnkskip = bnkskip
+    def set_bnkskip(self, flag):
+        self._txtpcache.bnkskip = flag
 
-    def set_bnkmark(self, bnkmark):
-        if not bnkmark:
-            return
-        self._txtpcache.bnkmark = bnkmark
+    def set_bnkmark(self, flag):
+        self._txtpcache.bnkmark = flag
 
-    def get_dir(self):
-        dir = ''
-        if self._txtpcache.outdir:
-            dir += self._txtpcache.outdir
-        if self._txtpcache.wemdir:
-            dir += self._txtpcache.wemdir
-        return dir
+    def set_alt_exts(self, flag):
+        self._txtpcache.alt_exts = flag
 
-    def set_alt_exts(self, alt_exts):
-        if not alt_exts:
-            return
-        self._txtpcache.alt_exts = alt_exts
+    def set_dupes(self, flag):
+        self._txtpcache.dupes = flag
 
-    def set_dupes(self, dupes):
-        if not dupes:
-            return
-        self._txtpcache.dupes = dupes
+    def set_random_all(self, flag):
+        self._txtpcache.random_all = flag
+
+    def set_random_force(self, flag):
+        self._txtpcache.random_force = flag
 
     def set_x_nocrossfade(self, flag):
         self._txtpcache.x_nocrossfade = flag

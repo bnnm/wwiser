@@ -64,6 +64,8 @@ class TxtpCache(object):
         self.bnkskip = False
         self.alt_exts = False
         self.dupes = False
+        self.random_all = False
+        self.random_force = False
 
         self.x_nocrossfade = True
         self.x_noloops = False
@@ -170,6 +172,7 @@ class Txtp(object):
         self._ntid = ntid
         self._ntidsub = ntidsub
         self._depth = 0             # info for padding
+        self._selected = None       # info
 
         if not self._ntid:
             self._ntid = node.find1(type='sid')
@@ -229,7 +232,7 @@ class Txtp(object):
                     info = self._ntid.value() #?
                 else:
                     info = "%04u" % (int(index))
-                    
+
 
             if self._txtpcache.unused_mark:
                 info += '~unused'
@@ -251,8 +254,13 @@ class Txtp(object):
             name += "-{stinger=~%s}" % (self._ntidsub.value())
 
         name += self._basename
-        if printer.has_random_steps():
-            name += " {r}"
+
+        if printer.has_random_steps() or printer.is_selection():
+            selection = printer.get_selected_main()
+            if selection:
+                name += " {r%s}" % (selection)
+            else:
+                name += " {r}"
         #if printer.has_random_continuous():
         #    name += " {rc}"
         if printer.has_externals():
@@ -305,6 +313,12 @@ class Txtp(object):
         #if self._txtpcache.x_nocrossfade:
         #    info += '# ~ no crossfade\n'
 
+        if self._selected:
+            extra = ''
+            if self._txtpcache.random_force:
+                extra = ' (forced)'
+            info += '# ~ selected group=%s%s\n' % (self._selected, extra)
+
         info += '#\n'
         info += ''.join(lines)
         return info
@@ -319,14 +333,31 @@ class Txtp(object):
                     banks.append(bank)
         return banks
 
+    #--------------------------------------------------------------------------
+
     def write(self):
         printer = wtxtp_tree.TxtpPrinter(self, self._root, self._txtpcache, self._rebuilder)
         printer.prepare()
-        text = printer.generate()
 
         # may have files but all silent
         if not printer.has_sounds():
             return
+
+        # make one txtp per random/selectable group
+        if self._txtpcache.random_all and printer.get_selectable_count():
+            count = printer.get_selectable_count()
+            # make one .txtp per random
+            for i in range(1, count + 1):
+                self._selected = i
+                printer.set_selected_main(i)
+                self._write_txtp(printer)
+
+        else:
+            # make main .txtp
+            self._write_txtp(printer)
+
+    def _write_txtp(self, printer):
+        text = printer.generate()
 
         #some games have many GS combos that end up being the same (ex. Nier Automata, Bayonetta 2)
         texthash = hash(text)
@@ -430,7 +461,7 @@ class Txtp(object):
         nfields = None
         if source:
             nfields = [source.nplugin]
-    
+
         next = TxtpInfo(self._depth + 1, None, nfields, None, source=ntid)
         self._ninfo.append(next)
 
@@ -478,7 +509,7 @@ class TxtpInfo(object):
         self.nattrs = nattrs
         self.gamesync = '' #text
         self.source = source
-        self._info = []
+        self._info = None
 
     def add_gamesyncs(self, gamesyncs):
         if self.gamesync:
@@ -515,6 +546,7 @@ class TxtpInfo(object):
 
     def generate(self, multibank=False):
         self.padding = ' ' * (self.depth * 2 + 1) #+1 for '# ' space after comment 
+        self._info = []
 
         self._generate_node(multibank)
         self._generate_gamesync()

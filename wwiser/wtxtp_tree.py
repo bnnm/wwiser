@@ -108,6 +108,7 @@ class TxtpNode(object):
             self.loop = None
 
         self.self_loop = False
+        self.force_selectable = False
 
 
     def single(self, transition=None):
@@ -156,7 +157,7 @@ class TxtpNode(object):
 
         if self.idelay or self.delay or self.volume:
             return False
-        
+
         #makeupgain, pitch: ignored
 
         if DEBUG_PRINT_IGNORABLE:
@@ -213,13 +214,22 @@ class TxtpPrinter(object):
         self._txtp = txtp
         self._txtpcache = txtpcache
         self._rebuilder = rebuilder
-        self._lines = []
-        self.depth = 0
 
+        # external config
+        self.selected_main = None
+
+        # during write
+        self._lines = None
+        self.depth = None
+
+        # during process
         self._sound_count = 0
         self._transition_count = 0
         self._loop_groups = 0
         self._loop_sounds = 0
+        self._selectable_count = 0  #number of selectable, for randoms or all types if forced (in the first node only)
+
+
         # flags
         self._lang_name = None
         self._random_continuous = False
@@ -238,8 +248,22 @@ class TxtpPrinter(object):
         self._modify()
 
     def generate(self):
+        self._depth = 0
+        self._lines = []
         self._write()
         return ''.join(self._lines)
+
+    def is_selection(self):
+        return self._selectable_count
+
+    def get_selected_main(self):
+        return self.selected_main
+
+    def set_selected_main(self, number):
+        self.selected_main = number
+
+    def get_selectable_count(self):
+        return self._selectable_count
 
     def has_sounds(self):
         return self._sound_count > 0
@@ -301,7 +325,8 @@ class TxtpPrinter(object):
         self._set_times(self._tree)
         self._reorder_wem(self._tree)
         self._find_loops(self._tree)
-        
+        self._find_info(self._tree)
+
 
         if DEBUG_PRINT_TREE_POST:
             logging.info("*** tree post:")
@@ -405,7 +430,7 @@ class TxtpPrinter(object):
         return
 
     def _kill_node(self, node):
-        node.parent.children.remove(node)        
+        node.parent.children.remove(node)
 
     def _has_random_repeats(self, node):
         if node.type not in TYPE_GROUPS_STEPS or len(node.children) <= 1:
@@ -623,7 +648,7 @@ class TxtpPrinter(object):
         # some games set very low volume in the base track (ex. SFZ -14bD), probably since they'll
         # be mixed with other stuff (also Wwise can normalize on realtime), just get rid of base volume
 
-        # don't remove slightly smaller volumes in case game is trying to normalize sounds?        
+        # don't remove slightly smaller volumes in case game is trying to normalize sounds?
         if node.volume:
             if node.volume < 0 and node.volume < 6.0:
                 node.volume = None
@@ -778,7 +803,7 @@ class TxtpPrinter(object):
             if iloops == len(node.children): #N iloops = children are meant to be shuffled songs
                 node.type = TYPE_GROUP_RANDOM_STEP
                 node.loop = None # plus removes on looping on higher level to simplify behavior
-        
+
 
         # tweak sequences
         if node.type in TYPE_GROUPS_CONTINUOUS:
@@ -825,6 +850,29 @@ class TxtpPrinter(object):
                 return child
 
         return None
+
+    #--------------------------------------------------------------------------
+
+    # extra info for other processes
+    def _find_info(self, node):
+
+        subnode = self._get_first_child(node)
+        if not subnode or subnode.type not in TYPE_GROUPS:
+            return
+
+        count = len(subnode.children)
+        if len(subnode.children) <= 1:
+            return
+
+        # total layers/segment/randoms in the main/upper group (can be used to generate 1 .txtp per type)
+        # also forces first group as selectable
+        force = self._txtpcache.random_force
+        if subnode.type in TYPE_GROUPS_STEPS or force:
+            self._selectable_count = count
+
+            subnode.force_selectable = force
+
+        return
 
     #--------------------------------------------------------------------------
 
@@ -1047,7 +1095,7 @@ class TxtpPrinter(object):
 
     def _write_node(self, node):
         if not node.ignorable():
-            self.depth += 1
+            self._depth += 1
 
         if   node.type in TYPE_SOUNDS:
             self._write_sound(node)
@@ -1062,7 +1110,7 @@ class TxtpPrinter(object):
             self._write_group(node)
 
         if not node.ignorable():
-            self.depth -= 1
+            self._depth -= 1
 
         # set flag with final tree since randoms of a single file can be simplified
         if node.type == TYPE_GROUP_RANDOM_CONTINUOUS and len(node.children) > 1:
@@ -1083,7 +1131,7 @@ class TxtpPrinter(object):
         type_text = TYPE_GROUPS_TYPE[node.type]
         count = len(node.children)
         ignored = False #self._ignore_next #or count <= 1 #allow 1 for looping full segments
-        
+
         line = ''
         mods = ''
         info = ''
@@ -1092,8 +1140,9 @@ class TxtpPrinter(object):
 
         # add base group
         line += 'group = -%s%s' % (type_text, count)
-        if    node.type in TYPE_GROUPS_STEPS:
-            line += '>1'
+        if    node.type in TYPE_GROUPS_STEPS or node.force_selectable:
+            selection = self.selected_main or 1
+            line += '>%s' % (selection)
             #info += "  ##select >N of %i" % (count)
         elif node.type == TYPE_GROUP_RANDOM_CONTINUOUS: #in TYPE_GROUPS_CONTINUOUS: #not for sequence since it's looks a bit strange
             line += '>-'
@@ -1362,4 +1411,4 @@ class TxtpPrinter(object):
         return out
 
     def _get_padding(self):
-        return ' ' * (self.depth - 1)
+        return ' ' * (self._depth - 1)

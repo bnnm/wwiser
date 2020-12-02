@@ -516,12 +516,14 @@ class TxtpPrinter(object):
             return False
 
 
-        # self loop: make a clone branch (new loop), then mark the original, so clone goes
-        # from 0..entry, and original from entry..exit
+        # self loop: make a clone branch (new loop), then mark the original:
+        # - subnode (original): 0..entry (no loop)
+        # - new_subnode (clone): entry..exit (loops)
         node.type = TYPE_GROUP_SEQUENCE_CONTINUOUS
         new_subnode = self._make_copy(node, subnode)
 
         subnode.self_loop = True #mark transition node
+        subnode.loop = None  #0..entry
         new_subnode.loop = node.loop #mark loop node
         node.loop = None
 

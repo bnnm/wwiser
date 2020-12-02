@@ -173,6 +173,7 @@ class Txtp(object):
         self._ntidsub = ntidsub
         self._depth = 0             # info for padding
         self._selected = None       # info
+        self._basepath = node.get_root().get_path()
 
         if not self._ntid:
             self._ntid = node.find1(type='sid')
@@ -379,8 +380,7 @@ class Txtp(object):
 
         outdir = self._txtpcache.outdir
         if outdir:
-            basepath = self._node.get_root().get_path()
-            outdir = os.path.join(basepath, outdir)
+            outdir = os.path.join(self._basepath, outdir)
             os.makedirs(outdir, exist_ok=True)
 
         outname = outdir + name

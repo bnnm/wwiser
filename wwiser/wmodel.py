@@ -527,7 +527,7 @@ class NodeList(NodeElement):
 
 # semi-leaf node describing a physical data "field" (represents a primitive member)
 class NodeField(NodeElement):
-    __slots__ = ['__offset', '__type', '__name', '__value', '__fmt', '__hashtype']
+    __slots__ = ['__offset', '__type', '__name', '__value', '__fmt', '__hashtype', '__row']
 
     def __init__(self, parent, offset, type, name, value):
         super(NodeField, self).__init__(parent, 'field')
@@ -537,6 +537,7 @@ class NodeField(NodeElement):
         self.__value = value
         self.__fmt = None
         self.__hashtype = False
+        self.__row = None
 
     # *** inheritance ***
 
@@ -551,18 +552,16 @@ class NodeField(NodeElement):
             attrs['valuefmt'] = self.__fmt.format(self.__type, self.__value)
 
         if self.__type in [TYPE_SID, TYPE_TID]:
-            names = self.get_root()._names
-            if names:
-                row = names.get_namerow(self.__value, hashtype=self.__hashtype)
-                if row:
-                    if row.hashname and self.__hashtype != wdefs.fnv_no:
-                        attrs['hashname'] = row.hashname
-                    if row.guidname:
-                        attrs['guidname'] = row.guidname
-                    if row.path:
-                        attrs['path'] = row.path
-                    if row.objpath:
-                        attrs['objpath'] = row.objpath
+            row = self._get_namerow()
+            if row:
+                if row.hashname and self.__hashtype != wdefs.fnv_no:
+                    attrs['hashname'] = row.hashname
+                if row.guidname:
+                    attrs['guidname'] = row.guidname
+                if row.path:
+                    attrs['path'] = row.path
+                if row.objpath:
+                    attrs['objpath'] = row.objpath
 
         return attrs
 
@@ -579,11 +578,34 @@ class NodeField(NodeElement):
             if self.__fmt:
                 return self.__fmt.format(self.__type, self.__value)
             return None
+        if attr == 'hashname':
+            row = self._get_namerow()
+            if row and row.hashname and self.__hashtype != wdefs.fnv_no:
+                return row.hashname
+            return None
+        if attr == 'guidname' and self.__row:
+            row = self._get_namerow()
+            if row:
+                return row.guidname
         return None
 
     def get_name(self):
         return self.__name
 
+    def _get_namerow(self):
+        # row in cache
+        if self.__row is not None:
+            return self.__row
+
+        # signal "tried to load but no results" by default
+        self.__row = False 
+
+        names = self.get_root()._names
+        if names:
+            row = names.get_namerow(self.__value, hashtype=self.__hashtype)
+            if row:
+                self.__row = row
+        return self.__row
 
     # *** node helpers ***
 

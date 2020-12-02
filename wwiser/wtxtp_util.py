@@ -209,7 +209,6 @@ PLUGIN_IGNORABLE = set([
 PLUGIN_NAME = {
     0x00640002: 'sine',
     0x00650002: 'silence',
-    0x00650002: 'silence',
 }
 
 class NodeSource(object):

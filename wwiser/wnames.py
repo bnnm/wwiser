@@ -33,7 +33,9 @@ class Names(object):
         self._loaded_banknames = {}
         self._missing = {}
         self._fnv = Fnv()
+        self._disable_fuzzy = False
 
+        
     def set_gamename(self, gamename):
         self._gamename = gamename #path
 
@@ -71,8 +73,10 @@ class Names(object):
             return None
 
         # on list with a close ID
-        id_fz = id & 0xFFFFFF00
-        row_fz = self._names_fuzzy.get(id_fz)
+        row_fz = None
+        if not self._disable_fuzzy:
+            id_fz = id & 0xFFFFFF00
+            row_fz = self._names_fuzzy.get(id_fz)
         if row_fz and row_fz.hashname:
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_fz.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
@@ -93,7 +97,9 @@ class Names(object):
                 return row
 
         # on db with a close ID
-        row_df = self._db.select_by_id_fuzzy(id)
+        row_df = None
+        if not self._disable_fuzzy:
+            row_df = self._db.select_by_id_fuzzy(id)
         if row_df and row_df.hashname:
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_df.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA, exhash=True)
@@ -487,6 +493,15 @@ class Names(object):
         #pattern_s2 = re.compile(r'[?|]')
 
         for line in infile:
+            # ignore comments
+            if not line:
+                continue
+            if line[0] == '#':
+                # special flag for complete wwnames that need no fuzzies
+                if line.startswith('#@nofuzzy'):
+                    self._disable_fuzzy = True
+                continue
+
             match = pattern_1.match(line)
             if match:
                 name, __, id = match.groups()
@@ -510,9 +525,6 @@ class Names(object):
             #    self._add_name(None, name, onrepeat=Names.ONREPEAT_BEST, source=NameRow.NAME_SOURCE_EXTRA)
             #    continue
 
-            # ignore comments
-            if not line or line[0] == '#':
-                continue
             # get sub-parts of a line and hash those, for scripts that have lines like "C_PlayMusic( bgm_01 )"
             # but we want "bgm_01" as the actual hashname, or XML like "<thing1 thing2='thing3'>"
             elems = pattern_s1.split(line)

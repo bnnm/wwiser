@@ -400,10 +400,8 @@ Bank format may change a bit between major Wwise SDK versions, adding new featur
 or moving fields around. *wwiser* should handle almost all but there are bugs left:
 - earliest versions used in *Shadowrun (X360)* and *Too Human (X360)* not supported
 - early banks in *Army of Two: The 40th Day (X360)* not fully supported (buggy banks?)
-- a couple of bank versions are untested (no known games)
 - parameters for custom plugins not parsed (uncommon and time-consuming to add)
 - some versions' field names and descriptions may be incorrect (missing SDKs)
-- may not gracefully fail with incorrect/unexpected data
 - viewer doesn't work in older (IE11<) browsers
 - some functions may not properly handle repeated IDs on different objects (unlikely
   and unsure how Wwise handles this)

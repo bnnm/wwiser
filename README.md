@@ -81,10 +81,10 @@ Main Wwise features missing in generated *TXTP* at the moment are:
 - overlaps: when a songs changes section or loops, Wwise allows to play "post-exit"
   and "pre-entry" audio simultaneously, but .txtp just ignores those for now, making
   some transitions sound less smooth
-- switch transitions: songs can dynamically change sections in real time via passed
-  parameters in Wwise, but the generator can only use pre-set parameters
 - different sample rates: Wwise can freely combine sample rates, but vgmstream needs
   to be updated to support this (some parts of the song will sound too fast)
+- switch transitions: songs can dynamically change sections in real time via passed
+  parameters in Wwise, but the generator only uses pre-set parameters
 - auto parameters: generator automatically makes combinations of parameters to create
   most possible songs, but some combos that play multiple songs simultaneously aren't
   created at the moment (made as separate songs, can be created by passing all
@@ -92,22 +92,29 @@ Main Wwise features missing in generated *TXTP* at the moment are:
 - songs with random files/variations: selected from a list and may change dynamically
   in Wwise (like on every loop), can only play pre-selected values (editable).
 - multi-loops: Wwise can loop each element independently (since it's just "repeating"
-  parts rather than "looping"), but .txtp doesn't (can be manually simulated by
-  setting play time of each element manually, but needs a finite time).
+  parts rather than "looping"), but .txtp doesn't (can be manually simulated).
 - effects: Wwise can apply effects like pitch, panning and so on, none are simulated
 - songs with unusual features like midis/sfx plugins can't play (too complex)
-- volumes/silences: Wwise games sometimes silence or crossfade files while playing
-  others, which isn't autodetected. Audio volume can also be set outside bank, so
-  some songs may sound a bit quiet (try using `3.0dB` to the master volume option).
+- silences: Wwise games sometimes silence or crossfade files while playing the rest,
+  that isn't autodetected.
+- volumes: Wwise can alter final volume outside bank parameters, so some songs may
+  sound a bit quiet (try setting `3.0dB` or `6.0dB` in the master volume option).
 
 Watch out for filenames with:
-- `{r}`: has random `.wem` (open and change `>1` to select random parts)
-- `{s}`: may need to silence .wem that crossfade (put `?` in front of unwanted files)
-- `{m}`: uses multi-loops (multiple places may loop, some may be fixed manually)
-- `{e}`: uses "external IDs" (set at runtime so can't guess file, usually voices)
-- `{!}`: missing audio (usually needs more .bnk or uses unsupported audio plugins)
-- `{l=(lang)}`: only when flag to handle languages is set (use when multiple songs/sfx
-   per language need to coexist coexist in same dir)
+- `{r}`: has random parts marked like `R3>1` ("from 3 items select first")
+  - open `.txtp` and change to `R3>2` to select 2nd part manually and so on
+  - may set extra options to auto-generate multiple .txtp per "outer" random
+- `{s}`: has crossfading parts marked like `##fade`
+  - open `.txtp` and silence those by put `?` in front of `.wem` (of `#v 0` before `#fade`)
+  - may set extra options to auto-silence parts
+- `{m}`: uses multi-loops where multiple places set `#@loop`
+  - cannot make true loops ATM, but may extend `#@loop` times manually to a fixed time
+- `{e}`: uses "external IDs" set at runtime so can't guess file, usually voices
+  - may change `(?).wem` to the correct file (possibly `.wem` in clearly marked dirs)
+- `{!}`: missing audio that usually needs more .bnk or uses unsupported audio plugins
+  - missing parts are marked as `?`
+- `{l=(lang)}`: when flag to handle languages is set, use when multiple songs/sfx
+   per language need to coexist coexist in same dir
 
 It's a good idea to keep the `.bnk` and companion files around in case `.txtp` need
 to be generated again when more features are added.

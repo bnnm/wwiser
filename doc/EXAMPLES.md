@@ -356,7 +356,7 @@ event > play > ...
    event > ... > sound (points to media index in ME)
 ```
 - some events set multiple loop infinites (only innermost would be used)
-- some events set loop infinite, but have audio after it (never plays)
+- some events set loop infinite, but have a song end after it (never plays)
 - some events in EV.bnk (events only) point to ME.bnk (media only) media
 
 
@@ -441,6 +441,7 @@ event > play > ...
 - tracks have random type but point to the same object
 - has tracks that changes (switch variables that are only accesible on change)
   - usually all point to the same thing
+- has vocal songs in multiple languages (set as localized banks)
 
 ## Bayonetta 2 (Switch)
 ```
@@ -455,14 +456,172 @@ event > play > ...
 
 ## Tetris Effect (PC)
 ```
-SB_16_HawaiiTribal_BGM_01.bnk
-[1638535919]
+[1638535919] SB_16_HawaiiTribal_BGM_01.bnk
     event > ... > segment > track [vorbis]
                           > track [midi]
                            ...
                           > track [vorbis]
 ```
+```
+[831639979] SB_20_SeaGoddess_BGM_01.bnk
+    event > ... > segment > track [6ch]
+                          > track [2ch + plugin + bus]
+                ...
+                > segment > track [6ch]
+                          > track [2ch + plugin + bus]
+```
 - uses wmid mixed with .wem (drums)
+- uses multiple 2ch vocals that use a peak meter FX plugin, and are re-routed to another bus with no channels defined
+  - presumably only used to read peak values and aren't output
+  - extra vocals set volume
 
-## Nier Automata
+## Detroit: Become Human (PC)
+
+```
+* Play_C05_INGAME_MUSIC (C05_Music_State=C05_OnChase_Part_3)
+[129941368] BNK_C05_Music.bnk
+    event > ... > mranseq       > item ..
+                  * seq.step    > item ..
+                  * loop 
+
+
+[.. > 799010033 !!!] BNK_C06_Music.bnk
+mswitch > - item x11 !!!
+
+[.. > 799010033 !!!] BNK_C06_EdenClub.bnk
+mswitch > - item x5 !!!
+```
+- has an infinite looping step sequence, in effect a regular sequence
+- different banks contain *same object IDs* but with *different number of children*
+  - in theory not possible, unless they make one bank, modify the object and make another bank (or copy projects)
+  - probably never loaded at the same time (not allowed by Wwise?)
+
+
+## Nier Automata (PC)
+```
+* BGM_PauseBoss_Opera_In
+[594371225] BGM.bnk
+    event > ... > mranseq       > item ..
+                  * seq.step    > item ..
+                  * loop        > item ..
+                                ..
+                                > item ..
+
+* BGM_GameCenter_In
+[3040688901] BGM.bnk
+    event > ... > mranseq       > item .. * loop
+                  * rnd.cont    > item .. * loop
+                                > item .. * loop
+                                ..
+                                > item .. * loop
+```
+- has an infinite looping step sequence, in effect a regular sequence
+- has a non-looping random continuous that ends in a infinite loop, in effect a shuffle of N songs
 - uses lower volumes for extra quieter song variations (`BGM_Layer=Middle` > `BGM_Layer=Quiet`)
+
+## Mario Kart: Home Circuit (PC)
+```
+[2196894807 > 133443069]
+    event > ... > mranseq       > item .. * loop
+                  * seq.step    ..
+                                > item .. * loop
+
+[3079605662]
+    event > play > sound
+          > play > sound
+                   * loop
+
+[3041644995]
+    event > play > sound [no loop, wem loops]
+
+[2526619286]
+    event > play > layer > sound [no loop, wem loops]
+                         > switch > sound [no loop, wem loops]
+```
+- has multiloops (with all looping or only 1)
+- has step sequence that ends in a infinite loop, in effect "change-per-play" N songs
+- plays non-looping song with internal loop but doesn't set loop at all nor disable them (loop=1)
+- has CAkSound with Wwise Motion Generator in regular ranseq
+  - not audio, see Wwise demo v128>= Motion.bnk
+- uses Wwise Silence with various durations
+
+## Nimbus (PC)
+```
+[2891093359]
+    event > play > ranseq       > sound
+                   * normal     > sound
+                   * loop
+```
+- has a simple ranseq that loops same track? doesn't seem to change between loops
+
+## Battle Chasers: Nightwar (PC)
+```
+[3675240519]
+    event > play > ranseq  > sound [2ch]
+                   * loop  > sound [1ch]
+```
+- mixes 2ch + 1ch (mono being silent and used as simple padding)
+
+## Assassin's Creed: Valhalla (PC)
+- mixes 2ch + 1ch (mono being silent and used as simple padding)
+- has transitions in playlists
+- uses Wwise Tone plugin in various events
+
+## Assassin's Creed 2 (X360)
+```
+    event > play > sound [bgm]
+                 > layer > sound [crowd 1]
+                         > ...
+                         > sound [crowd N]
+```
+- plays BGM with "music" sound + "crowd" sfx looping layer silenced via RTPC, in *every* BGM
+- has CAkFeedbackNode with Wwise Motion Generator in regular ranseq (ex. 5297032)
+  - not audio, see Wwise demo v125<= Motion.bnk
+
+## Spider-Man: Web of Shadows (multi)
+```
+* mx_combat (act=act3) (spidey_suit=-) (music_intensity=high)
+[3124666157 > 122709253] common_music.bnk / 3380667234.bnk
+    event > ... > mranseq   > item
+                  * loop    ..
+                            > item  > ... > 189662451.wav [clicks]
+```
+- has a buggy/imprecise transitions, where it jumps early and ~3ms/145 samples are cut off
+  - this matters in some songs where some source files have a click at the end
+  - rarely and randomly, songs play fully instead of jumping early on real systems, resulting in a click
+  - bank version ~v34 PC, also heard in PS3 version
+  - sometimes may also extend/jump late?
+
+## Halo Wars (X360)
+```
+* play_in_game (In_game=world_intros) [1617394438=music_harvest]
+[3671131488 > 791593293] 3991942870.bnk
+    event > ... > msegment > mtrack [loops due to trims]
+                           > mtrack [loops due to trims]
+```
+- has non-looping sections that use layers with loop #E (could fool txtp?)
+- most songs use sequence step + N subsongs
+- uses Wwise Silence with various durations
+
+## Nimbus (PC)
+```
+[2891093359]
+    event > ... > ranseq        > sound 1
+                  * continuous  > sound 2
+                  * loop
+```
+- has random + continuous + loop, in effect behaving like a sequence
+  - confirmed in videos
+
+## DmC (PC)
+```
+[2427747105 > 540417778]
+    event > ... > mranseq   > item    > msegment
+                            > item    > item    > msegment
+                              * loop  > item    > item > msegment
+                                        * loop  > item > msegment
+                                                > item > msegment
+                                                > item > msegment
+    
+```
+- has loop traps inside inner sequences (not easily handled)

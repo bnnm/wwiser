@@ -108,8 +108,8 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - tracks have a mode that affect how subtracks are used
 - modes work like this
   - normal: plays single subtrack normally (removes other subtracks if selected)
-  - random step: plays one subtrack at random
-  - sequence step: plays first subtrack; next time track is played next subtrack
+  - random step: plays random subtrack, on next call plays another (cannot loop) 
+  - sequence step: plays first subtrack, on next call plays next (cannot loop)
   - switch: plays subtracks (probably multiple at the same time) associated to switches
 - final segment duration is changed to last clip of all subtracks
   - so playing one random with a last clip ending earlier plays silence until segment end
@@ -144,14 +144,15 @@ Info gathered from the editor, to help understanding model and overall behavior.
   - AkMusicRanSeq saves the segments in children list, but aren't in the playlist
 - plays a list of objects inside a group
 - defines groups with modes that change when track is played
-  - sequence continuous: all objects, one after other
-  - sequence step: picks one object, on next play OR loop picks another
-  - random continuos: plays random until all objects are covered
-  - random step: plays one random
+  - sequence continuous: plays all objects in sequence, on loop/next call restarts
+  - sequence step: plays one object from first, on loop/next call plays next object
+  - random continuous: plays all objects randomly, on loop/next call restarts
+  - random step: plays one object at random, on loop/next call plays another object
+  - loop above means set on playlist/group level (loop on children level "traps" the sequence)
 - groups may have objects or other groups (with objects), at any position
 - random types have weight (probability to play), from 0.001 to 100% (default 50)
 - random types can use "standard"=allows repeats, or "shuffle"= doesn't
-- random types can set "avoid repeat N" (see docs)
+- random types can set "avoid repeat N" to affect which objects are picked on loops/next play
 - each "group" has N objects
 - group and objects have loop settings (1=once/none, 0=infinite, N=loops)
   - loop meaning varies per mode
@@ -243,6 +244,14 @@ Info gathered from the editor, to help understanding model and overall behavior.
   - as a AkProp in float time
 - may define loop random modifies: min (must be negative) or max (positive)
   - picks a value in that interval?
+- modes are very similar to playlist but are set as main mode + submode flag
+  - sequence + continuous: plays all objects in sequence, on loop/next call restarts
+  - sequence + step: plays one object from first, on next call plays next object / cannot loop
+  - random + continuous: plays all objects randomly, on loop/next call restarts
+  - random + step: plays one object at random, on next call plays another object / cannot loop
+  - loop above means flag set on ranseq level (loop flag on children level "traps" like playlists)
+  - even though steps cannot loop (loop=1), sometimes sets loop=0 when "avoid repeating last X" is set (still don't seem to loop)
+    - on sequence step, "avoid repeating" it's kept as set but not used
 
 ## switch container
 - same as music switch, can contain subobjects

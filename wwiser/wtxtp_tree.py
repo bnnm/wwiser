@@ -321,7 +321,7 @@ class TxtpPrinter(object):
         self._clean_tree(self._tree)
         self._set_self_loops(self._tree)
         self._set_props(self._tree)
-        self._set_volume(self._tree)
+        #self._set_volume(self._tree)
         self._set_times(self._tree)
         self._reorder_wem(self._tree)
         self._find_loops(self._tree)
@@ -641,6 +641,10 @@ class TxtpPrinter(object):
 
     #--------------------------------------------------------------------------
 
+    #todo
+    # sometimes game uses big values to normalize in non-obvious ways, it's disabled for now
+    # (ex. dirt rally 4, halo wars menus)
+
     # simplify volume stuff
     # volumes in wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
     # but usually (hopefully) volumes set on object level should make the track sound fine in most cases
@@ -649,21 +653,21 @@ class TxtpPrinter(object):
         # be mixed with other stuff (also Wwise can normalize on realtime), just get rid of base volume
 
         # don't remove slightly smaller volumes in case game is trying to normalize sounds?
-        if node.volume:
-            if node.volume < 0 and node.volume < 6.0:
-                node.volume = None
-            return #stop on first b/c there could be positives + negatives cancelling each other?
+        #if node.volume:
+        #    if node.volume < 0 and node.volume < 6.0:
+        #        node.volume = None
+        #    return #stop on first b/c there could be positives + negatives cancelling each other?
 
         # in some cases there are multiple segments setting the same -XdB, could be detected and
         # removed, but usually it's done near related tracks to normalize sound
         # might be possible to increase volume equally if all parts use the same high -dB? (ex. Nier Automata)
 
         # volumes of multiple children are hard to predict
-        if len(node.children) > 1: #flag?
-            return
+        #if len(node.children) > 1: #flag?
+        #    return
 
-        for subnode in node.children:
-            self._set_volume(subnode)
+        #for subnode in node.children:
+        #    self._set_volume(subnode)
 
         return
 

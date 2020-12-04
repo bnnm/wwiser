@@ -360,7 +360,7 @@ class Txtp(object):
     def _write_txtp(self, printer):
         text = printer.generate()
 
-        #some games have many GS combos that end up being the same (ex. Nier Automata, Bayonetta 2)
+        # some games have many GS combos that end up being the same (ex. Nier Automata, Bayonetta 2)
         texthash = hash(text)
         is_new = self._txtpcache.register_txtp(texthash, printer)
         name = self._get_name(printer, is_new)
@@ -368,7 +368,7 @@ class Txtp(object):
             logging.debug("txtp: ignore '%s' (repeat of %s)", name, texthash)
             return False
 
-        #same name but different txtp, shouldn't happen (just in case, maybe when loading many banks?)
+        # same name but different txtp, rarely happens when banks repeat events ids that are actually different
         if not self._txtpcache.register_name(name):
             logging.debug("txtp: renaming to '%s'", name)
             name += '#%03i' % (self._txtpcache.names)
@@ -545,7 +545,7 @@ class TxtpInfo(object):
         return self.node
 
     def generate(self, multibank=False):
-        self.padding = ' ' * (self.depth * 2 + 1) #+1 for '# ' space after comment 
+        self.padding = ' ' * (self.depth * 2 + 1) #+1 for '# ' space after comment
         self._info = []
 
         self._generate_node(multibank)

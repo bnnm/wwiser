@@ -86,13 +86,12 @@ class FormatterChannelConfig(object):
     def __init__(self):
         self.fmt = FormatterHex()
 
-
     def format(self, type=None, value=None):
         if value is None:
             raise ValueError("formatter: value not set")
         #if type is None:
         #    raise ValueError("formatter: type not set")
-        
+
         mapping = ""
         for i in range(0, 32):
             bitmask = (1<<i)

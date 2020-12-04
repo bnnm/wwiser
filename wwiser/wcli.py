@@ -184,7 +184,9 @@ class Cli(object):
             generator.set_x_noloops(args.txtp_x_noloops)
             generator.set_x_notxtp(args.txtp_x_notxtp)
             generator.set_x_nameid(args.txtp_x_nameid)
+
             generator.generate()
+
 
         # db manipulation
         if args.dump_type == wprinter.TYPE_NONE and (args.save_lst or args.save_db):

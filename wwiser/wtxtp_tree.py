@@ -140,7 +140,7 @@ class TxtpNode(object):
         self.children.append(tnode)
 
     # nodes that don't contribute to final .txtp so they don't need to be written
-    # also loads some values 
+    # also loads some values
     def ignorable(self, skiploop=False):
         if not skiploop: #sometimes gets in the way of calcs
             if self.loop == 0: #infinite loop
@@ -416,7 +416,7 @@ class TxtpPrinter(object):
         if node.type in TYPE_GROUPS and node.parent:
             is_empty = len(node.children) == 0
 
-            # kill segments that don't play (would generate empty silence), 
+            # kill segments that don't play (would generate empty silence),
             # seen in Doom Eternal (no duration) and mass effect 2 (duration but no exit)
             is_nosound = node.config.duration == 0 or node.config.exit == 0
 
@@ -758,7 +758,7 @@ class TxtpPrinter(object):
 
         # may reorder now (by id only (defaults to [N+1] on equals but can't compare nodes,
         # plus same nodes must not be ordered)
-        ids.sort(key=lambda x: x[0]) 
+        ids.sort(key=lambda x: x[0])
         node.children = []
         for id, subnode in ids:
             node.children.append(subnode)
@@ -1011,7 +1011,7 @@ class TxtpPrinter(object):
 
         # maybe should only apply to clip if segment has only 1 children, otherwise just apply to
         # group (more clear), but may make easier to copypaste wems if applied to clips
- 
+
         body_full = node.pad_begin + node.body_time - node.trim_begin - node.trim_end
         #delta = 0.00000000001 #some leeway after calcs
         # possible
@@ -1250,7 +1250,7 @@ class TxtpPrinter(object):
             name = "?.silent"
 
         elif sound.source.plugin_id:
-            # generator plugin 
+            # generator plugin
             name = "?.plugin-%s" % (sound.source.plugin_name)
 
             if sound.source.plugin_id == 0x00650002: #silence

@@ -35,7 +35,7 @@ class Names(object):
         self._fnv = Fnv()
         self._disable_fuzzy = False
 
-        
+
     def set_gamename(self, gamename):
         self._gamename = gamename #path
 

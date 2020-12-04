@@ -35,7 +35,7 @@ class Printer(object):
             raise ValueError("unknown type: " + self._type)
 
     def _make_name(self, extension):
-        outname  = self._name 
+        outname  = self._name
         outname += extension
         return outname
 

@@ -147,7 +147,7 @@ class NodeElement(object):
 
 # root node with special definitions (represents a bank)
 class NodeRoot(NodeElement):
-    __slots__ = ['__r', '__filename', '__path', '_version', '_feedback', '_names', '_strings']
+    __slots__ = ['__r', '__filename', '__path', '_version', '_id', '_feedback', '_names', '_strings']
 
     def __init__(self, r, version=0):
         super(NodeRoot, self).__init__(None, 'root')
@@ -156,6 +156,7 @@ class NodeRoot(NodeElement):
         self.__path = r.get_path()
         self._version = version
 
+        self._id = None
         self._feedback = False
         self._names = None
         self._strings = []
@@ -205,6 +206,12 @@ class NodeRoot(NodeElement):
 
     def set_version(self, version):
         self._version = version
+
+    def get_id(self):
+        return self._id
+
+    def set_id(self, id):
+        self._id = id
 
     def has_feedback(self):
         return self._feedback
@@ -372,7 +379,7 @@ class NodeObject(NodeElement):
                 else:
                     value = r.str(size)
             elif type == TYPE_GAP:
-                r.skip(size)
+                r.gap(size)
                 value = size
             elif type == TYPE_STZ:
                 # sorry...
@@ -388,8 +395,8 @@ class NodeObject(NodeElement):
                         raise ValueError("long string")
 
             elif type == TYPE_UNI:
-                #union of f32+u32, determined by Wwise subclass, do some simple guessing
-                # IEEE float uses last 9 bits for the exponent, so high values must be floats
+                # union of f32+u32 determined by Wwise subclass, do some simple guessing instead
+                # IEEE float uses upper 9 bits for the exponent, so high values must be floats
                 value = r.u32()
                 if value > 0x10000000:
                     r.skip(-4)
@@ -484,7 +491,7 @@ class NodeObject(NodeElement):
             return
         if to_skip < 0:
             raise ValueError("wrong consume: offset=%x, omax=%x, to_skip=%x" % (offset, omax, to_skip))
-        self.__r.skip(to_skip)
+        self.__r.gap(to_skip)
         self.append(NodeSkip(self, offset, to_skip))
         self.get_root()._skip_count += 1
         return self
@@ -598,7 +605,7 @@ class NodeField(NodeElement):
             return self.__row
 
         # signal "tried to load but no results" by default
-        self.__row = False 
+        self.__row = False
 
         names = self.get_root()._names
         if names:

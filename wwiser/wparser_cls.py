@@ -25,7 +25,7 @@ from . import wmodel
 #  CAkFxBaseStateAware : CAkStateAware
 # CAkIndexable
 #  CAkParamNodeStateAware : CAkStateAware
-#  CAkPBIAware : CAkIndexable 
+#  CAkPBIAware : CAkIndexable
 #   CAkParameterNodeBase : CAkPBIAware, CAkParamNodeStateAware, CAkRTPCSubscriberNode
 #    CAkParameterNode : CAkParameterNodeBase
 #     CAkSoundBase : CAkParameterNode
@@ -210,7 +210,7 @@ def CAkAction__Create(obj, actionType):
         0x05000: CAkActionPlayAndContinue,
         0x06000: CAkActionMute,
         0x07000: CAkActionMute,
-        0x08000: CAkActionSetPitch, 
+        0x08000: CAkActionSetPitch,
         0x09000: CAkActionSetPitch,
         0x0A000: CAkActionSetVolume,
         0x0B000: CAkActionSetVolume,

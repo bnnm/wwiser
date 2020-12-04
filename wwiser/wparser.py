@@ -320,13 +320,13 @@ def CAkParameterNode__SetInitialFxParams(obj, cls):
     obj = obj.node('NodeInitialFxParams')
 
     obj.U8x('bIsOverrideParentFX') #when != 0
-    
+
     if cls.version <= 26:
         obj.u32('uNumFx')
     else:
         obj.u8i('uNumFx')
     count = obj.lastval
-    
+
     if count > 0:
         obj.u8i('bitsFXBypass')
         for elem in obj.list('pFXChunk', 'FXChunk', count):
@@ -2867,15 +2867,22 @@ def CAkBankMgr__ProcessBankHeader(obj):
     version = get_version(obj)
     chunk_size = obj.lastval
 
+    root = obj.get_root()
+
     obj = obj.node('AkBankHeader')
 
     if version <= 26:
         obj.U32('unknown') #0/1
         obj.U32('unknown') #0/1
         obj.u32('dwBankGeneratorVersion')
+        # no actual id so use bank name
+        root.set_id(root.get_bankname())
+
     else:
         obj.u32('dwBankGeneratorVersion')
         obj.sid('dwSoundBankID').fnv(wdefs.fnv_com)
+        # needed to make txtp with mixed banks
+        root.set_id(obj.lastval)
 
     if version <= 120:
         obj.u32('dwLanguageID').fmt(wdefs.language_id)
@@ -2883,7 +2890,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
         obj.sid('dwLanguageID').fnv(wdefs.fnv_com) #hashed lang string
 
     if version <= 26:
-        obj.U64('timestamp?')
+        obj.u64('timestamp?')
     else:
         pass
 
@@ -3319,6 +3326,7 @@ class Parser(object):
 
         fourcc = r.fourcc()
         if fourcc == b'AKBK':
+            # very early versions have a mini header before BKHD
             __ = r.u32() #null
             __ = r.u32() #null
             r.guess_endian32(0x10)

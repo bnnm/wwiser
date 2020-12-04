@@ -160,6 +160,13 @@ class FileReader(object):
         #as bytes rather than string to avoid failures on bad data
         return self.__bytes(offset, 4)
 
+    def gap(self, bytes):
+        offset_before = self.current()
+        self.skip(bytes)
+        offset_after = self.current()
+        if offset_before + bytes != offset_after or offset_after > self.size:
+            raise ReaderError("can't skip requested bytes (corrupted file?)")
+
     def seek(self, offset):
         self.file.seek(offset, os.SEEK_SET)
 

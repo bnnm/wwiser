@@ -11,25 +11,30 @@ class Rebuilder(object):
     def __init__(self):
         self.DEFAULT_CLASS = _CAkNone
 
-        self._node_refs = {}        #sid > parser node
-        self._sid_refs = {}         #parser node > sid
-        self._bnodes = {}           #sid > rebuilt node
+        self._ref_to_node = {}              # bank + sid > parser node
+        self._id_to_refs = {}               # sid > bank + sid list
+        self._node_to_bnode = {}            # parser node > rebuilt node
+        #self._node_to_ref = {}             # parser node > bank + sid
 
-        self._media_banks = {}      #bank + sid > internal wem index
-        self._media_sids = {}       #sid > bank + internal wem index
-        self._missing_nodes = {}
-        self._missing_media = {}
-        self._transition_objects = 0
-        self._unknown_props = {}
+        self._media_banks = {}              # bank + sid > internal wem index
+        self._media_sids = {}               # sid > bank + internal wem index
+
+        self._missing_nodes_loaded = {}     # missing nodes that should be in loaded banks (event garbage left by Wwise)
+        self._missing_nodes_others = {}     # missing nodes in other banks (even pointing to other banks)
+        self._missing_nodes_unknown = {}    # missing nodes of unknown type
+
+        self._loaded_banks = {}             # id of banks that participate in generating
+        self._missing_banks = {}            # banks missing in the "others" list
+        self._missing_media = {}            # media (wem) objects missing in some bank
+        self._unknown_props = {}            # object properties that need to be investigated
+        self._transition_objects = 0        # info for future support
 
         # after regular generation we want a list of nodes that weren't used, and
         # generate TXTP for them, but ordered by types since generating some types
         # may end up using other unused types
-        self._used_refs = {}        # marks which node_refs has been used
-        self._name_refs = {}        # registered types > list of nodes
-        # transitions (separate to avoid counting as unused)
-        self._transition_nodes = {} # node
-
+        self._used_node = {}                # marks which node_refs has been used
+        self._hircname_to_nodes = {}        # registered types > list of nodes
+        self._transition_nodes = {}         # transitions (separate to avoid counting as unused)
 
         self._generated_hircs =  [
             'CAkEvent',
@@ -105,11 +110,22 @@ class Rebuilder(object):
 
         return
 
-    def get_missing_nodes(self):
-        return len(self._missing_nodes)
+    def get_missing_nodes_loaded(self):
+        return self._missing_nodes_loaded
+
+    def get_missing_nodes_others(self):
+        return self._missing_nodes_others
+
+    def get_missing_nodes_unknown(self):
+        return self._missing_nodes_unknown
+
+    def get_missing_banks(self):
+        banks = list(self._missing_banks.keys())
+        banks.sort()
+        return banks
 
     def get_missing_media(self):
-        return len(self._missing_media)
+        return self._missing_media
 
     def get_transition_objects(self):
         return self._transition_objects
@@ -122,51 +138,82 @@ class Rebuilder(object):
 
     #--------------------------------------------------------------------------
 
-    def add_node_ref(self, sid, node):
-        # objects can be repeated when saved to different banks, but should be
-        # clones so no matter which is chosen (ex. Magatsu Wahrheit, Ori and the Will of the Wisps)
+    # info about loaded banks
+    def add_loaded_bank(self, bank_id, bankname):
+        self._loaded_banks[bank_id] = bankname
 
-        self._sid_refs[id(node)] = sid #do save id > sid for minor speedup
-        if self._node_refs.get(sid) is not None:
-            #logging.info("generator: repeated id %i", sid)
+    #--------------------------------------------------------------------------
+
+    # register a new node
+    def add_node_ref(self, bank_id, sid, node):
+        # Objects can be repeated when saved to different banks, and should be clones (ex. Magatsu Wahrheit, Ori ATWOTW).
+        # Except sometimes they aren't, so we need to treat bank+id as separate things (ex. Detroit, Punch Out).
+        # Doesn't seem allowed in Wwise but it's possible if devs manually load banks without conflicting ids.
+        # ids may be in other banks though, so must also allow finding by single id
+
+        ref = (bank_id, sid)
+        #self._node_to_ref[id(node)] = ref
+
+        if self._ref_to_node.get(ref) is not None:
+            logging.debug("generator: ignored repeated bank %s + id %s", bank_id, sid)
             return
-        self._node_refs[sid] = node
+        self._ref_to_node[ref] = node
 
-        name = node.get_name()
-        if name not in self._name_refs:
-            self._name_refs[name] = []
-        self._name_refs[name].append(node)
+        if sid not in self._id_to_refs:
+            self._id_to_refs[sid] = []
+        self._id_to_refs[sid].append(ref)
 
-    def get_node_ref(self, tid):
-        return self._node_refs.get(tid)
+        hircname = node.get_name()
+        if hircname not in self._hircname_to_nodes:
+            self._hircname_to_nodes[hircname] = []
+        self._hircname_to_nodes[hircname].append(node)
+        return
 
+    def _get_node_by_ref(self, bank_id, sid):
+        ref = (bank_id, sid)
+        # find node in current bank
+        node = self._ref_to_node.get(ref)
+        # try node in another bank
+        if not node:
+            refs = self._id_to_refs.get(sid)
+            if not refs:
+                return None
+            if len(refs) > 1:
+                logging.info("generator: id %s found in multiple banks", sid)
+            ref = refs[0]
+            node = self._ref_to_node.get(ref)
+        return node
 
-    def add_transition_segment(self, tid):
+    def add_transition_segment(self, ntid):
         # transition nodes in switches don't get used, register manually to generate at the end
+        if not ntid:
+            return
+        bank_id = ntid.get_root().get_id()
+        tid = ntid.value()
         if not tid:
             return
 
-        node = self.get_node_ref(tid)
+        node = self._get_node_by_ref(bank_id, tid)
         if not node:
             return
 
         self._transition_nodes[id(node)] = node
-        self._get_bnode(node, tid) #force parse/register, but don't use yet
+        __ = self._get_bnode(node) #force parse/register, but don't use yet
         return
 
     def get_transition_segments(self):
         return self._transition_nodes.values()
 
-    def empty_transition_segments(self):
+    def reset_transition_segments(self):
         self._transition_nodes = {}
 
 
     def has_unused(self):
         # find if useful nodes where used
         for hirc_name in self._unused_hircs:
-            list = self._name_refs.get(hirc_name, [])
-            for node in list:
-                if id(node) not in self._used_refs:
+            nodes = self._hircname_to_nodes.get(hirc_name, [])
+            for node in nodes:
+                if id(node) not in self._used_node:
                     name = node.get_name()
                     #remove some false positives
                     if name == 'CAkMusicSegment':
@@ -181,9 +228,9 @@ class Rebuilder(object):
 
     def get_unused_list(self, hirc_name):
         results = []
-        list = self._name_refs.get(hirc_name, [])
-        for node in list:
-            if id(node) not in self._used_refs:
+        nodes = self._hircname_to_nodes.get(hirc_name, [])
+        for node in nodes:
+            if id(node) not in self._used_node:
                 results.append(node)
         return results
 
@@ -213,56 +260,78 @@ class Rebuilder(object):
         if media is not None:
             return media
 
-        #logging.info("generator: missing memory wem %s", sid)
+        logging.debug("generator: missing memory wem %s", sid)
         self._missing_media[sid] = True
         return None
 
-    def _get_bnode_tid(self, tid, sid):
-        node = self.get_node_ref(tid)
+    #--------------------------------------------------------------------------
+
+    # Finds a rebuild node from a bank+id ref
+    def _get_bnode_by_ref(self, bank_id, tid, sid_info=None, nbankid_info=None):
+        node = self._get_node_by_ref(bank_id, tid)
         if node:
             bnode = self._get_bnode(node)
         else:
             bnode = None
 
         if not bnode:
-            #logging.info("generator: node %s not found, called by %s", tid, sid)
-            self._missing_nodes[tid] = True
+            # register info about missing node
+
+            if nbankid_info:
+                # when asked for a target bank
+                if bank_id in self._loaded_banks:
+                    if (bank_id, tid) not in self._missing_nodes_loaded: 
+                        bankname = self._loaded_banks[bank_id]
+                        logging.debug("generator: missing node %s in loaded bank %s, called by %s", tid, bankname, sid_info)
+
+                    # bank is loaded: requested ID must be leftover garbage
+                    self._missing_nodes_loaded[(bank_id, tid)] = True
+
+                else:
+                    bankname = nbankid_info.get_attr('hashname')
+                    if not bankname:
+                        bankname = str(bank_id.value())
+
+                    if (bank_id, tid) not in self._missing_nodes_others:
+                        logging.debug("generator: missing node %s in non-loaded bank %s, called by %s", tid, bankname, sid_info)
+
+                    # bank not loaded: save bank name too
+                    self._missing_nodes_others[(bank_id, tid)] = True
+                    self._missing_banks[bankname] = True
+
+            else:
+                if (bank_id, tid) not in self._missing_nodes_unknown:
+                    logging.debug("generator: missing node %s in unknown bank, called by %s", tid, sid_info)
+
+                # unknown if node is in other bank or leftover garbage
+                self._missing_nodes_unknown[(bank_id, tid)] = True
 
         return bnode
 
-    def _get_bnode(self, node, sid=None, mark_used=True):
+    # Takes a parser "node" and makes a rebuilt "bnode" for txtp use.
+    # Normally would only need to rebuild per sid and ignore repeats (clones) in different banks, but
+    # some games repeat sid for different objects in different banks (not clones), so just make one per node.
+    def _get_bnode(self, node, mark_used=True):
         if not node:
             return None
-        if not sid:
 
-            sid = self._sid_refs.get(id(node))
-            if not sid:
-                #this shouldn't happen id add_node_ref did its thing
-                nsid = node.find1(type='sid') #slower
-                if not nsid:
-                    sid = 0
-                else:
-                    sid = nsid.value()
-                logging.info("generator: unregistered node sid %i (can be ignored)", sid)
-        if not sid:
-            return None
-
-        bnode = self._bnodes.get(sid)
+        # check is node already in cache
+        bnode = self._node_to_bnode.get(id(node))
         if bnode:
             return bnode
 
-        # pre-process nodes with a helper class and save to cache
+        # rebuild node with a helper class and save to cache
         # (some banks get huge and call the same things again and again, it gets quite slow to parse every time)
-        name = node.get_name()
-        bclass = self._hircs.get(name, self.DEFAULT_CLASS)
+        hircname = node.get_name()
+        bclass = self._hircs.get(hircname, self.DEFAULT_CLASS)
 
         bnode = bclass()
         bnode.init_builder(self)
         bnode.init_node(node)
 
-        self._bnodes[sid] = bnode
+        self._node_to_bnode[id(node)] = bnode
         if mark_used:
-            self._used_refs[id(node)] = True #register usage for unused detection
+            self._used_node[id(node)] = True #register usage for unused detection
         return bnode
 
     #--------------------------------------------------------------------------
@@ -278,7 +347,7 @@ class Rebuilder(object):
         return
 
     def begin_txtp_stinger(self, txtp, stinger):
-        bnode = self._get_bnode(stinger.node, stinger.ntrigger.value())
+        bnode = self._get_bnode(stinger.node) #sid is stinger.ntrigger.value()
         if not bnode:
             return
 
@@ -326,21 +395,29 @@ class _NodeHelper(object):
         raise ValueError("%s - %s %s" % (text, self.name, self.sid))
 
     def _is_node(self, ntid):
+        bank_id = ntid.get_root().get_id()
         tid = ntid.value()
-        node = self.builder.get_node_ref(tid)
+        node = self.builder._get_node_by_ref(bank_id, tid)
         return node is not None
 
-    def _process_next(self, ntid, txtp):
+    def _process_next(self, ntid, txtp, nbankid=None):
         tid = ntid.value()
         if tid == 0:
-            #this is fairly common in switches, that may define all combos, but some nodes don't point to anything
+            #this is fairly common in switches, that may define all combos but some nodes don't point to anything
             return
 
-        bnode = self.builder._get_bnode_tid(tid, self.sid)
+        if nbankid:
+            # play actions reference bank by id (plus may save bankname in STID)
+            bank_id = nbankid.value()
+        else:
+            # try same bank as node
+            bank_id = ntid.get_root().get_id()
+
+        bnode = self.builder._get_bnode_by_ref(bank_id, tid, sid_info=self.sid, nbankid_info=nbankid)
         if not bnode:
             return
 
-        #logging.info("next: %s %s > %s", self.node.get_name(), self.sid, tid)
+        #logging.debug("next: %s %s > %s", self.node.get_name(), self.sid, tid)
         bnode.make_txtp(txtp)
         return
 
@@ -362,7 +439,7 @@ class _NodeHelper(object):
         #"[OutputBusVolume]"
     ]
     OLD_AUDIO_PROPS = [
-        'Volume', 'Volume.min', 'Volume.max', 'LFE', 'LFE.min', 'LFE.max', 
+        'Volume', 'Volume.min', 'Volume.max', 'LFE', 'LFE.min', 'LFE.max',
         'Pitch', 'Pitch.min', 'Pitch.max', 'LPF', 'LPF.min', 'LPF.max',
     ]
     OLD_ACTION_PROPS = [
@@ -469,9 +546,9 @@ class _NodeHelper(object):
             if nstatechunk:
                 nstateids = nstatechunk.finds(name='ulStateInstanceID')
                 for nstateid in nstateids:
+                    bank_id = nstateid.get_root().get_id()
                     tid = nstateid.value()
-                    nstate = self.builder.get_node_ref(tid)
-                    bstate = self.builder._get_bnode(nstate, tid)
+                    bstate = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)
 
                     silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
                     if silences:
@@ -528,7 +605,7 @@ class _NodeHelper(object):
             ntid = nmto.find1(name='segmentID')
             if ntid and ntid.value() != 0:
                 if is_switch:
-                    self.builder.add_transition_segment(ntid.value())
+                    self.builder.add_transition_segment(ntid)
                 else:
                     # rare in playlists (Polyball, Spiderman)
                     self.builder._transition_objects += 1
@@ -566,9 +643,9 @@ class _NodeHelper(object):
                 source.plugin_fx = self._parse_sfx(nbnksrc, source.plugin_id)
             else:
                 # newer games use another CAkFxCustom (though in theory could inline)
+                bank_id = source.nsrc.get_root().get_id()
                 tid = source.tid
-                nfxcustom = self.builder.get_node_ref(tid)
-                bfxcustom = self.builder._get_bnode(nfxcustom, tid)
+                bfxcustom = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)
                 if bfxcustom:
                     source.plugin_fx = bfxcustom.fx
 
@@ -824,7 +901,6 @@ class _CAkAction(_NodeHelper):
             #tDelayMin
             #tDelayMax
 
-        #todo PlayActionParams
         self.ntid = ntid
 
         self._build_subaction(node)
@@ -863,11 +939,20 @@ class _CAkActionTrigger(_CAkAction):
 class _CAkActionPlay(_CAkAction):
     def __init__(self):
         super(_CAkActionPlay, self).__init__()
+        self.nbankid = None
+
+    def _build_subaction(self, node):
+        nparams = node.find1(name='PlayActionParams')
+        if nparams:
+            nbankid = node.find1(name='bankID')
+            if not nbankid:
+                nbankid = node.find1(name='fileID') #older
+            self.nbankid = nbankid
 
     def _process_txtp(self, txtp):
         # rare but may contain config
         txtp.group_single(self.config)
-        self._process_next(self.ntid, txtp)
+        self._process_next(self.ntid, txtp, self.nbankid)
         txtp.group_done()
         return
 
@@ -1421,8 +1506,8 @@ class _CAkMusicTrack(_NodeHelper):
             streaminfos[tid] = source
 
         #each track contains "clips" (srcs):
-        #- 0: silent track (ex. Astral Chain 517843579) 
-        #- 1: normal 
+        #- 0: silent track (ex. Astral Chain 517843579)
+        #- 1: normal
         #- N: layered with fades if overlapped (pre-defined)
         #Final length size depends on segment
         ncount = node.find1(name='numSubTrack')

@@ -224,16 +224,17 @@ class NodeSource(object):
         #0=bnk (always), 1/2=prefetch<>stream (varies with version)
         self.internal = (self.nstreamtype.value() == 0)
 
-        # in older games (<=112) fileID exists and can be different from sourceID
-        # (happens when clipped trims are different)
-        if not self.nfileid:
-            self.nfileid = self.nsourceid
-        else:
-            #when fileID exist it means 2 things:
-            #- bank ID for internals (could be useful to print errors?), sourceID is bank's media ID
-            #- file ID for streams, sourceID is just an info ID
-            if self.internal:
+        if self.nfileid:
+            # in older games (<=112) fileID exists and can be different from sourceID
+            # (happens when clipped trims are different), and has multiple meanings:
+            # - bankID for internals, with sourceID being bank's media ID
+            # - fileID for streams (.wem number), with sourceID being an info ID
+            if self.internal: #unify with newer version
+                #self.nbankid = self.nfileid #could be useful to find/print errors?
                 self.nfileid = self.nsourceid
+        else:
+            # in newer games only sourceID is used (.wem number)
+            self.nfileid = self.nsourceid
         self.tid = self.nfileid.value()
 
         self._plugin()
@@ -336,7 +337,7 @@ class NodeSource(object):
             lang_name = "language-%s" % (lang_value)
 
         lang_short = LANGUAGE_SHORTNAMES.get(lang_name, lang_name)
-        if lang_short == 'sfx': 
+        if lang_short == 'sfx':
             lang_short = ''
         self._lang_name = lang_short
 

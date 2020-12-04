@@ -173,9 +173,25 @@ class Generator(object):
         txc = self._txtpcache
 
         if reb.get_missing_media():
-            logging.info("generator: WARNING! missing %i memory audio (load more banks?)" % (reb.get_missing_media()))
-        if reb.get_missing_nodes():
-            logging.info("generator: WARNING! missing %i Wwise objects (load more banks?)" % (reb.get_missing_nodes()))
+            missing = len(reb.get_missing_media())
+            logging.info("generator: WARNING! missing %i memory audio (load more banks?)" % (missing))
+
+        if reb.get_missing_nodes_loaded():
+            missing = len(reb.get_missing_nodes_loaded())
+            logging.info("generator: WARNING! missing %i Wwise objects in loaded banks (ignore?)" % (missing))
+
+        if reb.get_missing_nodes_others():
+            missing = len(reb.get_missing_nodes_others())
+            logging.info("generator: WARNING! missing %i Wwise objects in other banks (load?)" % (missing))
+            for bank in reb.get_missing_banks():
+                logging.info("- %s.bnk" % (bank))
+
+        if reb.get_missing_nodes_unknown():
+            missing = len(reb.get_missing_nodes_unknown())
+            logging.info("generator: WARNING! missing %i Wwise objects in unknown banks (load/ignore?)" % (missing))
+
+        if not txc.created:
+            logging.info("generator: WARNING! no .txtp were created (find+load banks with events?)")
 
         if reb.get_transition_objects():
             logging.info("generator: WARNING! transition object in playlists (report)")
@@ -187,7 +203,7 @@ class Generator(object):
         if txc.trims:
             logging.info("generator: WARNING! trimmed %i long filenames (use shorter dirs?)" % (txc.trims))
         if txc.multitrack and not self._default_params:
-            logging.info("generator: multitracks detected")
+            logging.info("generator: multitracks detected (ignore, may regenerate in future versions)")
 
         dir = self.get_dir()
         if not dir:
@@ -211,7 +227,11 @@ class Generator(object):
 
     def _setup(self):
         for bank in self._banks:
+            root = bank.get_root()
+            bank_id = root.get_id()
             bankname = bank.get_root().get_filename()
+
+            self._rebuilder.add_loaded_bank(bank_id, bankname)
 
             # register sids/nodes first since banks can point to each other
             items = bank.find(name='listLoadedItem')
@@ -220,11 +240,11 @@ class Generator(object):
                     name = node.get_name()
                     nsid = node.find1(type='sid')
                     if not nsid:
-                        logging.info("generator: not found for %s in %s" % (name, bankname))
+                        logging.info("generator: not found for %s in %s" % (name, bankname)) #???
                         continue
                     sid = nsid.value()
 
-                    self._rebuilder.add_node_ref(sid, node)
+                    self._rebuilder.add_node_ref(bank_id, sid, node)
 
                     # move wems to folder for nodes that can contain sources
                     if self._move:
@@ -291,7 +311,7 @@ class Generator(object):
         for node in self._rebuilder.get_transition_segments():
             self._make_txtp(node)
         self._txtpcache.transition_mark = False
-        self._rebuilder.empty_transition_segments() #restart for unused
+        self._rebuilder.reset_transition_segments() #restart for unused
 
 
     def _write_unused(self):

@@ -169,9 +169,10 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
     if cls.version <= 46:
         elem = obj.node('AkAudioFormat')
         if cls.version <= 26: #26=TH
-            elem.u32('trackID?')
+            elem.u32('trackID?') #sometimes repeated, index?
             elem.u32('uSampleRate')
-            elem.U32('uFormatBits?')
+            elem.U32('uFormatBits?') #related to stream/bank type?
+
         else: #36=SM
             elem.u32('uSampleRate')
             elem.U32('uFormatBits') \
@@ -186,7 +187,11 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
     elem = obj.node('AkMediaInformation')
     elem.tid('sourceID').fnv(wdefs.fnv_no)
 
-    if   cls.version <= 88:
+    if   cls.version <= 26:
+        #todo source + ? may appear or not depending on some other field
+        pass #elem.U32('unknown?')
+
+    elif cls.version <= 88:
         elem.tid('uFileID') #wem or bnk
         if stream_type != 1: #memory/prefetch
             elem.U32('uFileOffset')
@@ -202,11 +207,15 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
         #fileID is sourceID
         elem.U32('uInMemoryMediaSize')
 
-    elem.U8x('uSourceBits') \
-        .bit('bIsLanguageSpecific', elem.lastval,0) \
-        .bit('bPrefetch', elem.lastval,1) \
-        .bit('bNonCachable', elem.lastval, 3) \
-        .bit('bHasSource', elem.lastval, 7)
+
+    if   cls.version <= 26:
+        pass
+    else:
+        elem.U8x('uSourceBits') \
+            .bit('bIsLanguageSpecific', elem.lastval,0) \
+            .bit('bPrefetch', elem.lastval,1) \
+            .bit('bNonCachable', elem.lastval, 3) \
+            .bit('bHasSource', elem.lastval, 7)
 
     if cls.version <= 125:
         has_param = (PluginType == 2 or PluginType == 5)
@@ -1075,7 +1084,9 @@ def CAkActionPlay__SetActionParams(obj, cls):
     else:
         pass
 
-    if cls.version <= 125:
+    if   cls.version <= 26:
+        pass
+    elif cls.version <= 125:
         obj.tid('fileID').fnv(wdefs.fnv_com) #same as bankID
     else:
         obj.tid('bankID').fnv(wdefs.fnv_com)
@@ -2835,9 +2846,8 @@ def CAkBankMgr__ProcessBankHeader(obj):
         obj.U32('unknown') #0/1
         obj.U32('unknown') #0/1
         obj.u32('dwBankGeneratorVersion')
-        # no actual id so use bank name
-        root.set_id(root.get_bankname())
-
+        # no actual id so use timestamp below
+        #root.set_id(root.get_bankname())
     else:
         obj.u32('dwBankGeneratorVersion')
         obj.sid('dwSoundBankID').fnv(wdefs.fnv_com)
@@ -2851,6 +2861,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
 
     if version <= 26:
         obj.u64('timestamp?')
+        root.set_id(obj.lastval)
     else:
         pass
 

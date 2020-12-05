@@ -268,6 +268,10 @@ class Rebuilder(object):
 
     # Finds a rebuild node from a bank+id ref
     def _get_bnode_by_ref(self, bank_id, tid, sid_info=None, nbankid_info=None):
+        if bank_id <= 0  or tid <= 0:
+            # bank -1 seen in KOF12 bgm's play action referencing nothing
+            return
+
         node = self._get_node_by_ref(bank_id, tid)
         if node:
             bnode = self._get_bnode(node)
@@ -290,7 +294,7 @@ class Rebuilder(object):
                 else:
                     bankname = nbankid_info.get_attr('hashname')
                     if not bankname:
-                        bankname = str(bank_id.value())
+                        bankname = str(nbankid_info.value())
 
                     if (bank_id, tid) not in self._missing_nodes_others:
                         logging.debug("generator: missing node %s in non-loaded bank %s, called by %s", tid, bankname, sid_info)
@@ -947,6 +951,7 @@ class _CAkActionPlay(_CAkAction):
             nbankid = node.find1(name='bankID')
             if not nbankid:
                 nbankid = node.find1(name='fileID') #older
+            # v26<= don't set bankID, automatically uses current
             self.nbankid = nbankid
 
     def _process_txtp(self, txtp):

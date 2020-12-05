@@ -1192,7 +1192,7 @@ class TxtpPrinter(object):
             self._others = True
 
         if node.pitch:
-            info += '  ##pitch'
+            info += '  ##pitch %s' % (node.pitch)
             self._others = True
 
 
@@ -1342,7 +1342,7 @@ class TxtpPrinter(object):
             self._others = True
 
         if node.pitch:
-            info += '  ##pitch'
+            info += '  ##pitch %s' % (node.pitch)
             self._others = True
 
 

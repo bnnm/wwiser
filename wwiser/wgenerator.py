@@ -203,7 +203,7 @@ class Generator(object):
         if txc.trims:
             logging.info("generator: WARNING! trimmed %i long filenames (use shorter dirs?)" % (txc.trims))
         if txc.multitrack and not self._default_params:
-            logging.info("generator: multitracks detected (ignore, may regenerate in future versions)")
+            logging.info("generator: multitracks detected (ignore, may generate in future versions)")
 
         dir = self.get_dir()
         if not dir:

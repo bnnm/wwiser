@@ -40,7 +40,7 @@ bank_versions = [
     128, #0x80 Wwise 2017.2     [Spyro Reignited Trilogy (PC/PS4), Let's Go Pikachu (Switch), Magatsu Wahrheit (Android)]
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
-    135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC)]
+    135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
 ]
 
 
@@ -1626,8 +1626,96 @@ AkLoopValue = wfmt.FormatterLUT({
 #  0x4: "StepNewSound",
 #})
 
+# #############################################################################
+# PLUGIN ENUMS (prefixed since they are proce to collisions)
 
-# #######################################
+CAkToneGen__AkToneGenType = wfmt.FormatterLUT({
+  0x0: "SINE",
+  0x1: "TRIANGLE",
+  0x2: "SQUARE",
+  0x3: "SAWTOOTH",
+  0x4: "WHITENOISE",
+  0x5: "PINKNOISE",
+})
+
+CAkToneGen__AkToneGenMode = wfmt.FormatterLUT({
+  0x0: "FIX",
+  0x1: "ENV",
+})
+
+CAkToneGen__AkToneGenSweep = wfmt.FormatterLUT({
+  0x0: "LIN",
+  0x1: "LOG",
+})
+
+CAkStereoDelayFX__AkFilterType = wfmt.FormatterLUT({
+  0x0: "NONE",
+  0x1: "LOWSHELF",
+  0x2: "PEAKINGEQ",
+  0x3: "HIGHSHELF",
+  0x4: "LOWPASS",
+  0x5: "HIGHPASS",
+  0x6: "BANDPASS",
+  0x7: "NOTCH",
+})
+
+CAkStereoDelayFX__AkInputChannelType = wfmt.FormatterLUT({
+  0x0: "LEFT_OR_RIGHT",
+  0x1: "CENTER",
+  0x2: "DOWNMIX",
+  0x3: "NONE",
+})
+
+CAkSynthOne__AkSynthOneWaveType = wfmt.FormatterLUT({
+  0x0: "Sine",
+  0x1: "Triangle",
+  0x2: "Square",
+  0x3: "Sawtooth",
+})
+
+CAkSynthOne__AkSynthOneNoiseType = wfmt.FormatterLUT({
+  0x0: "White",
+  0x1: "Pink",
+  0x2: "Red",
+  0x3: "Purple",
+})
+
+CAkSynthOne__AkSynthOneOperationMode = wfmt.FormatterLUT({
+  0x0: "Mix",
+  0x1: "Ring",
+})
+
+CAkSynthOne__AkSynthOneFrequencyMode = wfmt.FormatterLUT({
+  0x0: "Specify",
+  0x1: "MidiNote",
+})
+
+CAkRoomVerbFX__FilterInsertType = wfmt.FormatterLUT({
+  0x0: "OFF",
+  0x1: "ERONLY",
+  0x2: "REVERBONLY",
+  0x3: "ERANDREVERB",
+})
+
+CAkRoomVerbFX__FilterCurveType = wfmt.FormatterLUT({
+  0x0: "LOWSHELF",
+  0x1: "PEAKING",
+  0x2: "HIGHSHELF",
+})
+
+CAkParameterEQ__AkFilterType = wfmt.FormatterLUT({
+  0x0: "LOWPASS",
+  0x1: "HIPASS",
+  0x2: "BANDPASS",
+  0x3: "NOTCH",
+  0x4: "LOWSHELF",
+  0x5: "HISHELF",
+  0x6: "PEAKINGEQ",
+})
+
+
+# #############################################################################
+# VERSION SETUP
 
 def setup(version):
     #many of these enums are very similar but annoyingly put new values in the middle,
@@ -1635,7 +1723,7 @@ def setup(version):
     #the huge number of parameters
 
     global AkCurveScaling
-    if   version <= 62: 
+    if   version <= 62:
         AkCurveScaling = AkCurveScaling_062
     elif   version <= 65:
         AkCurveScaling = AkCurveScaling_065

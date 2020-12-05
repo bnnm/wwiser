@@ -1,5 +1,5 @@
 import logging
-from . import wmodel, wio, wdefs, wparser_cls as wcls
+from . import wmodel, wio, wdefs, wparser_cls as wcls, wparser_plg as wplg
 
 
 # parser mimics AK's functions, naming and some internals as to simplify debugging.
@@ -46,46 +46,6 @@ def parse_plugin(obj, name='ulPluginID'):
     #plugin_id = obj.lastval
     #if plugin_id == 0x01990005 or plugin_id == 0x00640002:
     #    logging.info("parser: found plugin 0x%08X (already parsed)", plugin_id)
-    return
-
-def parse_plugin_params(obj, plugin_id, size_name, params_name):
-    if not plugin_id or plugin_id < 0:
-        return
-    #version = get_version(obj)
-
-    #todo
-    # SetFX calls on vtable, possibly CAkFxBase::SetFXParam, whick in turn calls
-    # another thing, treats param as a float if size==4, or calls PluginRTPCSub::SetPluginParam
-    #if fxID != -1:
-    #   CAkFxBase::SetFX()
-
-    obj.U32(size_name)
-    size = obj.lastval
-    if size == 0:
-        return
-
-    if plugin_id == 0x00650002: #silence
-        obj = obj.node('AkFXSrcSilenceParams')
-        obj.omax(size)
-
-        obj.f32('fDuration')
-        obj.f32('fRandomizedLengthMinus')
-        obj.f32('fRandomizedLengthPlus')
-
-    elif plugin_id == 0x00640002: #tone #v056>=?
-        obj = obj.node('AkSineFXParams')
-        obj.omax(size)
-
-        obj.f32('fFrequency')
-        obj.f32('fGain')
-        obj.f32('fDuration')
-        obj.U32('uChannelMask').fmt(wdefs.fmt_ch)
-    else:
-        # examples:
-        # - Motion Source (0x01990002): rumble/force feedback config (x8 floats? + u16 count + u16 channels?)
-        # - RoomVerb (0x00760003): reverb (x20 floats + counts + floats)
-        obj.gap(params_name, size)
-
     return
 
 #helper
@@ -254,7 +214,7 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
         has_param = (PluginType == 2)
 
     if has_param:
-        parse_plugin_params(obj, plugin_id,  'uSize', 'pParam')
+        wplg.parse_plugin_params(obj, plugin_id,  'uSize', 'pParam')
         #obj.U32('uSize')
         #obj.gap('pParam', obj.lastval)
     return
@@ -2602,7 +2562,7 @@ def CAkFxBase__SetInitialValues(obj, cls):
     parse_plugin(obj, name='fxID') #obj.U32('fxID')
     plugin_id = obj.lastval
 
-    parse_plugin_params(obj, plugin_id, 'uSize', 'pParamBlock')
+    wplg.parse_plugin_params(obj, plugin_id, 'uSize', 'pParamBlock')
     #obj.U32('uSize')
     #obj.gap('pParamBlock', obj.lastval)
 
@@ -2980,7 +2940,7 @@ def CAkBankMgr__ProcessFxParamsChunk(obj):
         elem.tid('EnvID')
         parse_plugin(elem, 'FXID')
         plugin_id = elem.lastval
-        parse_plugin_params(elem, plugin_id, 'ulPresetSize', 'pDataBlock')
+        wplg.parse_plugin_params(elem, plugin_id, 'ulPresetSize', 'pDataBlock')
         #elem.U32('ulPresetSize')
         #elem.gap('pDataBlock', elem.lastval)
 
@@ -3026,8 +2986,7 @@ def parse_stid_old(obj):
     obj.u32('depth') #1 in most banks, 4 in init (flags?)
 
     obj = obj.node('StringMapping')
-    obj.U32('size')
-    obj.omax(obj.lastval)
+    obj.U32('size').omax()
 
     obj.u32('entries')
     count = obj.lastval

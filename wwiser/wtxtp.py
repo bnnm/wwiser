@@ -67,7 +67,7 @@ class TxtpCache(object):
         self.random_all = False
         self.random_force = False
 
-        self.x_nocrossfade = True
+        self.x_nocrossfade = False
         self.x_noloops = False
         self.x_notxtp = False
         self.x_nameid = False

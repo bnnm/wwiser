@@ -138,6 +138,9 @@ class Generator(object):
     def set_random_force(self, flag):
         self._txtpcache.random_force = flag
 
+    def set_tagsm3u(self, flag):
+        self._txtpcache.tagsm3u = flag
+
     def set_x_nocrossfade(self, flag):
         self._txtpcache.x_nocrossfade = flag
 
@@ -160,6 +163,7 @@ class Generator(object):
             self._write()
             self._write_unused()
             self._write_transitions()
+            self._write_tagsm3u()
             self._report()
 
         except Exception: # as e
@@ -171,6 +175,11 @@ class Generator(object):
     def _report(self):
         reb = self._rebuilder
         txc = self._txtpcache
+
+        if self._rebuilder.has_unused() and not self._generate_unused:
+            logging.info("generator: WARNING! possibly unused audio? (find+load more banks?)")
+            logging.info("*** set 'generate unused' option to include, may not create anything")
+            return
 
         if reb.get_missing_media():
             missing = len(reb.get_missing_media())
@@ -206,6 +215,8 @@ class Generator(object):
 
         if txc.trims:
             logging.info("generator: WARNING! trimmed %i long filenames (use shorter dirs?)" % (txc.trims))
+            logging.info("*** set 'tags.m3u' option for shorter names + tag file with full names")
+
         if txc.multitrack and not self._default_params:
             logging.info("generator: multitracks detected (ignore, may generate in future versions)")
 
@@ -325,8 +336,6 @@ class Generator(object):
             return
 
         if not self._generate_unused:
-            logging.info("generator: WARNING! possibly unused audio? (find+load more banks?)")
-            logging.info("*** set 'generate unused' option to include, may not create anything")
             return
 
         logging.info("generator: processing unused")
@@ -386,6 +395,33 @@ class Generator(object):
 
             logging.info("generator: ERROR! node %s in %s" % (sid, bankname))
             raise
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    def _write_tagsm3u(self):
+        if not self._txtpcache.tagsm3u:
+            return
+        tags = self._txtpcache.get_tag_names()
+        if not tags:
+            return
+        files = list(tags.keys())
+        files.sort()
+
+        outdir = self._txtpcache.outdir
+        outname = outdir + "!tags.m3u"
+
+        with open(outname, 'w', newline="\r\n") as outfile:
+            outfile.write("# @ALBUM    \n")
+            outfile.write("# $AUTOTRACK\n")
+            outfile.write("\n")
+
+            for file in files:
+                longname = tags[file]
+
+                outfile.write("# %%TITLE    %s\n" %(longname))
+                outfile.write('%s\n' % (file))
 
         return
 

@@ -22,6 +22,7 @@ class Rebuilder(object):
         self._missing_nodes_loaded = {}     # missing nodes that should be in loaded banks (event garbage left by Wwise)
         self._missing_nodes_others = {}     # missing nodes in other banks (even pointing to other banks)
         self._missing_nodes_unknown = {}    # missing nodes of unknown type
+        self._multiple_nodes = {}           # nodes that exist but were loaded in multiple banks and can't decide which one is best
 
         self._loaded_banks = {}             # id of banks that participate in generating
         self._missing_banks = {}            # banks missing in the "others" list
@@ -127,6 +128,9 @@ class Rebuilder(object):
     def get_missing_media(self):
         return self._missing_media
 
+    def get_multiple_nodes(self):
+        return self._multiple_nodes
+
     def get_transition_objects(self):
         return self._transition_objects
 
@@ -179,7 +183,9 @@ class Rebuilder(object):
             if not refs:
                 return None
             if len(refs) > 1:
-                logging.info("generator: id %s found in multiple banks", sid)
+                # could try to figure out if nodes are equivalent before reporting?
+                logging.debug("generator: id %s found in multiple banks, not found in bank %s", sid, bank_id)
+                self._multiple_nodes[sid] = True
             ref = refs[0]
             node = self._ref_to_node.get(ref)
         return node

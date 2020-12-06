@@ -183,12 +183,16 @@ class Generator(object):
         if reb.get_missing_nodes_others():
             missing = len(reb.get_missing_nodes_others())
             logging.info("generator: WARNING! missing %i Wwise objects in other banks (load?)" % (missing))
-            for bank in reb.get_missing_banks():
-                logging.info("- %s.bnk" % (bank))
+            for bankinfo in reb.get_missing_banks():
+                logging.info("- %s.bnk" % (bankinfo))
 
         if reb.get_missing_nodes_unknown():
             missing = len(reb.get_missing_nodes_unknown())
             logging.info("generator: WARNING! missing %i Wwise objects in unknown banks (load/ignore?)" % (missing))
+
+        if reb.get_multiple_nodes():
+            missing = len(reb.get_multiple_nodes())
+            logging.info("generator: WARNING! repeated %i Wwise objects in multiple banks (load less?)" % (missing))
 
         if not txc.created:
             logging.info("generator: WARNING! no .txtp were created (find+load banks with events?)")

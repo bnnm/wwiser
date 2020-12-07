@@ -66,7 +66,7 @@ class Cli(object):
         parser.add_argument('-gra','--txtp-random-all',     help="Make multiple .txtp per base 'random' section", action='store_true')
         parser.add_argument('-grf','--txtp-random-force',   help="Force base section to be selectable like a 'random'\n(combine with the above to make .txtp per layer)", action='store_true')
         parser.add_argument('-gt', '--txtp-tagsm3u',        help="Use shorter .txtp names and put full names in !tags.m3u", action='store_true')
-        parser.add_argument('-gxnc','--txtp-x-nocrossfade', help="Extra: silence crossfaded parts", action='store_true')
+        parser.add_argument('-gs', '--txtp-silence',        help="Silence by default parts that crossfade", action='store_true')
         parser.add_argument('-gxnl','--txtp-x-noloops',     help="Extra: don't loop sounds", action='store_true')
         parser.add_argument('-gxnt','--txtp-x-notxtp',      help="Extra: don't save .txtp", action='store_true')
         parser.add_argument('-gxni','--txtp-x-nameid',      help="Extra: add ID to generic names", action='store_true')
@@ -181,8 +181,8 @@ class Cli(object):
             generator.set_random_all(args.txtp_random_all)
             generator.set_random_force(args.txtp_random_force)
             generator.set_tagsm3u(args.txtp_tagsm3u)
+            generator.set_silence(args.txtp_silence)
 
-            generator.set_x_nocrossfade(args.txtp_x_nocrossfade)
             generator.set_x_noloops(args.txtp_x_noloops)
             generator.set_x_notxtp(args.txtp_x_notxtp)
             generator.set_x_nameid(args.txtp_x_nameid)

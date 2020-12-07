@@ -1201,10 +1201,9 @@ class TxtpPrinter(object):
                 info += ' #loop-end'
 
         if node.crossfaded or node.silenced:
-            if self._txtpcache.x_nocrossfade:
+            if self._txtpcache.silence:
                 mods += '  #v 0'
-            else:
-                info += '  ##fade'
+            info += '  ##fade'
             self._others = True
 
         #if node.makeupgain:
@@ -1251,6 +1250,7 @@ class TxtpPrinter(object):
         info = ''
         if ignored:
             line += '#'
+        silence_line = False
 
         name = ''
         if sound.source and sound.source.plugin_wmid:
@@ -1361,10 +1361,11 @@ class TxtpPrinter(object):
                 info += ' #loop-end'
 
         if node.crossfaded or node.silenced:
-            if self._txtpcache.x_nocrossfade:
-                mods += '  #v 0'
-            else:
-                info += '  ##fade'
+            if self._txtpcache.silence:
+                #mods += '  #v 0' #set "?" later as it's a bit simpler to use
+                silence_line = True
+
+            info += '  ##fade'
             self._others = True
 
         #if node.makeupgain:
@@ -1375,6 +1376,8 @@ class TxtpPrinter(object):
             info += '  ##pitch %s' % (node.pitch)
             self._others = True
 
+        if silence_line:
+            line = "?" + line
 
         # final result
         pad = self._get_padding() #padded for clarity

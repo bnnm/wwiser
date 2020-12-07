@@ -141,8 +141,8 @@ class Generator(object):
     def set_tagsm3u(self, flag):
         self._txtpcache.tagsm3u = flag
 
-    def set_x_nocrossfade(self, flag):
-        self._txtpcache.x_nocrossfade = flag
+    def set_silence(self, flag):
+        self._txtpcache.silence = flag
 
     def set_x_noloops(self, flag):
         self._txtpcache.x_noloops = flag

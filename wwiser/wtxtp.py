@@ -67,8 +67,8 @@ class TxtpCache(object):
         self.random_all = False
         self.random_force = False
         self.tagsm3u = False
+        self.silence = False
 
-        self.x_nocrossfade = False
         self.x_noloops = False
         self.x_notxtp = False
         self.x_nameid = False
@@ -275,7 +275,10 @@ class Txtp(object):
         if printer.has_multiloops():
             name += " {m}"
         if printer.has_silences():
-            name += " {s}"
+            if self._txtpcache.silence:
+                name += " {s-}" #"silence all"
+            else:
+                name += " {s}"
         if printer.has_internals() and self._txtpcache.bnkmark:
             name += " {b}"
         if printer.get_lang_name():
@@ -334,8 +337,6 @@ class Txtp(object):
             if self._txtpcache.volume_db:
                 type = 'dB'
             info += '# ~ master volume %s%s\n' % (self._txtpcache.volume_master, type)
-        #if self._txtpcache.x_nocrossfade:
-        #    info += '# ~ no crossfade\n'
 
         if self._selected:
             extra = ''

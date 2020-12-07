@@ -878,8 +878,9 @@ class _CAkDialogueEvent(_NodeHelper):
             self._build_tree(node, ntree)
 
     def _process_txtp(self, txtp):
-        # set all gamesyncs
+
         if txtp.params.empty:
+            # set all gamesyncs (won't generate txtp)
             for path, ntid in self.paths:
                 txtp.ppaths.adds(path)
                 self._process_next(ntid, txtp)
@@ -891,7 +892,10 @@ class _CAkDialogueEvent(_NodeHelper):
         if npath_combo:
             npath, ntid = npath_combo
             txtp.info_gamesyncs(npath)
+
+            txtp.group_single(self.config)
             self._process_next(ntid, txtp)
+            txtp.group_done()
         return
 
 #******************************************************************************
@@ -961,8 +965,8 @@ class _CAkActionPlay(_CAkAction):
             self.nbankid = nbankid
 
     def _process_txtp(self, txtp):
-        # rare but may contain config
-        txtp.group_single(self.config)
+        
+        txtp.group_single(self.config) # rare but may contain config
         self._process_next(self.ntid, txtp, self.nbankid)
         txtp.group_done()
         return
@@ -1238,8 +1242,9 @@ class _CAkMusicSwitchCntr(_NodeHelper):
 
     def _process_txtp(self, txtp):
         if self.has_tree:
-            # set all gamesyncs
+
             if txtp.params.empty:
+                # set all gamesyncs (won't generate txtp)
                 txtp.ppaths.add_stingers(self.stingers)
 
                 for path, ntid in self.paths:
@@ -1253,7 +1258,10 @@ class _CAkMusicSwitchCntr(_NodeHelper):
             if npath_combo:
                 npath, ntid = npath_combo
                 txtp.info_gamesyncs(npath)
+
+                txtp.group_single(self.config) #rarely may contain volumes
                 self._process_next(ntid, txtp)
+                txtp.group_done()
             return
 
         else:
@@ -1261,7 +1269,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
             gname = self.ngname.value()
 
             if txtp.params.empty:
-                #set all gamesyncs
+                #set all gamesyncs (won't generate txtp)
                 for ntid, ngvalue in self.gvalue_ntid.values(): #order doesn't matter
                     gvalue = ngvalue.value()
                     txtp.ppaths.add(gtype, gname, ngvalue.value())
@@ -1276,9 +1284,11 @@ class _CAkMusicSwitchCntr(_NodeHelper):
             if not gvalue in self.gvalue_ntid:
                 return
             ntid, ngvalue = self.gvalue_ntid[gvalue]
-
             txtp.info_gamesync(gtype, self.ngname, ngvalue)
+
+            txtp.group_single(self.config)
             self._process_next(ntid, txtp)
+            txtp.group_done()
             return
 
         return
@@ -1660,6 +1670,7 @@ class _CAkMusicTrack(_NodeHelper):
             if clip.neid and clip.neid.value():
                 econfig = wtxtp_util.NodeConfig()
                 econfig.idelay = clip.sound.fpa #uses FPA to start segment, should work ok
+
                 txtp.group_single(econfig)
                 self._process_next(clip.neid, txtp)
                 txtp.group_done()

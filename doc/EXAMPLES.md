@@ -89,7 +89,7 @@ Hex_Lair.bnk
 - some tracks play super-extended playtime with loop count
 - sets sLoopCount in ranseq but doesn't loop?
 - may apply pitch or other effects
-
+- mswitch groups contain volumes
 
 ## Metal Gear Rising (PS3)
 ```
@@ -358,7 +358,7 @@ event > play > ...
 - some events set multiple loop infinites (only innermost would be used)
 - some events set loop infinite, but have a song end after it (never plays)
 - some events in EV.bnk (events only) point to ME.bnk (media only) media
-
+- most layers use sounds with MakeUpGain = -96dB to silence parts, rather than regular volume
 
 ## Ori and the Will of the Wisps (PC)
 ```
@@ -625,3 +625,11 @@ mswitch > - item x5 !!!
     
 ```
 - has loop traps inside inner sequences (not easily handled)
+
+## Gunslinger Stratos Reloaded (PC)
+```
+3991942870 music: BusVolume=-18.0
+``` 
+- most BGM sets around +7dB volume, but override bus to use one with lower volume
+  - also defines RTPC "MusicVol_Parameter" controlling bus volume
+- some BGM define both volume and makeupgain for a resulting 7-9dB

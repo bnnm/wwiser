@@ -184,7 +184,7 @@ LANGUAGE_SHORTNAMES = {
     "Italian": 'it',
     "Japanese": 'ja',
     "Korean": 'ko',
-    "Latin": 'la', #what
+    "Latin": 'la', #what (used in SM:WoS for placeholder voices, that are reversed audio of misc voices)
     "Norwegian": 'no',
     "Polish": 'pl',
     "Portuguese(Brazil)": 'pt-br',

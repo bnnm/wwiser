@@ -108,6 +108,30 @@ def CAkPeakLimiterFXParams__SetParamsBlock(obj, size):
     return
 
 
+#AkMatrixReverb
+def CAkFDNReverbFXParams__SetParamsBlock(obj, size):
+    #CAkFDNReverbFXParams::SetParamsBlock
+    obj = obj.node('AkFDNReverbFXParams')
+
+    #RTPC: AkFDNReverbRTPCParams
+    #NonRTPC: AkFDNReverbNonRTPCParams
+    obj.f32('RTPC.fReverbTime')
+    obj.f32('RTPC.fHFRatio')
+    obj.u32('NonRTPC.uNumberOfDelays')
+    delays = obj.lastval
+
+    obj.f32('RTPC.fDryLevel') #dB
+    obj.f32('RTPC.fWetLevel') #dB
+    obj.f32('NonRTPC.fPreDelay') #dB
+    obj.U8x('NonRTPC.uProcessLFE')
+    obj.U32('NonRTPC.uDelayLengthsMode').fmt(wdefs.CAkFDNReverbFX__AkDelayLengthsMode)
+    delay_mode = obj.lastval
+
+    if delay_mode == 1 and delays:
+        for i in range(delays):
+            obj.f32('RTPC.fDelayTime')
+
+
 #AkRoomVerb
 def CAkRoomVerbFXParams__SetParamsBlock(obj, size):
     #CAkRoomVerbFXParams::SetParamsBlock
@@ -169,6 +193,82 @@ def CAkRoomVerbFXParams__SetParamsBlock(obj, size):
 
     return
 
+#AkFlanger
+def CAkFlangerFXParams__SetParamsBlock(obj, size):
+    #CAkFlangerFXParams::SetParamsBlock
+    obj = obj.node('CAkFlangerFXParams')
+
+    #RTPC: AkFlangerRTPCParams
+    #NonRTPC: AkFlangerNonRTPCParams
+    obj.f32('NonRTPC.fDelayTime')
+    obj.f32('RTPC.fDryLevel')
+    obj.f32('RTPC.fFfwdLevel')
+    obj.f32('RTPC.fFbackLevel')
+
+    obj.f32('RTPC.fModDepth')
+    obj.f32('RTPC.modParams.lfoParams.fFrequency')
+    obj.U32('RTPC.modParams.lfoParams.eWaveform').fmt(wdefs.CAkFlangerFX__Waveform)
+    obj.f32('RTPC.modParams.lfoParams.fSmooth')
+    obj.f32('RTPC.modParams.lfoParams.fPWM')
+
+    obj.f32('RTPC.modParams.phaseParams.fPhaseOffset')
+    obj.U32('RTPC.modParams.phaseParams.ePhaseMode').fmt(wdefs.CAkFlangerFX__PhaseMode)
+    obj.f32('RTPC.modParams.phaseParams.fPhaseSpread')
+    obj.f32('RTPC.fOutputLevel') #db
+    obj.f32('RTPC.fWetDryMix')
+    obj.U8x('NonRTPC.bEnableLFO')
+    obj.U8x('NonRTPC.bProcessCenter')
+    obj.U8x('NonRTPC.bProcessLFE')
+
+    return
+
+
+#AkConvolutionReverb
+def CAkConvolutionReverbFXParams__SetParamsBlock(obj, size):
+    #CAkConvolutionReverbFXParams::SetParamsBlock
+    obj = obj.node('AkConvolutionReverbFXParams') #m_Params
+
+    obj.f32('fPreDelay')
+    obj.f32('fFrontRearDelay')
+    obj.f32('fStereoWidth')
+
+    obj.f32('fInputCenterLevel') #db
+    obj.f32('fInputLFELevel') #db
+    if   size == 0x30: #v118<=
+        pass
+    elif size == 0x34: #v120>=
+        obj.f32('fInputStereoWidth')
+
+    obj.f32('fFrontLevel') #db
+    obj.f32('fRearLevel') #db
+    obj.f32('fCenterLevel') #db
+    obj.f32('fLFELevel') #db
+    obj.f32('fDryLevel') #db
+    obj.f32('fWetLevel')
+    obj.U32('eAlgoType').fmt(wdefs.CAkConvolutionReverbFX__AkConvolutionAlgoType)
+
+    return
+
+
+#AkSoundEngineDLL
+def CAkMeterFXParams__SetParamsBlock(obj, size):
+    #CAkMeterFXParams::SetParamsBlock
+    obj = obj.node('AkMeterFXParams') #m_Params
+
+    #RTPC: AkMeterRTPCParams
+    #NonRTPC: AkMeterNonRTPCParams
+    obj.f32('RTPC.fAttack')
+    obj.f32('RTPC.fRelease')
+    obj.f32('RTPC.fMin')
+    obj.f32('RTPC.fMax')
+    obj.f32('RTPC.fHold')
+    obj.U8x('NonRTPC.eMode').fmt(wdefs.CAkMeterFX__AkMeterMode)
+    obj.U8x('NonRTPC.eScope').fmt(wdefs.CAkMeterFX__AkMeterScope)
+    obj.U8x('NonRTPC.bApplyDownstreamVolume')
+    obj.U32('NonRTPC.uGameParamID')
+
+    return
+
 
 #AkStereoDelay
 def CAkStereoDelayFXParams__SetParamsBlock(obj, size):
@@ -193,6 +293,16 @@ def CAkStereoDelayFXParams__SetParamsBlock(obj, size):
     obj.f32('fFrontRearBalance')
     obj.U8x('bEnableFeedback')
     obj.U8x('bEnableCrossFeed')
+
+    return
+
+#AkGain
+def CAkGainFXParams__SetParamsBlock(obj, size):
+    #CAkGainFXParams::SetParamsBlock
+    obj = obj.node('AkGainFXParams')
+
+    obj.f32('fFullbandGain')
+    obj.f32('fLFEGain')
 
     return
 
@@ -233,6 +343,23 @@ def CAkFxSrcAudioInputParams__SetParamsBlock(obj, size):
     return
 
 
+def iZTrashDelayFXParams__SetParamsBlock(obj, size):
+    #iZTrashDelayFXParams::SetParamsBlock
+    obj = obj.node('iZTrashDelayFXParams')
+
+    obj.f32('fDryOut')
+    obj.f32('fWetOut')
+    obj.f32('fLowCutoff')
+    obj.f32('fLowQ')
+    obj.f32('fHighCutoff')
+    obj.f32('fHighQ')
+    obj.f32('fAmount')
+    obj.f32('fFeedback')
+    obj.f32('fTrash')
+    obj.U32('bHasChanged')
+
+    return
+
 # #############################################################################
 
 plugin_dispatch = {
@@ -242,10 +369,19 @@ plugin_dispatch = {
     0x00690003: CAkParameterEQFXParams__SetParamsBlock,
     0x006A0003: CAkDelayFXParams__SetParamsBlock,
     0x006E0003: CAkPeakLimiterFXParams__SetParamsBlock,
+    0x00730003: CAkFDNReverbFXParams__SetParamsBlock,
     0x00760003: CAkRoomVerbFXParams__SetParamsBlock,
+    0x007D0003: CAkFlangerFXParams__SetParamsBlock,
+    0x007F0003: CAkConvolutionReverbFXParams__SetParamsBlock,
+    0x00810003: CAkMeterFXParams__SetParamsBlock,
     0x00870003: CAkStereoDelayFXParams__SetParamsBlock,
+    0x008B0003: CAkGainFXParams__SetParamsBlock,
     0x00940002: CAkSynthOneParams__SetParamsBlock,
     0x00C80002: CAkFxSrcAudioInputParams__SetParamsBlock,
+    0x00041033: iZTrashDelayFXParams__SetParamsBlock
+
+   #0x00AE0007: (no params)
+   #0x00B50007: (no params)
 }
 
 def parse_chunk_default(obj, size, params_name):

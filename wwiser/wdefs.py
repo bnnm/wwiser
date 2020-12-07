@@ -1713,6 +1713,43 @@ CAkParameterEQ__AkFilterType = wfmt.FormatterLUT({
   0x6: "PEAKINGEQ",
 })
 
+CAkConvolutionReverbFX__AkConvolutionAlgoType = wfmt.FormatterLUT({
+  0x0: "DOWNMIX",
+  0x1: "DIRECT",
+})
+
+CAkFDNReverbFX__AkDelayLengthsMode = wfmt.FormatterLUT({
+  0x0: "DEFAULT",
+  0x1: "CUSTOM",
+})
+
+CAkMeterFX__AkMeterScope = wfmt.FormatterLUT({
+  0x0: "Global",
+  0x1: "GameObject",
+})
+
+CAkMeterFX__AkMeterMode = wfmt.FormatterLUT({
+  0x0: "Peak",
+  0x1: "RMS",
+})
+
+CAkFlangerFX__Waveform = wfmt.FormatterLUT({ #DSP::LFO::Waveform
+  0x0: "FIRST/SINE",
+  0x1: "TRIANGLE",
+  0x2: "SQUARE",
+  0x3: "SAW_UP",
+  0x4: "SAW_DOWN",
+  0x5: "RND",
+  0x6: "NUM",
+})
+
+CAkFlangerFX__PhaseMode = wfmt.FormatterLUT({ #DSP::LFO::MultiChannel::PhaseMode
+  0x0: "LEFT_RIGHT",
+  0x1: "FRONT_REAR",
+  0x2: "CIRCULAR",
+  0x3: "RANDOM",
+})
+
 
 # #############################################################################
 # VERSION SETUP

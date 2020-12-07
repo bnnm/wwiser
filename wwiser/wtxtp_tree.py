@@ -96,6 +96,22 @@ class TxtpNode(object):
             self.volume = None
             self.silenced = True
 
+        if self.makeupgain and self.makeupgain <= -96.0:
+            self.makeupgain = None
+            self.silenced = True
+
+        # MakeUpGain is a secondary volume value, where first you set a "HDR window" in the container bus,
+        # and sounds volumes are altered depending on window and MakeUpGain (meant for temp focus on some sfxs).
+        # When HRD window has default settings it seems to behave like regular volume (ex. Gunslinger Stratos).
+        if self.makeupgain:
+            if not self.volume:
+                self.volume = 0
+            self.volume += self.makeupgain
+            #self.makeupgain = 0 #todo leave gain for info in txtp?
+            self._others = True
+            self._debug = True
+
+
         # allowed to separate "loop not set" and "loop set but not looping"
         #if self.loop == 1:
         #    self.loop = None
@@ -606,6 +622,10 @@ class TxtpPrinter(object):
 
         if not subnode.volume:
             subnode.volume = node.volume
+            node.volume = None
+        elif node.volume and subnode.volume and subnode.type == TYPE_GROUP_SINGLE:
+            # fuse volumes to make less groups sometimes
+            subnode.volume += node.volume
             node.volume = None
 
         if not subnode.crossfaded:
@@ -1187,9 +1207,9 @@ class TxtpPrinter(object):
                 info += '  ##fade'
             self._others = True
 
-        if node.makeupgain:
-            info += '  ##gain'
-            self._others = True
+        #if node.makeupgain:
+        #    info += '  ##gain'
+        #    self._others = True
 
         if node.pitch:
             info += '  ##pitch %s' % (node.pitch)
@@ -1308,13 +1328,23 @@ class TxtpPrinter(object):
         # apply decreasing master volume to wems and before other volumes
         # (lowers chances of clipping due to vgmstream's pcm16)
         if self._txtpcache.volume_master and self._txtpcache.volume_decrease:
+            base_volume = self._txtpcache.volume_master
+            node_volume = node.volume
             if self._txtpcache.volume_db:
                 voltype = 'dB'
+                # try to cancel master dB and node's dB for cleaner results
+                if node_volume:
+                    base_volume += node_volume
+                    node_volume = 0
             else:
                 voltype = ''
-            mods += '  #v %s%s' % (self._txtpcache.volume_master, voltype)
 
-        if node.volume:
+            if base_volume:
+                mods += '  #v %s%s' % (base_volume, voltype)
+            if node_volume:
+                mods += '  #v %sdB' % (node_volume)
+
+        elif node.volume:
             mods += '  #v %sdB' % (node.volume)
 
         # add anchors
@@ -1337,9 +1367,9 @@ class TxtpPrinter(object):
                 info += '  ##fade'
             self._others = True
 
-        if node.makeupgain:
-            info += '  ##gain'
-            self._others = True
+        #if node.makeupgain:
+        #    info += '  ##gain'
+        #    self._others = True
 
         if node.pitch:
             info += '  ##pitch %s' % (node.pitch)

@@ -126,6 +126,9 @@ class Gui(object):
         box[1].grid(row=1, column=1, sticky="W")
         box[2].grid(row=1, column=2, sticky="W")
 
+        chk = self._chk('txtp_filter_rest', frame, "Generate rest of files after filtering (use to prioritize some names over other dupes)")
+        chk.grid(row=2, column=1, columnspan=3, sticky="W")
+
         frame = ttk.Frame(root)
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
 
@@ -377,6 +380,7 @@ class Gui(object):
 
             generator = wgenerator.Generator(banks)
             generator.set_filter(filter)
+            generator.set_filter_rest(self._fields['txtp_filter_rest'].get())
             generator.set_params(params)
             #generator.set_outdir(self.fields['txtp_outdir'].get())
             generator.set_wemdir(self._fields['txtp_wemdir'].get())

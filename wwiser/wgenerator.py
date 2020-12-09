@@ -27,6 +27,7 @@ class Generator(object):
         self._move = False
         self._moved_sources = {}
         self._filter = []
+        self._filter_rest = False
         self._default_params = None
 
         self._object_sources = {
@@ -42,6 +43,9 @@ class Generator(object):
         for item in filter:
             if item is not None:
                 self._filter.append(item.lower())
+    
+    def set_filter_rest(self, flag):
+        self._filter_rest = flag
 
     def set_generate_unused(self, generate_unused):
         if not generate_unused:
@@ -284,7 +288,9 @@ class Generator(object):
 
 
     def _write(self):
+        nodes_rest = []
         default_hircs = self._rebuilder.get_generated_hircs()
+
         for bank in self._banks:
             items = bank.find(name='listLoadedItem')
             if not items:
@@ -293,7 +299,7 @@ class Generator(object):
             for node in items.get_children():
                 classname = node.get_name()
 
-                #filter list
+                # filter list
                 generate = False
                 if self._filter:
                     nsid = node.find1(type='sid')
@@ -306,6 +312,12 @@ class Generator(object):
                         hashname = nsid.get_attr('hashname')
                         if hashname and hashname.lower() in self._filter:
                             generate = True
+
+                    # register valid non-filtered nodes if marked, to handle after first pass
+                    if self._filter_rest and not generate:
+                        if classname in default_hircs:
+                            nodes_rest.append(node)
+
                 else:
                     if classname in default_hircs:
                         generate = True
@@ -313,6 +325,12 @@ class Generator(object):
                 if not generate:
                     continue
 
+                self._make_txtp(node)
+
+        # make txtp for non-filtered nodes
+        if nodes_rest:
+            self._filter = [] #remove for later code
+            for node in nodes_rest:
                 self._make_txtp(node)
 
         self._write_transitions()

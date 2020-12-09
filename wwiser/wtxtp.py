@@ -64,6 +64,7 @@ class TxtpCache(object):
         self.bnkskip = False
         self.alt_exts = False
         self.dupes = False
+        self.dupes_exact = False
         self.random_all = False
         self.random_force = False
         self.tagsm3u = False
@@ -288,6 +289,8 @@ class Txtp(object):
         if printer.has_unsupported():
             name += " {!}"
         if not is_new: #dupe
+            #if is_not_exact_dupe:
+            #    name += " {D}"
             name += " {d}"
         #if printer.has_others():
         #    name += " {o}"
@@ -362,7 +365,7 @@ class Txtp(object):
 
     def write(self):
         printer = wtxtp_tree.TxtpPrinter(self, self._root, self._txtpcache, self._rebuilder)
-        printer.prepare()
+        printer.prepare() #simplify tree
 
         # may have files but all silent
         if not printer.has_sounds():
@@ -382,10 +385,23 @@ class Txtp(object):
             self._write_txtp(printer)
 
     def _write_txtp(self, printer):
-        text = printer.generate()
+        # Some games have GS combos and events that end up being the same (ex. Nier Automata, Bayonetta 2).
+        # We make the txtp text and check (without comments) if wasn't already generated = dupe = ignored.
+        # Because some txtp are 99% the same save minor differences (volumes, delays), those diffs should
+        # be ignored, meaning text for checking and text for printing is slightly different
+        # (this can be disabled so only exact dupes are printed).
 
-        # some games have many GS combos that end up being the same (ex. Nier Automata, Bayonetta 2)
-        texthash = hash(text)
+        # make txtp + txtp for dupe checking
+        text = printer.generate()
+        if self._txtpcache.dupes_exact:
+            # only considers dupes exact repeats
+            texthash = hash(text)
+        else:
+            # by default uses a simpler text ignoring minor differences
+            text_simpler = printer.generate(simpler=True)
+            texthash = hash(text_simpler)
+
+        # check hash
         is_new = self._txtpcache.register_txtp(texthash, printer)
         name = self._get_name(printer, is_new)
         if not is_new and not self._txtpcache.dupes:

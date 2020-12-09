@@ -136,6 +136,9 @@ class Generator(object):
     def set_dupes(self, flag):
         self._txtpcache.dupes = flag
 
+    def set_dupes_exact(self, flag):
+        self._txtpcache.dupes_exact = flag
+
     def set_random_all(self, flag):
         self._txtpcache.random_all = flag
 

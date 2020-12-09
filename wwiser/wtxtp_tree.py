@@ -236,7 +236,8 @@ class TxtpPrinter(object):
 
         # during write
         self._lines = None
-        self.depth = None
+        self._depth = None
+        self._simpler = False # when set skips some configs to ease comparing similar txtp
 
         # during process
         self._sound_count = 0
@@ -263,11 +264,14 @@ class TxtpPrinter(object):
     def prepare(self):
         self._modify()
 
-    def generate(self):
+    def generate(self, simpler=False):
         self._depth = 0
         self._lines = []
+        self._simpler = simpler
+
         self._write()
-        return ''.join(self._lines)
+        text = ''.join(self._lines)
+        return text
 
     def is_selection(self):
         return self._selectable_count
@@ -1174,15 +1178,17 @@ class TxtpPrinter(object):
             line += '>-'
 
         # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
-        if node.volume:
+        if node.volume and not self._simpler:
             mods += '  #v %sdB' % (node.volume)
 
         # wwise seems to mix untouched then use volumes to tweak
         if node.type in TYPE_GROUPS_LAYERS:
             mods += ' #@layer-v'
 
-        # add config
-        mods += self._get_ms(' #p', node.pad_begin)
+        # add delay config
+        if not self._simpler:
+            mods += self._get_ms(' #p', node.pad_begin)
+
 
         # add loops/anchors
         if node.loop is not None: #and node.loop_anchor: #groups always use anchors
@@ -1327,7 +1333,7 @@ class TxtpPrinter(object):
 
         # apply decreasing master volume to wems and before other volumes
         # (lowers chances of clipping due to vgmstream's pcm16)
-        if self._txtpcache.volume_master and self._txtpcache.volume_decrease:
+        if self._txtpcache.volume_master and self._txtpcache.volume_decrease and not self._simpler:
             base_volume = self._txtpcache.volume_master
             node_volume = node.volume
             if self._txtpcache.volume_db:
@@ -1344,7 +1350,7 @@ class TxtpPrinter(object):
             if node_volume:
                 mods += '  #v %sdB' % (node_volume)
 
-        elif node.volume:
+        elif node.volume and not self._simpler:
             mods += '  #v %sdB' % (node.volume)
 
         # add anchors
@@ -1400,12 +1406,12 @@ class TxtpPrinter(object):
             if node.loop > 1:
                 mods += ' #l %s.0' % (node.loop)
 
-        mods += self._get_ms(' #p', node.pad_begin)
-        #mods += self._get_ms(' #b', node.body_time)
-        #mods += self._get_ms(' #r', node.trim_begin)
-        #mods += self._get_ms(' #R', node.trim_end)
-        #mods += self._get_ms(' #P', node.pad_end)
+        # add delay config (remove for comparision if flag is set)
+        if not self._simpler:
+            mods += self._get_ms(' #p', node.pad_begin)
+
         return mods
+
 
     def _get_clip(self, sound, node):
         mods = ''
@@ -1421,6 +1427,8 @@ class TxtpPrinter(object):
             mods += ' #E' #clips only do full loops
         else:
             mods += ' #i' #just in case
+
+        #clips don't have delay and don't need it removed when _simpler is set
 
         mods += self._get_ms(' #p', node.pad_begin)
         if loops: #forces disabling fades, that get in the way when playing separate music tracks

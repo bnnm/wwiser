@@ -76,7 +76,7 @@ def CAkParameterEQFXParams__SetParamsBlock(obj, size):
 #AkDelay
 def CAkDelayFXParams__SetParamsBlock(obj, size):
     #CAkDelayFXParams::SetParamsBlock
-    obj = obj.node('CAkDelayFXParams')
+    obj = obj.node('AkDelayFXParams')
 
     #RTPC: AkDelayRTPCParams
     #NonRTPC: AkDelayNonRTPCParams
@@ -196,7 +196,7 @@ def CAkRoomVerbFXParams__SetParamsBlock(obj, size):
 #AkFlanger
 def CAkFlangerFXParams__SetParamsBlock(obj, size):
     #CAkFlangerFXParams::SetParamsBlock
-    obj = obj.node('CAkFlangerFXParams')
+    obj = obj.node('AkFlangerFXParams')
 
     #RTPC: AkFlangerRTPCParams
     #NonRTPC: AkFlangerNonRTPCParams
@@ -219,6 +219,35 @@ def CAkFlangerFXParams__SetParamsBlock(obj, size):
     obj.U8x('NonRTPC.bEnableLFO')
     obj.U8x('NonRTPC.bProcessCenter')
     obj.U8x('NonRTPC.bProcessLFE')
+
+    return
+
+#AkGuitarDistortion
+def CAkGuitarDistortionFXParams__SetParamsBlock(obj, size):
+    #CAkGuitarDistortionFXParams::SetParamsBlock
+    obj = obj.node('AkGuitarDistortionFXParams')
+
+    count = 3
+    for elem in obj.list('PreEQ', 'AkFilterBand', count):
+        elem.U32('eFilterType').fmt(wdefs.CAkGuitarDistortion__AkFilterType)
+        elem.f32('fGain')
+        elem.f32('fFrequency')
+        elem.f32('fQFactor')
+        elem.U8x('bOnOff')
+    for elem in obj.list('PostEQ', 'AkFilterBand', count):
+        elem.U32('eFilterType').fmt(wdefs.CAkGuitarDistortion__AkFilterType)
+        elem.f32('fGain')
+        elem.f32('fFrequency')
+        elem.f32('fQFactor')
+        elem.U8x('bOnOff')
+
+    elem = obj.node('AkDistortionParams')
+    elem.U32('eDistortionType').fmt(wdefs.CAkGuitarDistortion__AkDistortionType)
+    elem.f32('fDrive')
+    elem.f32('fTone')
+    elem.f32('fRectification')
+    elem.f32('fOutputLevel') #db
+    elem.f32('fWetDryMix')
 
     return
 
@@ -263,7 +292,10 @@ def CAkMeterFXParams__SetParamsBlock(obj, size):
     obj.f32('RTPC.fMax')
     obj.f32('RTPC.fHold')
     obj.U8x('NonRTPC.eMode').fmt(wdefs.CAkMeterFX__AkMeterMode)
-    obj.U8x('NonRTPC.eScope').fmt(wdefs.CAkMeterFX__AkMeterScope)
+    if size == 0x1A: #v120<=
+        pass
+    else: #0x1B #v125>=
+        obj.U8x('NonRTPC.eScope').fmt(wdefs.CAkMeterFX__AkMeterScope)
     obj.U8x('NonRTPC.bApplyDownstreamVolume')
     obj.U32('NonRTPC.uGameParamID')
 
@@ -372,6 +404,7 @@ plugin_dispatch = {
     0x00730003: CAkFDNReverbFXParams__SetParamsBlock,
     0x00760003: CAkRoomVerbFXParams__SetParamsBlock,
     0x007D0003: CAkFlangerFXParams__SetParamsBlock,
+    0x007E0003: CAkGuitarDistortionFXParams__SetParamsBlock,
     0x007F0003: CAkConvolutionReverbFXParams__SetParamsBlock,
     0x00810003: CAkMeterFXParams__SetParamsBlock,
     0x00870003: CAkStereoDelayFXParams__SetParamsBlock,

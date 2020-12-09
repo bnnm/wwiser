@@ -315,6 +315,7 @@ AkPluginType_id = wfmt.FormatterLUT({
 
   0x00020403: "Codemasters ?", # [Dirt Rally (PS4)]
 
+  0x00640332: "Ubisoft ?", # [Mario + Rabbids DLC 3]
   0x04F70803: "Ubisoft ? Effect", # [AC Valhalla]
   0x04F80806: "Ubisoft ? Mixer", # [AC Valhalla]
   0x04F90803: "Ubisoft ? Effect", # [AC Valhalla]
@@ -1450,6 +1451,8 @@ AkRTPC_ParameterID_134 = wfmt.FormatterLUT({
   0x3C: "Unknown?", #Spyro Ignited Trilogy (Switch)
   0x3D: "Unknown?", #same
   0x3E: "Unknown?", #same
+  0x40: "Unknown?", #Bayonetta 2 (Switch), near volumes
+  0x41: "Unknown?", #same
 })
 #135<=
 AkRTPC_ParameterID_135 = wfmt.FormatterLUT({
@@ -1750,6 +1753,23 @@ CAkFlangerFX__PhaseMode = wfmt.FormatterLUT({ #DSP::LFO::MultiChannel::PhaseMode
   0x3: "RANDOM",
 })
 
+CAkGuitarDistortion__AkFilterType = wfmt.FormatterLUT({
+  0x0: "LOWSHELF",
+  0x1: "PEAKINGEQ",
+  0x2: "HIGHSHELF",
+  0x3: "LOWPASS",
+  0x4: "HIGHPASS",
+  0x5: "BANDPASS",
+  0x6: "NOTCH",
+})
+
+CAkGuitarDistortion__AkDistortionType = wfmt.FormatterLUT({
+  0x0: "NONE",
+  0x1: "OVERDRIVE",
+  0x2: "HEAVY",
+  0x3: "FUZZ",
+  0x4: "CLIP",
+})
 
 # #############################################################################
 # VERSION SETUP

@@ -291,8 +291,11 @@ def CAkMeterFXParams__SetParamsBlock(obj, size):
     obj.f32('RTPC.fMin')
     obj.f32('RTPC.fMax')
     obj.f32('RTPC.fHold')
-    obj.U8x('NonRTPC.eMode').fmt(wdefs.CAkMeterFX__AkMeterMode)
-    if size == 0x1A: #v120<=
+    if size == 0x19: #v088<=
+        pass
+    else:
+        obj.U8x('NonRTPC.eMode').fmt(wdefs.CAkMeterFX__AkMeterMode)
+    if size <= 0x1A: #v120<=
         pass
     else: #0x1B #v125>=
         obj.U8x('NonRTPC.eScope').fmt(wdefs.CAkMeterFX__AkMeterScope)

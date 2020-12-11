@@ -191,7 +191,6 @@ class Generator(object):
         if self._rebuilder.has_unused() and not self._generate_unused:
             logging.info("generator: WARNING! possibly unused audio? (find+load more banks?)")
             logging.info("*** set 'generate unused' option to include, may not create anything")
-            return
 
         if reb.get_missing_media():
             missing = len(reb.get_missing_media())

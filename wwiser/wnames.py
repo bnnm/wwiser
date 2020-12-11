@@ -201,13 +201,14 @@ class Names(object):
     def parse_files(self, banks, filenames, xml=None, txt=None, h=None, lst=None, db=None):
         if not filenames:
             return
+        logging.info("names: loading names")
 
-        # add banks names (double as hashname), first since it looks a bit nicer in list output
+        # add banks names (doubles as hashnames), first since it looks a bit nicer in list output
         for bank in banks:
             bankname = bank.get_root().get_bankname()
             self._add_name(None, bankname, source=NameRow.NAME_SOURCE_EXTRA)
 
-        # parse files for a single bank
+        # parse files for each single bank
         for filename in filenames:
             # update current bank name (in case of mixed bank dirs; repeats aren't parsed again)
             self.set_bankname(filename)
@@ -215,13 +216,17 @@ class Names(object):
             # from more to less common/useful
             self.parse_xml(xml)
             self.parse_txt(txt)
-            self.parse_h(h)
 
         # banks may store some extra hashname strings (rarely)
         for bank in banks:
             strings = bank.get_root().get_strings()
             for string in strings:
                 self._add_name(None, string, source=NameRow.NAME_SOURCE_EXTRA)
+
+        # parse .h (names in CAPS so less priority)
+        for filename in filenames:
+            self.set_bankname(filename)
+            self.parse_h(h)
 
         # extra files, after other banks or priority when generating some missing lists and stuff is off
         pathfiles = [filenames[0]] #todo fix for multiple paths in filenames, for now assumes one
@@ -231,6 +236,11 @@ class Names(object):
             # from more to less common/useful
             self.parse_lst(lst)
             self.parse_db(db)
+
+        # just in case
+        self.set_bankname(None)
+
+        logging.info("names: done")
 
 
     def _parse_base(self, filename, callback, reverse_encoding=False):

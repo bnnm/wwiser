@@ -37,7 +37,7 @@ class Gui(object):
         # base
 
         root = Tk()
-        root.geometry('700x800')
+        root.geometry('680x800')
         #root.resizable(width=False,height=False)
         #root.iconbitmap(wutil.Loader.get_resource('/resources/wwiser.ico'))
 
@@ -128,6 +128,8 @@ class Gui(object):
 
         chk = self._chk('txtp_filter_rest', frame, "Generate rest of files after filtering (use to prioritize some names over other dupes)")
         chk.grid(row=2, column=1, columnspan=3, sticky="W")
+        chk = self._chk('txtp_bank_order', frame, "Generate TXTP in bank order instead of names first (alters which txtp are considered dupes)")
+        chk.grid(row=3, column=1, columnspan=3, sticky="W")
 
         frame = ttk.Frame(root)
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
@@ -156,7 +158,7 @@ class Gui(object):
         chk = self._chk('txtp_wemname', frame, "Add all .wem names to .txtp filename (if found)")
         chk.grid(row=2, column=0, sticky="W")
 
-        chk = self._chk('txtp_unused', frame, "Generate unused audio (when log complains, load more banks first)")
+        chk = self._chk('txtp_unused', frame, "Generate unused audio (when log complains)")
         chk.grid(row=2, column=1, sticky="W")
 
         chk = self._chk('txtp_alt_exts', frame, "Use TXTP alt extensions (.logg/lwav)")
@@ -382,6 +384,7 @@ class Gui(object):
             generator.set_filter(filter)
             generator.set_filter_rest(self._fields['txtp_filter_rest'].get())
             generator.set_params(params)
+            generator.set_bank_order(self._fields['txtp_bank_order'].get())
             #generator.set_outdir(self.fields['txtp_outdir'].get())
             generator.set_wemdir(self._fields['txtp_wemdir'].get())
             generator.set_volume(self._fields['txtp_volume'].get())

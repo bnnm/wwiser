@@ -23,11 +23,14 @@ class Generator(object):
         self._rebuilder = wrebuilder.Rebuilder()
         self._txtpcache = wtxtp.TxtpCache()
 
-        self._generate_unused = False
-        self._move = False
-        self._moved_sources = {}
-        self._filter = []
-        self._filter_rest = False
+        # options
+        self._generate_unused = False   # generate unused after regular txtp
+        self._move = False              # move sources to wem dir
+        self._moved_sources = {}        # ref
+        self._filter = []               # filter nodes
+        self._filter_rest = False       # generate rest after filtering (rather than just filtered nodes)
+        self._bank_order = False        # use bank order to generate txtp (instead of prioritizing named nodes)
+
         self._default_params = None
 
         self._object_sources = {
@@ -46,6 +49,9 @@ class Generator(object):
     
     def set_filter_rest(self, flag):
         self._filter_rest = flag
+
+    def set_bank_order(self, flag):
+        self._bank_order = flag
 
     def set_generate_unused(self, generate_unused):
         if not generate_unused:
@@ -169,7 +175,6 @@ class Generator(object):
             self._setup()
             self._write()
             self._write_unused()
-            self._write_transitions()
             self._write_tagsm3u()
             self._report()
 
@@ -291,56 +296,88 @@ class Generator(object):
 
 
     def _write(self):
-        nodes_rest = []
-        default_hircs = self._rebuilder.get_generated_hircs()
-
+        # save nodes in bank order rather than all together (allows fine tuning bank load order)
         for bank in self._banks:
-            items = bank.find(name='listLoadedItem')
-            if not items:
-                continue
-
-            for node in items.get_children():
-                classname = node.get_name()
-
-                # filter list
-                generate = False
-                if self._filter:
-                    nsid = node.find1(type='sid')
-                    sid = nsid.value()
-                    if   str(sid) in self._filter:
-                        generate = True
-                    elif classname.lower() in self._filter:
-                        generate = True
-                    else:
-                        hashname = nsid.get_attr('hashname')
-                        if hashname and hashname.lower() in self._filter:
-                            generate = True
-
-                    # register valid non-filtered nodes if marked, to handle after first pass
-                    if self._filter_rest and not generate:
-                        if classname in default_hircs:
-                            nodes_rest.append(node)
-
-                else:
-                    if classname in default_hircs:
-                        generate = True
-
-                if not generate:
-                    continue
-
-                self._make_txtp(node)
-
-        # make txtp for non-filtered nodes
-        if nodes_rest:
-            self._filter = [] #remove for later code
-            for node in nodes_rest:
-                self._make_txtp(node)
+            self._write_bank(bank)
 
         self._write_transitions()
         return
 
+    def _write_bank(self, bank):
+        items = bank.find(name='listLoadedItem')
+        if not items:
+            return
+
+        nodes_filtered = []
+        nodes_named = []
+        nodes_unnamed = []
+        default_hircs = self._rebuilder.get_generated_hircs()
+
+        # save candidate nodes to generate
+        for node in items.get_children():
+            classname = node.get_name()
+            nsid = node.find1(type='sid')
+            if not nsid:
+                continue
+            sid = nsid.value()
+
+            generate = False
+
+            if self._filter:
+                sid = nsid.value()
+                if   str(sid) in self._filter: #filter by ID
+                    generate = True
+                elif classname.lower() in self._filter: #filter by class
+                    generate = True
+                else: #filter by hashname
+                    hashname = nsid.get_attr('hashname')
+                    if hashname and hashname.lower() in self._filter:
+                        generate = True
+
+                if generate:
+                    item = node
+                    nodes_filtered.append(item)
+                    continue
+                else:
+                    # ignore node if not in filter and not marked to include rest after filter
+                    # (with flag would register valid non-filtered nodes below, written after filtered nodes)
+                    if not self._filter_rest:
+                        continue
+
+            if not generate and classname in default_hircs:
+                generate = True
+
+            if not generate:
+                continue
+
+            # When making txtp, put named nodes in a list to generate first, then unnamed nodes.
+            # Useful when multiple events do the same thing, but we only have wwnames for one
+            # (others may be leftovers). This way named one is generated and others are ignored as
+            # dupes. Can be disabled to treat all as unnamed = in bank order.
+            hashname = nsid.get_attr('hashname')
+            if hashname and not self._bank_order:
+                item = (hashname, node)
+                nodes_named.append(item)
+            else:
+                item = (sid, node)
+                nodes_unnamed.append(item)
+
+        # prepare nodes in final order
+        nodes = []
+        nodes += nodes_filtered
+        nodes_named.sort() # usually gives better results with dupes
+        for __, node in nodes_named:
+            nodes.append(node)
+        for __, node in nodes_unnamed:
+            nodes.append(node)
+        logging.debug("generator: writting bank nodes (names: %s, unnamed: %s, filtered: %s)", len(nodes_named), len(nodes_unnamed), len(nodes_filtered))
+
+        # make txtp for nodes
+        for node in nodes:
+            self._make_txtp(node)
+
     def _write_transitions(self):
-        if self._filter:
+        if self._filter and not self._filter_rest:
             return
 
         self._txtpcache.transition_mark = True
@@ -351,7 +388,7 @@ class Generator(object):
 
 
     def _write_unused(self):
-        if self._filter:
+        if self._filter and not self._filter_rest:
             return
         if not self._rebuilder.has_unused():
             return

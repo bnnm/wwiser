@@ -577,9 +577,9 @@ class TxtpInfo(object):
             if value == 0:
                 value = '-'
 
-            if   gtype == wgamesync.GamesyncParams.TYPE_STATE:
+            if   gtype == wgamesync.TYPE_STATE:
                 type = "(%s=%s)" % (name, value) # states = more globals = "("
-            elif gtype == wgamesync.GamesyncParams.TYPE_SWITCH:
+            elif gtype == wgamesync.TYPE_SWITCH:
                 type = "[%s=%s]" % (name, value) # switches = more restrictive = "["
             else:
                 raise ValueError("unknown gamesync type %i" % (gtype))

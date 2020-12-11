@@ -554,8 +554,9 @@ class _NodeHelper(object):
             # state sets silence value (ex. MGR double tracks)
             nstatechunk = nbase.find1(name='StateChunk')
             if nstatechunk:
-                nstateids = nstatechunk.finds(name='ulStateInstanceID')
-                for nstateid in nstateids:
+                nstategroups = nstatechunk.finds(name='AkStateGroupChunk')
+                for nstategroup in nstategroups:
+                    nstateid = nstategroup.find1(name='ulStateInstanceID')
                     bank_id = nstateid.get_root().get_id()
                     tid = nstateid.value()
                     bstate = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)
@@ -564,8 +565,12 @@ class _NodeHelper(object):
                     if silences:
                         self.config.crossfaded = True
                         #logging.info("generator: state silence found %s %s %s" % (self.sid, tid, node.get_name()))
-                        nstategroupid = nstatechunk.find1(name='ulStateGroupID')
-                        self.nfields.append(nstategroupid)
+                        nstategroupid = nstategroup.find1(name='ulStateGroupID')
+                        nstateid = nstategroup.find1(name='ulStateID')
+                        if nstateid:
+                            self.nfields.append((nstategroupid, nstateid))
+                        else:
+                            self.nfields.append(nstategroupid)
 
         if nbase and check_rtpc:
             # RTPC linked to volume (ex. DMC5 battle rank layers)
@@ -691,7 +696,7 @@ class _NodeHelper(object):
             if ngtype:
                 gtype = ngtype.value()
             else: #assumed default for DialogueEvent in older versions
-                gtype = wgamesync.GamesyncParams.TYPE_STATE
+                gtype = wgamesync.TYPE_STATE
             self.args.append( (gtype, ngname) )
 
         #simplify tree to a list of gamesyncs pointing to an id, basically how the editor shows them

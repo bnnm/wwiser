@@ -1,9 +1,17 @@
 import logging, re
+from . import wfnv
 
 
 DEBUG_PRINT_TREE_BASE = False
 DEBUG_PRINT_TREE_COMBOS = False
 DEBUG_PRINT_TREE_PARAMS = False
+
+TYPE_SWITCH = 0
+TYPE_STATE = 1
+TYPE_NAMES = {
+    TYPE_SWITCH: 'SW',
+    TYPE_STATE: 'ST',
+}
 
 # GAMESYNC PATHS
 # Some objects depend on gamesyncs (variables). When parsing a root node (ex. event), by default the
@@ -74,6 +82,7 @@ class _GamesyncNode(object):
 
 #******************************************************************************
 
+# saves possible switch paths in a txtp
 class GamesyncPaths(object):
 
     def __init__(self, txtpcache):
@@ -147,19 +156,15 @@ class GamesyncPaths(object):
 
 #******************************************************************************
 
+# stores current selected switch path
 class GamesyncParams(object):
-    TYPE_SWITCH = 0
-    TYPE_STATE = 1
-    TYPE_NAMES = {
-        TYPE_SWITCH: 'SW',
-        TYPE_STATE: 'ST',
-    }
 
     def __init__(self, txtpcache):
         self.empty = True
         self.elems = {}
         self.txtpcache = txtpcache
         self.external = False
+        self._fnv = wfnv.Fnv()
         pass
 
     def adds(self, gamesyncs):
@@ -216,11 +221,11 @@ class GamesyncParams(object):
         if key is None or val is None:
             return
         if not key.isnumeric():
-            key = self._fnv_hash(key)
+            key = self._fnv.get_hash(key)
         if val == '-': #any
             val = '0'
         if not val.isnumeric():
-            val = self._fnv_hash(val)
+            val = self._fnv.get_hash(val)
         self.add(type, key, val)
 
 
@@ -234,12 +239,12 @@ class GamesyncParams(object):
             match = pattern_st.match(param)
             if match:
                 key, val = match.groups()
-                self.add_param(GamesyncParams.TYPE_STATE, key, val)
+                self.add_param(TYPE_STATE, key, val)
 
             match = pattern_sw.match(param)
             if match:
                 key, val = match.groups()
-                self.add_param(GamesyncParams.TYPE_SWITCH, key, val)
+                self.add_param(TYPE_SWITCH, key, val)
 
         if DEBUG_PRINT_TREE_PARAMS:
             logging.info("*** params")
@@ -247,16 +252,3 @@ class GamesyncParams(object):
 
             logging.info("out: %s", self.elems)
             logging.info("")
-
-
-    #standard AK FNV-1 with 32-bit
-    def _fnv_hash(self, param):
-        lowparam = param.lower()
-        parambytes = bytes(lowparam, 'UTF-8')
-
-        hash = 2166136261 #FNV offset basis
-        for i in range(len(parambytes)):
-            hash = hash * 16777619 #FNV prime
-            hash = hash ^ parambytes[i] #FNV xor
-            hash = hash & 0xFFFFFFFF #python clamp
-        return hash

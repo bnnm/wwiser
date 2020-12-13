@@ -128,7 +128,7 @@ def CAkFDNReverbFXParams__SetParamsBlock(obj, size):
     delay_mode = obj.lastval
 
     if delay_mode == 1 and delays:
-        for i in range(delays):
+        for _i in range(delays):
             obj.f32('RTPC.fDelayTime')
 
 
@@ -263,9 +263,9 @@ def CAkConvolutionReverbFXParams__SetParamsBlock(obj, size):
 
     obj.f32('fInputCenterLevel') #db
     obj.f32('fInputLFELevel') #db
-    if   size == 0x30: #v118<=
+    if   size <= 0x30: #v118<=
         pass
-    elif size == 0x34: #v120>=
+    elif size >= 0x34: #v120>=
         obj.f32('fInputStereoWidth')
 
     obj.f32('fFrontLevel') #db
@@ -275,6 +275,8 @@ def CAkConvolutionReverbFXParams__SetParamsBlock(obj, size):
     obj.f32('fDryLevel') #db
     obj.f32('fWetLevel')
     obj.U32('eAlgoType').fmt(wdefs.CAkConvolutionReverbFX__AkConvolutionAlgoType)
+    if size >= 0x38: #~v135
+        obj.f32('unknown?') #db
 
     return
 

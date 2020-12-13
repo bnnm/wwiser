@@ -192,7 +192,7 @@ AkPluginType_company = wfmt.FormatterLUT({
     0: "Audiokinetic",
     1: "Audiokinetic External",
    64: "Plugin", #PLUGINDEV_MIN
-  128: "Ubisoft", #unofficial?
+
   255: "Plugin", #PLUGINDEV_MAX
   256: "McDSP",
   257: "WaveArts",
@@ -215,6 +215,10 @@ AkPluginType_company = wfmt.FormatterLUT({
   275: "Microsoft",
   276: "YAMAHA",
   277: "VisiSonics",
+ 
+  #unofficial?
+  128: "Ubisoft",
+  666: "CD Projekt RED",
 })
 
 #derived from SDK includes/xmls/docs
@@ -321,6 +325,15 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x04F90803: "Ubisoft ? Effect", # [AC Valhalla]
 
   0x00AA1137: "Microsoft Spatial Sound", #MSSpatial
+
+  0x000129A3: "CPR Simple Delay", #CDPSimpleDelay
+  0x000229A2: "CPR Voice Broadcast Receive ?", #CDPVoiceBroadcastReceive
+  0x000329A3: "CPR Voice Broadcast Send ?", #CDPVoiceBroadcastSend
+  0x000429A2: "CPR Voice Broadcast Receive ?", #CDPVoiceBroadcastReceive
+  0x000529A3: "CPR Voice Broadcast Send ?", #CDPVoiceBroadcastSend
+
+  0x01A01052: "Crankcase REV Model Player", #CrankcaseAudioREVModelPlayer
+
 }, zeropad=8)
 
 #046>= 062<=

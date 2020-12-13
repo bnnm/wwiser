@@ -567,10 +567,9 @@ class _NodeHelper(object):
                         #logging.info("generator: state silence found %s %s %s" % (self.sid, tid, node.get_name()))
                         nstategroupid = nstategroup.find1(name='ulStateGroupID')
                         nstateid = nstategroup.find1(name='ulStateID')
-                        if nstateid:
+                        if nstategroupid and nstateid:
+                            self.config.add_silence_state(nstategroupid, nstateid)
                             self.nfields.append((nstategroupid, nstateid))
-                        else:
-                            self.nfields.append(nstategroupid)
 
         if nbase and check_rtpc:
             # RTPC linked to volume (ex. DMC5 battle rank layers)
@@ -1506,8 +1505,6 @@ class _CAkMusicTrack(_NodeHelper):
     def _build(self, node):
         self._build_audio_config(node)
 
-        #todo clips probably can be plugins
-
         nloop = node.find(name='Loop')
         if nloop: #older
             self.config.loop = nloop.value()
@@ -1603,6 +1600,11 @@ class _CAkMusicTrack(_NodeHelper):
         if not self.subtracks: #empty / no clips
             return
 
+        # node defines states that muted sources
+        if self.config.silence_states:
+            txtp.spaths.add_nstates(self.config.silence_states)
+
+        # musictrack can play in various ways
         if   self.type == 0: #normal (plays one subtrack, N aren't allowed)
             if len(self.subtracks) > 1:
                 raise ValueError("more than 1 track")

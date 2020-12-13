@@ -225,11 +225,11 @@ class TxtpNode(object):
 # it's ignored.
 
 class TxtpPrinter(object):
-    def __init__(self, txtp, tree, txtpcache, rebuilder):
+    def __init__(self, txtp, tree):
         self._tree = tree
         self._txtp = txtp
-        self._txtpcache = txtpcache
-        self._rebuilder = rebuilder
+        self._txtpcache = txtp.txtpcache
+        self._rebuilder = txtp.rebuilder
 
         # external config
         self.selected_main = None
@@ -1207,7 +1207,7 @@ class TxtpPrinter(object):
                 info += ' #loop-end'
 
         if node.crossfaded or node.silenced:
-            if self._txtpcache.silence:
+            if self._txtpcache.silence or self._has_silent_state(node):
                 mods += '  #v 0'
             info += '  ##fade'
             self._others = True
@@ -1303,7 +1303,7 @@ class TxtpPrinter(object):
             if media:
                 bankname, index = media
                 name += "%s #s%s" % (bankname, index + 1)
-                #info += "  ##%s.%s" % (sound.source.tid, extension)
+                info += "  ##%s.%s" % (sound.source.tid, extension) #to check source in info tree
                 if sound.source.plugin_wmid:
                     info += " ##unsupported wmid"
             else:
@@ -1367,12 +1367,10 @@ class TxtpPrinter(object):
                 info += ' #loop-end'
 
         if node.crossfaded or node.silenced:
-            if self._txtpcache.silence:
-                #mods += '  #v 0' #set "?" later as it's a bit simpler to use
+            if self._txtpcache.silence or self._has_silent_state(node):
                 silence_line = True
-
+                #mods += '  #v 0' #set "?" below as it's a bit simpler to use
             info += '  ##fade'
-            self._others = True
 
         #if node.makeupgain:
         #    info += '  ##gain'
@@ -1459,3 +1457,15 @@ class TxtpPrinter(object):
 
     def _get_padding(self):
         return ' ' * (self._depth - 1)
+
+    # Some nodes are silenced via states, test if those are currently set.
+    # This info isn't passed around so must find (possibly ignored) parent node that has it.
+    #todo do in prepare()?
+    def _has_silent_state(self, node):
+        if node.config.silence_states:
+            return self._txtp.sparams and self._txtp.sparams.is_silent(node.config.silence_states)
+
+        if node.parent:
+            return self._has_silent_state(node.parent)
+
+        return False

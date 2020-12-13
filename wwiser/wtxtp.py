@@ -8,7 +8,7 @@ DEFAULT_WEMDIR = 'wem/'
 #use a bit less than 255 so files can be moved around dirs
 #long paths can be enabled on Windows but detection+support is messy...
 WINDOWS_MAX_PATH = 235
-
+WINDOWS_INTERNAL_NAME = 'nt'
 
 # Builds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
 #
@@ -85,7 +85,7 @@ class TxtpCache(object):
         self.names = 0
 
         # other helpers
-        self.is_windows = os.name == 'nt'
+        self.is_windows = os.name == WINDOWS_INTERNAL_NAME
         self.basedir = os.getcwd()
 
         self._txtp_hashes = {}
@@ -138,16 +138,8 @@ class TxtpCache(object):
 #******************************************************************************
 
 class Txtp(object):
-    def __init__(self, params, ppaths, txtpcache, rebuilder):
-        self.params = params
-        self.ppaths = ppaths
-        self._txtpcache = txtpcache
-        self._rebuilder = rebuilder
-
-        self._node = None
-        self._info = []
-
-        self._object_names = {
+    # info
+    CLASSNAME_SHORTNAMES = {
             'CAkEvent': 'event',
             'CAkDialogueEvent': 'dialogueevent',
             'CAkActionPlay': 'action',
@@ -165,27 +157,40 @@ class Txtp(object):
             'CAkMusicTrack': 'musictrack',
 
             #'CAkStinger': 'stinger',
-        }
+    }
+
+    def __init__(self, params, ppaths, txtpcache, rebuilder):
+        self.params = params
+        self.ppaths = ppaths
+        self.spaths = wgamesync.SilencePaths()
+        self.txtpcache = txtpcache
+        self.rebuilder = rebuilder
+
+        self._node = None
+        self._info = []
+
+        # config during printing
+        self._depth = 0             # info for padding
+        self._basename = ''         # info for final name
+        self._selected = None       # current selected random in sub-txtp
+        self.sparams = None         # current silence combo in sub-txtp
 
         return
 
+    # start of txtp generation
     def begin(self, node, root_config, nname=None, ntid=None, ntidsub=None):
-        #tree
+        # tree
         self._root = wtxtp_tree.TxtpNode(None, root_config)
         self._current = self._root
 
-        self._node = node           # base node
+        # for info
+        self._node = node
         self._nname = nname
         self._ntid = ntid
         self._ntidsub = ntidsub
-        self._depth = 0             # info for padding
-        self._selected = None       # info
         self._basepath = node.get_root().get_path()
-
         if not self._ntid:
             self._ntid = node.find1(type='sid')
-
-        self._basename = ''         # final name
         self._ninfo = []            # node info to add in output as comment
         return
 
@@ -242,19 +247,19 @@ class Txtp(object):
                     info = "%04u" % (int(index))
 
 
-            if self._txtpcache.unused_mark:
+            if self.txtpcache.unused_mark:
                 info += '~unused'
-            if self._txtpcache.transition_mark:
+            if self.txtpcache.transition_mark:
                 info += '~transition'
 
             classname = node.get_name()
-            subname = self._object_names.get(classname)
-            if subname:
-                name = "%s-%s-%s" % (name, info, subname)
+            shortname = self.CLASSNAME_SHORTNAMES.get(classname)
+            if shortname:
+                name = "%s-%s-%s" % (name, info, shortname)
             else:
                 name = "%s-%s" % (name, info)
 
-            if self._txtpcache.x_nameid and self._ntid and self._ntid.value():
+            if self.txtpcache.x_nameid and self._ntid and self._ntid.value():
                 name += "-%s" % (self._ntid.value())
 
         # for stingers, where the same id/name can trigger different segments
@@ -262,6 +267,13 @@ class Txtp(object):
             name += "-{stinger=~%s}" % (self._ntidsub.value())
 
         name += self._basename
+
+        if printer.has_silences():
+            if self.txtpcache.silence:
+                name += " {s-}" #"silence all"
+            else:
+                name += " {s}"
+        name += self._get_sparams()
 
         if printer.has_random_steps() or printer.is_selection():
             selection = printer.get_selected_main()
@@ -275,17 +287,10 @@ class Txtp(object):
             name += " {e}"
         if printer.has_multiloops():
             name += " {m}"
-        if printer.has_silences():
-            if self._txtpcache.silence:
-                name += " {s-}" #"silence all"
-            else:
-                name += " {s}"
-        if printer.has_internals() and self._txtpcache.bnkmark:
+        if printer.has_internals() and self.txtpcache.bnkmark:
             name += " {b}"
         if printer.get_lang_name():
             name += " {l=%s}" % (printer.get_lang_name())
-        #if printer.has_self_loops():
-        #    name += " {selfloop}"
         if printer.has_unsupported():
             name += " {!}"
         if not is_new: #dupe
@@ -294,6 +299,8 @@ class Txtp(object):
             name += " {d}"
         #if printer.has_others():
         #    name += " {o}"
+        #if printer.has_self_loops():
+        #    name += " {selfloop}"
         if printer.has_debug():
             name += " {debug}"
 
@@ -302,6 +309,21 @@ class Txtp(object):
         return name
 
 
+    def _get_sparams(self):
+        info = ''
+        if not self.sparams:
+            return info
+
+        info += '='
+        for group, value, group_name, value_name in self.sparams.items():
+            gn = group_name or group
+            vn = value_name or value
+            if value == 0:
+                vn = '-'
+            info += "(%s=%s)" % (gn, vn)
+
+        return info
+
     def _get_shortname(self):
         node = self._node #named based on default node, usually an event
 
@@ -309,7 +331,7 @@ class Txtp(object):
         bankname = os.path.basename(nroot.get_filename()) #[:-4] #
         bankname = os.path.splitext(bankname)[0]
 
-        name = "%s-%05i" % (bankname, self._txtpcache.names)
+        name = "%s-%05i" % (bankname, self.txtpcache.names)
 
         return name
 
@@ -335,15 +357,15 @@ class Txtp(object):
         for bank in banks:
             info += '# - %s\n' % (bank)
 
-        if self._txtpcache.volume_master:
+        if self.txtpcache.volume_master:
             type = ''
-            if self._txtpcache.volume_db:
+            if self.txtpcache.volume_db:
                 type = 'dB'
-            info += '# ~ master volume %s%s\n' % (self._txtpcache.volume_master, type)
+            info += '# ~ master volume %s%s\n' % (self.txtpcache.volume_master, type)
 
         if self._selected:
             extra = ''
-            if self._txtpcache.random_force:
+            if self.txtpcache.random_force:
                 extra = ' (forced)'
             info += '# ~ selected group=%s%s\n' % (self._selected, extra)
 
@@ -364,7 +386,7 @@ class Txtp(object):
     #--------------------------------------------------------------------------
 
     def write(self):
-        printer = wtxtp_tree.TxtpPrinter(self, self._root, self._txtpcache, self._rebuilder)
+        printer = wtxtp_tree.TxtpPrinter(self, self._root)
         printer.prepare() #simplify tree
 
         # may have files but all silent
@@ -372,7 +394,7 @@ class Txtp(object):
             return
 
         # make one txtp per random/selectable group
-        if self._txtpcache.random_all and printer.get_selectable_count():
+        if self.txtpcache.random_all and printer.get_selectable_count():
             count = printer.get_selectable_count()
             # make one .txtp per random
             for i in range(1, count + 1):
@@ -385,6 +407,27 @@ class Txtp(object):
             self._write_txtp(printer)
 
     def _write_txtp(self, printer):
+        # handle sub-txtp per silence combo
+        if self.spaths.empty:
+            # without variables
+            self._write_txtp_internal(printer)
+
+        else:
+            # per combo
+            combos = self.spaths.combos()
+            for combo in combos:
+                self.sparams = combo
+                self._write_txtp_internal(printer)
+
+            self.sparams = None
+
+            # generate a base .txtp with all songs in some cases
+            # - multiple states used like a switch, base playing everything = bad (MGR, Bayo2)
+            # - singe state used for on/off a single layer, base playing everything = good (AChain)
+            if len(combos) == 1:
+                self._write_txtp_internal(printer)
+
+    def _write_txtp_internal(self, printer):
         # Some games have GS combos and events that end up being the same (ex. Nier Automata, Bayonetta 2).
         # We make the txtp text and check (without comments) if wasn't already generated = dupe = ignored.
         # Because some txtp are 99% the same save minor differences (volumes, delays), those diffs should
@@ -393,7 +436,7 @@ class Txtp(object):
 
         # make txtp + txtp for dupe checking
         text = printer.generate()
-        if self._txtpcache.dupes_exact:
+        if self.txtpcache.dupes_exact:
             # only considers dupes exact repeats
             texthash = hash(text)
         else:
@@ -402,33 +445,33 @@ class Txtp(object):
             texthash = hash(text_simpler)
 
         # check hash
-        is_new = self._txtpcache.register_txtp(texthash, printer)
+        is_new = self.txtpcache.register_txtp(texthash, printer)
         name = self._get_name(printer, is_new)
-        if not is_new and not self._txtpcache.dupes:
+        if not is_new and not self.txtpcache.dupes:
             logging.debug("txtp: ignore '%s' (repeat of %s)", name, texthash)
             return False
 
         # same name but different txtp, rarely happens when banks repeat events ids that are actually different
-        if not self._txtpcache.register_name(name):
+        if not self.txtpcache.register_name(name):
             logging.debug("txtp: renaming to '%s'", name)
-            name += '#%03i' % (self._txtpcache.names)
+            name += '#%03i' % (self.txtpcache.names)
 
         for rpl in ['*','?',':','<','>','|']: #'\\','/'
             name = name.replace(rpl, "_")
 
         longname = None
-        if self._txtpcache.tagsm3u:
+        if self.txtpcache.tagsm3u:
             longname = name
             shortname = self._get_shortname() #todo should probably store after trimming
             name = shortname
 
             shortname += ".txtp"
-            self._txtpcache._tag_names[shortname] = longname
+            self.txtpcache._tag_names[shortname] = longname
 
         name += ".txtp"
         logging.debug("txtp: saving '%s' (%s)", name, texthash)
 
-        outdir = self._txtpcache.outdir
+        outdir = self.txtpcache.outdir
         if outdir:
             outdir = os.path.join(self._basepath, outdir)
             os.makedirs(outdir, exist_ok=True)
@@ -438,15 +481,15 @@ class Txtp(object):
         info = self._get_info(name, longname)
 
         # some variable combos or multi .wem names get too wordy
-        if  self._txtpcache.is_windows:
-            fullpath = self._txtpcache.basedir + '/' + outname
+        if  self.txtpcache.is_windows:
+            fullpath = self.txtpcache.basedir + '/' + outname
             if len(fullpath) > WINDOWS_MAX_PATH:
-                maxlen = WINDOWS_MAX_PATH - len(self._txtpcache.basedir) - 10
-                outname = "%s~%04i%s" % (outname[0:maxlen], self._txtpcache.created, '.txtp')
-                self._txtpcache.trims += 1
+                maxlen = WINDOWS_MAX_PATH - len(self.txtpcache.basedir) - 10
+                outname = "%s~%04i%s" % (outname[0:maxlen], self.txtpcache.created, '.txtp')
+                self.txtpcache.trims += 1
                 logging.debug("txtp: trimmed '%s'" % (outname)) #gets kinda noisy
 
-        if self._txtpcache.x_notxtp:
+        if self.txtpcache.x_notxtp:
             return
 
         with open(outname, 'w', encoding='utf-8') as outfile:
@@ -515,7 +558,7 @@ class Txtp(object):
         next = TxtpInfo(self._depth + 1, None, nfields, None, source=ntid)
         self._ninfo.append(next)
 
-        if self._txtpcache.wemnames:
+        if self.txtpcache.wemnames:
             attrs = ntid.get_attrs()
             wemname = attrs.get('guidname', attrs.get('path'))
             if wemname:

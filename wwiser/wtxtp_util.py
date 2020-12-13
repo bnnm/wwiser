@@ -20,6 +20,14 @@ class NodeConfig(object):
         self.exit = None
         self.exit = None
 
+        # states that when active silence group
+        self.silence_states = []
+
+    def add_silence_state(self, ngroup, nvalue):
+        item = (ngroup, nvalue)
+        self.silence_states.append(item)
+
+
 #common audio object with config
 class NodeSound(object):
     def __init__(self):
@@ -330,7 +338,7 @@ class NodeSource(object):
         else: #set of hashed names
             # typical values but languages can be anything (redefined in project options)
             lang_name = LANGUAGE_HASHNAMES.get(lang_value)
-            if not lang_name: #try loaded names
+            if not lang_name: #try loaded names (ex. Xenoblade DE uses "en" and "jp")
                 lang_name = nlangid.get_attr('hashname')
 
         if not lang_name:

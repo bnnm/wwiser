@@ -1,9 +1,17 @@
-import os
+import math, os
 
 DEFAULT_OUTDIR = 'txtp/'
 DEFAULT_WEMDIR = 'wem/'
 WINDOWS_INTERNAL_NAME = 'nt'
 
+# a few common cases to avoid a bunch of decimals
+VOLUME_PERCENT_TO_DB = {
+    4.0: 12.0,
+    2.0: 6.0,
+    1.0: 0.0,
+    0.5: -6.0,
+    0.25: -12.0,
+}
 # config/cache/info for all txtp (updated during process)
 
 class TxtpCache(object):
@@ -13,8 +21,6 @@ class TxtpCache(object):
         self.wemdir = DEFAULT_WEMDIR
         self.wemnames = False
         self.volume_master = None
-        self.volume_db = False
-        self.volume_decrease = False
         self.lang = False
         self.bnkmark = False
         self.bnkskip = False
@@ -114,19 +120,19 @@ class TxtpCache(object):
         if not volume:
             return
 
-        percent = False
-        if volume.lower().endswith('db'):
-            volume = volume[:-2]
-            self.volume_db = True
-        elif volume.lower().endswith('%'):
-            volume = volume[:-1]
-            percent = True
+        try:
+            # use dB for easier mixing with Wwise's values
+            if volume.lower().endswith('db'):
+                master_db = float(volume[:-2])
+            else:
+                if volume.lower().endswith('%'):
+                    master_db = float(volume[:-1]) / 100.0
+                else:
+                    master_db = float(volume)
+                if master_db < 0:
+                    return
+                master_db = VOLUME_PERCENT_TO_DB.get(master_db, math.log10(master_db) * 20.0)
 
-        self.volume_master = float(volume)
-        if percent:
-            self.volume_master = self.volume_master / 100.0
-
-        if self.volume_db:
-            self.volume_decrease = (self.volume_master < 0)
-        else:
-            self.volume_decrease = (self.volume_master < 1.0)
+            self.volume_master = master_db
+        except ValueError: #not a float
+            return

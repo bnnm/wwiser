@@ -94,7 +94,7 @@ class Txtp(object):
         self._basepath = node.get_root().get_path()
         if not self._ntid:
             self._ntid = node.find1(type='sid')
-        
+
         return
 
     #--------------------------------------------------------------------------
@@ -423,10 +423,7 @@ class Txtp(object):
 
         # config info
         if self.txtpcache.volume_master:
-            type = ''
-            if self.txtpcache.volume_db:
-                type = 'dB'
-            info += '# ~ master volume %s%s\n' % (self.txtpcache.volume_master, type)
+            info += '# ~ master volume %sdB\n' % (self.txtpcache.volume_master)
 
         if self.selected:
             extra = ''

@@ -46,7 +46,7 @@ class Generator(object):
         for item in filter:
             if item is not None:
                 self._filter.append(item.lower())
-    
+
     def set_filter_rest(self, flag):
         self._filter_rest = flag
 
@@ -82,10 +82,9 @@ class Generator(object):
         self._txtpcache.wemdir = self._txtpcache.normalize_path(path)
 
     def set_volume(self, volume):
-        try:
-            self._txtpcache.set_volume(volume)
-        except:
-            logging.info("generator: ignored incorrect volume")
+        self._txtpcache.set_volume(volume)
+        if volume and not self._txtpcache.volume_master:
+            logging.info("generator: ignored incorrect volume %s", volume)
 
     def set_lang(self, flag):
         self._txtpcache.lang = flag

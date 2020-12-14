@@ -231,6 +231,8 @@ class TxtpPrinter(object):
         self._txtpcache = txtp.txtpcache
         self._rebuilder = txtp.rebuilder
 
+        self._volume = self._txtpcache.volume_master or 0 #copy since may need to modify
+
         # during write
         self._lines = None
         self._depth = None
@@ -242,7 +244,6 @@ class TxtpPrinter(object):
         self._loop_groups = 0
         self._loop_sounds = 0
         self._selectable_count = 0  #number of selectable, for randoms or all types if forced (in the first node only)
-
 
         # flags
         self._lang_name = None
@@ -329,7 +330,7 @@ class TxtpPrinter(object):
         self._clean_tree(self._tree)
         self._set_self_loops(self._tree)
         self._set_props(self._tree)
-        #self._set_volume(self._tree)
+        self._set_volume(self._tree)
         self._set_times(self._tree)
         self._reorder_wem(self._tree)
         self._find_loops(self._tree)
@@ -410,6 +411,8 @@ class TxtpPrinter(object):
         if not node.ignorable():
             return node
 
+        # logically this will stop in a sound (leaf) node or a node with N children,
+        # while skipping nodes with 1 children that have no config
         for subnode in node.children:
             child = self._get_first_child(subnode)
             if child:
@@ -669,33 +672,28 @@ class TxtpPrinter(object):
 
     #--------------------------------------------------------------------------
 
-    #todo
-    # sometimes game uses big values to normalize in non-obvious ways, it's disabled for now
-    # (ex. dirt rally 4, halo wars menus)
-
-    # simplify volume stuff
-    # volumes in wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
-    # but usually (hopefully) volumes set on object level should make the track sound fine in most cases
+    # Simplify volume stuff
+    #
+    # Volumes in Wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
+    # but usually (hopefully) volumes set on object level make the .txtp sound fine in most cases.
+    # 
+    # However some games set low volume in base objects (ex. SFZ -14dB), since output bus volumes alter
+    # this, and Wwise can normalize on realtime, plus may be used in only a few tracks as normalization
+    # (ex. Dirt Rally 4, Halo Wars menus), so we need keep it. To handle this, "master volume" can be set
+    # manually and it's used to alter this base volume.
     def _set_volume(self, node):
-        # some games set very low volume in the base track (ex. SFZ -14bD), probably since they'll
-        # be mixed with other stuff (also Wwise can normalize on realtime), just get rid of base volume
 
-        # don't remove slightly smaller volumes in case game is trying to normalize sounds?
-        #if node.volume:
-        #    if node.volume < 0 and node.volume < 6.0:
-        #        node.volume = None
-        #    return #stop on first b/c there could be positives + negatives cancelling each other?
+        # negative volumes are applied per source
+        if self._volume <= 0:
+            return
 
-        # in some cases there are multiple segments setting the same -XdB, could be detected and
-        # removed, but usually it's done near related tracks to normalize sound
-        # might be possible to increase volume equally if all parts use the same high -dB? (ex. Nier Automata)
+        # find base node and cancel its volume if possible
+        subnode = self._get_first_child(node)
+        if not subnode or not subnode.volume:
+            return
 
-        # volumes of multiple children are hard to predict
-        #if len(node.children) > 1: #flag?
-        #    return
-
-        #for subnode in node.children:
-        #    self._set_volume(subnode)
+        subnode.volume += self._volume
+        self._volume = 0
 
         return
 
@@ -1102,12 +1100,8 @@ class TxtpPrinter(object):
 
         # apply increasing master volume after all other volumes
         # (lowers chances of clipping due to vgmstream's pcm16)
-        if self._txtpcache.volume_master and not self._txtpcache.volume_decrease:
-            if self._txtpcache.volume_db:
-                voltype = 'dB'
-            else:
-                voltype = ''
-            line = 'commands = #v %s%s' % (self._txtpcache.volume_master, voltype)
+        if self._volume > 0:
+            line = 'commands = #v %sdB' % (self._volume)
             self._lines.append('%s\n' % (line))
 
         return
@@ -1321,27 +1315,14 @@ class TxtpPrinter(object):
         else: #CAkSound
             mods += self._get_sfx(sound, node)
 
-        # apply decreasing master volume to wems and before other volumes
-        # (lowers chances of clipping due to vgmstream's pcm16)
-        if self._txtpcache.volume_master and self._txtpcache.volume_decrease and not self._simpler:
-            base_volume = self._txtpcache.volume_master
-            node_volume = node.volume
-            if self._txtpcache.volume_db:
-                voltype = 'dB'
-                # try to cancel master dB and node's dB for cleaner results
-                if node_volume:
-                    base_volume += node_volume
-                    node_volume = 0
-            else:
-                voltype = ''
-
-            if base_volume:
-                mods += '  #v %s%s' % (base_volume, voltype)
-            if node_volume:
-                mods += '  #v %sdB' % (node_volume)
-
-        elif node.volume and not self._simpler:
-            mods += '  #v %sdB' % (node.volume)
+        # apply decreasing master volume to wems and mixing with other volumes
+        # (better performance and lowers chances of clipping due to vgmstream's pcm16)
+        node_volume = node.volume or 0
+        if self._volume < 0:
+            # cancel master dB and node's dB for cleaner results
+            node_volume += self._volume
+        if node_volume and not self._simpler:
+            mods += '  #v %sdB' % (node_volume)
 
         # add anchors
         if node.loop_anchor:

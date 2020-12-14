@@ -1,16 +1,16 @@
 import logging, os, pkgutil, itertools
-from . import wutil, wgamesync, wrebuilder, wtxtp, wtxtp_util
+from . import wutil, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
 
 
 # Tries to write .txtp from a list of HIRC objects. Each object parser adds some part to final
 # .txtp (like output name, or text info) and calls child objects, 'leaf' node(s) being some 
 # source .wem in CAkSound or CAkMusicTrack.
 #
-# Nodes that don't contribute to audio are ignored. Some objects depend on variables, but some
+# Nodes that don't contribute to audio are ignored. Objects may depend on variables, but some
 # games use SetState and similar events, while others change via API. To unify both cases
 # .txtp are created per possible variable combination, or variables may be pre-set via args.
 #
-# output name is normally from event name (or number, if not defined), or first object found.
+# Output name is normally from event name (or number, if not defined), or first object found.
 # .wem names are not used by default (given there can be multiple and that's how wwise works).
 # Names and other info is written in the txtp.
 
@@ -21,7 +21,7 @@ class Generator(object):
         self._banks = banks
 
         self._rebuilder = wrebuilder.Rebuilder()
-        self._txtpcache = wtxtp.TxtpCache()
+        self._txtpcache = wtxtp_cache.TxtpCache()
 
         # options
         self._generate_unused = False   # generate unused after regular txtp
@@ -71,58 +71,21 @@ class Generator(object):
 
     #--------------------------------------------------------------------------
 
-    def get_dir(self):
-        dir = ''
-        if self._txtpcache.outdir:
-            dir += self._txtpcache.outdir
-        if self._txtpcache.wemdir:
-            dir += self._txtpcache.wemdir
-        return dir
-
-    def _normalize_path(self, path):
-        #path = path or '' #better?
+    def set_outdir(self, path):
         if path is None:
-            path = ''
-        path = path.strip()
-        path = path.replace('\\', '/')
-        if path and not path.endswith('/'):
-            path += '/'
-        return path
-
-    def set_outdir(self, outdir):
-        if outdir is None:
             return
-        self._txtpcache.outdir = self._normalize_path(outdir)
+        self._txtpcache.outdir = self._txtpcache.normalize_path(path)
 
-    def set_wemdir(self, wemdir):
-        if wemdir is None:
+    def set_wemdir(self, path):
+        if path is None:
             return
-        self._txtpcache.wemdir = self._normalize_path(wemdir)
+        self._txtpcache.wemdir = self._txtpcache.normalize_path(path)
 
     def set_volume(self, volume):
-        if not volume:
-            return
         try:
-            percent = False
-            if volume.lower().endswith('db'):
-                volume = volume[:-2]
-                self._txtpcache.volume_db = True
-            elif volume.lower().endswith('%'):
-                volume = volume[:-1]
-                percent = True
-
-            self._txtpcache.volume_master = float(volume)
-            if percent:
-                self._txtpcache.volume_master = self._txtpcache.volume_master / 100.0
-
-            if self._txtpcache.volume_db:
-                self._txtpcache.volume_decrease = (self._txtpcache.volume_master < 0)
-            else:
-                self._txtpcache.volume_decrease = (self._txtpcache.volume_master < 1.0)
-
+            self._txtpcache.set_volume(volume)
         except:
             logging.info("generator: ignored incorrect volume")
-
 
     def set_lang(self, flag):
         self._txtpcache.lang = flag
@@ -188,31 +151,31 @@ class Generator(object):
         reb = self._rebuilder
         txc = self._txtpcache
 
-        if self._rebuilder.has_unused() and not self._generate_unused:
+        if reb.has_unused() and not self._generate_unused:
             logging.info("generator: WARNING! possibly unused audio? (find+load more banks?)")
             logging.info("*** set 'generate unused' option to include, may not create anything")
 
         if reb.get_missing_media():
             missing = len(reb.get_missing_media())
-            logging.info("generator: WARNING! missing %i memory audio (load more banks?)" % (missing))
+            logging.info("generator: WARNING! missing %s memory audio (load more banks?)", missing)
 
         if reb.get_missing_nodes_loaded():
             missing = len(reb.get_missing_nodes_loaded())
-            logging.info("generator: WARNING! missing %i Wwise objects in loaded banks (ignore?)" % (missing))
+            logging.info("generator: WARNING! missing %s Wwise objects in loaded banks (ignore?)", missing)
 
         if reb.get_missing_nodes_others():
             missing = len(reb.get_missing_nodes_others())
-            logging.info("generator: WARNING! missing %i Wwise objects in other banks (load?)" % (missing))
+            logging.info("generator: WARNING! missing %s Wwise objects in other banks (load?)", missing)
             for bankinfo in reb.get_missing_banks():
                 logging.info("- %s.bnk" % (bankinfo))
 
         if reb.get_missing_nodes_unknown():
             missing = len(reb.get_missing_nodes_unknown())
-            logging.info("generator: WARNING! missing %i Wwise objects in unknown banks (load/ignore?)" % (missing))
+            logging.info("generator: WARNING! missing %s Wwise objects in unknown banks (load/ignore?)", missing)
 
         if reb.get_multiple_nodes():
             missing = len(reb.get_multiple_nodes())
-            logging.info("generator: WARNING! repeated %i Wwise objects in multiple banks (load less?)" % (missing))
+            logging.info("generator: WARNING! repeated %s Wwise objects in multiple banks (load less?)", missing)
 
         if not txc.created:
             logging.info("generator: WARNING! no .txtp were created (find+load banks with events?)")
@@ -225,22 +188,22 @@ class Generator(object):
                 logging.info("- %s" % (prop))
 
         if txc.trims:
-            logging.info("generator: WARNING! trimmed %i long filenames (use shorter dirs?)" % (txc.trims))
+            logging.info("generator: WARNING! trimmed %s long filenames (use shorter dirs?)", txc.trims)
             logging.info("*** set 'tags.m3u' option for shorter names + tag file with full names")
 
         if txc.multitrack and not self._default_params:
             logging.info("generator: multitracks detected (ignore, may generate in future versions)")
 
-        dir = self.get_dir()
+        dir = txc.get_txtp_dir()
         if not dir:
             dir = '.'
 
         if txc.streams and not self._move:
-            logging.info("generator: some .txtp (%i) use streams, move to %s" % (txc.streams, dir))
+            logging.info("generator: some .txtp (%s) use streams, move to %s", txc.streams, dir)
         if txc.internals and not txc.bnkskip:
-            logging.info("generator: some .txtp (%i) use .bnk, move to %s" % (txc.internals, dir))
+            logging.info("generator: some .txtp (%s) use .bnk, move to %s", txc.internals, dir)
             for bankname in txc.get_banks():
-                logging.info("- %s" % (bankname))
+                logging.info("- %s", bankname)
 
         #logging.info("generator: done")
         line = "created %i" % txc.created
@@ -248,7 +211,7 @@ class Generator(object):
             line += ", %i duplicates" % txc.duplicates
         if self._generate_unused:
             line += ", unused %i" % txc.unused
-        logging.info("generator: done (%s)" % (line))
+        logging.info("generator: done (%s)", line)
 
 
     def _setup(self):
@@ -266,7 +229,7 @@ class Generator(object):
                     name = node.get_name()
                     nsid = node.find1(type='sid')
                     if not nsid:
-                        logging.info("generator: not found for %s in %s" % (name, bankname)) #???
+                        logging.info("generator: not found for %s in %s", name, bankname) #???
                         continue
                     sid = nsid.value()
 
@@ -413,8 +376,8 @@ class Generator(object):
         # per combination (like first "music=b01" then ""music=b02")
 
         try:
-            params = wgamesync.GamesyncParams(self._txtpcache) #current config
             ppaths = wgamesync.GamesyncPaths(self._txtpcache)  #paths during process
+            params = wgamesync.GamesyncParams(self._txtpcache) #current config
             if self._default_params:            #external config
                 params = self._default_params
 
@@ -450,7 +413,7 @@ class Generator(object):
                 sid = nsid.value()
                 bankname = nsid.get_root().get_filename()
 
-            logging.info("generator: ERROR! node %s in %s" % (sid, bankname))
+            logging.info("generator: ERROR! node %s in %s", sid, bankname)
             raise
 
         return
@@ -502,7 +465,7 @@ class Generator(object):
 
         self._moved_sources[source.tid] = True #skip dupes
 
-        dir = self.get_dir()
+        dir = self._txtpcache.get_txtp_dir()
         if self._txtpcache.lang:
             dir += source.subdir()
 
@@ -528,7 +491,7 @@ class Generator(object):
 
         if os.path.exists(out_name):
             if os.path.exists(in_name):
-                logging.info("generator: cannot move %s (exists on output folder)" % (in_name))
+                logging.info("generator: cannot move %s (exists on output folder)", in_name)
             return
 
         if not os.path.exists(in_name):
@@ -538,10 +501,10 @@ class Generator(object):
                 in_name = os.path.join(in_dir, in_name)
                 in_name = os.path.normpath(in_name)
                 if not os.path.exists(in_name):
-                    logging.info("generator: cannot move %s (file not found) / %s" % (in_name, bank))
+                    logging.info("generator: cannot move %s (file not found) / %s", in_name, bank)
                     return
             else:
-                logging.info("generator: cannot move %s (file not found) / %s" % (in_name, bank))
+                logging.info("generator: cannot move %s (file not found) / %s", in_name, bank)
                 return
 
         #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)

@@ -231,9 +231,6 @@ class TxtpPrinter(object):
         self._txtpcache = txtp.txtpcache
         self._rebuilder = txtp.rebuilder
 
-        # external config
-        self.selected_main = None
-
         # during write
         self._lines = None
         self._depth = None
@@ -272,15 +269,6 @@ class TxtpPrinter(object):
         self._write()
         text = ''.join(self._lines)
         return text
-
-    def is_selection(self):
-        return self._selectable_count
-
-    def get_selected_main(self):
-        return self.selected_main
-
-    def set_selected_main(self, number):
-        self.selected_main = number
 
     def get_selectable_count(self):
         return self._selectable_count
@@ -405,15 +393,29 @@ class TxtpPrinter(object):
             line1 += config1
             line2 += config2
 
-        logging.info("%s%s" % (' ' * self._mdepth, line1))
+        logging.info("%s%s", ' ' * self._mdepth, line1)
         if line2:
-            logging.info("%s%s" % (' ' * self._mdepth, line2))
+            logging.info("%s%s", ' ' * self._mdepth, line2)
 
 
         self._mdepth += 1
         for subnode in node.children:
             self._print_tree(subnode, post)
         self._mdepth -= 1
+
+    #--------------------------------------------------------------------------
+
+    # get first non-ignorable children
+    def _get_first_child(self, node):
+        if not node.ignorable():
+            return node
+
+        for subnode in node.children:
+            child = self._get_first_child(subnode)
+            if child:
+                return child
+
+        return None
 
     #--------------------------------------------------------------------------
 
@@ -869,18 +871,6 @@ class TxtpPrinter(object):
 
         return
 
-    # get first non-ignorable children
-    def _get_first_child(self, node):
-        if not node.ignorable():
-            return node
-
-        for subnode in node.children:
-            child = self._get_first_child(subnode)
-            if child:
-                return child
-
-        return None
-
     #--------------------------------------------------------------------------
 
     # extra info for other processes
@@ -1171,7 +1161,7 @@ class TxtpPrinter(object):
         # add base group
         line += 'group = -%s%s' % (type_text, count)
         if    node.type in TYPE_GROUPS_STEPS or node.force_selectable:
-            selection = self.selected_main or 1
+            selection = self._txtp.selected or 1
             line += '>%s' % (selection)
             #info += "  ##select >N of %i" % (count)
         elif node.type == TYPE_GROUP_RANDOM_CONTINUOUS: #in TYPE_GROUPS_CONTINUOUS: #not for sequence since it's looks a bit strange

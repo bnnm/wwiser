@@ -2,13 +2,9 @@ import logging, os
 from . import wgamesync, wtxtp_tree, wtxtp_info, wversion
 
 
-DEFAULT_OUTDIR = 'txtp/'
-DEFAULT_WEMDIR = 'wem/'
-
 #use a bit less than 255 so files can be moved around dirs
 #long paths can be enabled on Windows but detection+support is messy...
-WINDOWS_MAX_PATH = 235
-WINDOWS_INTERNAL_NAME = 'nt'
+WINDOWS_MAX_PATH = 240
 
 # Builds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
 #
@@ -44,96 +40,7 @@ WINDOWS_INTERNAL_NAME = 'nt'
 #    group = -L2
 #    5.wem #b 10.0
 #    5.wem #b 160.0 #r 10.0
-#  group = -S4
-#
-#  loop_mode = auto #last segment
-
-#******************************************************************************
-
-class TxtpCache(object):
-    def __init__(self):
-        # process config
-        self.outdir = DEFAULT_OUTDIR
-        self.wemdir = DEFAULT_WEMDIR
-        self.wemnames = False
-        self.volume_master = None
-        self.volume_db = False
-        self.volume_decrease = False
-        self.lang = False
-        self.bnkmark = False
-        self.bnkskip = False
-        self.alt_exts = False
-        self.dupes = False
-        self.dupes_exact = False
-        self.random_all = False
-        self.random_force = False
-        self.tagsm3u = False
-        self.silence = False
-
-        self.x_noloops = False
-        self.x_notxtp = False
-        self.x_nameid = False
-
-        # process info
-        self.created = 0
-        self.duplicates = 0
-        self.unused = 0
-        self.multitrack = 0
-        self.trims = 0
-        self.streams = 0
-        self.internals = 0
-        self.names = 0
-
-        # other helpers
-        self.is_windows = os.name == WINDOWS_INTERNAL_NAME
-        self.basedir = os.getcwd()
-
-        self._txtp_hashes = {}
-        self._name_hashes = {}
-        self._banks = {}
-
-        self._tag_names = {}
-
-        self.transition_mark = False
-        self.unused_mark = False
-
-
-    def register_txtp(self, texthash, printer):
-        if texthash in self._txtp_hashes:
-            self.duplicates += 1
-            return False
-
-        self._txtp_hashes[texthash] = True
-        self.created += 1
-        if self.unused_mark:
-            self.unused += 1
-
-        if printer.has_internals():
-            self.internals += 1
-        if printer.has_streams():
-            self.streams += 1
-        return True
-
-    def register_name(self, name):
-        hashname = hash(name)
-
-        self.names += 1
-        if hashname in self._name_hashes:
-            return False
-
-        self._name_hashes[hashname] = True
-        return True
-
-
-    def register_bank(self, bankname):
-        self._banks[bankname] = True
-        return
-
-    def get_banks(self):
-        return self._banks
-
-    def get_tag_names(self):
-        return self._tag_names
+#  group = -S4 #@loop
 
 #******************************************************************************
 
@@ -168,7 +75,7 @@ class Txtp(object):
         self.info = wtxtp_info.TxtpInfo(wemnames=txtpcache.wemnames)  # node info to add in output as comment
 
         # config during printing
-        self._selected = None       # current selected random in sub-txtp
+        self.selected = None        # current random selection in sub-txtp
         self.sparams = None         # current silence combo in sub-txtp
 
         return
@@ -192,187 +99,6 @@ class Txtp(object):
 
     #--------------------------------------------------------------------------
 
-    def _get_name(self, printer, is_new=True):
-        node = self._node #named based on default node, usually an event
-        if self._nname:
-            attrs = self._nname.get_attrs()
-        elif self._ntid:
-            attrs = self._ntid.get_attrs()
-        else:
-            attrs = {}
-
-        hashname = attrs.get('hashname')
-        guidname = attrs.get('guidname')
-
-        is_stinger = self._ntidsub is not None
-
-        #todo cache info
-        if   hashname:
-            name = hashname
-        elif guidname:
-            name = guidname
-        else:
-            #get usable name
-            nroot = node.get_root()
-            bankname = os.path.basename(nroot.get_filename()) #[:-4] #
-            bankname = os.path.splitext(bankname)[0]
-
-            name = None
-            if bankname.isnumeric(): #try using hashname from bankname
-                nbnk = nroot.find1(name='BankHeader')
-                nbid = nbnk.find(name='dwSoundBankID')
-                battrs = nbid.get_attrs()
-
-                hashname = battrs.get('hashname')
-                if hashname:
-                    name = hashname
-                #maybe could add language name?
-
-            if not name:
-                name = bankname
-
-            if is_stinger:
-                info = "{stinger=%s~%s}" % (self._ntid.value(), self._ntidsub.value())
-                is_stinger = False
-            else:
-                attrs_node = node.get_attrs()
-                index = attrs_node.get('index')
-                if index is None: #shouldn't happen
-                    info = self._ntid.value() #?
-                else:
-                    info = "%04u" % (int(index))
-
-
-            if self.txtpcache.unused_mark:
-                info += '~unused'
-            if self.txtpcache.transition_mark:
-                info += '~transition'
-
-            classname = node.get_name()
-            shortname = self.CLASSNAME_SHORTNAMES.get(classname)
-            if shortname:
-                name = "%s-%s-%s" % (name, info, shortname)
-            else:
-                name = "%s-%s" % (name, info)
-
-            if self.txtpcache.x_nameid and self._ntid and self._ntid.value():
-                name += "-%s" % (self._ntid.value())
-
-        # for stingers, where the same id/name can trigger different segments
-        if is_stinger:
-            name += "-{stinger=~%s}" % (self._ntidsub.value())
-
-        name += self.info.get_gsnames()
-
-        if printer.has_silences():
-            if self.txtpcache.silence:
-                name += " {s-}" #"silence all"
-            else:
-                name += " {s}"
-        name += self._get_sparams()
-
-        name += self.info.get_wemnames()
-
-        if printer.has_random_steps() or printer.is_selection():
-            selection = printer.get_selected_main()
-            if selection:
-                name += " {r%s}" % (selection)
-            else:
-                name += " {r}"
-        #if printer.has_random_continuous():
-        #    name += " {rc}"
-        if printer.has_externals():
-            name += " {e}"
-        if printer.has_multiloops():
-            name += " {m}"
-        if printer.has_internals() and self.txtpcache.bnkmark:
-            name += " {b}"
-        if printer.get_lang_name():
-            name += " {l=%s}" % (printer.get_lang_name())
-        if printer.has_unsupported():
-            name += " {!}"
-        if not is_new: #dupe
-            #if is_not_exact_dupe:
-            #    name += " {D}"
-            name += " {d}"
-        #if printer.has_others():
-        #    name += " {o}"
-        #if printer.has_self_loops():
-        #    name += " {selfloop}"
-        if printer.has_debug():
-            name += " {debug}"
-
-        #name += ".txtp"
-
-        return name
-
-
-    def _get_sparams(self):
-        info = ''
-        if not self.sparams:
-            return info
-
-        info += '='
-        for group, value, group_name, value_name in self.sparams.items():
-            gn = group_name or group
-            vn = value_name or value
-            if value == 0:
-                vn = '-'
-            info += "(%s=%s)" % (gn, vn)
-
-        return info
-
-    def _get_shortname(self):
-        node = self._node #named based on default node, usually an event
-
-        nroot = node.get_root()
-        bankname = os.path.basename(nroot.get_filename()) #[:-4] #
-        bankname = os.path.splitext(bankname)[0]
-
-        name = "%s-%05i" % (bankname, self.txtpcache.names)
-
-        return name
-
-    def _get_info(self, name, longname):
-
-        # base info
-        info  = '\n\n'
-        info += '# AUTOGENERATED WITH WWISER %s\n' % (wversion.WWISER_VERSION)
-        info += '#\n'
-        info += '# %s\n' % (name)
-        if longname:
-            info += '# * full name: %s\n' % (longname)
-
-        #bank info
-        banks = self.info.get_banks()
-        #info += '#\n'
-        #info += '# Banks:\n'
-        for bank in banks:
-            info += '# - %s\n' % (bank)
-
-        # config info
-        if self.txtpcache.volume_master:
-            type = ''
-            if self.txtpcache.volume_db:
-                type = 'dB'
-            info += '# ~ master volume %s%s\n' % (self.txtpcache.volume_master, type)
-
-        if self._selected:
-            extra = ''
-            if self.txtpcache.random_force:
-                extra = ' (forced)'
-            info += '# ~ selected group=%s%s\n' % (self._selected, extra)
-        info += '#\n'
-
-        # tree info
-        lines = self.info.get_lines()
-        info += ''.join(lines)
-
-
-        return info
-
-    #--------------------------------------------------------------------------
-
     def write(self):
         printer = wtxtp_tree.TxtpPrinter(self, self._root)
         printer.prepare() #simplify tree
@@ -386,8 +112,7 @@ class Txtp(object):
             count = printer.get_selectable_count()
             # make one .txtp per random
             for i in range(1, count + 1):
-                self._selected = i
-                printer.set_selected_main(i)
+                self.selected = i
                 self._write_txtp(printer)
 
         else:
@@ -475,7 +200,7 @@ class Txtp(object):
                 maxlen = WINDOWS_MAX_PATH - len(self.txtpcache.basedir) - 10
                 outname = "%s~%04i%s" % (outname[0:maxlen], self.txtpcache.created, '.txtp')
                 self.txtpcache.trims += 1
-                logging.debug("txtp: trimmed '%s'" % (outname)) #gets kinda noisy
+                logging.debug("txtp: trimmed '%s'", outname)
 
         if self.txtpcache.x_notxtp:
             return
@@ -535,3 +260,184 @@ class Txtp(object):
         node = wtxtp_tree.TxtpNode(self._current, sound=sound, config=config)
         self._current.append(node)
         return self._current
+
+    #--------------------------------------------------------------------------
+
+    def _get_name(self, printer, is_new=True):
+        node = self._node #named based on default node, usually an event
+        if self._nname:
+            attrs = self._nname.get_attrs()
+        elif self._ntid:
+            attrs = self._ntid.get_attrs()
+        else:
+            attrs = {}
+
+        hashname = attrs.get('hashname')
+        guidname = attrs.get('guidname')
+
+        is_stinger = self._ntidsub is not None
+
+        #todo cache info
+        if   hashname:
+            name = hashname
+        elif guidname:
+            name = guidname
+        else:
+            #get usable name
+            nroot = node.get_root()
+            bankname = os.path.basename(nroot.get_filename()) #[:-4] #
+            bankname = os.path.splitext(bankname)[0]
+
+            name = None
+            if bankname.isnumeric(): #try using hashname from bankname
+                nbnk = nroot.find1(name='BankHeader')
+                nbid = nbnk.find(name='dwSoundBankID')
+                battrs = nbid.get_attrs()
+
+                hashname = battrs.get('hashname')
+                if hashname:
+                    name = hashname
+                #maybe could add language name?
+
+            if not name:
+                name = bankname
+
+            if is_stinger:
+                info = "{stinger=%s~%s}" % (self._ntid.value(), self._ntidsub.value())
+                is_stinger = False
+            else:
+                attrs_node = node.get_attrs()
+                index = attrs_node.get('index')
+                if index is None: #shouldn't happen
+                    info = self._ntid.value() #?
+                else:
+                    info = "%04u" % (int(index))
+
+
+            if self.txtpcache.unused_mark:
+                info += '~unused'
+            if self.txtpcache.transition_mark:
+                info += '~transition'
+
+            classname = node.get_name()
+            shortname = self.CLASSNAME_SHORTNAMES.get(classname)
+            if shortname:
+                name = "%s-%s-%s" % (name, info, shortname)
+            else:
+                name = "%s-%s" % (name, info)
+
+            if self.txtpcache.x_nameid and self._ntid and self._ntid.value():
+                name += "-%s" % (self._ntid.value())
+
+        # for stingers, where the same id/name can trigger different segments
+        if is_stinger:
+            name += "-{stinger=~%s}" % (self._ntidsub.value())
+
+        name += self.info.get_gsnames()
+
+        if printer.has_silences():
+            if self.txtpcache.silence:
+                name += " {s-}" #"silence all"
+            else:
+                name += " {s}"
+        name += self._get_sparams()
+
+        name += self.info.get_wemnames()
+
+        if printer.has_random_steps() or self.selected:
+            selection = self.selected
+            if selection:
+                name += " {r%s}" % (selection)
+            else:
+                name += " {r}"
+        #if printer.has_random_continuous():
+        #    name += " {rc}"
+        if printer.has_externals():
+            name += " {e}"
+        if printer.has_multiloops():
+            name += " {m}"
+        if printer.has_internals() and self.txtpcache.bnkmark:
+            name += " {b}"
+        if printer.get_lang_name():
+            name += " {l=%s}" % (printer.get_lang_name())
+        if printer.has_unsupported():
+            name += " {!}"
+        if not is_new: #dupe
+            #if is_not_exact_dupe:
+            #    name += " {D}"
+            name += " {d}"
+        #if printer.has_others():
+        #    name += " {o}"
+        #if printer.has_self_loops():
+        #    name += " {selfloop}"
+        if printer.has_debug():
+            name += " {debug}"
+
+        #name += ".txtp"
+
+        return name
+
+
+    def _get_sparams(self):
+        info = ''
+        if not self.sparams:
+            return info
+
+        info += '='
+        for group, value, group_name, value_name in self.sparams.items():
+            gn = group_name or group
+            vn = value_name or value
+            if value == 0:
+                vn = '-'
+            info += "(%s=%s)" % (gn, vn)
+
+        return info
+
+    def _get_shortname(self):
+        node = self._node #named based on default node, usually an event
+
+        nroot = node.get_root()
+        bankname = os.path.basename(nroot.get_filename()) #[:-4] #
+        bankname = os.path.splitext(bankname)[0]
+
+        name = "%s-%05i" % (bankname, self.txtpcache.names)
+
+        return name
+
+    def _get_info(self, name, longname):
+
+        # base info
+        info  = '\n\n'
+        info += '# AUTOGENERATED WITH WWISER %s\n' % (wversion.WWISER_VERSION)
+        info += '#\n'
+        info += '# %s\n' % (name)
+        if longname:
+            info += '# * full name: %s\n' % (longname)
+
+        #bank info
+        banks = self.info.get_banks()
+        #info += '#\n'
+        #info += '# Banks:\n'
+        for bank in banks:
+            info += '# - %s\n' % (bank)
+
+        # config info
+        if self.txtpcache.volume_master:
+            type = ''
+            if self.txtpcache.volume_db:
+                type = 'dB'
+            info += '# ~ master volume %s%s\n' % (self.txtpcache.volume_master, type)
+
+        if self.selected:
+            extra = ''
+            if self.txtpcache.random_force:
+                extra = ' (forced)'
+            info += '# ~ selected group=%s%s\n' % (self.selected, extra)
+        info += '#\n'
+
+        # tree info
+        lines = self.info.get_lines()
+        info += ''.join(lines)
+
+
+        return info

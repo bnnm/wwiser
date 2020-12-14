@@ -772,9 +772,9 @@ class _NodeHelper(object):
 
     def make_txtp(self, txtp):
         try:
-            txtp.info_next(self.node, self.nfields, nattrs=self.nattrs, nsid=self.nsid)
+            txtp.info.next(self.node, self.nfields, nattrs=self.nattrs, nsid=self.nsid)
             self._process_txtp(txtp)
-            txtp.info_done()
+            txtp.info.done()
         except Exception: #as e #autochained
             raise ValueError("Error processing TXTP for node %i" % (self.sid)) #from e
 
@@ -895,7 +895,7 @@ class _CAkDialogueEvent(_NodeHelper):
         npath_combo = self._tree_get_npath(txtp, self.npaths) #then with default path
         if npath_combo:
             npath, ntid = npath_combo
-            txtp.info_gamesyncs(npath)
+            txtp.info.gamesyncs(npath)
 
             txtp.group_single(self.config)
             self._process_next(ntid, txtp)
@@ -1034,7 +1034,7 @@ class _CAkSwitchCntr(_NodeHelper):
         ntids, ngvalue = self.gvalue_ntids[gvalue]
 
 
-        txtp.info_gamesync(gtype, self.ngname, ngvalue)
+        txtp.info.gamesync(gtype, self.ngname, ngvalue)
         txtp.group_layer(ntids, self.config)
         for ntid in ntids: #multi IDs are possible but rare (KOF13)
             self._process_next(ntid, txtp)
@@ -1194,7 +1194,7 @@ class _CAkSound(_NodeHelper):
         return
 
     def _process_txtp(self, txtp):
-        txtp.info_source(self.sound.nsrc, self.sound.source)
+        txtp.info.source(self.sound.nsrc, self.sound.source)
         txtp.source_sound(self.sound, self.config)
         return
 
@@ -1261,7 +1261,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
             npath_combo = self._tree_get_npath(txtp, self.npaths)
             if npath_combo:
                 npath, ntid = npath_combo
-                txtp.info_gamesyncs(npath)
+                txtp.info.gamesyncs(npath)
 
                 txtp.group_single(self.config) #rarely may contain volumes
                 self._process_next(ntid, txtp)
@@ -1288,7 +1288,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
             if not gvalue in self.gvalue_ntid:
                 return
             ntid, ngvalue = self.gvalue_ntid[gvalue]
-            txtp.info_gamesync(gtype, self.ngname, ngvalue)
+            txtp.info.gamesync(gtype, self.ngname, ngvalue)
 
             txtp.group_single(self.config)
             self._process_next(ntid, txtp)
@@ -1377,7 +1377,7 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
             type = item.type
             subitems = item.items
 
-            txtp.info_next(item.nitem, item.nfields)
+            txtp.info.next(item.nitem, item.nfields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
             if type == -1 or item.ntid:
                 transition = wtxtp_util.NodeTransition()
@@ -1404,7 +1404,7 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
 
                 self._process_playlist(txtp, item.items)
                 txtp.group_done(subitems)
-            txtp.info_done()
+            txtp.info.done()
 
         return
 
@@ -1647,7 +1647,7 @@ class _CAkMusicTrack(_NodeHelper):
             index, ngvalue = self.gvalue_index[gvalue]
 
             #play subtrack based on index (assumed to follow order as defined)
-            txtp.info_gamesync(gtype, self.ngname, ngvalue)
+            txtp.info.gamesync(gtype, self.ngname, ngvalue)
 
             txtp.group_single(self.config)
             self._process_clips(self.subtracks[index], txtp)
@@ -1684,9 +1684,9 @@ class _CAkMusicTrack(_NodeHelper):
             else:
                 sconfig = wtxtp_util.NodeConfig()
                 sound = clip.sound
-                txtp.info_next(clip.nitem, clip.nfields)
-                txtp.info_source(clip.sound.nsrc, clip.sound.source)
-                txtp.info_done()
+                txtp.info.next(clip.nitem, clip.nfields)
+                txtp.info.source(clip.sound.nsrc, clip.sound.source)
+                txtp.info.done()
                 txtp.source_sound(clip.sound, sconfig)
         txtp.group_done(subtrack)
         return

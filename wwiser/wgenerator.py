@@ -370,37 +370,32 @@ class Generator(object):
         return
 
     def _make_txtp(self, node):
-        # When params aren't set and objects need them, all possible params are added
-        # to "paths" list. Then, instead of generating a giant .txtp it recreates one
-        # per combination (like first "music=b01" then ""music=b02")
+        # When default_params aren't set and objects need them, Txtp finds possible params, added
+        # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then ""music=b02")
 
         try:
-            ppaths = wgamesync.GamesyncPaths(self._txtpcache)  #paths during process
-            params = wgamesync.GamesyncParams(self._txtpcache) #current config
-            if self._default_params:            #external config
-                params = self._default_params
-
-            txtp = wtxtp.Txtp(params, ppaths, self._txtpcache, self._rebuilder)
+            # base .txtp
+            txtp = wtxtp.Txtp(self._txtpcache, self._rebuilder, params=self._default_params)
             self._rebuilder.begin_txtp(txtp, node)
 
+            ppaths = txtp.ppaths  # gamesync "paths" found during process
             if ppaths.empty:
-                # without variables
+                # single .txtp (no variables)
                 txtp.write()
             else:
-                # per variable combo
+                # .txtp per variable combo
                 combos = ppaths.combos()
                 for combo in combos:
                     #logging.info("generator: combo %s", combo.elems)
-                    txtp = wtxtp.Txtp(combo, ppaths, self._txtpcache, self._rebuilder)
+                    txtp = wtxtp.Txtp(self._txtpcache, self._rebuilder, params=combo)
                     self._rebuilder.begin_txtp(txtp, node)
                     txtp.write()
 
             # triggers are handled a bit differently
             if ppaths.stingers:
-                stingers = ppaths.stingers
-                ppaths = wgamesync.GamesyncPaths(self._txtpcache)
-                for stinger in stingers:
-                    txtp = wtxtp.Txtp(params, ppaths, self._txtpcache, self._rebuilder)
+                params = self._default_params #?
+                for stinger in ppaths.stingers:
+                    txtp = wtxtp.Txtp(self._txtpcache, self._rebuilder, params=params)
                     self._rebuilder.begin_txtp_stinger(txtp, stinger)
                     txtp.write()
 

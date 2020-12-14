@@ -883,8 +883,8 @@ class _CAkDialogueEvent(_NodeHelper):
 
     def _process_txtp(self, txtp):
 
-        if txtp.params.empty:
-            # set all gamesyncs (won't generate txtp)
+        if not txtp.params:
+            # find all possible gamesyncs paths (won't generate txtp)
             for path, ntid in self.paths:
                 txtp.ppaths.adds(path)
                 self._process_next(ntid, txtp)
@@ -1015,8 +1015,8 @@ class _CAkSwitchCntr(_NodeHelper):
         gtype = self.gtype
         gname = self.ngname.value()
 
-        if txtp.params.empty:
-            #set all gamesyncs
+        if not txtp.params:
+            # find all possible gamesyncs paths (won't generate txtp)
             for ntids, ngvalue in self.gvalue_ntids.values(): #order doesn't matter
                 gvalue = ngvalue.value()
                 txtp.ppaths.add(gtype, gname, ngvalue.value())
@@ -1247,8 +1247,8 @@ class _CAkMusicSwitchCntr(_NodeHelper):
     def _process_txtp(self, txtp):
         if self.has_tree:
 
-            if txtp.params.empty:
-                # set all gamesyncs (won't generate txtp)
+            if not txtp.params:
+                # find all possible gamesyncs paths (won't generate txtp)
                 txtp.ppaths.add_stingers(self.stingers)
 
                 for path, ntid in self.paths:
@@ -1272,8 +1272,8 @@ class _CAkMusicSwitchCntr(_NodeHelper):
             gtype = self.gtype
             gname = self.ngname.value()
 
-            if txtp.params.empty:
-                #set all gamesyncs (won't generate txtp)
+            if not txtp.params:
+                # find all possible gamesyncs paths (won't generate txtp)
                 for ntid, ngvalue in self.gvalue_ntid.values(): #order doesn't matter
                     gvalue = ngvalue.value()
                     txtp.ppaths.add(gtype, gname, ngvalue.value())
@@ -1362,7 +1362,7 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
         return
 
     def _process_txtp(self, txtp):
-        if txtp.params.empty:
+        if not txtp.params:
             txtp.ppaths.add_stingers(self.stingers)
 
         txtp.group_single(self.config) #typically useless but may have volumes
@@ -1629,8 +1629,8 @@ class _CAkMusicTrack(_NodeHelper):
             gtype = self.gtype
             gname = self.ngname.value()
 
-            if txtp.params.empty:
-                #set all gamesyncs
+            if not txtp.params:
+                # find all possible gamesyncs paths (won't generate txtp)
                 for index, ngvalue in self.gvalue_index.values(): #order doesn't matter
                     gvalue = ngvalue.value()
                     txtp.ppaths.add(gtype, gname, ngvalue.value())

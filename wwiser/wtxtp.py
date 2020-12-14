@@ -66,10 +66,10 @@ class Txtp(object):
             #'CAkStinger': 'stinger',
     }
 
-    def __init__(self, params, ppaths, txtpcache, rebuilder):
-        self.params = params
-        self.ppaths = ppaths
-        self.spaths = wgamesync.SilencePaths()
+    def __init__(self, txtpcache, rebuilder, params=None):
+        self.params = params  #current gamesync "path" config (default/empty means must find paths)
+        self.ppaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
+        self.spaths = wgamesync.SilencePaths() #states used to mute tracks
         self.txtpcache = txtpcache
         self.rebuilder = rebuilder
         self.info = wtxtp_info.TxtpInfo(wemnames=txtpcache.wemnames)  # node info to add in output as comment

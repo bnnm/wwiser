@@ -57,4 +57,8 @@ Low priority TODOs
 - recheck TTime in earlier games (ex. Trine 2)
 - fix multiloops: calc max by padding+body+loops of max branch
 - DelayTime/InitialDelay may not work correctly with loops (ex. John Wick Hex 2932040671)
-- alias: set "(blah blah)" to "(thing)"?
+- simplify nodes when testing for dupes? (ex Bayonetta 2)
+- apply default bus volumes for better results? (ex. Astral Chain, Gunslinger Stratos)
+- mark loop inside inner group (double loop) as multiloop (ex. DmC last boss)
+- use bankid for internals when possible instead of auto-using current+any bank?
+- giant playlist + random + wem name options: only write selected wem (ex. Tony Hawk Shred Wii)

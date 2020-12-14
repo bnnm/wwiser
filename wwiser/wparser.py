@@ -393,7 +393,7 @@ def CAkParameterNodeBase__SetAuxParams(obj, cls):
         has_aux = (obj.lastval >> 3) & 1
 
     if has_aux:
-        for i in range(4):
+        for _i in range(4):
             obj.tid('auxID')
 
     if cls.version <= 134:
@@ -417,7 +417,7 @@ def CAkParentNode_CAkParameterNode___SetChildren(obj, cls):
 
     obj.u32('ulNumChilds')
     #for elem in obj.list('mapChild', 'WwiseObject', obj.lastval):
-    for i in range(obj.lastval):
+    for _i in range(obj.lastval):
         obj.tid('ulChildID').fnv(wdefs.fnv_no)
     return
 
@@ -686,6 +686,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
     uBitsPositioning = obj.lastval
     has_positioning = (uBitsPositioning >> 0) & 1 #override parent
 
+    has_3d = False
     if has_positioning:
         if cls.version <= 56: #56=KOF13
             #BaseGenParams
@@ -719,8 +720,10 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
         if   cls.version <= 88:
             obj.U32('eType').fmt(wdefs.AkPositioningType)
             eType = obj.lastval
+            uBits3d = 0
         else:
             fld = obj.U8x('uBits3d')
+            eType = 0
             uBits3d = obj.lastval
 
             #todo bit meanings may vary more in older versions
@@ -751,7 +754,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             pass
 
         if   cls.version <= 72:
-            eType = eType
+            #eType = eType
             has_automation = (eType == 2) #Ak3DUserDef
             has_dynamic = (eType == 3) #Ak3DGameDef
         elif cls.version <= 88:
@@ -1393,7 +1396,7 @@ def CAkSwitchCntr__SetInitialValues(obj, cls):
         elem.sid('ulSwitchID').fnv(wdefs.fnv_val)
         elem.u32('ulNumItems')
         elem2 = elem.node('NodeList')
-        for i in range(elem.lastval):
+        for _i in range(elem.lastval):
             elem2.tid('NodeID').fnv(wdefs.fnv_no) #just 'ID'
 
     obj.u32('ulNumSwitchParams')
@@ -1956,7 +1959,7 @@ def CAkMusicTrack__SetInitialValues(obj, cls):
 
     if cls.version <= 26:
         obj2 = obj.node('TracksIDs?')
-        for i in range(0, count):
+        for _i in range(0, count):
             obj2.u32('trackID?')
 
     for elem in obj.list('pSource', 'AkBankSourceData', count): #CAkMusicSource
@@ -2190,7 +2193,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
             elem.u32('uNumSrc')
             numsrc = elem.lastval
 
-        for i in range(numsrc):
+        for _i in range(numsrc):
             elem.tid('srcID').fnv(wdefs.fnv_no) #-1 or sid
 
         if cls.version <= 72:
@@ -2199,7 +2202,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
             elem.u32('uNumDst')
             numdst = elem.lastval
 
-        for i in range(numdst):
+        for _i in range(numdst):
             elem.tid('dstID').fnv(wdefs.fnv_no)
 
         for elem2 in [elem.node('AkMusicTransSrcRule')]:
@@ -3001,9 +3004,9 @@ def parse_stid_old(obj):
 
     obj.u32('entries')
     count = obj.lastval
-    for i in range(0, count):
+    for _i in range(0, count):
         obj.U32('offset')
-    for i in range(0, count): #todo not correct, some bnk have one per entry, other don't
+    for _i in range(0, count): #todo not correct, some bnk have one per entry, other don't
         obj.u32('hash')
         if obj.lastval != -1:
             obj.stz('name')
@@ -3297,19 +3300,19 @@ class Parser(object):
         fourcc = r.fourcc()
         if fourcc == b'AKBK':
             # very early versions have a mini header before BKHD
-            __ = r.u32() #null
-            __ = r.u32() #null
+            _unknown = r.u32() #null
+            _unknown = r.u32() #null
             r.guess_endian32(0x10)
             fourcc = r.fourcc()
 
         if fourcc != b'BKHD':
             raise wmodel.VersionError("not a Wwise bank", -1)
 
-        size = r.u32()
+        _size = r.u32()
 
         version = r.u32()
         if version == 0 or version == 1:
-            __ = r.u32()
+            _unknown = r.u32()
             version = r.u32() #actual version in very early banks
 
         root = bank.get_root()

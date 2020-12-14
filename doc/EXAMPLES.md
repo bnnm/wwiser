@@ -442,6 +442,12 @@ event > play > ...
 - has tracks that changes (switch variables that are only accesible on change)
   - usually all point to the same thing
 - has vocal songs in multiple languages (set as localized banks)
+- uses variable 0x27 [FadeOutTime]
+- has a lot of strange usage of features to achieve effects in twisted ways (inexperienced?)
+  - ex. creates many sequential clips to loop a track of few seconds, that is also silenced most of the time
+  - this is rather cheap in Wwise (ie. N nodes = 1 playlist of same things) but makes lots of VGMSTREAMs in .txtp,
+    reaching the max segment limit and failing to open
+
 
 ## Bayonetta 2 (Switch)
 ```

@@ -637,6 +637,8 @@ class Names(object):
     def save_lst(self, name=None, save_all=False, save_companion=False, save_missing=False):
         if not name:
             name = 'banks'
+        else:
+            name = os.path.basename(name)
         time = datetime.today().strftime('%Y%m%d%H%M%S')
         outname = 'wwnames-%s-%s.txt' % (name, time)
 

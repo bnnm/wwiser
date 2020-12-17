@@ -110,6 +110,9 @@ class Generator(object):
     def set_random_all(self, flag):
         self._txtpcache.random_all = flag
 
+    def set_random_multi(self, flag):
+        self._txtpcache.random_multi = flag
+
     def set_random_force(self, flag):
         self._txtpcache.random_force = flag
 

@@ -108,8 +108,8 @@ class TxtpNode(object):
                 self.volume = 0
             self.volume += self.makeupgain
             #self.makeupgain = 0 #todo leave gain for info in txtp?
-            self._others = True
-            self._debug = True
+            self.has_others = True
+            self.has_debug = True
 
 
         # allowed to separate "loop not set" and "loop set but not looping"
@@ -243,21 +243,25 @@ class TxtpPrinter(object):
         self._transition_count = 0
         self._loop_groups = 0
         self._loop_sounds = 0
-        self._selectable_count = 0  #number of selectable, for randoms or all types if forced (in the first node only)
 
-        # flags
-        self._lang_name = None
-        self._random_continuous = False
-        self._random_steps = False
-        self._silences = False      # may use silences to change/crossfade songs
-        self._self_loops = False    #
-        self._streams = False       # has regular files
-        self._externals = False     # special "external sources"
-        self._internals = False     # internal .wem (inside .bnk)
-        self._unsupported = False   # missing audio/unsupported plugins
-        self._multiloops = False    # multiple layers have infinite loops
-        self._others = False        # misc marks
-        self._debug = False         # special mark for testing
+        # output flags
+        self.lang_name = None
+        self.has_random_continuous = False
+        self.has_random_steps = False   # 
+        self.has_silences = False       # may use silences to change/crossfade songs
+        self.has_self_loops = False     # hack for smoother looping
+        self.has_streams = False        # 
+        self.has_externals = False      # special "external sources"
+        self.has_internals = False      # internal .wem (inside .bnk)
+        self.has_unsupported = False    # missing audio/unsupported plugins
+        self.has_multiloops = False     # multiple layers have infinite loops
+        self.has_others = False         # misc marks
+        self.has_debug = False          # special mark for testing
+        
+        self.selectable_count = 0       # number of selectable (in the first node only), for flags below
+        self.is_random_select = False   # 
+        self.is_multi_select = False    # 
+        self.is_force_select = False    # 
 
     def prepare(self):
         self._modify()
@@ -271,50 +275,11 @@ class TxtpPrinter(object):
         text = ''.join(self._lines)
         return text
 
-    def get_selectable_count(self):
-        return self._selectable_count
-
     def has_sounds(self):
         return self._sound_count > 0
 
-    def has_random_continuous(self):
-        return self._random_continuous
-
-    def has_random_steps(self):
-        return self._random_steps
-
-    def has_unsupported(self):
-        return self._unsupported
-
-    def has_streams(self):
-        return self._streams
-
-    def has_externals(self):
-        return self._externals
-
-    def has_internals(self):
-        return self._internals
-
-    def has_self_loops(self):
-        return self._self_loops
-
-    def has_silences(self):
-        return self._silences
-
-    def has_multiloops(self):
-        return self._multiloops
-
     def has_noloops(self):
         return self._loop_groups == 0 and self._loop_sounds == 0
-
-    def has_others(self):
-        return self._others
-
-    def has_debug(self):
-        return self._debug
-
-    def get_lang_name(self):
-        return self._lang_name
 
     #--------------------------------------------------------------------------
 
@@ -810,10 +775,10 @@ class TxtpPrinter(object):
         # If one layer has 2 playlists that loop, items may have different loop end times = multiloop.
         # * find if layer has multiple children and at least 1 infinite loops (vgmstream can't replicate ATM)
         # * one layer not looping while other does it's considered multiloop
-        if node.type in TYPE_GROUPS_LAYERS and not self._multiloops:
+        if node.type in TYPE_GROUPS_LAYERS and not self.has_multiloops:
             for subnode in node.children:
                 if self._has_iloops(subnode):
-                    self._multiloops = True
+                    self.has_multiloops = True
                     break
 
         # looping steps behave like continuous, since they get "trapped" repeating at this level (ex. Nier Automata)
@@ -882,13 +847,25 @@ class TxtpPrinter(object):
         if len(subnode.children) <= 1:
             return
 
-        # total layers/segment/randoms in the main/upper group (can be used to generate 1 .txtp per type)
-        # also forces first group as selectable
-        force = self._txtpcache.random_force
-        if subnode.type in TYPE_GROUPS_STEPS or force:
-            self._selectable_count = count
+        # set total layers/segment/randoms in the main/upper group (can be used to generate 1 .txtp per type)
+        # depending on flags (may set only one or all)
+        # - flag to make random groups + group is random
+        random_all = self._txtpcache.random_all and subnode.type in TYPE_GROUPS_STEPS
+        # - flag to make multiloops only + group isn't regular random
+        random_multi = self._txtpcache.random_multi and self.has_multiloops
+        # - flag to make others
+        random_force = self._txtpcache.random_force and not subnode.type in TYPE_GROUPS_STEPS
 
-            subnode.force_selectable = force
+        if random_all or random_multi or random_force:
+            self.selectable_count = count
+            subnode.force_selectable = True
+            # set flags taking into account priority (r > m > f)
+            if   random_all:
+                self.is_random_select = True
+            elif random_multi:
+                self.is_multi_select = True
+            elif random_force:
+                self.is_force_select = True
 
         return
 
@@ -1059,7 +1036,7 @@ class TxtpPrinter(object):
         if play_before and tnode.self_loop: #hack for self-looping files
             entry = 0
             exit = pconfig.entry
-            self._self_loops = True
+            self.has_self_loops = True
 
         if not play_before:
             time = entry
@@ -1128,11 +1105,11 @@ class TxtpPrinter(object):
 
         # set flag with final tree since randoms of a single file can be simplified
         if node.type == TYPE_GROUP_RANDOM_CONTINUOUS and len(node.children) > 1:
-            self._random_continuous = True
+            self.has_random_continuous = True
         if node.type in TYPE_GROUPS_STEPS and len(node.children) > 1:
-            self._random_steps = True
+            self.has_random_steps = True
         if node.silenced or node.crossfaded:
-            self._silences = True
+            self.has_silences = True
 
 
     # make a TXTP group
@@ -1194,15 +1171,15 @@ class TxtpPrinter(object):
             if self._txtpcache.silence or self._has_silent_state(node):
                 mods += '  #v 0'
             info += '  ##fade'
-            self._others = True
+            self.has_others = True
 
         #if node.makeupgain:
         #    info += '  ##gain'
-        #    self._others = True
+        #    self.has_others = True
 
         if node.pitch:
             info += '  ##pitch %s' % (node.pitch)
-            self._others = True
+            self.has_others = True
 
 
         # final result
@@ -1245,13 +1222,13 @@ class TxtpPrinter(object):
         name = ''
         if sound.source and sound.source.plugin_wmid:
             name += '?'
-            self._unsupported = True
+            self.has_unsupported = True
 
         name += self._txtpcache.wemdir
         if sound.source and self._txtpcache.lang:
             lang = sound.source.lang()
             if lang: #in case it's blank for some sources yet filled for others
-                self._lang_name = lang
+                self.lang_name = lang
             name += sound.source.subdir()
 
         # add source
@@ -1266,7 +1243,7 @@ class TxtpPrinter(object):
             if sound.source.plugin_id == 0x00650002: #silence
                 mods += self._get_ms(' #B', sound.source.plugin_fx.duration)
             else:
-                self._unsupported = True
+                self.has_unsupported = True
 
         elif sound.source.plugin_external:
             # "external" ID (set at runtime)
@@ -1274,7 +1251,7 @@ class TxtpPrinter(object):
             name += "(?).wem"
             # tid seems fixed for all files, needs to print base class' sid to avoid being dupes
             info += "  ##external %s-%s" % (sound.source.src_sid, sound.source.tid)
-            self._externals = True
+            self.has_externals = True
 
         elif sound.source.internal and not self._txtpcache.bnkskip:
             # internal/memory stream
@@ -1293,8 +1270,8 @@ class TxtpPrinter(object):
             else:
                 name = "?" + name + "%s.%s" % (sound.source.tid, extension)
                 info += "  ##other bnk?"
-                self._unsupported = True
-            self._internals = True
+                self.has_unsupported = True
+            self.has_internals = True
             self._txtpcache.register_bank(bankname)
 
         else:
@@ -1304,7 +1281,7 @@ class TxtpPrinter(object):
                 extension = sound.source.extension_alt
 
             name += "%s.%s" % (sound.source.tid, extension)
-            self._streams = True
+            self.has_streams = True
 
 
         line += name
@@ -1345,11 +1322,11 @@ class TxtpPrinter(object):
 
         #if node.makeupgain:
         #    info += '  ##gain'
-        #    self._others = True
+        #    self.has_others = True
 
         if node.pitch:
             info += '  ##pitch %s' % (node.pitch)
-            self._others = True
+            self.has_others = True
 
         if silence_line:
             line = "?" + line

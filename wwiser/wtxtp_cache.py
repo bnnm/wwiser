@@ -28,6 +28,7 @@ class TxtpCache(object):
         self.dupes = False
         self.dupes_exact = False
         self.random_all = False
+        self.random_multi = False
         self.random_force = False
         self.tagsm3u = False
         self.silence = False
@@ -70,9 +71,9 @@ class TxtpCache(object):
         if self.unused_mark:
             self.unused += 1
 
-        if printer.has_internals():
+        if printer.has_internals:
             self.internals += 1
-        if printer.has_streams():
+        if printer.has_streams:
             self.streams += 1
         return True
 

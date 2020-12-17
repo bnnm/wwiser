@@ -108,8 +108,9 @@ class Txtp(object):
             return
 
         # make one txtp per random/selectable group
-        if self.txtpcache.random_all and printer.get_selectable_count():
-            count = printer.get_selectable_count()
+        # selectable is only set if appropriate flags are defined
+        if printer.selectable_count:
+            count = printer.selectable_count
             # make one .txtp per random
             for i in range(1, count + 1):
                 self.selected = i
@@ -335,7 +336,7 @@ class Txtp(object):
 
         name += self.info.get_gsnames()
 
-        if printer.has_silences():
+        if printer.has_silences:
             if self.txtpcache.silence:
                 name += " {s-}" #"silence all"
             else:
@@ -344,33 +345,38 @@ class Txtp(object):
 
         name += self.info.get_wemnames()
 
-        if printer.has_random_steps() or self.selected:
-            selection = self.selected
-            if selection:
-                name += " {r%s}" % (selection)
+        if printer.has_random_steps:
+            if printer.is_random_select:
+                name += " {r%s}" % (self.selected)
             else:
                 name += " {r}"
-        #if printer.has_random_continuous():
+        #if printer.has_random_continuous:
         #    name += " {rc}"
-        if printer.has_externals():
-            name += " {e}"
-        if printer.has_multiloops():
-            name += " {m}"
-        if printer.has_internals() and self.txtpcache.bnkmark:
+        if printer.has_multiloops:
+            if printer.is_multi_select:
+                name += " {m%s}" % (self.selected)
+            else:
+                name += " {m}"
+        if printer.is_force_select:
+            name += " {f%s}" % (self.selected)
+
+        if printer.lang_name:
+            name += " {l=%s}" % (printer.lang_name)
+        if printer.has_internals and self.txtpcache.bnkmark:
             name += " {b}"
-        if printer.get_lang_name():
-            name += " {l=%s}" % (printer.get_lang_name())
-        if printer.has_unsupported():
+        if printer.has_externals:
+            name += " {e}"
+        if printer.has_unsupported:
             name += " {!}"
         if not is_new: #dupe
             #if is_not_exact_dupe:
             #    name += " {D}"
             name += " {d}"
-        #if printer.has_others():
+        #if printer.has_others:
         #    name += " {o}"
-        #if printer.has_self_loops():
+        #if printer.has_self_loops:
         #    name += " {selfloop}"
-        if printer.has_debug():
+        if printer.has_debug:
             name += " {debug}"
 
         #name += ".txtp"
@@ -429,6 +435,8 @@ class Txtp(object):
             extra = ''
             if self.txtpcache.random_force:
                 extra = ' (forced)'
+            elif self.txtpcache.random_multi:
+                extra = ' (multi)'
             info += '# ~ selected group=%s%s\n' % (self.selected, extra)
         info += '#\n'
 

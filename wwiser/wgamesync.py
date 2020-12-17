@@ -323,12 +323,16 @@ class SilencePaths(object):
         self._paths = []
 
         # short items by value_name if possible as it makes more consistently named .txtp
-        # keys in order or appearance seem to work well
-        for items in self._elems.values():
-            items.sort(key=lambda x: x[3])
+        # order keys too since they same vars move around between tracks
+        elems = []
+        for values in self._elems.values():
+            values.sort(key=lambda x: x[3])
+            elems.append(values)
+        elems.sort(key=lambda x: x[0][2])
 
         # combos of existing variables
-        items = itertools.product(*self._elems.values())
+        #items = itertools.product(*self._elems.values())
+        items = itertools.product(*elems)
         for item in items:
             sparam = SilenceParams()    
             sparam.adds(item)

@@ -75,6 +75,7 @@ class Cli(object):
         parser.add_argument('-gra','--txtp-random-all',     help="Make multiple .txtp per base 'random' group", action='store_true')
         parser.add_argument('-grm','--txtp-random-multi',   help="Force multiloops to be selectable like a 'random'\n(ex. make .txtp per layer in multiloops files)", action='store_true')
         parser.add_argument('-grf','--txtp-random-force',   help="Force base section to be selectable like a 'random'\n(ex. make .txtp per layer in all files)", action='store_true')
+        parser.add_argument('-gwd','--txtp-write-delays',   help="Don't skip initial delay.\(some .txtp will start with some delay)", action='store_true')
         parser.add_argument('-gs', '--txtp-silence',        help="Silence by default parts that crossfade", action='store_true')
         parser.add_argument('-gt', '--txtp-tagsm3u',        help="Use shorter .txtp names and put full names in !tags.m3u", action='store_true')
 
@@ -197,6 +198,7 @@ class Cli(object):
             generator.set_random_all(args.txtp_random_all)
             generator.set_random_multi(args.txtp_random_multi)
             generator.set_random_force(args.txtp_random_force)
+            generator.set_write_delays(args.txtp_write_delays)
             generator.set_silence(args.txtp_silence)
             generator.set_tagsm3u(args.txtp_tagsm3u)
 

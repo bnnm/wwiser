@@ -116,11 +116,14 @@ class Generator(object):
     def set_random_force(self, flag):
         self._txtpcache.random_force = flag
 
-    def set_tagsm3u(self, flag):
-        self._txtpcache.tagsm3u = flag
+    def set_write_delays(self, flag):
+        self._txtpcache.write_delays = flag
 
     def set_silence(self, flag):
         self._txtpcache.silence = flag
+
+    def set_tagsm3u(self, flag):
+        self._txtpcache.tagsm3u = flag
 
     def set_x_noloops(self, flag):
         self._txtpcache.x_noloops = flag

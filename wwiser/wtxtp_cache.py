@@ -30,8 +30,9 @@ class TxtpCache(object):
         self.random_all = False
         self.random_multi = False
         self.random_force = False
-        self.tagsm3u = False
+        self.write_delays = False
         self.silence = False
+        self.tagsm3u = False
 
         self.x_noloops = False
         self.x_notxtp = False

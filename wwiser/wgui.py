@@ -176,10 +176,13 @@ class Gui(object):
         chk = self._chk('txtp_random_force', frame, "Force base groups to be selectable like a 'random'")
         chk.grid(row=5, column=0, sticky="W")
 
-        chk = self._chk('txtp_tagsm3u', frame, "Use shorter .txtp names and put full names in !tags.m3u")
-        chk.grid(row=6, column=0, sticky="W")
+        chk = self._chk('txtp_write_delays', frame, "Don't skip initial delay")
+        chk.grid(row=5, column=1, sticky="W")
 
         chk = self._chk('txtp_silence', frame, "Silence parts that crossfade by default")
+        chk.grid(row=6, column=0, sticky="W")
+
+        chk = self._chk('txtp_tagsm3u', frame, "Use shorter .txtp names and put full names in !tags.m3u")
         chk.grid(row=6, column=1, sticky="W")
 
         #----------------------------------------------------------------------
@@ -402,8 +405,9 @@ class Gui(object):
             generator.set_random_all(self._fields['txtp_random_all'].get())
             generator.set_random_multi(self._fields['txtp_random_multi'].get())
             generator.set_random_force(self._fields['txtp_random_force'].get())
-            generator.set_tagsm3u(self._fields['txtp_tagsm3u'].get())
+            generator.set_write_delays(self._fields['txtp_write_delays'].get())
             generator.set_silence(self._fields['txtp_silence'].get())
+            generator.set_tagsm3u(self._fields['txtp_tagsm3u'].get())
 
             generator.generate()
 

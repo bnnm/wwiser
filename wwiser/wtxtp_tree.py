@@ -157,7 +157,7 @@ class TxtpNode(object):
 
     # nodes that don't contribute to final .txtp so they don't need to be written
     # also loads some values
-    def ignorable(self, skiploop=False):
+    def ignorable(self, skiploop=False, simpler=False):
         if not skiploop: #sometimes gets in the way of calcs
             if self.loop == 0: #infinite loop
                 return False
@@ -171,7 +171,7 @@ class TxtpNode(object):
         if len(self.children) > 1:
             return False
 
-        if self.idelay or self.delay or self.volume:
+        if (self.idelay or self.delay or self.volume) and not simpler:
             return False
 
         #makeupgain, pitch: ignored
@@ -236,7 +236,8 @@ class TxtpPrinter(object):
         # during write
         self._lines = None
         self._depth = None
-        self._simpler = False # when set skips some configs to ease comparing similar txtp
+        self._simpler = False   # when set skips some configs to ease comparing similar txtp
+                                # (some games have an event + same softer or slightly delayed = useless)
 
         # during process
         self._sound_count = 0
@@ -247,21 +248,21 @@ class TxtpPrinter(object):
         # output flags
         self.lang_name = None
         self.has_random_continuous = False
-        self.has_random_steps = False   # 
+        self.has_random_steps = False   # some parts contain randoms
         self.has_silences = False       # may use silences to change/crossfade songs
         self.has_self_loops = False     # hack for smoother looping
-        self.has_streams = False        # 
-        self.has_externals = False      # special "external sources"
+        self.has_streams = False        # stream .wem
         self.has_internals = False      # internal .wem (inside .bnk)
+        self.has_externals = False      # special "external sources"
         self.has_unsupported = False    # missing audio/unsupported plugins
         self.has_multiloops = False     # multiple layers have infinite loops
         self.has_others = False         # misc marks
         self.has_debug = False          # special mark for testing
-        
+
         self.selectable_count = 0       # number of selectable (in the first node only), for flags below
-        self.is_random_select = False   # 
-        self.is_multi_select = False    # 
-        self.is_force_select = False    # 
+        self.is_random_select = False   # has selectable random group
+        self.is_multi_select = False    # has selectable multilooping group
+        self.is_force_select = False    # has selectable forced group
 
     def prepare(self):
         self._modify()
@@ -295,11 +296,11 @@ class TxtpPrinter(object):
         self._clean_tree(self._tree)
         self._set_self_loops(self._tree)
         self._set_props(self._tree)
-        self._set_volume(self._tree)
         self._set_times(self._tree)
         self._reorder_wem(self._tree)
         self._find_loops(self._tree)
-        self._find_info(self._tree)
+        self._set_extra(self._tree)
+        self._set_volume(self._tree)
 
 
         if DEBUG_PRINT_TREE_POST:
@@ -637,33 +638,6 @@ class TxtpPrinter(object):
 
     #--------------------------------------------------------------------------
 
-    # Simplify volume stuff
-    #
-    # Volumes in Wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
-    # but usually (hopefully) volumes set on object level make the .txtp sound fine in most cases.
-    # 
-    # However some games set low volume in base objects (ex. SFZ -14dB), since output bus volumes alter
-    # this, and Wwise can normalize on realtime, plus may be used in only a few tracks as normalization
-    # (ex. Dirt Rally 4, Halo Wars menus), so we need keep it. To handle this, "master volume" can be set
-    # manually and it's used to alter this base volume.
-    def _set_volume(self, node):
-
-        # negative volumes are applied per source
-        if self._volume <= 0:
-            return
-
-        # find base node and cancel its volume if possible
-        subnode = self._get_first_child(node)
-        if not subnode or not subnode.volume:
-            return
-
-        subnode.volume += self._volume
-        self._volume = 0
-
-        return
-
-    #--------------------------------------------------------------------------
-
     # applies clip and transition times to nodes
     def _set_times(self, node):
         # find leaf clips and set duration
@@ -836,29 +810,52 @@ class TxtpPrinter(object):
 
     #--------------------------------------------------------------------------
 
-    # extra info for other processes
-    def _find_info(self, node):
+    # extra stuff
+    def _set_extra(self, node):
 
-        subnode = self._get_first_child(node)
-        if not subnode or subnode.type not in TYPE_GROUPS:
+        # simplify first node
+        basenode = self._get_first_child(node)
+        if not basenode:
             return
 
-        count = len(subnode.children)
-        if len(subnode.children) <= 1:
+        self._set_initial_delay(basenode)
+        self._set_selectable(basenode)
+        return
+
+    def _set_initial_delay(self, node):
+        # Sometimes games have events where "play" and similar objects starts delayed.
+        # Not very useful and sometimes the same event without delay exists, so it's removed by default.
+
+        if self._txtpcache.write_delays:
+            return
+        #only with first sfx/group, not clips (don't have delay and padding has other meaning)
+        if node.type in TYPE_SOUNDS and node.sound and node.sound.clip:
+            return
+        node.pad_begin = 0
+        node.idelay = None
+        node.delay = None
+
+
+    def _set_selectable(self, node):
+        if node.type not in TYPE_GROUPS:
+            return
+
+        count = len(node.children)
+        if len(node.children) <= 1:
             return
 
         # set total layers/segment/randoms in the main/upper group (can be used to generate 1 .txtp per type)
         # depending on flags (may set only one or all)
         # - flag to make random groups + group is random
-        random_all = self._txtpcache.random_all and subnode.type in TYPE_GROUPS_STEPS
+        random_all = self._txtpcache.random_all and node.type in TYPE_GROUPS_STEPS
         # - flag to make multiloops only + group isn't regular random
         random_multi = self._txtpcache.random_multi and self.has_multiloops
         # - flag to make others
-        random_force = self._txtpcache.random_force and not subnode.type in TYPE_GROUPS_STEPS
+        random_force = self._txtpcache.random_force and not node.type in TYPE_GROUPS_STEPS
 
         if random_all or random_multi or random_force:
             self.selectable_count = count
-            subnode.force_selectable = True
+            node.force_selectable = True
             # set flags taking into account priority (r > m > f)
             if   random_all:
                 self.is_random_select = True
@@ -866,6 +863,53 @@ class TxtpPrinter(object):
                 self.is_multi_select = True
             elif random_force:
                 self.is_force_select = True
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    # Simplify volume stuff
+    #
+    # Volumes in Wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
+    # but usually (hopefully) volumes set on object level make the .txtp sound fine in most cases.
+    #
+    # However some games set low volume in base objects (ex. SFZ -14dB), since output bus volumes alter
+    # this, and Wwise can normalize on realtime, plus may be used in only a few tracks as normalization
+    # (ex. Dirt Rally 4, Halo Wars menus), so we need keep it. To handle this, "master volume" can be set
+    # manually and it's used to alter this base volume.
+    def _set_volume(self, node):
+
+        # negative volumes are applied per source
+        if self._volume <= 0:
+            return
+
+        # find base node and cancel its volume if possible
+        basenode = self._get_first_child(node)
+        if not basenode:
+            return
+
+        if basenode.volume:
+            basenode.volume += self._volume
+            self._volume = 0
+            return
+
+        # sometimes we can pass volume to lower leafs if base node didn't have volume and
+        # there aren't more groups in between (better volume cancelling)
+        subnodes = []
+        for subnode in basenode.children:
+            subbasenode = self._get_first_child(subnode)
+            if not subbasenode:
+                continue
+            # all should be sounds
+            if not subbasenode.type in TYPE_SOUNDS:
+                return
+            subnodes.append(subbasenode)
+
+        for subnode in subnodes:
+            if not subnode.volume:
+               subnode.volume = 0 
+            subnode.volume += self._volume
+        self._volume = 0
 
         return
 
@@ -1077,7 +1121,7 @@ class TxtpPrinter(object):
 
         # apply increasing master volume after all other volumes
         # (lowers chances of clipping due to vgmstream's pcm16)
-        if self._volume > 0:
+        if self._volume > 0 and not self._simpler:
             line = 'commands = #v %sdB' % (self._volume)
             self._lines.append('%s\n' % (line))
 
@@ -1085,7 +1129,7 @@ class TxtpPrinter(object):
 
 
     def _write_node(self, node):
-        if not node.ignorable():
+        if not node.ignorable(simpler=self._simpler):
             self._depth += 1
 
         if   node.type in TYPE_SOUNDS:
@@ -1100,7 +1144,7 @@ class TxtpPrinter(object):
         if node.type in TYPE_GROUPS:
             self._write_group(node)
 
-        if not node.ignorable():
+        if not node.ignorable(simpler=self._simpler):
             self._depth -= 1
 
         # set flag with final tree since randoms of a single file can be simplified
@@ -1115,7 +1159,7 @@ class TxtpPrinter(object):
     # make a TXTP group
     def _write_group(self, node):
         #ignore dumb nodes that don't contribute (children are output though)
-        if node.ignorable():
+        if node.ignorable(simpler=self._simpler):
             return
 
         # ex. -L2: at position N (auto), layers previous 2 files
@@ -1191,7 +1235,7 @@ class TxtpPrinter(object):
     def _write_group_header(self, node):
         if not DEBUG_PRINT_GROUP_HEADER:
             return #not too useful
-        if node.ignorable():
+        if node.ignorable(simpler=self._simpler):
             return
 
         line = ''

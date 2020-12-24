@@ -157,10 +157,16 @@ class Cli(object):
             else:
                 dump_name = 'banks'
 
+        # default dump type
         if args.dump_type is None:
-            if args.save_lst: #forces all names without making a file
+            if args.save_lst:
+                 #forces all names without making a file
                 args.dump_type = wprinter.TYPE_EMPTY
-            else: #default
+            elif args.txtp or args.viewer:
+                # not very useful for txtp/viewer
+                args.dump_type = wprinter.TYPE_NONE
+            else:
+                # default without other flags
                 args.dump_type = wprinter.TYPE_XSL
         printer = wprinter.Printer(banks, args.dump_type, dump_name)
         printer.dump()

@@ -326,9 +326,9 @@ class SilencePaths(object):
         # order keys too since they same vars move around between tracks
         elems = []
         for values in self._elems.values():
-            values.sort(key=lambda x: x[3])
+            values.sort(key=lambda x: x[3] or x[1])
             elems.append(values)
-        elems.sort(key=lambda x: x[0][2])
+        elems.sort(key=lambda x: x[0][2] or x[0][1])
 
         # combos of existing variables
         #items = itertools.product(*self._elems.values())

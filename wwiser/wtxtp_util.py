@@ -217,6 +217,7 @@ PLUGIN_IGNORABLE = set([
 PLUGIN_NAME = {
     0x00640002: 'sine',
     0x00650002: 'silence',
+    0x00660002: 'tone',
 }
 
 class NodeSource(object):
@@ -291,6 +292,12 @@ class NodeSource(object):
             self.extension_alt = None
             return
 
+        # rare but possible to have sources without tid/codec (ex. AoT2 Car_Cestructible.bnk)
+        if not self.plugin_codec:
+            self.extension = None
+            self.extension_alt = None
+            return
+
         version = self.nsrc.get_root().get_version()
         if version >= CODEC_EXTENSION_NEW_VERSION:
             #wmid seem to be use .wem but also .wmid sometimes?
@@ -298,7 +305,7 @@ class NodeSource(object):
         else:
             self.extension = CODEC_EXTENSIONS_OLD.get(self.plugin_codec)
             if not self.extension:
-                raise ValueError("extension not found for old version codec %s (report)" % (self.plugin_codec))
+                raise ValueError("extension not found for old version codec %s, tid=%s (report)" % (self.plugin_codec, self.tid))
 
         if   self.extension == 'ogg':
             self.extension_alt = 'logg'

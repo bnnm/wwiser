@@ -11,17 +11,25 @@ from . import wfmt
 # media content (objects still may change).
 #
 # Versions marked with "*" were not checked against SDKs and may contain bugs for untested games
+#
+# related changelog
+# - 06.1: XMA1
+# - 06.2: XMA2
+# - 06.3: Blends
+# - 07.1: Interactive music
+# - 07.2: Dynamic dialogue, plugins
+# - 07.4: removed string table, SoundBanksInfo.xml instead of .info
 bank_versions = [
-    #--, #0x-- Wwise 2016.1~3  *(changelog: 06.1= XMA1, 06.2=XMA2, 06.3=Blends, 07.1=Interactive music, 07.2=Dynamic dialogue, plugins)
+    #--, #0x-- Wwise 2016.1~3  *
     #14, #0x0E Wwise 2007.1/2? *[Shadowrun (X360)]
     #26, #0x1A Wwise 2007.3?   *[Too Human (X360), KetnetKick 2 (PC)]
-    #--, #0x-- Wwise 2007.4?   *(07.4: removed string table, SoundBanksInfo.xml instead of .info)
-     34, #0x22 Wwise 2008.1?   *[Spider-Man: Web of Shadows (X360), The Lord of The Rings: Conquest (PC), Halo Wars (X360)]
+     29, #0x1D Wwise 2007.4?   *[Army of Two: The 40th Day (PS3)-test banks]
+     34, #0x22 Wwise 2008.1?   *[Spider-Man: Web of Shadows (X360), The Lord of the Rings: Conquest (PC), Halo Wars (X360)]
      35, #0x23 Wwise 2008.2?   *[Jungle Speed (Wii), Punch Out!! (Wii)]
      36, #0x24 Wwise 2008.3?   *[UFC 2009 Undisputed (PS3)]
      38, #0x26 Wwise 2008.4    *[The King of Fighters XII (PS3), Food Network (Wii)]
      44, #0x2C Wwise 2009.1?   *[Assassin's Creed II (X360), Mass Effect 2 (X360), The Saboteur (X360), Doc Louis's Punch Out!! (Wii)]
-     45, #0x2D Wwise 2009.2?   *[Army of Two: The 40th Day (X360)--has v44/38/34 banks]
+     45, #0x2D Wwise 2009.2?   *[Army of Two: The 40th Day (X360)-has v44/38/34 banks]
      46, #0x2E Wwise 2009.3     [Enslaved (X360), The King of Fighters XIII (AC), Tron Evolution (PS3)]
      48, #0x30 Wwise 2010.1     [Assassin's Creed: Brotherhood (X360), Splatterhouse (PS3), Harry Potter and the Deathly Hallows Part 1 (PS3)]
      52, #0x34 Wwise 2010.2     [Chime Super Deluxe (PS3)]
@@ -42,6 +50,19 @@ bank_versions = [
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
 ]
+
+# for extra detection
+aot2_buggy_banks = {
+    #base
+    3915989931, #Amb_Spot_Sparks
+    2026489925, #Destructibles_Car
+    3309142066, #gun_type_m249saw
+    4045268090, #SE_Embassy_Morality_Immoral
+    4259715843, #Trig_CamShake_Debris
+    #langs
+    2610742330, #Global_VO
+    2867304520, #VO_INT_FDI_HEAVIES
+}
 
 
 # #############################################################################
@@ -1783,6 +1804,7 @@ CAkGuitarDistortion__AkDistortionType = wfmt.FormatterLUT({
   0x3: "FUZZ",
   0x4: "CLIP",
 })
+
 
 # #############################################################################
 # VERSION SETUP

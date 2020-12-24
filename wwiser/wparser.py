@@ -1309,16 +1309,12 @@ def CAkRanSeqCntr__SetInitialValues(obj, cls):
         pass
 
     if cls.version <= 44: #44=DLPO/ME2/AC2
-        #todo: AoT2 needs this but no other games do, no apparent flag elsewhere
-        #(even if some banks are almost 100% exactly like other games like VO_INT_CHI_GUARD)
-        #since AoT2 has multiple bnk versions it could be buggy, as Wwise should only
-        #support one version
-        #could try to read up to Children and if it has funny values rewind back, not sure
-        #obj.U16('unknown')
+        #AoT2 buggy banks need this, see bank loading info
+        if obj.get_root().get_subversion() == 45:
+            obj.U16('unknown')
         pass
     elif cls.version <= 45: #45=AoT2
         obj.U16('unknown') #unrelated to wAvoidRepeatCount (00/01/03/05)
-        pass
     else:
         pass
 
@@ -2039,7 +2035,9 @@ def parse_tree_node(obj, cls, count, cur_depth, max_depth):
             elem.u16('children.uCount')
             children_count = elem.lastval
 
-        if   cls.version <= 36: #36=UFC
+        if   cls.version <= 29: #29=AoT2 test banks
+            pass
+        elif cls.version <= 36: #36=UFC
             elem.u16('uWeight')
             elem.u16('uProbability')
         elif cls.version <= 45: #45=AoT2
@@ -2871,35 +2869,53 @@ def CAkBankMgr__ProcessBankHeader(obj):
     if version <= 125:
         obj.U32('bFeedbackInBank') #bFeedbackSupported
         #in later versions seems 16b=feedback + 16b=?, but this is how it's read/checked
-        obj.get_root().set_feedback(obj.lastval & 1) #not (obj.lastval ^ 1)
+        root.set_feedback(obj.lastval & 1) #not (obj.lastval ^ 1)
     else:
-        obj.u16('bUnused')
+        obj.u16('bUnused') #old feedback?
         obj.u16('bDeviceAllocated')
 
+    if   version <= 76:
+        project_id = 0
+    else:
+        obj.u32('dwProjectID')
+        project_id = obj.lastval
+
+    # rest is skipped (not defined/padded), may be used for DATA alignment to sector size
     if version <= 26:
         gap_size = chunk_size - 0x1c
     elif version <= 76:
         gap_size = chunk_size - 0x10
     else:
-        obj.u32('dwProjectID')
         gap_size = chunk_size - 0x14
-
-        # Star Fox Zero (v112) has some odd behavior in the feedback flag. All .bnk except init.bnk set it, but
-        # no .bnk has feedback info. Presumably only init.bnk (first) flag's matters, but since we can't be sure
-        # that bank was loaded, we need some crude autodetection.
-        # Some test/remnant .bnk in SFZ use v88 and don't have the flag set, and no other 112 bnk exhibits this bug
-        # either (flag works as intended), so maybe it happened in some Wwise revision only.
-        if version == 112:
-            root = obj.get_root()
-            project_id = obj.lastval #not unique but seems unique enough for this case
-            is_be = root.is_be()
-            if project_id == 0x000004A0 and is_be:
-                obj.get_root().set_feedback(0)
-
-    # rest is skipped like this (not defined/padding),
-    # may be used for DATA alignment to sector size
     if gap_size > 0:
-        obj.gap('blank', gap_size)
+        obj.gap('padding', gap_size)
+
+
+    # * special detection for buggy banks
+    
+    # Star Fox Zero (v112) has some odd behavior in the feedback flag. All .bnk except init.bnk set it, but
+    # no .bnk has feedback info. Presumably only init.bnk (first) flag's matters, but since we can't be sure
+    # that bank was loaded, we need some crude autodetection.
+    # Some test/remnant .bnk in SFZ use v88 and don't have the flag set, and no other 112 bnk exhibits this bug
+    # either (flag works as intended), so maybe it happened in some Wwise revision only.
+    if version == 112:
+        is_be = root.is_be()
+        if project_id == 0x000004A0 and is_be: #id not unique but seems unique enough for this case
+            root.set_feedback(0)
+
+    # Army of Two: the 40th Day banks range from v034~045, though init.bnk and most files use 045.
+    # Most versions work ok, but *some* banks using v044 have one extra field in CAkRanseq like 045.
+    # (no apparent flag, even banks almost 100% exactly like others, ex. VO_INT_CHI_GUARD or
+    # gun_type_m249saw.bnk v44 vs gun_type_m249.bnk v45).
+    # No other game with v044 does this (ME2, AC2, DLPOut), and in theory Wwise only loads one
+    # version, so maybe init.bnk version is what matters or buggy banks/objects are rejected.
+    # We'll autodetect to treat as v045 and read the extra field to avoid throwing errors.
+    if version == 44:
+        is_be = root.is_be() #seen in X360 and PS3 (though the later has a few less bnk)
+        # since checks are a bit limited we need exact bank ids (Global_VO may be problematic though?)
+        if project_id == 0 and not root.has_feedback() and is_be and root.get_id() in wdefs.aot2_buggy_banks:
+            root.set_subversion(45)
+            pass
     return
 
 

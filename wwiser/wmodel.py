@@ -147,7 +147,7 @@ class NodeElement(object):
 
 # root node with special definitions (represents a bank)
 class NodeRoot(NodeElement):
-    __slots__ = ['__r', '__filename', '__path', '_version', '_id', '_feedback', '_names', '_strings']
+    __slots__ = ['__r', '__filename', '__path', '_version', '_id', '_feedback', '_subversion', '_names', '_strings']
 
     def __init__(self, r, version=0):
         super(NodeRoot, self).__init__(None, 'root')
@@ -157,6 +157,7 @@ class NodeRoot(NodeElement):
         self._version = version
 
         self._id = None
+        self._subversion = None
         self._feedback = False
         self._names = None
         self._strings = []
@@ -212,6 +213,12 @@ class NodeRoot(NodeElement):
 
     def set_id(self, id):
         self._id = id
+
+    def get_subversion(self):
+        return self._subversion
+
+    def set_subversion(self, subversion):
+        self._subversion = subversion
 
     def has_feedback(self):
         return self._feedback

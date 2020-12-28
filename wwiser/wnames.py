@@ -500,7 +500,7 @@ class Names(object):
         #pattern_2 = re.compile(r"^[\t]*([a-zA-Z_][a-zA-Z0-9_]*)[ ]*$")
 
         # catch and split non-useful (FNV) characters
-        pattern_s1 = re.compile(r'[\t\n\r .<>,;.:{}\[\]()\'"$&/=!\\/#@+\^`´¨?|]')
+        pattern_s1 = re.compile(r'[\t\n\r .<>,;.:{}\[\]()\'"$&/=!\\/#@+\^`´¨?|~]')
         #pattern_s2 = re.compile(r'[?|]')
 
         for line in infile:

@@ -33,6 +33,7 @@ class TxtpCache(object):
         self.write_delays = False
         self.silence = False
         self.tagsm3u = False
+        self.tagsm3u_limit = None
 
         self.x_noloops = False
         self.x_notxtp = False
@@ -98,6 +99,10 @@ class TxtpCache(object):
 
     def get_tag_names(self):
         return self._tag_names
+
+    def add_tag_names(self, shortname, longname):
+        self._tag_names[shortname] = longname
+        
 
     # paths for txtp
     def normalize_path(self, path):

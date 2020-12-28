@@ -176,11 +176,18 @@ class Txtp(object):
         longname = None
         if self.txtpcache.tagsm3u:
             longname = name
-            shortname = self._get_shortname() #todo should probably store after trimming
+            if not self.txtpcache.tagsm3u_limit:
+                shortname = self._get_shortname() #todo should probably store after trimming
+            else:
+                if len(longname) > self.txtpcache.tagsm3u_limit:
+                    cutname = longname[0:self.txtpcache.tagsm3u_limit] 
+                    shortname = "%s~%04i" % (cutname, self.txtpcache.created)
+                else:
+                    shortname = longname
             name = shortname
 
             shortname += ".txtp"
-            self.txtpcache._tag_names[shortname] = longname
+            self.txtpcache.add_tag_names(shortname, longname)
 
         name += ".txtp"
         logging.debug("txtp: saving '%s' (%s)", name, texthash)

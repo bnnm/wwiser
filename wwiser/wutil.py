@@ -1,4 +1,4 @@
-import os, logging, pkgutil
+import logging, pkgutil
 
 
 def setup_clean_logging():

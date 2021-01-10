@@ -1,5 +1,4 @@
-import logging, math, os, copy
-from . import wgamesync, wtxtp_util
+import logging, math, copy
 
 
 DEBUG_PRINT_TREE_PRE = False

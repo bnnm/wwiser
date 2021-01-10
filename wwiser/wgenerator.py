@@ -1,5 +1,5 @@
-import logging, os, pkgutil, itertools
-from . import wutil, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
+import logging, os
+from . import wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
 
 
 # Tries to write .txtp from a list of HIRC objects. Each object parser adds some part to final

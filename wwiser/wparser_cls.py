@@ -1,19 +1,19 @@
-from . import wparser
 from . import wmodel
+#from . import wparser
+wparser = None #needed for circular refs in python <3.7, see setup()
 
 
 #******************************************************************************
 # VTABLE HELPERS
 
-# some functions use callbacks/vtables due to inheritance, so we need to simulate
+# Some functions use callbacks/vtables due to inheritance, so we need to simulate
 # it with a container with callbacks to pass around
 #
 # Doesn't emulate the full-blown subclassing model, since decompiled code doesn't
 # either (virtual functions calls are more expensive) and it'd make harder to
 # follow/compare SDKs.
-
-#***
-#common class inheritance paths:
+#
+# Common class inheritance paths:
 
 # CAkAction
 #  CAkActionExcept : CAkAction
@@ -446,3 +446,21 @@ def CAkTimeModulator__Create(obj):
     #CAkTimeModulator::Create
     cls = AkClass(obj, CAkTimeModulator)
     return cls
+
+
+# #############################################################################
+# SETUP
+
+# this module was split from wparser so it references functions from it, and wparser in turn
+# calls functions here = circular reference. Python <3.7 doesn't seem to support "from x import y"
+# circular refs (raises ImportError), so just load module ref indirectly when starting the parser.
+def setup():
+    global wparser
+
+    # probably not needed since modules are singletons but just in case
+    if wparser:
+        return
+
+    # load local import and put in var (modules in python are first-class things too)
+    from . import wparser as wparser_ref
+    wparser = wparser_ref

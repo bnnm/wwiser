@@ -3339,6 +3339,7 @@ class Parser(object):
         r.seek(current)
 
         wdefs.setup(version)
+        wcls.setup()
         return version
 
     def parse_banks(self, filenames):

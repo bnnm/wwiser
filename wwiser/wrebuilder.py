@@ -557,6 +557,8 @@ class _NodeHelper(object):
                 nstategroups = nstatechunk.finds(name='AkStateGroupChunk')
                 for nstategroup in nstategroups:
                     nstateid = nstategroup.find1(name='ulStateInstanceID')
+                    if not nstateid: #possible to have groups without pStates (ex Xcom2's 820279197)
+                        continue
                     bank_id = nstateid.get_root().get_id()
                     tid = nstateid.value()
                     bstate = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)

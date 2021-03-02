@@ -1,6 +1,8 @@
 import logging, math, copy
 
 
+TXTP_SPACES = 1
+
 DEBUG_PRINT_TREE_PRE = False
 DEBUG_PRINT_TREE_POST = False
 DEBUG_PRINT_IGNORABLE = False
@@ -1447,7 +1449,7 @@ class TxtpPrinter(object):
         return out
 
     def _get_padding(self):
-        return ' ' * (self._depth - 1)
+        return ' ' * (self._depth - 1) * TXTP_SPACES
 
     # Some nodes are silenced via states, test if those are currently set.
     # This info isn't passed around so must find (possibly ignored) parent node that has it.

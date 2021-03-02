@@ -287,7 +287,6 @@ class GamesyncParams(object):
 # - ...
 # Typically only one variable is used though.
 
-
 # saves possible silence paths in a txtp
 class SilencePaths(object):
 
@@ -328,7 +327,8 @@ class SilencePaths(object):
         for values in self._elems.values():
             values.sort(key=lambda x: x[3] or x[1])
             elems.append(values)
-        elems.sort(key=lambda x: x[0][2] or x[0][1])
+        # order is value_name first then value (to avoid comparing str vs int), forcing Nones go last
+        elems.sort(key=lambda x: (x[0][2] or '~', x[0][1]))
 
         # combos of existing variables
         #items = itertools.product(*self._elems.values())

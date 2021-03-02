@@ -432,7 +432,14 @@ class Generator(object):
         files = list(tags.keys())
         files.sort()
 
+        # take first bank as base folder (like .txtp), not sure if current (wwiser's) would be beter
+        basepath = self._banks[0].get_root().get_path()
+
         outdir = self._txtpcache.outdir
+        if outdir:
+            outdir = os.path.join(basepath, outdir)
+            os.makedirs(outdir, exist_ok=True)
+
         outname = outdir + "!tags.m3u"
 
         with open(outname, 'w', newline="\r\n") as outfile:

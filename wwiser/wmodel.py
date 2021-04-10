@@ -380,26 +380,30 @@ class NodeObject(NodeElement):
                 value = r.f32()
             elif type == TYPE_D64:
                 value = r.d64()
+
             elif type == TYPE_STR:
                 if size > 255:
                     raise ParseError("unlikely string size %i" % (size), self)
                 else:
                     value = r.str(size)
+
             elif type == TYPE_GAP:
                 r.gap(size)
                 value = size
+
             elif type == TYPE_STZ:
                 # sorry...
-                string = ""
+                stz = ""
                 max = 0
                 while True:
-                    value = r.s8()
-                    if value == 0 or value < 0: #ASCII 128b only
+                    elem = r.s8()
+                    if elem == 0 or elem < 0: #ASCII 128b only
                         break
-                    string += chr(value)
+                    stz += chr(elem)
                     max += 1
-                    if max >= 256: #arbitary max
+                    if max > 255: #arbitary max
                         raise ValueError("long string")
+                value = stz
 
             elif type == TYPE_UNI:
                 # union of f32+u32 determined by Wwise subclass, do some simple guessing instead
@@ -408,6 +412,7 @@ class NodeObject(NodeElement):
                 if value > 0x10000000:
                     r.skip(-4)
                     value = r.f32()
+
             elif type == TYPE_VAR:
                 cur = r.u8()
                 value = (cur & 0x7F)

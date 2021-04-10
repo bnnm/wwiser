@@ -297,7 +297,8 @@ def CAkParameterNode__SetInitialFxParams(obj, cls):
     count = obj.lastval
 
     if count > 0:
-        obj.u8i('bitsFXBypass')
+        obj.U8x('bitsFXBypass')
+
         for elem in obj.list('pFXChunk', 'FXChunk', count):
             elem.u8i('uFXIndex')
             elem.tid('fxID') #.fnv(wdefs.fnv_sfx) #tid in 113=Doom16
@@ -565,7 +566,12 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
     #CAkParameterNodeBase::SetNodeBaseParams
     obj = obj.node('NodeBaseParams')
 
-    cls.CAkClass__SetInitialFxParams(obj, cls) #_vptr$CAkIndexable + 71
+    cls.CAkClass__SetInitialFxParams(obj, cls) #_vptr$CAkIndexable + 71 (v135<=), _vptr$IAkEffectSlotsOwner + 70
+    
+    if   cls.version <= 135:
+        pass
+    else:
+        cls.CAkClass__SetInitialMetadataParams(obj, cls) #_vptr$IAkEffectSlotsOwner + 71
 
     if   cls.version <= 88:
         pass
@@ -830,6 +836,38 @@ def CAkParameterNode__SetPositioningParams(obj, cls):
     CAkParameterNodeBase__SetPositioningParams(obj, cls)
     return
 
+#140>=
+def CAkParameterNode__SetInitialMetadataParams(obj, cls):
+    #CAkParameterNode::SetInitialMetadataParams
+
+    obj.U8x('bIsOverrideParentMetadata')
+    
+    obj.u8i('uNumFx')
+    count = obj.lastval
+
+    if count > 0:
+        for elem in obj.list('pFXChunk', 'FXChunk', count):
+            elem.u8i('uFXIndex')
+            elem.tid('fxID') #.fnv(wdefs.fnv_sfx)
+            elem.U8x('bIsShareSet')
+    return
+
+#140>=
+def CAkEffectSlots__SetInitialValues(obj, cls):
+    #CAkEffectSlots::SetInitialValues
+    
+    obj.u8i('uNumFx')
+    count = obj.lastval
+
+    if count > 0:
+        obj.U8x('bitsFXBypass') #bIsBypassed & 0x11 != 0
+
+        for elem in obj.list('pFXChunk', 'FXChunk', count):
+            elem.u8i('uFXIndex')
+            elem.tid('fxID') #.fnv(wdefs.fnv_sfx)
+            elem.U8x('bIsShareSet')
+            elem.U8x('_bIsRendered') #unused
+    return
 
 #******************************************************************************
 # HIRC: State
@@ -1455,6 +1493,20 @@ def CAkBankMgr__StdBankRead_CAkActorMixer_CAkParameterNodeBase_(obj):
 #******************************************************************************
 # HIRC: Audio Bus
 
+#140>=
+def CAkBus__SetInitialMetadataParams(obj, cls):
+    #CAkBus::SetInitialMetadataParams
+    
+    obj.u8i('uNumFx')
+    count = obj.lastval
+
+    if count > 0:
+        for elem in obj.list('pFXChunk', 'FXChunk', count):
+            elem.u8i('uFXIndex')
+            elem.tid('fxID') #.fnv(wdefs.fnv_sfx)
+            elem.U8x('bIsShareSet')
+    return
+
 #046>=
 def CAkBus__SetInitialFxParams(obj, cls):
     #CAkBus::SetInitialFxParams
@@ -1462,9 +1514,12 @@ def CAkBus__SetInitialFxParams(obj, cls):
 
     if cls.version <= 26:
         obj.u32('uNumFx')
-    else:
+        count = obj.lastval
+    elif cls.version <= 135:
         obj.u8i('uNumFx')
-    count = obj.lastval
+        count = obj.lastval
+    else:
+        count = 0
 
     if cls.version <= 48:
         read_fx = count > 0
@@ -1477,7 +1532,7 @@ def CAkBus__SetInitialFxParams(obj, cls):
         if cls.version <= 26:
             pass
         else:
-            obj.u8i('bitsFXBypass') #bIsBypassed & 0x11 != 0
+            obj.U8x('bitsFXBypass') #bIsBypassed & 0x11 != 0
 
         for elem in obj.list('pFXChunk', 'FXChunk', count):
             if   cls.version <= 26:
@@ -1512,6 +1567,10 @@ def CAkBus__SetInitialFxParams(obj, cls):
             else:
                 pass
 
+    if cls.version <= 135:
+        pass
+    else:
+        CAkEffectSlots__SetInitialValues(obj, cls) #like the above fx reading though
 
     if cls.version <= 88:
         pass
@@ -1535,7 +1594,7 @@ def CAkBus__SetInitialParams(obj, cls):
         pass
     else:
         CAkParameterNodeBase__SetPositioningParams(obj, cls)
-        cls.CAkClass__SetAuxParams(obj, cls) #_vptr$CAkIndexable + 72
+        cls.CAkClass__SetAuxParams(obj, cls) #_vptr$CAkIndexable + 72 (v135<=), _vptr$IAkEffectSlotsOwner + 72
 
     if   cls.version <= 53:
         obj.f32('VolumeMain')
@@ -1669,7 +1728,7 @@ def CAkBus__SetInitialValues(obj, cls):
         if obj.lastval == 0:
             obj.tid('idDeviceShareset')
 
-    cls.CAkClass__SetInitialParams(obj, cls)
+    cls.CAkClass__SetInitialParams(obj, cls) #_vptr$CAkIndexable + 17 (v135<=), _vptr$IAkEffectSlotsOwner + 17
 
     if cls.version <= 52:
         obj.tid('ulStateGroupID').fnv(wdefs.fnv_var)
@@ -1701,12 +1760,17 @@ def CAkBus__SetInitialValues(obj, cls):
         else:
             elem.U8x('TargetProp').fmt(wdefs.AkPropID)
 
-    cls.CAkClass__SetInitialFxParams(obj, cls) #_vptr$CAkIndexable + 71
+    cls.CAkClass__SetInitialFxParams(obj, cls) #_vptr$CAkIndexable + 71 (v135<=), _vptr$IAkEffectSlotsOwner + 70
 
     if   cls.version <= 88:
         pass
     else:
         obj.U8x('bOverrideAttachmentParams')
+
+    if   cls.version <= 135:
+        pass
+    else:
+        cls.CAkClass__SetInitialMetadataParams(obj, cls) #_vptr$IAkEffectSlotsOwner + 71
 
     SetInitialRTPC_CAkBus_(obj, cls)
 
@@ -1868,12 +1932,16 @@ def CAkMusicSegment__SetInitialValues(obj, cls):
             elem.tid('id')
         elem.d64('fPosition')
 
-        if cls.version <= 62:
+        if   cls.version <= 62:
             pass
-        else:
+        elif cls.version <= 135:
+            #AK::ReadBankStringUtf8
             elem.u32('uStringSize')
             if elem.lastval > 0:
                 elem.str('pMarkerName', elem.lastval) #pszName
+        else:
+            #AK::ReadBankStringUtf8
+            elem.stz('pMarkerName') #pszName
     return
 
 #-
@@ -2385,6 +2453,11 @@ def CAkAttenuation__SetInitialValues(obj, cls):
     #CAkAttenuation::SetInitialValues
     obj = obj.node('AttenuationInitialValues')
 
+    if   cls.version <= 135:
+        pass
+    else:
+        obj.U8x('bIsHeightSpreadEnabled')
+
     obj.U8x('bIsConeEnabled')
     if (obj.lastval & 1):
         elem = obj.node('ConeParams')
@@ -2705,6 +2778,15 @@ def CAkBankMgr__StdBankRead_CAkEnvelopeModulator_CAkModulator_(obj):
 #******************************************************************************
 # HIRC: Audio Device
 
+#- (140>=)
+def CAkAudioDevice__SetInitialValues(obj, cls):
+    #CAkAudioDevice::SetInitialValues
+    obj = obj.node('AudioDeviceInitialValues')
+
+    CAkFxBase__SetInitialValues(obj, cls)
+    CAkEffectSlots__SetInitialValues(obj, cls)
+    return
+
 #- (118>=)
 def CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_(obj):
     #CAkBankMgr::StdBankRead<CAkAudioDevice,CAkAudioDevice>
@@ -2713,7 +2795,10 @@ def CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_(obj):
 
     obj.sid('ulID') #fnv?
 
-    CAkFxBase__SetInitialValues(obj, cls)
+    if    cls.version <= 135:
+        CAkFxBase__SetInitialValues(obj, cls)
+    else:
+        CAkAudioDevice__SetInitialValues(obj, cls)
     return
 
 
@@ -2900,7 +2985,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
     # either (flag works as intended), so maybe it happened in some Wwise revision only.
     if version == 112:
         is_be = root.is_be()
-        if project_id == 0x000004A0 and is_be: #id not unique but seems unique enough for this case
+        if project_id in wdefs.sfz_buggy_project_ids and is_be: #id not unique but seems unique enough for this case
             root.set_feedback(0)
 
     # Army of Two: the 40th Day banks range from v034~045, though init.bnk and most files use 045.
@@ -3237,9 +3322,14 @@ def CAkBankMgr__LoadMediaIndex(obj):
 def CAkBankMgr__ProcessCustomPlatformChunk(obj):
     #CAkBankMgr::ProcessCustomPlatformChunk
     obj.set_name('CustomPlatformChunk')
+    version = get_version(obj)
 
-    obj.u32('uStringSize')
-    obj.str('pCustomPlatformName', obj.lastval)
+    if version <= 135:
+        obj.u32('uStringSize')
+        obj.str('pCustomPlatformName', obj.lastval)
+    else:
+        obj.stz('pCustomPlatformName')
+
     return
 
 
@@ -3250,12 +3340,18 @@ def CAkBankMgr__ProcessCustomPlatformChunk(obj):
 def CAkBankMgr__ProcessPluginChunk(obj):
     #CAkBankMgr::ProcessPluginChunk
     obj.set_name('PluginChunk')
+    version = get_version(obj)
 
     obj.u32('count')
     for elem in obj.list('pAKPluginList', 'IAkPlugin', obj.lastval):
         parse_plugin(elem)
-        elem.u32('uStringSize')
-        elem.str('pDLLName', elem.lastval)
+        if version <= 135:
+            #AK::ReadBankStringUtf8
+            elem.u32('uStringSize')
+            elem.str('pDLLName', elem.lastval)
+        else:
+            #AK::ReadBankStringUtf8
+            elem.stz('pDLLName') #can be null
     return
 
 

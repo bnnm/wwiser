@@ -144,9 +144,10 @@ class AkClass:
     def __init__(self, obj, name):
         self.version = wparser.get_version(obj)
         self.name = name
-        self.CAkClass__SetInitialParams = self.DoNothing # _vptr$CAkIndexable + 70
-        self.CAkClass__SetInitialFxParams = self.DoNothing # _vptr$CAkIndexable + 71
-        self.CAkClass__SetAuxParams = self.DoNothing # _vptr$CAkIndexable + 72
+        self.CAkClass__SetInitialParams = self.DoNothing # _vptr$CAkIndexable + 70, 
+        self.CAkClass__SetInitialFxParams = self.DoNothing # _vptr$CAkIndexable + 71 (v135<=), _vptr$IAkEffectSlotsOwner + 70
+        self.CAkClass__SetInitialMetadataParams = self.DoNothing #_vptr$IAkEffectSlotsOwner + 71
+        self.CAkClass__SetAuxParams = self.DoNothing # _vptr$CAkIndexable + 72 (v135<=), _vptr$IAkEffectSlotsOwner + 72
         self.CAkClass__SetAdvSettingsParams = self.DoNothing # _vptr$CAkIndexable + 73
         self.CAkClass__ReadStateChunk = self.DoNothing # _vptr$CAkStateAware + 14
         self.CAkClass__SetActionParams = self.DoNothing #_vptr$CAkIndexable + 9
@@ -176,6 +177,7 @@ class AkClass:
         self.CAkClass__SetInitialParams = wparser.CAkParameterNode__SetInitialParams
         self.CAkClass__SetInitialFxParams = wparser.CAkParameterNode__SetInitialFxParams
         self.CAkClass__SetAdvSettingsParams = wparser.CAkParameterNode__SetAdvSettingsParams
+        self.CAkClass__SetInitialMetadataParams = wparser.CAkParameterNode__SetInitialMetadataParams
         #120<=
         #self.CAkClass__SetAuxParams = wparser.CAkParameterNode__SetAuxParams
 
@@ -183,6 +185,7 @@ class AkClass:
         self.CAkParameterNodeBase()
         self.CAkClass__SetInitialParams = wparser.CAkBus__SetInitialParams
         self.CAkClass__SetInitialFxParams = wparser.CAkBus__SetInitialFxParams
+        self.CAkClass__SetInitialMetadataParams = wparser.CAkBus__SetInitialMetadataParams
 
     # ##########
 

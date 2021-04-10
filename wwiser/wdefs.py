@@ -49,9 +49,15 @@ bank_versions = [
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
+    140, #0x8c Wwise 2021.1     (none known)
+    
 ]
 
+
 # for extra detection
+sfz_buggy_project_ids = {
+  0x000004A0
+}
 aot2_buggy_banks = {
     #base
     3915989931, #Amb_Spot_Sparks
@@ -167,7 +173,7 @@ AkBank__AKBKHircType_125 = wfmt.FormatterLUT({
   0x16: "Envelope",
   0x17: "AudioDevice",
 })
-#128>= 135<=
+#128>=
 AkBank__AKBKHircType_128 = wfmt.FormatterLUT({
   0x01: "State",
   0x02: "Sound",
@@ -194,7 +200,7 @@ AkBank__AKBKHircType_128 = wfmt.FormatterLUT({
 })
 AkBank__AKBKHircType = None
 
-#048>= 135<=
+#048>=
 AkPluginType = wfmt.FormatterLUT({
   0x00: "None",
   0x01: "Codec",
@@ -205,6 +211,7 @@ AkPluginType = wfmt.FormatterLUT({
   0x06: "Mixer",
   0x07: "Sink",
   0x08: "GlobalExtension", #132>=
+  0x09: "Metadata", #140>=
   #Mask=0x0F
   #internal classes like Sound/Bus/DialogueEvent/etc also get plugin IDs, with type 0x10
 })
@@ -383,7 +390,7 @@ AkCurveScaling_072 = wfmt.FormatterLUT({
 })
 AkCurveScaling = None
 
-#112>= 135<=
+#112>=
 AkRtpcType = wfmt.FormatterLUT({
   0x0: "GameParameter",
   0x1: "MIDIParameter",
@@ -391,7 +398,7 @@ AkRtpcType = wfmt.FormatterLUT({
   #0x8: "MaxNum",
 })
 
-#048>= 135<=
+#048>=
 AkCurveInterpolation = wfmt.FormatterLUT({
   0x0: "Log3",
   0x1: "Sine",
@@ -405,7 +412,7 @@ AkCurveInterpolation = wfmt.FormatterLUT({
   0x9: "Constant",
 })
 
-#112>= 135<=
+#112>=
 AkTransitionRampingType = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "SlewRate",
@@ -636,7 +643,7 @@ AkPropID_125 = wfmt.FormatterLUT({
 
   0xFF: "Unknown", #seen in DMC5, value 1.0
 })
-# 128>= 135<=
+# 128>=
 AkPropID_128 = wfmt.FormatterLUT({
   0x00: "Volume",
   0x01: "LFE",
@@ -709,6 +716,8 @@ AkPropID_128 = wfmt.FormatterLUT({
   0x46: "AttenuationID", #132>=
   0x47: "PositioningTypeBlend", #132>=
   0x48: "ReflectionBusVolume", #135>=
+  0x49: "PAN_UD", #140>=
+  #AkPropID_NUM = max
 })
 AkPropID = None
 
@@ -719,7 +728,7 @@ AkBank__AKBKSourceType_088 = wfmt.FormatterLUT({
     0x02: "PrefetchStreaming",
       -1: "NotInitialized",
 })
-#112>= 135<=
+#112>=
 AkBank__AKBKSourceType_112 = wfmt.FormatterLUT({
     0x00: "Data/bnk",
     0x01: "PrefetchStreaming",
@@ -824,7 +833,7 @@ AkActionType_056 = wfmt.FormatterLUT({
   0x14010: "ResetGameParameter", #~056>=
   0x14011: "ResetGameParameter_O", #~056>=
 }, zeropad=5)
-#062>= 135<=
+#062>=
 AkActionType_062 = wfmt.FormatterLUT({
   0x0000: "None",
   0x1204: "SetState",
@@ -939,7 +948,7 @@ AkMusicTrackRanSeqType = wfmt.FormatterLUT({
   0x1: "Random",
   0x2: "Sequence",
 })
-#112>= 135<=
+#112>=
 AkMusicTrackType = wfmt.FormatterLUT({
   0x0: "Normal",
   0x1: "Random",
@@ -968,29 +977,30 @@ AkBuiltInParam_128 = wfmt.FormatterLUT({
   0x6: "Occlusion",
   0x7: "ListenerCone",
   0x8: "Diffraction",
-  #0x9: "Max",
+  0x9: "TransmissionLoss",
+  #0xA: "Max",
 })
 AkBuiltInParam = None
 
-#046>= 135<=
+#046>=
 AkDecisionTree__Mode = wfmt.FormatterLUT({
   0x0: "BestMatch",
   0x1: "Weighted",
 })
 
-#046>= 135<=
+#046>=
 AkGroupType = wfmt.FormatterLUT({
   0x0: "Switch",
   0x1: "State",
 })
 
-#046>= 135<=
+#046>=
 AkOnSwitchMode = wfmt.FormatterLUT({
   0x0: "PlayToEnd",
   0x1: "Stop",
 })
 
-#046>= 135<=
+#046>=
 AkSyncType = wfmt.FormatterLUT({
   0x0: "Immediate",
   0x1: "NextGrid",
@@ -1026,7 +1036,7 @@ AkClipAutomationType_088 = wfmt.FormatterLUT({
   0x2: "FadeIn",
   0x3: "FadeOut",
 })
-#112~~ 135<=
+#112~~
 AkClipAutomationType_112 = wfmt.FormatterLUT({
   0x0: "Volume",
   0x1: "LPF",
@@ -1036,7 +1046,7 @@ AkClipAutomationType_112 = wfmt.FormatterLUT({
 })
 AkClipAutomationType = None
 
-#046>= 135<=
+#046>=
 AkPathMode = wfmt.FormatterLUT({
   0x0: "StepSequence",
   0x1: "StepRandom",
@@ -1053,7 +1063,7 @@ AkRtpcAccum_118 = wfmt.FormatterLUT({
   0x2: "Multiply",
   #0x8: "MaxNum",
 })
-#120>= 135<=
+#120>=
 AkRtpcAccum_120 = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "Exclusive",
@@ -1064,49 +1074,51 @@ AkRtpcAccum_120 = wfmt.FormatterLUT({
 })
 AkRtpcAccum = None
 
-#046>= 135<=
+#046>=
 AkValueMeaning = wfmt.FormatterLUT({
   0x0: "Default",
   0x1: "Independent",
   0x2: "Offset",
 })
 
-#132>= 135<=
+#132>=
 Ak3DPositionType = wfmt.FormatterLUT({
   0x0: "Emitter",
   0x1: "EmitterWithAutomation",
   0x2: "ListenerWithAutomation",
 })
 
-#128~~ 135<=
+#128~~
 Ak3DSpatializationMode = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "PositionOnly",
   0x2: "PositionAndOrientation",
 })
 
-#046>= 135<=
+#046>=
 #CAkEnvironmentsMgr::eCurveXType (indirect enum)
 eCurveXType = wfmt.FormatterLUT({
   0x0: "CurveObs",
   0x1: "CurveOcc",
+  #0x2: "MAX_CURVE_X_TYPES",
 })
 
-#046>= 135<=
+#046>=
 #CAkEnvironmentsMgr::eCurveYType (indirect enum)
 eCurveYType = wfmt.FormatterLUT({
   0x0: "CurveVol",
   0x1: "CurveLPF",
   0x2: "CurveHPF", #112>=
+  #0x3: "MAX_CURVE_Y_TYPES",
 })
 
-#046>= 135<=
+#046>=
 AKBKStringType = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "Bank",
 })
 
-#046>= 135<=
+#046>=
 RSType = wfmt.FormatterLUT({
   0x0: "ContinuousSequence",
   0x1: "StepSequence",
@@ -1116,7 +1128,7 @@ RSType = wfmt.FormatterLUT({
    -1: "None", #implicit
 })
 
-#046>= 135<=
+#046>=
 AkTransitionMode = wfmt.FormatterLUT({
   0x0: "Disabled",
   0x1: "CrossFadeAmp",
@@ -1126,13 +1138,13 @@ AkTransitionMode = wfmt.FormatterLUT({
   0x5: "TriggerRate",
 })
 
-#046>= 135<=
+#046>=
 AkRandomMode = wfmt.FormatterLUT({
   0x0: "Normal",
   0x1: "Shuffle",
 })
 
-#046>= 135<=
+#046>=
 AkContainerMode = wfmt.FormatterLUT({
   0x0: "Random",
   0x1: "Sequence",
@@ -1482,13 +1494,13 @@ AkRTPC_ParameterID_134 = wfmt.FormatterLUT({
   0x37: "GameAuxSendLPF",
   0x38: "GameAuxSendHPF",
   #~132
-  0x3C: "Unknown?", #Spyro Ignited Trilogy (Switch)
-  0x3D: "Unknown?", #same
-  0x3E: "Unknown?", #same
-  0x40: "Unknown?", #Bayonetta 2 (Switch), near volumes
-  0x41: "Unknown?", #same
+  0x3C: "Unknown/Custom?", #Spyro Ignited Trilogy (Switch)
+  0x3D: "Unknown/Custom?", #same
+  0x3E: "Unknown/Custom?", #same
+  0x40: "Unknown/Custom?", #Bayonetta 2 (Switch), near volumes
+  0x41: "Unknown/Custom?", #same
 })
-#135<=
+#135>=
 AkRTPC_ParameterID_135 = wfmt.FormatterLUT({
   #ADDITIVE_PARAMS_START
   0x0: "Volume",
@@ -1550,14 +1562,17 @@ AkRTPC_ParameterID_135 = wfmt.FormatterLUT({
   0x37: "UserAuxSendHPF3",
   0x38: "GameAuxSendLPF",
   0x39: "GameAuxSendHPF",
+  0x3A: "Position_PAN_Z_2D",
+  0x3B: "BypassAllMetadata",
+  #0x3C: "MaxNumRTPC,
 
-  0x3D: "Unknown?", #AC Valhalla
-  0x3E: "Unknown?", #AC Valhalla (found near "DB" scaling, some volume?)
-  0x3F: "Unknown?", #AC Valhalla
+  0x3D: "Unknown/Custom?", #AC Valhalla
+  0x3E: "Unknown/Custom?", #AC Valhalla (found near "DB" scaling, some volume?)
+  0x3F: "Unknown/Custom?", #AC Valhalla
 })
 AkRTPC_ParameterID = None
 
-#118>= 135<=
+#118>=
 AkRTPC_ModulatorParamID = wfmt.FormatterLUT({
   #ModulatorRTPCIDStart
   0x0: "ModulatorLfoDepth",
@@ -1576,9 +1591,10 @@ AkRTPC_ModulatorParamID = wfmt.FormatterLUT({
   0xD: "ModulatorEnvelopeReleaseTime",
   0xE: "ModulatorTimePlaybackSpeed", #132~~
   0xF: "ModulatorTimeInitialDelay", #132~~
+  #0x10: "MaxNumModulatorRTPC",
 })
 
-#112>= 135<=
+#112>=
 AkModulatorPropID = wfmt.FormatterLUT({
   0x0: "Scope",
   0x1: "Envelope_StopPlayback",
@@ -1600,9 +1616,10 @@ AkModulatorPropID = wfmt.FormatterLUT({
   0x11: "Time_Loops", #132~~
   0x12: "Time_PlaybackRate", #132~~
   0x13: "Time_InitialDelay", #132~~
+  #0x14: "NUM",
 })
 
-#065>> 135<=
+#065>>
 AkJumpToSelType = wfmt.FormatterLUT({
   0x0: "StartOfPlaylist",
   0x1: "SpecificItem",
@@ -1610,7 +1627,7 @@ AkJumpToSelType = wfmt.FormatterLUT({
   0x3: "NextSegment",
 })
 
-#046>= 135<=
+#046>=
 AkEntryType = wfmt.FormatterLUT({
    0x0: "EntryMarker",
    0x1: "SameTime",
@@ -1627,10 +1644,11 @@ AkPositioningType = wfmt.FormatterLUT({
   0x3: "3DGameDef",
 })
 
-#132>= 135<=
+#132>=
 AkSpeakerPanningType = wfmt.FormatterLUT({
   0x0: "DirectSpeakerAssignment",
   0x1: "BalanceFadeHeight",
+  0x2: "SteeringPanner", #140>=
 })
 
 #120>=
@@ -1638,6 +1656,9 @@ AkChannelConfigType = wfmt.FormatterLUT({
   0x0: "Anonymous",
   0x1: "Standard",
   0x2: "Ambisonic",
+  0x3: "Objects", #140>=
+  0xE: "UseDeviceMain", #140>=
+  0xF: "UseDevicePassthrough", #140>=
 })
 
 #maybe needed? not directly used in code AkSoundEngine, maybe other for internal engine things, some repeats
@@ -1777,7 +1798,7 @@ CAkFlangerFX__Waveform = wfmt.FormatterLUT({ #DSP::LFO::Waveform
   0x3: "SAW_UP",
   0x4: "SAW_DOWN",
   0x5: "RND",
-  0x6: "NUM",
+  #0x6: "NUM",
 })
 
 CAkFlangerFX__PhaseMode = wfmt.FormatterLUT({ #DSP::LFO::MultiChannel::PhaseMode

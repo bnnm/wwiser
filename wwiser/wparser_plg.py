@@ -85,7 +85,10 @@ def CAkDelayFXParams__SetParamsBlock(obj, size):
     obj.f32('RTPC.fWetDryMix')
     obj.f32('RTPC.fOutputLevel') #db
     obj.U8x('RTPC.bFeedbackEnabled')
-    obj.U8x('NonRTPC.bProcessLFE')
+    if   size == 0x11: #026<=
+        pass
+    elif size == 0x12:
+        obj.U8x('NonRTPC.bProcessLFE')
 
     return
 

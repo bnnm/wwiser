@@ -189,7 +189,10 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
 
     if   cls.version <= 26:
         #todo source + ? may appear or not depending on some other field
-        pass #elem.U32('unknown?')
+        if cls.version <= 14:
+            pass
+        else:
+            elem.U32('unknown') #0
 
     elif cls.version <= 88:
         elem.tid('uFileID') #wem or bnk
@@ -297,16 +300,30 @@ def CAkParameterNode__SetInitialFxParams(obj, cls):
     count = obj.lastval
 
     if count > 0:
-        obj.U8x('bitsFXBypass')
+        if   cls.version <= 26:
+            pass
+        else:
+            obj.U8x('bitsFXBypass')
 
         for elem in obj.list('pFXChunk', 'FXChunk', count):
-            elem.u8i('uFXIndex')
+            if   cls.version <= 26:
+                pass
+            else:
+                elem.u8i('uFXIndex')
+
             elem.tid('fxID') #.fnv(wdefs.fnv_sfx) #tid in 113=Doom16
 
-            if   cls.version <= 48:
+            if   cls.version <= 26:
+                elem.U8x('unknown')
+                elem.U8x('unknown')
+                elem.U32('ulSize')
+                elem.gap('pDataBloc', elem.lastval)
+
+            elif cls.version <= 48:
                 elem.U8x('bIsRendered')
                 elem.U32('ulPresetSize')
                 elem.gap('pDataBloc', elem.lastval)
+
             else:
                 elem.U8x('bIsShareSet')
                 elem.U8x('bIsRendered')
@@ -1098,7 +1115,10 @@ def CAkActionBypassFX__SetActionParams(obj, cls):
     obj = obj.node('BypassFXActionParams')
 
     obj.U8x('bIsBypass')
-    obj.U8x('uTargetMask')
+    if   cls.version <= 26:
+        pass
+    else:
+        obj.U8x('uTargetMask')
 
     CAkActionExcept__SetExceptParams(obj, cls)
     return
@@ -1512,7 +1532,7 @@ def CAkBus__SetInitialFxParams(obj, cls):
     #CAkBus::SetInitialFxParams
     obj = obj.node('BusInitialFxParams')
 
-    if cls.version <= 26:
+    if   cls.version <= 26:
         obj.u32('uNumFx')
         count = obj.lastval
     elif cls.version <= 135:
@@ -1529,7 +1549,7 @@ def CAkBus__SetInitialFxParams(obj, cls):
         read_fx = count > 0
 
     if read_fx:
-        if cls.version <= 26:
+        if   cls.version <= 26:
             pass
         else:
             obj.U8x('bitsFXBypass') #bIsBypassed & 0x11 != 0

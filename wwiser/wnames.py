@@ -17,6 +17,8 @@ from . import wfnv
 #
 # IDs may also have an "object path" (logical) or "path" (physical), that are never a HASHNAMEs,
 # but give extra hints.
+#
+# Companion files are created by the editor depending on the "project settings" options.
 #******************************************************************************
 
 class Names(object):
@@ -197,9 +199,9 @@ class Names(object):
 
         return row
 
-    # *************************************
+    # *************************************************************************
 
-    def parse_files(self, banks, filenames, xml=None, txt=None, h=None, lst=None, db=None):
+    def parse_files(self, banks, filenames, xml=None, txt=None, h=None, lst=None, db=None, json=None):
         if not filenames:
             return
         logging.info("names: loading names")
@@ -216,7 +218,10 @@ class Names(object):
 
             # from more to less common/useful
             self.parse_xml(xml)
-            self.parse_txt(txt)
+            self.parse_xml_bnk(xml)
+            self.parse_txt_bnk(txt)
+            self.parse_json(json)
+            self.parse_json_bnk(json)
 
         # banks may store some extra hashname strings (rarely)
         for bank in banks:
@@ -277,7 +282,8 @@ class Names(object):
         self._loaded_banknames[filename] = True
 
 
-    #Wwise_IDs.h
+    # Wwise_IDs.h ('header file')
+    #
     # C++ namespaces with callable constants, as "NAME = ID". Possible namespaces (all inside from "AK"):
     # - EVENTS > (NAME) = (id)
     # - DIALOGUE_EVENTS > (NAME) = (names)
@@ -321,7 +327,8 @@ class Names(object):
                 self._add_name(id, name)
 
 
-    #(bankname).txt
+    # (bankname).txt ('bank content TXT')
+    #
     # CSV-like format, with section headers and section data (without spaces)
     # (Section name)\t  ID\t    Name\t  (extra fields and \t depending on section)
     # \t  (id)\t    (name)\t    (...)
@@ -338,9 +345,9 @@ class Names(object):
     #
     # Encoding on Windows is cp-1252 (has 0xA9=copyright), maybe Linux/Mac would use
     # UTF-8, but those symbols seem only used in comments so shouldn't matter too much
-    # (other than Python throwing exceptions on unknown chars).
-    #
-    def parse_txt(self, filename=None):
+    # (other than Python throwing exceptions on unknown chars). Wwise lets you choose
+    # between "ANSI" and "Unicode".
+    def parse_txt_bnk(self, filename=None):
         if not filename:
             filename = os.path.splitext(self._bankname)[0] + '.txt'
         self._parse_base(filename, self._parse_txt, reverse_encoding=True)
@@ -396,7 +403,9 @@ class Names(object):
         return info and len(info) > 2 and info[1] == ':' and info[2] == '\\'
 
 
-    #SoundbanksInfo.xml
+    # SoundbanksInfo.xml ('XML metadata')
+    # (bankname).xml
+    #
     # An XML with info about bank objects. Main targets are:
     # - <(object) Id="(id)" Name="(name)" ...
     # - <(object) Id="(id)" ...>\n ...  <ShortName>(name)</ShortName> <Path>(path)</Path>...
@@ -405,16 +414,24 @@ class Names(object):
     # .wem with same ShortName but different Paths) and can be a hashname. Other attrs include
     # ObjectPath (not too useful, see .txt info). Some tags are just IDs
     # links without name though.
+    #
     # The XML can be big (+20MB) and since we don't need all details and just id/names it can be
     # parsed as simple text to increase performance.
+    # 
+    # Devs may generate one .xml per bnk instead but this is much less common
     def parse_xml(self, filename=None):
         if not filename:
             filename = self._make_filepath('SoundbanksInfo.xml')
         self._parse_base(filename, self._parse_xml)
 
+    def parse_xml_bnk(self, filename=None):
+        if not filename:
+            filename = os.path.splitext(self._bankname)[0] + '.xml'
+        self._parse_base(filename, self._parse_xml)
+
     def _parse_xml(self, infile):
         #catch: "	<Thing Id="12345" Name="Play_Thing" ObjectPath="\Default Work Unit\Play_Thing">"
-        pattern_in = re.compile(r"^.*<.+ Id=[\"]([0-9]+)[\"] .*Name=[\"]([a-zA-Z0-9_]+)[\"](.* ObjectPath=[\"](.+)[\"])?.+")
+        pattern_in = re.compile(r"^.*<.+ Id=[\"]([0-9]+)[\"] .*Name=[\"]([a-zA-Z0-9_]+)[\"](.* ObjectPath=[\"](.+?)[\"])?.+")
         #catch: "	<Thing Id="12345" Language="SFX">"
         #       "		<ShortName>Thing-Stuff.wem</ShortName>"
         pattern_id = re.compile(r"^.*<.+ Id=[\"]([0-9]+)[\"] .+")
@@ -472,7 +489,71 @@ class Names(object):
             self._add_name(id, name, objpath=objpath, path=path)
 
 
-    #wwnames.txt
+    # wwnames.json ('JSON metadata')
+    # (bankname).json
+    #
+    # A json equivalent to SoundbanksInfo.xml and (bankname).txt, added in ~2020, format roughly being:
+    # "(type)": [
+    #    { id: ..., field: ... }
+    # ],
+    # "(type)": [
+    # ....
+    #
+    # Like other files, to avoid loading the (often massive) .json and handling schema
+    # changes, just find an "id" then get all possible fields until next "id".
+    def parse_json(self, filename=None):
+        if not filename:
+            filename = self._make_filepath('SoundbanksInfo.json')
+        self._parse_base(filename, self._parse_json)
+
+    def parse_json_bnk(self, filename=None):
+        if not filename:
+            filename = os.path.splitext(self._bankname)[0] + '.json'
+        self._parse_base(filename, self._parse_json)
+
+    def _parse_json(self, infile):
+        #catch: '	"Id": "12345" '
+        pattern_id = re.compile(r"^[ \t]+[\"]Id[\"]: [\"](.+?)[\"][, \t]*")
+        #catch: '	"(field)": "(value)" '
+        pattern_fv = re.compile(r"^[ \t]+[\"](.+)[\"]: [\"](.+?)[\"][, \t]*")
+
+        id = name = objpath = path = None
+        for line in infile:
+            # try id (may change multiple times)
+            match = pattern_id.match(line)
+            if match:
+                # prev id + name still hanging around
+                if id and name:
+                    #print("add", id, name, objpath, path)
+                    self._add_name(id, name, objpath=objpath, path=path)
+
+                id = name = objpath = path = None
+                id, = match.groups()
+                continue
+
+            # If id was found (in the above match or a previous one) try parts
+            # This assumes an id is followed by names, could get fooled in some cases.
+            if id:
+                match = pattern_fv.match(line)
+                if match:
+                    field, value = match.groups()
+                    if   field == 'Name':
+                        name = value
+                    elif field == 'ShortName': #treated as name, will be identified as guidname when added
+                        name = value
+                    elif field == 'ObjectPath':
+                        objpath = value
+                    elif field == 'Path':
+                        path = value
+                    continue
+
+        # last id + name still hanging around
+        if id and name:
+            self._add_name(id, name, objpath=objpath, path=path)
+
+
+    # wwnames.txt
+    #
     # An artificial list of names, with optionally an ID and descriptions, in various forms
     # - "(name) - (id)"
     # - "(name) = (id)"
@@ -611,8 +692,8 @@ class Names(object):
         self._add_name(None, elem, source=NameRow.NAME_SOURCE_EXTRA)
 
 
-
-    #wwnames.db3
+    # wwnames.db3
+    #
     # An artificial SQLite DB of names. Not parsed, just prepared to be read on get_name
     #
     # Since a parser may load banks from multiple locations (base, langs, etc) other companion files

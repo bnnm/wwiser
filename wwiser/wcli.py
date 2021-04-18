@@ -41,9 +41,6 @@ class Cli(object):
         parser.add_argument('-vp', '--viewer-port',     help="Set the viewer port", default=wview.DEFAULT_PORT)
         parser.add_argument('-iv', '--ignore-version',  help="Ignore bank version check", action='store_true')
         # companion file options
-        parser.add_argument('-nx', '--names-xml',           metavar='XML_NAME', help="Set SoundbanksInfo.xml companion file (default: auto)")
-        parser.add_argument('-nt', '--names-txt',           metavar='TXT_NAME', help="Set (bankname).txt companion file (default: auto)")
-        parser.add_argument('-nh', '--names-h',             metavar='H_NAME',   help="Set Wwise_IDs.h companion file (default: auto)")
         parser.add_argument('-nl', '--names-lst',           metavar='LST_NAME', help="Set wwnames.txt companion file (default: auto)")
         parser.add_argument('-nd', '--names-db',            metavar='DB_NAME',  help="Set wwnames.db3 companion file (default: auto)")
         # list options
@@ -146,8 +143,7 @@ class Cli(object):
 
         # load names
         names = wnames.Names()
-        names.parse_files(banks, parser.get_filenames(),
-                xml=args.names_xml, txt=args.names_txt, h=args.names_h, lst=args.names_lst, db=args.names_db)
+        names.parse_files(banks, parser.get_filenames(), lst=args.names_lst, db=args.names_db)
         parser.set_names(names)
 
         # dump files

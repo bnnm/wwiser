@@ -33,6 +33,7 @@ class TxtpCache(object):
         self.write_delays = False
         self.silence = False
         self.tagsm3u = False
+        self.tagsm3u_add = False
         self.tagsm3u_limit = None
 
         self.x_noloops = False

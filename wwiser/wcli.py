@@ -75,7 +75,8 @@ class Cli(object):
         parser.add_argument('-gwd','--txtp-write-delays',   help="Don't skip initial delay.\(some .txtp will start with some delay)", action='store_true')
         parser.add_argument('-gs', '--txtp-silence',        help="Silence by default parts that crossfade", action='store_true')
         parser.add_argument('-gt', '--txtp-tagsm3u',        help="Use shorter .txtp names and put full names in !tags.m3u", action='store_true')
-        parser.add_argument('-gtl', '--txtp-tagsm3u-limit', help="Use shorter names + m3u by limiting original names to N chars", type=int)
+        parser.add_argument('-gta','--txtp-tagsm3u-add',   help="Add to existing !tags.m3u instead of overwritting", action='store_true')
+        parser.add_argument('-gtl','--txtp-tagsm3u-limit', help="Use shorter names + m3u by limiting original names to N chars", type=int)
 
         parser.add_argument('-gxnl','--txtp-x-noloops',     help="Extra: don't loop sounds", action='store_true')
         parser.add_argument('-gxnt','--txtp-x-notxtp',      help="Extra: don't save .txtp", action='store_true')
@@ -204,6 +205,7 @@ class Cli(object):
             generator.set_write_delays(args.txtp_write_delays)
             generator.set_silence(args.txtp_silence)
             generator.set_tagsm3u(args.txtp_tagsm3u)
+            generator.set_tagsm3u_add(args.txtp_tagsm3u_add)
             generator.set_tagsm3u_limit(args.txtp_tagsm3u_limit)
 
             generator.set_x_noloops(args.txtp_x_noloops)

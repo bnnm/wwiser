@@ -50,6 +50,9 @@ class TxtpCache(object):
         self.internals = 0
         self.names = 0
 
+        # externals
+        self.externals = None
+
         # other helpers
         self.is_windows = os.name == WINDOWS_INTERNAL_NAME
         self.basedir = os.getcwd()

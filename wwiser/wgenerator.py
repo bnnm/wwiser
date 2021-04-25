@@ -130,7 +130,7 @@ class Generator(object):
         self._txtpcache.tagsm3u_add = flag
 
     def set_tagsm3u_limit(self, value):
-        self._txtpcache.tagsm3u = True
+        self._txtpcache.tagsm3u = value
         self._txtpcache.tagsm3u_limit = value
 
     def set_x_noloops(self, flag):
@@ -149,6 +149,7 @@ class Generator(object):
             logging.info("generator: start")
 
             self._setup()
+            self._read_externals()
             self._write()
             self._write_unused()
             self._write_tagsm3u()
@@ -465,6 +466,49 @@ class Generator(object):
                 outfile.write("# %%TITLE    %s\n" %(longname))
                 outfile.write('%s\n' % (file))
 
+        return
+
+    #--------------------------------------------------------------------------
+
+    # reads a externals.txt list for externals
+    def _read_externals(self):
+        #if not self._txtpcache.externals_set:
+        #    return
+
+        # take first bank as base folder (like .txtp), not sure if current (wwiser's) would be beter
+        basepath = self._banks[0].get_root().get_path()
+        in_name = os.path.join(basepath, 'externals.txt')
+        if not os.path.exists(in_name):
+            return
+
+        logging.info("generator: found list of externals")
+        items = {}
+        with open(in_name, 'r') as in_file:
+            current_tid = None
+            current_list = None
+            for line in in_file:
+                line = line.strip()
+
+                if not line or line.startswith('#'):
+                    continue
+
+                # new ID
+                if line.isnumeric():
+                    current_tid = int(line)
+                    if current_tid not in items:
+                        items[current_tid] = []
+                    current_list = items[current_tid]
+                    continue
+
+                # must have one
+                if not current_tid:
+                    logging.info("generator: WARNING, ignored externals (must start with an ID)")
+                    return
+                
+                # add text under current ID
+                current_list.append(line)
+
+        self._txtpcache.externals = items
         return
 
     #--------------------------------------------------------------------------

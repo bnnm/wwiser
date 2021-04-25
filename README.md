@@ -110,7 +110,8 @@ Watch out for filenames with:
 - `{m}`: uses multi-loops where multiple places set `#@loop`
   - cannot make true loops ATM, but may extend `#@loop` times manually to a fixed time
 - `{e}`: uses "external IDs" set at runtime so can't guess file, usually voices
-  - may change `(?).wem` to the correct file (possibly `.wem` in clearly marked dirs)
+  - may supply a `externals.txt` file, add N *Wwise sID* followed by N lines pointing to files
+    ex. `12345(line)vo/vo_char01_001.wem(line)vo/vo_char01_002.wem(line)23456(line)vo/vo_char02_001.wem(line)...`
 - `{!}`: missing audio that usually needs more .bnk or uses unsupported audio plugins
   - missing parts are marked as `?`
 - `{l=(lang)}`: when flag to handle languages is set, use when multiple songs/sfx

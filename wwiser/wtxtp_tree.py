@@ -419,6 +419,11 @@ class TxtpPrinter(object):
         if self._has_random_repeats(node):
             subnode = node.children[0] #use first only
             node.children = [subnode]
+
+        # set externals flag
+        if node.type in TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_external:
+            self.has_externals = True
+
         return
 
     def _kill_node(self, node):
@@ -1292,11 +1297,16 @@ class TxtpPrinter(object):
 
         elif sound.source.plugin_external:
             # "external" ID (set at runtime)
-            name = "?" + name
-            name += "(?).wem"
+            if self._txtp.external_path:
+                # set during txtp process
+                name = "%s" % (self._txtp.external_path)
+            else:
+                # unknown
+                name = "?" + name
+                name += "(?).wem"
+
             # tid seems fixed for all files, needs to print base class' sid to avoid being dupes
             info += "  ##external %s-%s" % (sound.source.src_sid, sound.source.tid)
-            self.has_externals = True
 
         elif sound.source.internal and not self._txtpcache.bnkskip:
             # internal/memory stream

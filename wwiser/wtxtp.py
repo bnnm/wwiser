@@ -77,7 +77,8 @@ class Txtp(object):
         # config during printing
         self.selected = None        # current random selection in sub-txtp
         self.sparams = None         # current silence combo in sub-txtp
-
+        self.external_path = None   # current external
+        self.external_name = None   # current external
         return
 
     # start of txtp generation
@@ -107,6 +108,25 @@ class Txtp(object):
         if not printer.has_sounds():
             return
 
+        # in case of externals, we can preload a .txt file that maps event tid > N paths
+        # then a .txtp per external will be created
+        if printer.has_externals and self.txtpcache.externals:
+            # usually an event an event
+            tid = None
+            if self._ntid and self._ntid.value(): 
+                tid = self._ntid.value()
+
+            elems = self.txtpcache.externals.get(tid, None)
+            if elems: # has external for current id, otherwise just go normally
+                for elem in elems:
+                    self.external_path = elem
+                    self.external_name = os.path.splitext(os.path.basename(elem))[0]
+                    self._write_selectable(printer)
+                return
+
+        self._write_selectable(printer)
+
+    def _write_selectable(self, printer):
         # make one txtp per random/selectable group
         # selectable is only set if appropriate flags are defined
         if printer.selectable_count:
@@ -114,24 +134,24 @@ class Txtp(object):
             # make one .txtp per random
             for i in range(1, count + 1):
                 self.selected = i
-                self._write_txtp(printer)
+                self._write_combos(printer)
 
         else:
             # make main .txtp
-            self._write_txtp(printer)
+            self._write_combos(printer)
 
-    def _write_txtp(self, printer):
+    def _write_combos(self, printer):
         # handle sub-txtp per silence combo
         if self.spaths.empty:
             # without variables
-            self._write_txtp_internal(printer)
+            self._write_txtp(printer)
 
         else:
             # per combo
             combos = self.spaths.combos()
             for combo in combos:
                 self.sparams = combo
-                self._write_txtp_internal(printer)
+                self._write_txtp(printer)
 
             self.sparams = None
 
@@ -139,9 +159,9 @@ class Txtp(object):
             # - multiple states used like a switch, base playing everything = bad (MGR, Bayo2)
             # - singe state used for on/off a single layer, base playing everything = good (AChain)
             if len(combos) == 1:
-                self._write_txtp_internal(printer)
+                self._write_txtp(printer)
 
-    def _write_txtp_internal(self, printer):
+    def _write_txtp(self, printer):
         # Some games have GS combos and events that end up being the same (ex. Nier Automata, Bayonetta 2).
         # We make the txtp text and check (without comments) if wasn't already generated = dupe = ignored.
         # Because some txtp are 99% the same save minor differences (volumes, delays), those diffs should
@@ -371,8 +391,13 @@ class Txtp(object):
             name += " {l=%s}" % (printer.lang_name)
         if printer.has_internals and self.txtpcache.bnkmark:
             name += " {b}"
+
         if printer.has_externals:
-            name += " {e}"
+            if self.external_name:
+                name += " {e=%s}" % (self.external_name)
+            else:
+                name += " {e}"
+
         if printer.has_unsupported:
             name += " {!}"
         if not is_new: #dupe

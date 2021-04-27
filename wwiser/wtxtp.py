@@ -108,15 +108,22 @@ class Txtp(object):
         if not printer.has_sounds():
             return
 
+        # write chains
+        self._write_externals(printer)
+        return
+
+    def _write_externals(self, printer):
+
         # in case of externals, we can preload a .txt file that maps event tid > N paths
         # then a .txtp per external will be created
         if printer.has_externals and self.txtpcache.externals:
-            # usually an event an event
-            tid = None
-            if self._ntid and self._ntid.value(): 
-                tid = self._ntid.value()
+            # get external IDs #todo for now only one
+            if len(printer.externals) > 1:
+                logging.warn("generator: ignoring multiple externals (report)")
+                elems = None
+            else:
+                elems = self.txtpcache.externals.get(printer.externals[0], None)
 
-            elems = self.txtpcache.externals.get(tid, None)
             if elems: # has external for current id, otherwise just go normally
                 for elem in elems:
                     self.external_path = elem

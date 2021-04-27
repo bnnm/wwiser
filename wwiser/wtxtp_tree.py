@@ -264,6 +264,8 @@ class TxtpPrinter(object):
         self.is_random_select = False   # has selectable random group
         self.is_multi_select = False    # has selectable multilooping group
         self.is_force_select = False    # has selectable forced group
+        
+        self.externals = []
 
     def prepare(self):
         self._modify()
@@ -423,6 +425,8 @@ class TxtpPrinter(object):
         # set externals flag
         if node.type in TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_external:
             self.has_externals = True
+            if node.sound.source.tid not in self.externals:
+                self.externals.append(node.sound.source.tid)
 
         return
 
@@ -1305,8 +1309,8 @@ class TxtpPrinter(object):
                 name = "?" + name
                 name += "(?).wem"
 
-            # tid seems fixed for all files, needs to print base class' sid to avoid being dupes
-            info += "  ##external %s-%s" % (sound.source.src_sid, sound.source.tid)
+            # external tid (a hashname) seems shared for multiple objects, needs to print object's sid to avoid being dupes
+            info += "  ##external %s [obj %s]" % (sound.source.tid, sound.source.src_sid)
 
         elif sound.source.internal and not self._txtpcache.bnkskip:
             # internal/memory stream

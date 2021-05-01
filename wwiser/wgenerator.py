@@ -1,4 +1,4 @@
-import logging, os
+import logging, os, fnmatch
 from . import wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
 
 
@@ -24,12 +24,12 @@ class Generator(object):
         self._txtpcache = wtxtp_cache.TxtpCache()
 
         # options
-        self._generate_unused = False   # generate unused after regular txtp
-        self._move = False              # move sources to wem dir
-        self._moved_sources = {}        # ref
-        self._filter = []               # filter nodes
-        self._filter_rest = False       # generate rest after filtering (rather than just filtered nodes)
-        self._bank_order = False        # use bank order to generate txtp (instead of prioritizing named nodes)
+        self._generate_unused = False       # generate unused after regular txtp
+        self._move = False                  # move sources to wem dir
+        self._moved_sources = {}            # ref
+        self._filter = GeneratorFilter()    # filter nodes
+        self._filter_rest = False           # generate rest after filtering (rather than just filtered nodes)
+        self._bank_order = False            # use bank order to generate txtp (instead of prioritizing named nodes)
 
         self._default_params = None
 
@@ -41,11 +41,7 @@ class Generator(object):
     #--------------------------------------------------------------------------
 
     def set_filter(self, filter):
-        if not filter:
-            return
-        for item in filter:
-            if item is not None:
-                self._filter.append(item.lower())
+        self._filter.add(filter)
 
     def set_filter_rest(self, flag):
         self._filter_rest = flag
@@ -299,16 +295,8 @@ class Generator(object):
 
             generate = False
 
-            if self._filter:
-                sid = nsid.value()
-                if   str(sid) in self._filter: #filter by ID
-                    generate = True
-                elif classname.lower() in self._filter: #filter by class
-                    generate = True
-                else: #filter by hashname
-                    hashname = nsid.get_attr('hashname')
-                    if hashname and hashname.lower() in self._filter:
-                        generate = True
+            if self._filter.active:
+                generate = self._filter.check_generate(default_hircs, node, nsid, classname=classname)
 
                 if generate:
                     item = node
@@ -328,14 +316,14 @@ class Generator(object):
 
             # When making txtp, put named nodes in a list to generate first, then unnamed nodes.
             # Useful when multiple events do the same thing, but we only have wwnames for one
-            # (others may be leftovers). This way named one is generated and others are ignored as
-            # dupes. Can be disabled to treat all as unnamed = in bank order.
+            # (others may be leftovers). This way named ones are generated and others are ignored
+            # as dupes. Can be disabled to treat all as unnamed = in bank order.
             hashname = nsid.get_attr('hashname')
             if hashname and not self._bank_order:
                 item = (hashname, node)
                 nodes_named.append(item)
             else:
-                item = (sid, node)
+                item = (nsid.value(), node)
                 nodes_unnamed.append(item)
 
         # prepare nodes in final order
@@ -576,3 +564,121 @@ class Generator(object):
         #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)
         os.rename(in_name, out_name)
         return
+
+
+class GeneratorFilterItem(object):
+    def __init__(self, value):
+        # wheter when node matches this filter node is included or excluded
+        self.excluded = False
+        # filter must compare value vs a sid/bank/class. 
+        self.use_sid = False
+        self.use_bank = False
+        self.use_class = False
+        # if value matches a pattern
+        self.is_pattern = False
+        # actual filter
+        self.value = None
+
+        value = value.lower()
+        if value.startswith('-') or value.startswith('/') :
+            self.excluded = True
+            value = value[1:]
+
+        self.value = value
+        
+        if '*' in value:
+            self.is_pattern = True
+
+        if value.isnumeric():
+            self.use_sid = True
+        elif value.startswith('cak'):
+            self.use_class = True
+        elif value.endswith('.bnk'):
+            self.use_bank = True
+            
+        return
+        
+    def match(self, sid, hashname, classname, bankname):
+        if   self.use_sid:
+            comps = [str(sid)]
+        elif self.use_bank:
+            comps = [bankname]
+        elif self.use_class:
+            comps = [classname]
+        else:
+            comps = [str(sid), hashname, classname, bankname]
+
+        for comp in comps:
+            if not comp:
+                continue
+            if self.is_pattern and fnmatch.fnmatch(comp, self.value):
+                return True
+            elif comp == self.value:
+                return True
+
+        return False
+    
+
+class GeneratorFilter(object):
+    def __init__(self):
+        self.active = False
+        self._filters = []
+        self._default_generate = False
+        self._generate_all = False
+        None
+
+    def add(self, items):
+        if not items:
+            return
+
+        self.active = True
+        has_includes = False
+        has_all = False
+        for item in items:
+            gfi = GeneratorFilterItem(item)
+            if not gfi.excluded:
+                has_includes = True
+            if gfi.use_class:
+                has_all = True
+            if gfi.use_sid and not gfi.excluded:
+                has_all = True
+            self._filters.append(gfi)
+
+        # if filter only has "includes", default must be "exclude everything but these",
+        # while only "excludes" default is "include everything but these".
+        # If both are set, first has priority (?).
+        if has_includes:
+            self._default_generate = False
+        else:
+            self._default_generate = True
+
+        # by default only Event types are generated, but filtering by class or id means 
+        # generating not only events
+        if has_all:
+            self._generate_all = True
+
+        return
+
+    def check_generate(self, default_hircs, node, nsid=None, hashname=None, classname=None, bankname=None):
+        if not nsid:
+            nsid = node.find1(type='sid')
+        if not nsid:
+            return False
+        sid = str(nsid.value())
+
+        hashname = hashname or nsid.get_attr('hashname')
+        if hashname:
+            hashname = hashname.lower()
+        classname = classname or node.get_name().lower()
+        bankname = bankname or node.get_root().get_filename().lower()
+
+        if not self._generate_all and classname not in default_hircs:
+            return False
+
+        generate = self._default_generate
+        for filter in self._filters:
+            if filter.match(sid, hashname, classname, bankname):
+                generate = not filter.excluded
+
+
+        return generate

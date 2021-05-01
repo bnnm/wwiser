@@ -121,6 +121,19 @@ Watch out for filenames with:
 It's a good idea to keep the `.bnk` and companion files around in case `.txtp` need
 to be generated again when more features are added.
 
+By default it generates all .txtp that are considered "usable", but you can use add a
+list of "filters" to alter this. `(sid) (class name) (name) (bank name)` generates .txtp
+that match those. Add a `-` or '/' to generate defaults all *excluding* those. Wildcards
+are allowed too. Examples:
+- `123456`: only objects with that ID (could be an ID of a "music segment" object)
+- `CAkMusicSegment`: .txtp only from "music segment" objects (by default only events are considered)
+- `play_bgm_001`: only event .txtp that are named like that
+- `music.bnk`: only event .txtp in said bank. This is useful when `music.bnk` references other banks,
+   so you need to load many banks, but you only need music .txtp (otherwise would generate sfx and such)
+- `play_bgm_*`: only event .txtp that start with `play_`
+- `-play_sfx_*`: all event .txtp except those that play sfx
+- `/play_sfx_*`: same (alt since command line gets confused by `-`)
+
 Names are used from *loaded banks*'s companion files, load related files like `init.bnk`
 to get names that .txtp may need. You can also create a name list in `wwnames.txt`
 instead, see https://github.com/bnnm/wwiser-utils for some tips.

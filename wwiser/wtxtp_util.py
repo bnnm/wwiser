@@ -149,6 +149,7 @@ LANGUAGE_HASHNAMES = {
     1076167009: "Indonesian",
     1238911111: "Italian",
     2008704848: "Japanese",
+    4224429355: "Japanese(JP)",
     3391026937: "Korean",
     3647200089: "Latin",
     701323259: "Norwegian",
@@ -191,6 +192,7 @@ LANGUAGE_SHORTNAMES = {
     "Indonesian": 'id',
     "Italian": 'it',
     "Japanese": 'ja',
+    "Japanese(JP)": 'ja',
     "Korean": 'ko',
     "Latin": 'la', #what (used in SM:WoS for placeholder voices, that are reversed audio of misc voices)
     "Norwegian": 'no',

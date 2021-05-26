@@ -105,7 +105,7 @@ Watch out for filenames with:
   - open `.txtp` and change to `R3>2` to select 2nd part manually and so on
   - may set extra options to auto-generate multiple .txtp per "outer" random
 - `{s}`: has crossfading parts marked like `##fade`
-  - open `.txtp` and silence those by put `?` in front of `.wem` (of `#v 0` before `#fade`)
+  - open `.txtp` and silence those by put `?` in front of `.wem` (or `#v 0` before `##fade`)
   - may set extra options to auto-silence parts
 - `{m}`: uses multi-loops where multiple places set `#@loop`
   - cannot make true loops ATM, but may extend `#@loop` times manually to a fixed time
@@ -123,7 +123,7 @@ to be generated again when more features are added.
 
 By default it generates all .txtp that are considered "usable", but you can use add a
 list of "filters" to alter this. `(sid) (class name) (name) (bank name)` generates .txtp
-that match those. Add a `-` or '/' to generate defaults all *excluding* those. Wildcards
+that match those. Add a `-` or `/` to generate defaults all *excluding* those. Wildcards
 are allowed too. Examples:
 - `123456`: only objects with that ID (could be an ID of a "music segment" object)
 - `CAkMusicSegment`: .txtp only from "music segment" objects (by default only events are considered)

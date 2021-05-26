@@ -235,15 +235,22 @@ class Names(object):
             self.parse_h(h)
 
         # extra files, after other banks or priority when generating some missing lists and stuff is off
-        pathfiles = [filenames[0]] #todo fix for multiple paths in filenames, for now assumes one
-        for pathfile in pathfiles:
-            self.set_bankname(pathfile)
+        for filename in filenames:
+            self.set_bankname(filename)
 
-            # from more to less common/useful
             self.parse_lst(lst)
-            self.parse_db(db)
 
-        # just in case
+        # current folder just in case
+        self.set_bankname(None)
+        self.parse_lst(lst)
+
+        # program folder also just in case
+        self.set_bankname(sys.argv[0])
+        self.parse_lst(lst)
+
+        # automatically from program folder, only one db3 is allowed
+        self.parse_db(db)
+
         self.set_bankname(None)
 
         logging.info("names: done")
@@ -254,12 +261,14 @@ class Names(object):
         if reverse_encoding:
             encodings.reverse()
         try:
-            if not os.path.isfile(filename):
+            if filename in self._loaded_banknames:
+                #logging.debug("names: ignoring already loaded file " + filename)
                 return
 
-            if filename in self._loaded_banknames:
-                #logging.info("names: ignoring already loaded file " + filename)
+            #logging.debug("names: testing " + filename)
+            if not os.path.isfile(filename):
                 return
+            logging.info("names: loading " + filename)
 
             #try encodings until one works
             done = False
@@ -489,7 +498,7 @@ class Names(object):
             self._add_name(id, name, objpath=objpath, path=path)
 
 
-    # wwnames.json ('JSON metadata')
+    # SoundbanksInfo.json ('JSON metadata')
     # (bankname).json
     #
     # A json equivalent to SoundbanksInfo.xml and (bankname).txt, added in ~2020, format roughly being:
@@ -891,6 +900,7 @@ class SqliteHandler(object):
                 logging.info("names: couldn't find %s name file", workpath)
                 return
             path = filename
+        logging.info("names: loading %s", filename)
 
         #by default each thread needs its own cx (ex. viewer/server thread vs dumper/main thread),
         #but we don't really care since it's mostly read-only (could use some kinf od threadlocal?)

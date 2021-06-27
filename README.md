@@ -43,7 +43,7 @@ some extra stuff. If you need help try asking on hcs64.com forums or discord.
 that play one or many `.wem` indirectly. You want to open main `.bnk` (leaving
 companion `xml` and `txt` files together to get names) with *wwiser*, maybe explore
 a bit, and  automatically generate *TXTP* for *events*, to use with *vgmstream* to
-play music (https://github.com/losnoco/vgmstream).
+play music (https://github.com/vgmstream/vgmstream).
 
 Wwise has two "modes", a sound engine that plays single sfx or tracks capable of simple
 looping (some games loop like this), and a music engine that dynamically plays multiple

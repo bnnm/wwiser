@@ -232,7 +232,7 @@ class TxtpPrinter(object):
         self._txtpcache = txtp.txtpcache
         self._rebuilder = txtp.rebuilder
 
-        self._volume = self._txtpcache.volume_master or 0 #copy since may need to modify
+        self._volume_master = self._txtpcache.volume_master or 0 #copy since may need to modify
 
         # during write
         self._lines = None
@@ -890,7 +890,7 @@ class TxtpPrinter(object):
     def _set_volume(self, node):
 
         # negative volumes are applied per source
-        if self._volume <= 0:
+        if self._volume_master <= 0:
             return
 
         # find base node and cancel its volume if possible
@@ -899,8 +899,8 @@ class TxtpPrinter(object):
             return
 
         if basenode.volume:
-            basenode.volume += self._volume
-            self._volume = 0
+            basenode.volume += self._volume_master
+            self._volume_master = 0
             return
 
         # sometimes we can pass volume to lower leafs if base node didn't have volume and
@@ -915,11 +915,13 @@ class TxtpPrinter(object):
                 return
             subnodes.append(subbasenode)
 
-        for subnode in subnodes:
-            if not subnode.volume:
-               subnode.volume = 0 
-            subnode.volume += self._volume
-        self._volume = 0
+        if subnodes:
+            for subnode in subnodes:
+                if not subnode.volume:
+                    subnode.volume = 0
+                subnode.volume += self._volume_master
+            # only if there are subnodes to pass info, otherwise it's set at the end
+            self._volume_master = 0
 
         return
 
@@ -1131,8 +1133,8 @@ class TxtpPrinter(object):
 
         # apply increasing master volume after all other volumes
         # (lowers chances of clipping due to vgmstream's pcm16)
-        if self._volume > 0 and not self._simpler:
-            line = 'commands = #v %sdB' % (self._volume)
+        if self._volume_master > 0 and not self._simpler:
+            line = 'commands = #v %sdB' % (self._volume_master)
             self._lines.append('%s\n' % (line))
 
         return
@@ -1354,9 +1356,9 @@ class TxtpPrinter(object):
         # apply decreasing master volume to wems and mixing with other volumes
         # (better performance and lowers chances of clipping due to vgmstream's pcm16)
         node_volume = node.volume or 0
-        if self._volume < 0:
+        if self._volume_master < 0:
             # cancel master dB and node's dB for cleaner results
-            node_volume += self._volume
+            node_volume += self._volume_master
         if node_volume and not self._simpler:
             mods += '  #v %sdB' % (node_volume)
 

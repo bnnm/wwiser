@@ -56,8 +56,8 @@ class Cli(object):
         parser.add_argument('-gw', '--txtp-wemdir',         help="Set TXTP .wem dir (default: auto)")
         parser.add_argument('-gm', '--txtp-move',           help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
         # txtp options related to filtering
-        parser.add_argument('-gf', '--txtp-filter',         help="Set TXTP targets name/id/classname (default: auto)", nargs='+')
-        parser.add_argument('-gfr','--txtp-filter-rest',    help="Generate rest of files after filtering\n(allows prioritizing some names then creating\nrestm to ensure won't be marked as dupes)", action='store_true')
+        parser.add_argument('-gf', '--txtp-filter',         help="Set TXTP targets name/id/classname/bnk (default: auto)", nargs='+')
+        parser.add_argument('-gfr','--txtp-filter-rest',    help="Generate rest of files after filtering\n(allows prioritizing names in filter then creating\nrest, altering dupe order)", action='store_true')
         parser.add_argument('-gp', '--txtp-params',         help="Set TXTP parameters (default: auto)", nargs='*')
         parser.add_argument('-gd', '--txtp-dupes',          help="Generate TXTP duplicates\n(may create a lot of .txtp)", action='store_true')
         parser.add_argument('-gde','--txtp-dupes-exact',    help="Only consider dupes TXTP that are exactly the same\n(may create .txtp that sound 99%% the same)", action='store_true')

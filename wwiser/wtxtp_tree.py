@@ -1075,6 +1075,9 @@ class TxtpPrinter(object):
 
     # apply musicranseq transition config/times between segments (ex. 100s segment may play from 10..90s)
     # wwise allows to overlap entry/exit audio but it's not simulated ATM
+    # previous simplification detects self-loops and clones 2 segments, then this parts adjust segment times:
+    # if entry=10, exit=100: segment1 = 0..10, segment2 = 10..100
+    # since each segment may have N tracks, this applies directly to their config (body/padding/etc) values.
     def _apply_transition(self, node, tnode, snode):
         #if not snode:
         #    logging.info("generator: empty segment?")
@@ -1087,19 +1090,29 @@ class TxtpPrinter(object):
         entry = pconfig.entry
         exit = pconfig.exit
 
+
         #since we don't simulate pre-entry, just play it if it's first segment
         play_before = self._transition_count == 1 #todo load + check transition.play_begin
-        if play_before and tnode.self_loop: #hack for self-looping files
+        #print("transition: entry=%s, exit=%s, before=%s" % (entry, exit, play_before))
+ 
+        #print("**A b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))
+
+        # hack for self-looping files: 
+        if play_before and tnode.self_loop:
+            # settings for 0..entry
             entry = 0
             exit = pconfig.entry
             self.has_self_loops = True
 
         if not play_before:
+            # settings for entry..exit
             time = entry
 
             remove = time
+            #print("*remove end: ", remove, node.pad_begin)
             if remove > node.pad_begin:
                 remove = node.pad_begin
+            #print("remove end: ", remove)
             node.pad_begin -= remove
             time -= remove
 
@@ -1108,18 +1121,41 @@ class TxtpPrinter(object):
 
         if body < exit:
             time = (exit - body)
-
             node.pad_end += time
         else:
+            #print("*b", body, exit, time)
             time = (body - exit)
-
             removed = time
             if removed > node.pad_end:
                 removed = node.pad_end
             node.pad_end -= removed
-            time -= removed
 
-            node.body_time -= time
+            time -= removed
+            removed = time
+            if removed > node.body_time:
+                removed = node.body_time
+            node.body_time -= removed
+            
+            # in odd cases entry may fall in the padding, so body doesn't play
+            # since vgmstream needs a body ATM and this code is just a hack,
+            # make some fake, tiny body (would be fixed with an overlapped layout)
+            if not node.body_time:
+                threshold = 5.0 / 48000.0 * 1000.0 #5 samples
+                node.body_time = threshold
+                #maybe should try adding to trim_end but not sure if works
+
+            time -= removed
+            removed = time
+            if removed > node.pad_begin:
+                removed = node.pad_begin
+            node.pad_begin -= removed
+
+            time -= removed
+            if time:
+                raise ValueError("non-trimmed transition %s" % (time))
+
+        #body = node.pad_begin + node.body_time - node.trim_begin - node.trim_end + node.pad_end
+        #print("**B b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))
 
         return
 

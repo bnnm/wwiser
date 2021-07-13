@@ -341,7 +341,7 @@ class Generator(object):
             self._make_txtp(node)
 
     def _write_transitions(self):
-        if self._filter and not self._filter_rest:
+        if self._filter.active and not self._filter_rest:
             return
 
         self._txtpcache.transition_mark = True
@@ -350,9 +350,8 @@ class Generator(object):
         self._txtpcache.transition_mark = False
         self._rebuilder.reset_transition_segments() #restart for unused
 
-
     def _write_unused(self):
-        if self._filter and not self._filter_rest:
+        if self._filter.active and not self._filter_rest:
             return
         if not self._rebuilder.has_unused():
             return

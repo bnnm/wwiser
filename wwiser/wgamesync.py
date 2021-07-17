@@ -325,7 +325,7 @@ class SilencePaths(object):
         # order keys too since they same vars move around between tracks
         elems = []
         for values in self._elems.values():
-            values.sort(key=lambda x: x[3] or x[1])
+            values.sort(key=lambda x: str(x[3]) or str(x[1]))
             elems.append(values)
         # order is value_name first then value (to avoid comparing str vs int), forcing Nones go last
         elems.sort(key=lambda x: (x[0][2] or '~', x[0][1]))

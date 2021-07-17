@@ -81,6 +81,8 @@ class TxtpNode(object):
         self.trim_end = None
         self.pad_end = None
 
+        self.envelopes = []
+
         # copy value as may need to simplify tree config (ex. multiple objects can set infinite loop)
         # but changing config directly is no good (Wwise objects repeat)
         self.volume = config.volume
@@ -660,6 +662,7 @@ class TxtpPrinter(object):
                 self._apply_clip(node)
             else:
                 self._apply_sfx(node)
+            self._apply_automations(node)
 
         for subnode in node.children:
             self._set_times(subnode)
@@ -1037,6 +1040,51 @@ class TxtpPrinter(object):
             node.pad_begin += node.delay
         return
 
+    def _apply_automations(self, node):
+        sound = node.sound
+
+        if not sound.automations:
+            return
+
+        # transform wwise automations to txtp envelopes
+        # wwise defines points (A,B,C) and autocalcs combos like (A,B),(B,C).
+        # for txtp we need to make combos
+        # ch(type)(position)(time-start)+(time-length)
+        # ch^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
+        for am in sound.automations:
+            #self.has_debug = True
+
+            max = len(am.points)
+            for i in range(0, max):
+                if (i + 1 >= max):
+                    #combo = (p1.value, p2.value, '{', p1.time, p2.time - p1.time)
+                    continue
+                if am.type == 1: #todo ignore better by type
+                    continue
+
+                p1 = am.points[i]
+                p2 = am.points[i+1]
+                #todo
+                if p1.interp in [4,9]:
+                    shape = 'T'
+                else:
+                    shape = '{'
+                if   p1.value <= -96.0 and p2.value == 0.0: #todo proper dB
+                    p1.value = 0.0
+                    p2.value = 1.0
+                elif p2.value <= -96.0 and p1.value == 0.0: #todo proper dB
+                    p2.value = 0.0
+                    p1.value = 1.0
+
+                combo = (p1.value, p2.value, shape, p1.time, p2.time - p1.time)
+
+                if p1.value == p2.value: #some points are just used to delay
+                    continue
+
+                node.envelopes.append(combo)
+            #todo apply delays
+            #todo unsure how time works (relative to all segment?)
+
     def _apply_group(self, node):
 
         if not node.pad_begin:
@@ -1389,6 +1437,20 @@ class TxtpPrinter(object):
         else: #CAkSound
             mods += self._get_sfx(sound, node)
 
+        # add envelopes
+        if node.envelopes:
+            # ch(type)(position)(time-start)+(time-length)
+            # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
+            for combo in node.envelopes:
+                vol_st = self._get_sec(combo[0])
+                vol_ed = self._get_sec(combo[1])
+                shape = combo[2]
+                time_st = self._get_sec(combo[3])
+                time_ed = self._get_sec(combo[4])
+                # todo: early versions use db
+                # todo: seems to reapply on loops (time becomes 0 again)
+                info += ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
+
         # apply decreasing master volume to wems and mixing with other volumes
         # (better performance and lowers chances of clipping due to vgmstream's pcm16)
         node_volume = node.volume or 0
@@ -1484,10 +1546,9 @@ class TxtpPrinter(object):
 
         return mods
 
-    def _get_ms(self, param, value_ms):
-        if not value_ms:
+    def _get_float_str(self, value_sec):
+        if not value_sec:
             return ''
-        value_sec = value_ms / 1000
         value_str = str(value_sec) #default, no 0 padding
         if 'e' in value_str:
             # has scientific notation, use format to fix/truncate (9.22e-06 > 0.0000092213114704)
@@ -1497,8 +1558,24 @@ class TxtpPrinter(object):
                 return ''
         #todo ignore trims that end up being 0 samples (value * second = sample)
 
+        return value_str
+
+    def _get_ms(self, param, value_ms):
+        if not value_ms:
+            return ''
+        value_sec = value_ms / 1000
+        value_str = self._get_float_str(value_sec)
+        if not value_str:
+            return ''
         out = '%s %s' % (param, value_str)
         return out
+
+    def _get_sec(self, value_sec):
+        value_str = self._get_float_str(value_sec)
+        if not value_str:
+            return '0.0'
+        return value_str
+
 
     def _get_padding(self):
         return ' ' * (self._depth - 1) * TXTP_SPACES

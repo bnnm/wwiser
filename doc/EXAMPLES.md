@@ -53,7 +53,7 @@ BGM.bnk
 - some musicranseqs mix 2 different sample rates, automatically handled by the engine (no flags)
 - has play events pointing to non-existing ids
 - some switches point to object 0
-
+- has clip automations to handle fades
 
 ## John Wick Hex (PC)
 ```
@@ -572,6 +572,7 @@ mswitch > - item x5 !!!
 - mixes 2ch + 1ch (mono being silent and used as simple padding)
 - has transitions in playlists
 - uses Wwise Tone plugin in various events
+- has clip automations
 
 ## Assassin's Creed 2 (X360)
 ```
@@ -631,6 +632,7 @@ mswitch > - item x5 !!!
     
 ```
 - has loop traps inside inner sequences (not easily handled)
+- has clip automations to handle clicks
 
 ## Gunslinger Stratos Reloaded (PC)
 ```

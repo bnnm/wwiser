@@ -34,6 +34,7 @@ class NodeSound(object):
         self.source = None #original source info (may not exist for silence)
         self.nsrc = None #to get root bank
         self.silent = False
+        self.automations = None
 
         #clips can be modded by the engine (regular sounds are pre-changed when saved to .wem)
         self.clip = False

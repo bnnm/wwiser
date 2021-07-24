@@ -1046,6 +1046,10 @@ class TxtpPrinter(object):
         if not sound.automations:
             return
 
+        # automations are relative to clip start, after applying trims/padding, that should correspond to this
+        # time in seconds, unlike clip values
+        base_time =  node.pad_begin / 1000.0
+
         # transform wwise automations to txtp envelopes
         # wwise defines points (A,B,C) and autocalcs combos like (A,B),(B,C).
         # for txtp we need to make combos
@@ -1076,7 +1080,7 @@ class TxtpPrinter(object):
                     p2.value = 0.0
                     p1.value = 1.0
 
-                combo = (p1.value, p2.value, shape, p1.time, p2.time - p1.time)
+                combo = (p1.value, p2.value, shape, p1.time + base_time, p2.time - p1.time)
 
                 if p1.value == p2.value: #some points are just used to delay
                     continue

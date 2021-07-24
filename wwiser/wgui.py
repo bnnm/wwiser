@@ -338,7 +338,7 @@ class Gui(object):
             messagebox.showerror('Error', 'Unknown output format')
             return
         if dump_type == 'xml':
-            dump_type = 'xsl'
+            dump_type = 'xsl_s'
 
         printer = wprinter.Printer(self.parser.get_banks(), dump_type, dump_name)
         printer.dump()

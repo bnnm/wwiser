@@ -4,13 +4,24 @@ from . import wmodel, wutil
 
 TYPE_TXT = 'txt'
 TYPE_XSL = 'xsl'
+TYPE_XSL_SMALLER = 'xsl_s'
 TYPE_XML = 'xml'
 TYPE_EMPTY = 'empty'
 TYPE_NONE = 'none'
 
 
 class Printer(object):
-    attr_format = { 'offset': "%08x", 'size': "0x%x" }
+    attr_format = { 
+        'offset':"%08x", 'size':"0x%x"
+    }
+    node_smaller = {
+        'object':'obj', 'field':'fld', 'list':'lst'
+    }
+    attr_smaller = { 
+        'offset':'of', 'type':'ty', 'name':'na', 'value':'va', 'valuefmt':'vf',
+        'hashname':'hn', 'guidname':'gn', 'objpath':'op', 'path':'pa',
+        'index':'ix', 'count':'co', 'size':'si', 'message':'me',
+    }
 
     def __init__(self, banks, type, name):
         self._banks = banks
@@ -18,6 +29,7 @@ class Printer(object):
         self._name = name
         self._file = None
         self._formatted = False
+        self._smaller = False
 
 
     def dump(self):
@@ -27,6 +39,8 @@ class Printer(object):
             self.write_xml()
         elif self._type == TYPE_XSL:
             self.write_xsl()
+        elif self._type == TYPE_XSL_SMALLER:
+            self.write_xsl_smaller()
         elif self._type == TYPE_EMPTY:
             self.write_empty()
         elif self._type == TYPE_NONE:
@@ -43,13 +57,17 @@ class Printer(object):
         outname  = self._make_name(".txt")
         self._write(outname, self._print_txt)
 
-    def write_xml(self, formatted=False):
-        self._formatted = formatted
+    def write_xml(self):
         outname  = self._make_name(".xml")
         self._write(outname, self._print_xml)
 
     def write_xsl(self):
-        self.write_xml(formatted=True)
+        self._formatted = True
+        self.write_xml()
+
+    def write_xsl_smaller(self):
+        self._smaller = True
+        self.write_xsl()
 
     def _write(self, outname, callback):
         if not self._banks: #no banks loaded
@@ -116,8 +134,12 @@ class Printer(object):
                 strval = str(val)
             for chr, rpl in [('&','&amp;'), ('"','&quot;'), ('\'','&apos;'), ('<','&lt;'), ('>','&gt;')]:
                 strval = strval.replace(chr, rpl)
+            if self._smaller and key in self.attr_smaller:
+                key = self.attr_smaller[key]
             line += " %s=\"%s\"" % (key, strval)
 
+        if self._smaller and nodename in self.node_smaller:
+            nodename = self.node_smaller[nodename]
 
         if not has_children:
             line = "%s<%s%s/>\n" % (just, nodename, line)

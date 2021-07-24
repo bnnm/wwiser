@@ -34,7 +34,7 @@ class Cli(object):
         # main options
         parser.add_argument('files', help="Files to get (wildcards work)", nargs='+')
         parser.add_argument('-m',  '--multi',           help="Treat files as multiple separate files", action='store_true')
-        parser.add_argument('-d',  '--dump-type',       help="Set dump type: txt|xml|xsl|none|empty (default: auto)")
+        parser.add_argument('-d',  '--dump-type',       help="Set dump type: txt|xml|xsl|xsl_s|none|empty (default: auto)")
         parser.add_argument('-dn', '--dump-name',       help="Set dump filename (default: auto)")
         parser.add_argument('-l',  '--log',             help="Write info to wwiser log (has extra messages)", action='store_true')
         parser.add_argument('-v',  '--viewer',          help="Start the viewer", action='store_true')
@@ -165,7 +165,7 @@ class Cli(object):
                 args.dump_type = wprinter.TYPE_NONE
             else:
                 # default without other flags
-                args.dump_type = wprinter.TYPE_XSL
+                args.dump_type = wprinter.TYPE_XSL_SMALLER
         printer = wprinter.Printer(banks, args.dump_type, dump_name)
         printer.dump()
 

@@ -160,14 +160,14 @@ body { font-family: monospace; font-size: 16px; white-space: nowrap; }
         </div>
     </xsl:template>
 
-    <xsl:template match="object">
+    <xsl:template match="object|obj">
         <div class="object closable">
             <div class="head">
                 <span class="attr type">obj</span>
                 <span class="attr name">
-                    <xsl:value-of select="@name"/>
-                    <xsl:if test="@index">
-                        <span class="index">[<xsl:value-of select="@index"/>]</span>
+                    <xsl:value-of select="@name|@na"/>
+                    <xsl:if test="@index|@ix">
+                        <span class="index">[<xsl:value-of select="@index|@ix"/>]</span>
                     </xsl:if>
                 </span>
             </div>
@@ -177,13 +177,13 @@ body { font-family: monospace; font-size: 16px; white-space: nowrap; }
         </div>
     </xsl:template>
 
-    <xsl:template match="list">
+    <xsl:template match="list|lst">
         <!--<xsl:if test="count(*)>0">-->
         <div class="list closable">
             <div class="head">
                 <span class="attr type">list</span>
-                <span class="attr name"><xsl:value-of select="@name"/></span>
-                <span class="attr value"><xsl:value-of select="@count"/></span>
+                <span class="attr name"><xsl:value-of select="@name|@na"/></span>
+                <span class="attr value"><xsl:value-of select="@count|@co"/></span>
             </div>
             <div class="body">
                 <xsl:apply-templates />
@@ -192,35 +192,35 @@ body { font-family: monospace; font-size: 16px; white-space: nowrap; }
         <!--</xsl:if>-->
     </xsl:template>
 
-    <xsl:template match="field">
+    <xsl:template match="field|fld">
         <div class="field">
             <div class="offset">
-                <xsl:value-of select="@offset"/>
+                <xsl:value-of select="@offset|@of"/>
             </div>
             <div class="head">
-                <span class="attr type"><xsl:value-of select="@type"/></span>
-                <span class="attr name"><xsl:value-of select="@name"/></span>
+                <span class="attr type"><xsl:value-of select="@type|@ty"/></span>
+                <span class="attr name"><xsl:value-of select="@name|@na"/></span>
                 <span class="attr value">
                 <xsl:choose>
-                    <xsl:when test="@valuefmt"><xsl:value-of select="@valuefmt"/></xsl:when>
-                    <xsl:otherwise><xsl:value-of select="@value"/></xsl:otherwise>
+                    <xsl:when test="@valuefmt|@vf"><xsl:value-of select="@valuefmt|@vf"/></xsl:when>
+                    <xsl:otherwise><xsl:value-of select="@value|@va"/></xsl:otherwise>
                 </xsl:choose>
                 </span>
                 <!--clickable links need text nodes, but not anchors-->
-                <xsl:if test="@type='tid' and @value!=0 and @value!=-1"><a class="target" href="#{@value}">target</a></xsl:if>
-                <xsl:if test="@type='sid'"><a class="anchor" id="{@value}" href="#{@value}">anchor</a></xsl:if>
+                <xsl:if test="(@type='tid' or @ty='tid')and (@value!=0 or @va!=0) and (@value!=-1 or @va!=-1)"><a class="target" href="#{@value|@va}">target</a></xsl:if>
+                <xsl:if test="@type='sid' or @ty='sid'"><a class="anchor" id="{@value|@va}" href="#{@value|@va}">anchor</a></xsl:if>
 
-                <xsl:if test="@hashname">
-                    <span class="attr hashname">(<xsl:value-of select="@hashname"/>)</span>
+                <xsl:if test="@hashname|@hn">
+                    <span class="attr hashname">(<xsl:value-of select="@hashname|@hn"/>)</span>
                 </xsl:if>
-                <xsl:if test="@guidname">
-                    <span class="attr guidname">{<xsl:value-of select="@guidname"/>}</span>
+                <xsl:if test="@guidname|@gn">
+                    <span class="attr guidname">{<xsl:value-of select="@guidname|@gn"/>}</span>
                 </xsl:if>
-                <xsl:if test="@objpath">
-                    <span class="tooltip objpath"><span class="attr objpath"><xsl:value-of select="@objpath"/></span></span>
+                <xsl:if test="@objpath|@op">
+                    <span class="tooltip objpath"><span class="attr objpath"><xsl:value-of select="@objpath|@op"/></span></span>
                 </xsl:if>
-                <xsl:if test="@path">
-                    <span class="tooltip path"><span class="attr path"><xsl:value-of select="@path"/></span></span>
+                <xsl:if test="@path|@pa">
+                    <span class="tooltip path"><span class="attr path"><xsl:value-of select="@path|@pa"/></span></span>
                 </xsl:if>
             </div>
             <div class="body">
@@ -231,14 +231,14 @@ body { font-family: monospace; font-size: 16px; white-space: nowrap; }
 
     <xsl:template match="skip">
         <div class="skip">
-            (skipped <xsl:value-of select="@size"/>)
+            (skipped <xsl:value-of select="@size|@si"/>)
             <xsl:apply-templates />
         </div>
     </xsl:template>
 
     <xsl:template match="error">
         <div class="error">
-            error: <xsl:value-of select="@message"/>
+            error: <xsl:value-of select="@message|@me"/>
             <xsl:apply-templates />
         </div>
     </xsl:template>

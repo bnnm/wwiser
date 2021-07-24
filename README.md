@@ -118,25 +118,47 @@ Watch out for filenames with:
 - `{l=(lang)}`: when flag to handle languages is set, use when multiple songs/sfx
    per language need to coexist coexist in same dir
 
+Generator has a bunch of options to tweak how files are created.
+
 It's a good idea to keep the `.bnk` and companion files around in case `.txtp` need
 to be generated again when more features are added.
 
-By default it generates all .txtp that are considered "usable", but you can use add a
-list of "filters" to alter this. `(sid) (class name) (name) (bank name)` generates .txtp
-that match those. Add a `-` or `/` to generate defaults all *excluding* those. Wildcards
-are allowed too. Examples:
-- `123456`: only objects with that ID (could be an ID of a "music segment" object)
-- `CAkMusicSegment`: .txtp only from "music segment" objects (by default only events are considered)
+`.txtp` names are taken from *loaded banks*'s companion files if found. Load related
+banks (like `init.bnk`) too to ensure all needed names are loaded. You can also manually
+make an extra name list in a `wwnames.txt` file, see https://github.com/bnnm/wwiser-utils
+for some examples and tips.
+
+### TXTP filters and name order
+By default *wwiser* generates all `.txtp` that are considered "usable". This mainly means
+events (`CAkEvent`), prioritizing those with known names.
+
+You can use add a list of "filters" to alter this, passing multiple `(id) (class name) (name) (bank name)`
+to generate `.txtp` that match those. Add a `-` or `/` before to generate defaults
+*excluding* those. Wildcards are allowed too. Examples:
+- `123456`: object with that ID (could be an ID of a "music segment" and similar objects)
+- `CAkMusicSegment`: .txtp only from "music segment" objects (by default only events are
+  considered)
 - `play_bgm_001`: only event .txtp that are named like that
-- `music.bnk`: only event .txtp in said bank. This is useful when `music.bnk` references other banks,
-   so you need to load many banks, but you only need music .txtp (otherwise would generate sfx and such)
-- `play_bgm_*`: only event .txtp that start with `play_`
+- `music.bnk`: only event .txtp in said bank.
+- `play_bgm_*`: only event .txtp that start with `play_bgm_`
 - `-play_sfx_*`: all event .txtp except those that play sfx
 - `/play_sfx_*`: same (alt since command line gets confused by `-`)
 
-Names are used from *loaded banks*'s companion files, load related files like `init.bnk`
-to get names that .txtp may need. You can also create a name list in `wwnames.txt`
-instead, see https://github.com/bnnm/wwiser-utils for some tips.
+Some tricks you can do with filters:
+- testing: if you have a big `.txtp` with lots of groups, you can pass a single ID and
+  output just the part you want.
+- ignore sfx: maybe you have `common.bnk` with lots of sfx but a handful of jingles.
+  Pass `jingle_*` (if named) or an event ID list to ignore sfx events.
+- load many banks: sometimes games separate and load `.bnk` in non-obvious ways.
+  You could just load everything then filter by `music.bnk` to get music but ensure
+  all needed banks are there (ignoring sfx or voice banks).
+- Alter `.txtp` order: some games have several events that do the same thing. For
+  example `jukebox01` then `music01_fields` in that order may be clones. By default
+  `.txtp` order is as found, meaning you get `jukebox01` and `music01_fields` is ignored
+  (dupe). But the later name is more descriptive and would be preferable. To fix this,
+  you can filter by `music*` **and** pass the option to *"generate rest of files after
+  filtering"*. This reorders so `music01_fields` goes first, then `jukebox01` (now a
+  dupe = ignored).
 
 
 ## LIMITATIONS

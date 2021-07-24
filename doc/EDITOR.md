@@ -10,6 +10,16 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - pStateChunks for switching + syncs? (may be set as default?)
 
 
+## files
+- you can import audio (.wav) into a project and use freely as is
+- by default uses .wav, but can be converted to .wem ("convert all audio files" in project menu)
+  - objects with non-converted audio have blue names
+- .wem are given same name as .wav + some ID
+  - ID seems to be some kind of salted CRC, and not a GUID/ShortID, as same .wav renamed can be
+    imported multiple times, and gets a different ID sometimes, but also may use an old one.
+  - `Drum_D79FB2B7.wem`, `Drum2_10C4C929.wem`, `drum_a_10C4C929.wem`, `drum_b_10C4C929.wem`, `drum_c_D79FB2B7.wem`
+
+
 ## gamesyncs
 - "switches", "states", in key=value format
 - there is also "game parameters" (have RTPC config) and "triggers" (no config)
@@ -333,3 +343,75 @@ Info gathered from the editor, to help understanding model and overall behavior.
                                :.../        #time=2s, offset=2s
 
 ```
+
+## RTPCs and graphs
+- Define some types to set what is exactly affected and how
+- Then define a bunch of "points" to make a graph (X/Y axis).
+- You get a math function-like graph, usually pass X (external value), get Y (resulting value)
+  - for example, may define a X=hit_points, Y=volume: when hit_points=30 graphs sets volume to 50%
+  - config is set on RPTC (main) level, X=rtpcType, Y=ParamID.
+- each point defines an easing/interpolation function to the next point, that alters how Y evolves
+- Setting 2 points makes basically a sub-graph and combining points makes a full graph
+- RTPC example, making a weird fade-in:
+  * meaning of X could be "hit_points", and meaning of Y could be "volume %" (set on RPTC level)
+  - point A: x=0,  y=0,  interp=linear
+  - point B: x=10, y=50,  interp=curve
+  - point C: x=20, y=100, interp=linear
+  - (A,B): from hit_points 0..10 you get volume 0..50. At hit_points 5, volume is 25% (linear)
+  - (B,C): from hit_points 10..20 you get volume 50..100. At hit_points 15, volume is ~65% (non-linear)
+  - less and A (-1) and more than C (30) presumably use their min/max values.
+```
+          Y=volume
+       100
+          |         -
+          |       --
+        50|    ---
+          |  /
+          | /
+          |/_________
+          0    10    20 x=hit_points
+```
+- Definition:
+  - may define multiple, separate RTPCs per object, clicking on the graph to add more points
+  - must define game parameter first, with min/max/default, before usage
+  - then in object (RPTCs can be attached to almost everything), set an Y from the allowed list, then X from parameters
+    - X's min/max depends on defined values
+    - Y's min/max depends on the selected variable
+    - X's default is used to show value in editor, and saved to Init.bnk in RTPCRamping.fValue (used?)
+    - X can be a special LFO/envelope/time modulator rather than gamesync
+  - can define as many points as needed (considering performance)
+  - "volume" Y can use "linear" (eScaling=0) or "db" volume (eScaling=2).
+  - selectable curves: Logarithmic (Base 3), Sine (power fade in), Logarithmic (Base 1.41), Inverted S-Curve, Linear, Constant, S-Curve, Exponential (Base 1.41), Reciprocal Sine (power fade out), Exponential (Base 3)
+    - logs, sin in, inv-scurve are "fast" curves (take less time to ramp up)
+    - exps, sin out, scurve are "slow" curves (take more time to ramp up)
+    - constant is a special setting that keeps value same as 1st point (no curve and ignores 2nd point)
+  - in editor can set a value of X to get simulated value of Y
+- RPTCs can be linked to game variables then to switches/states
+  - for example `enemy_awareness` could link to exploration/action music via switches
+  - also may use "slew rates" so that changes between states aren't inmediate 
+    - so even if values keep quickly changing, transition takes some time for more natural results
+
+## Clip automations
+- attached directly to MusicTrack's clips, a special type of RTPC
+- used to fade or apply effects in a clip
+- makes a point graph like RTPCs, but X is always "time" in the clip
+- in the clip, drag little triangle on the top left and right to add a fade-in and fade-out
+  - just like dragging the little block on the bottom left/right changes clip times
+  - internal points: fade ins 2 (0=0%...N=100% volume), fade outs 3 (0=100%..N=100%..M=0% volume)
+  - can change curve type, but not points
+- press the lowpass/highpass/volume button to activate graphs for those
+  - add more points by double clip (like a regular RTPC), can change curve type between points
+  - volume bar on top/100% = disabled (not written), same with lowpass/highpass on bottom
+- time is relative to the clip and not track/segment, after applying trims/padding
+  - with clip of 0..13s
+  - add a fade-in 0..5s: X=0..5
+  - move clip so it starts at 1: no change on X
+  - trim start 1s: no change on X
+  - padding start 1s: no change on X
+  - add a fade-out 10..13s: X=10..13
+  - trim end 1s: X=9..12
+  - padding start 1s: X=11..14
+  * in some (early?) games negative X values exists when combined with trims/fplayat/etc
+- added by default when 2 clips overlap (autoadjusted fade-out + fade-in) but can be changed
+  - with multiple clips, automation is attached to one defining "uClipIndex" where index is AkTrackSrcInfo (not AkBankSourceData.
+  - if there are sub-tracks, uClipIndex + AkTrackSrcInfo are absolute so no difference

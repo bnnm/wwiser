@@ -547,8 +547,8 @@ class Generator(object):
                 logging.info("generator: cannot move %s (exists on output folder)", in_name)
             return
 
+        bank = nroot.get_filename()
         if not os.path.exists(in_name):
-            bank = nroot.get_filename()
             if self._txtpcache.alt_exts:
                 in_name = "%s.%s" % (source.tid, source.extension_alt)
                 in_name = os.path.join(in_dir, in_name)
@@ -562,6 +562,8 @@ class Generator(object):
 
         #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)
         os.rename(in_name, out_name)
+        logging.debug("generator: moved %s / %s", in_name, bank)
+
         return
 
 
@@ -594,10 +596,13 @@ class GeneratorFilterItem(object):
             self.use_class = True
         elif value.endswith('.bnk'):
             self.use_bank = True
-            
+        else:
+            pass
+
         return
         
     def match(self, sid, hashname, classname, bankname):
+
         if   self.use_sid:
             comps = [str(sid)]
         elif self.use_bank:
@@ -605,11 +610,12 @@ class GeneratorFilterItem(object):
         elif self.use_class:
             comps = [classname]
         else:
-            comps = [str(sid), hashname, classname, bankname]
+            comps = [str(sid), hashname] #, classname, bankname # bnk  and hashnames sometimes clash
 
         for comp in comps:
             if not comp:
                 continue
+            comp = comp.lower()
             if self.is_pattern and fnmatch.fnmatch(comp, self.value):
                 return True
             elif comp == self.value:

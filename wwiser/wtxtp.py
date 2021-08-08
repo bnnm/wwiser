@@ -2,9 +2,14 @@ import logging, os
 from . import wgamesync, wtxtp_tree, wtxtp_info, wversion
 
 
-#use a bit less than 255 so files can be moved around dirs
-#long paths can be enabled on Windows but detection+support is messy...
+# use a bit less than 255 so files can be moved around dirs
+# long paths can be enabled on Windows + python but detection+support is messy...
+# (if not trimmed python may give an error on open W, even if individual path elems are less than 255)
 WINDOWS_MAX_PATH = 240
+
+# use a bit less than 255 for "base" filenames, too
+# (max filename length on Linux is 255, even if dirs + name can be more than that
+MAX_FILENAME_LENGTH = 240
 
 # Builds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
 #
@@ -224,6 +229,14 @@ class Txtp(object):
             outdir = os.path.join(self._basepath, outdir)
             os.makedirs(outdir, exist_ok=True)
 
+        # enforce max filename (few OSes support more than that)
+        if len(name) > MAX_FILENAME_LENGTH:
+            if not longname:
+                longname = name
+            name = "%s~%04i%s" % (name[0:MAX_FILENAME_LENGTH], self.txtpcache.created, '.txtp')
+            self.txtpcache.trims += 1
+            logging.debug("txtp: trimmed name '%s'", name)
+
         outname = outdir + name
 
         info = self._get_info(name, longname)
@@ -235,7 +248,7 @@ class Txtp(object):
                 maxlen = WINDOWS_MAX_PATH - len(self.txtpcache.basedir) - 10
                 outname = "%s~%04i%s" % (outname[0:maxlen], self.txtpcache.created, '.txtp')
                 self.txtpcache.trims += 1
-                logging.debug("txtp: trimmed '%s'", outname)
+                logging.debug("txtp: trimmed path '%s'", outname)
 
         if self.txtpcache.x_notxtp:
             return

@@ -265,7 +265,7 @@ class Names(object):
 
 
     def _parse_base(self, filename, callback, reverse_encoding=False):
-        encodings = ['utf-8', 'iso-8859-1']
+        encodings = ['utf-8-sig', 'iso-8859-1']
         if reverse_encoding:
             encodings.reverse()
         try:

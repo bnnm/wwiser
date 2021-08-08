@@ -408,7 +408,7 @@ AkCurveInterpolation = wfmt.FormatterLUT({
   0x5: "SCurve",
   0x6: "Exp1",
   0x7: "SineRecip",
-  0x8: "Exp3/LastFadeCurve", #defines both as 0x8 in all versions
+  0x8: "Exp3", #"LastFadeCurve" define as 0x8 too in all versions
   0x9: "Constant",
 })
 

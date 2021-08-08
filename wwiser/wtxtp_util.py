@@ -233,6 +233,11 @@ class NodeSource(object):
         self.nfileid = nbnksrc.find(name='uFileID')
         self.nlang = nbnksrc.find(name='bIsLanguageSpecific')
         self._lang_loaded = False
+
+        self.version = None
+        if self.nsrc:
+            self.version = self.nsrc.get_root().get_version()
+
         #0=bnk (always), 1/2=prefetch<>stream (varies with version)
         self.internal = (self.nstreamtype.value() == 0)
 
@@ -301,8 +306,7 @@ class NodeSource(object):
             self.extension_alt = None
             return
 
-        version = self.nsrc.get_root().get_version()
-        if version >= CODEC_EXTENSION_NEW_VERSION:
+        if self.version >= CODEC_EXTENSION_NEW_VERSION:
             #wmid seem to be use .wem but also .wmid sometimes?
             self.extension = CODEC_EXTENSION_NEW
         else:
@@ -377,3 +381,72 @@ class NodeFx(object):
             nparams = node.find1(name='AkFXSrcSilenceParams')
             ndur = nparams.find(name='fDuration')
             self.duration = ndur.value()  * 1000.0 #to ms for consistency
+
+
+ENVELOPE_NEW_VERSION = 112 #>= #todo unsure
+
+INTERPOLATIONS = {
+    0:'L', #Log3
+    1:'Q', #Sine
+    2:'L', #Log1
+    3:'H', #InvSCurve
+    4:'T', #Linear
+    5:'H', #SCurve
+    6:'E', #Exp1
+    7:'Q', #SineRecip
+    8:'E', #Exp3
+    9:'T', #Constant
+}
+
+class NodeEnvelope(object):
+    def __init__(self, am, p1, p2, version=0, base_time=0):
+        self.usable = False
+        self.vol1 = None
+        self.vol2 = None
+        self.shape = None
+        self.time1 = None
+        self.time2 = None
+        if not am or not p1 or not p2:
+            return
+
+        # LFE work differently        
+        if version < ENVELOPE_NEW_VERSION:
+            ignorable_types = [1] #LFE
+        else:
+            ignorable_types = [1,2] #LFE,HFE
+        if am.type in ignorable_types:
+            return
+
+        self.vol1 = p1.value
+        self.vol2 = p2.value
+
+        # constant is an special value that should ignore p2
+        if (p1.interp == 9):
+            self.vol2 = self.vol1
+
+        # normalize volumes
+        if version < ENVELOPE_NEW_VERSION:
+            # convert -96.0 .. 0.0 .. 96.0 dB to volume
+            self.vol1 = pow(10.0, self.vol1 / 20.0)
+            self.vol2 = pow(10.0, self.vol2 / 20.0)
+        else:
+            if am.type == 0: # volume
+                # convert -1.0 .. 0.0 .. 1.0 to 0.0 .. 1.0 .. 2.0
+                self.vol1 += 1.0
+                self.vol2 += 1.0
+            else: # fades
+                # standard 0.0 .. 1.0
+                pass
+
+        # some points are just used to delay with no volume change
+        # note that constant different volumes exists (ex. -0.24 .. -0.24 on doomy ternal)
+        if self.vol1 == 1.0 and self.vol2 == 1.0:
+            return
+
+        #todo approximate curves, improve
+        self.shape = INTERPOLATIONS.get(p1.interp, '{')
+
+        self.time1 = p1.time + base_time
+        self.time2 = p2.time - p1.time
+
+        self.usable = True

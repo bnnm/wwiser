@@ -1,4 +1,5 @@
 import logging, math, copy
+from . import wtxtp_util
 
 
 TXTP_SPACES = 1
@@ -545,6 +546,10 @@ class TxtpPrinter(object):
         new_node.type = node.type
         new_node.transition = new_transition
 
+        for envelope in node.envelopes:
+            new_envelope = copy.copy(envelope)
+            new_node.envelopes.append(new_envelope)
+
         new_parent.append(new_node)
 
         for subnode in node.children:
@@ -1058,36 +1063,22 @@ class TxtpPrinter(object):
         for am in sound.automations:
             #self.has_debug = True
 
+            version = sound.source.version
+
             max = len(am.points)
             for i in range(0, max):
                 if (i + 1 >= max):
-                    #combo = (p1.value, p2.value, '{', p1.time, p2.time - p1.time)
-                    continue
-                if am.type == 1: #todo ignore better by type
                     continue
 
                 p1 = am.points[i]
                 p2 = am.points[i+1]
-                #todo
-                if p1.interp in [4,9]:
-                    shape = 'T'
-                else:
-                    shape = '{'
-                if   p1.value <= -96.0 and p2.value == 0.0: #todo proper dB
-                    p1.value = 0.0
-                    p2.value = 1.0
-                elif p2.value <= -96.0 and p1.value == 0.0: #todo proper dB
-                    p2.value = 0.0
-                    p1.value = 1.0
-
-                combo = (p1.value, p2.value, shape, p1.time + base_time, p2.time - p1.time)
-
-                if p1.value == p2.value: #some points are just used to delay
+                envelope = wtxtp_util.NodeEnvelope(am, p1, p2, version, base_time)
+                if not envelope.usable:
                     continue
 
-                node.envelopes.append(combo)
-            #todo apply delays
-            #todo unsure how time works (relative to all segment?)
+                #todo apply delays
+
+                node.envelopes.append(envelope)
 
     def _apply_group(self, node):
 
@@ -1155,6 +1146,11 @@ class TxtpPrinter(object):
             entry = 0
             exit = pconfig.entry
             self.has_self_loops = True
+
+        #todo fix
+        #for envelope in node.envelopes:
+        #    print(tnode.self_loop, play_before, entry, exit, envelope.time1, envelope.time2)
+        #    pass
 
         if not play_before:
             # settings for entry..exit
@@ -1445,13 +1441,12 @@ class TxtpPrinter(object):
         if node.envelopes:
             # ch(type)(position)(time-start)+(time-length)
             # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
-            for combo in node.envelopes:
-                vol_st = self._get_sec(combo[0])
-                vol_ed = self._get_sec(combo[1])
-                shape = combo[2]
-                time_st = self._get_sec(combo[3])
-                time_ed = self._get_sec(combo[4])
-                # todo: early versions use db
+            for envelope in node.envelopes:
+                vol_st = self._get_sec(envelope.vol1)
+                vol_ed = self._get_sec(envelope.vol2)
+                shape = envelope.shape
+                time_st = self._get_sec(envelope.time1)
+                time_ed = self._get_sec(envelope.time2)
                 # todo: seems to reapply on loops (time becomes 0 again)
                 info += ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
 

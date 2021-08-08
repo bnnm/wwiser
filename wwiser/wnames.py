@@ -236,8 +236,16 @@ class Names(object):
 
         # extra files, after other banks or priority when generating some missing lists and stuff is off
         for filename in filenames:
+            # try wwnames in bnk folder
             self.set_bankname(filename)
+            self.parse_lst(lst)
 
+            # also try in prev folder, for easier names in localized dirs
+            pathname = os.path.dirname(filename)
+            basename = os.path.basename(filename)
+            prevname = os.path.join(pathname, '..')
+            prevname = os.path.join(prevname, basename)
+            self.set_bankname(prevname)
             self.parse_lst(lst)
 
         # current folder just in case

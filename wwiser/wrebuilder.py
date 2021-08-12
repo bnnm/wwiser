@@ -1077,18 +1077,26 @@ class _CAkRanSeqCntr(_NodeHelper):
         #    self._barf("ranseq transition")
 
 
-        if   self.mode == 0: #random
-            #wAvoidRepeatCount: N objects must be played before one is repeated (also depends on normal/shuffle)
-            #_bIsUsingWeight: unused? (AkPlaylistItem always has weight)
-            nitems = node.finds(name='AkPlaylistItem') #there is also children, but this has proper order
+        # try playlist or children (both can be empty)
+        nitems = node.finds(name='AkPlaylistItem')
+        if nitems:
+            # playlist items should have proper order (important in sequence types)
             for nitem in nitems:
                 self.ntids.append( nitem.find(type='tid') )
                 #self.nweights.append( nitem.find(name='weight') )
+        else:
+            # just in case but children aren't ordered (remnant code, probably safe to remove)
+            self.ntids = node.find(name='Children').finds(type='tid') 
+            if self.ntids:
+                logging.info("generator: ranseq without playlist  %s %s" % (self.sid, node.get_name()))
 
-        elif self.mode == 1: #sequence
+        #if   self.mode == 0: #random
+            #wAvoidRepeatCount: N objects must be played before one is repeated (also depends on normal/shuffle)
+            #_bIsUsingWeight: unused? (AkPlaylistItem always has weight)
+
+        #elif self.mode == 1: #sequence
             #bResetPlayListAtEachPlay: resets from 1st object each time is event replayed (in continuous mode)
             #bIsRestartBackward: once done, play item from last to first
-            self.ntids = node.find(name='Children').finds(type='tid') #not actually ordered?
 
 
         #ignored by Wwise but sometimes set, simplify

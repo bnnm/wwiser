@@ -29,7 +29,7 @@ bank_versions = [
      36, #0x24 Wwise 2008.3?   *[UFC 2009 Undisputed (PS3)]
      38, #0x26 Wwise 2008.4    *[The King of Fighters XII (PS3), Food Network (Wii)]
      44, #0x2C Wwise 2009.1?   *[Assassin's Creed II (X360), Mass Effect 2 (X360), The Saboteur (X360), Doc Louis's Punch Out!! (Wii)]
-     45, #0x2D Wwise 2009.2?   *[Army of Two: The 40th Day (X360)-has v44/38/34 banks]
+     45, #0x2D Wwise 2009.2?   *[Dance on Broadway (Wii), Army of Two: The 40th Day (X360)-buggy + has v44/38/34 banks]
      46, #0x2E Wwise 2009.3     [Enslaved (X360), The King of Fighters XIII (AC), Tron Evolution (PS3)]
      48, #0x30 Wwise 2010.1     [Assassin's Creed: Brotherhood (X360), Splatterhouse (PS3), Harry Potter and the Deathly Hallows Part 1 (PS3)]
      52, #0x34 Wwise 2010.2     [Chime Super Deluxe (PS3)]

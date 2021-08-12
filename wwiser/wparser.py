@@ -1372,7 +1372,10 @@ def CAkRanSeqCntr__SetInitialValues(obj, cls):
             obj.U16('unknown')
         pass
     elif cls.version <= 45: #45=AoT2
-        obj.U16('unknown') #unrelated to wAvoidRepeatCount (00/01/03/05)
+        # same thing
+        if obj.get_root().get_subversion() == 45:
+            obj.U16('unknown') #unrelated to wAvoidRepeatCount (00/01/03/05)
+        pass
     else:
         pass
 
@@ -3021,6 +3024,11 @@ def CAkBankMgr__ProcessBankHeader(obj):
         if project_id == 0 and not root.has_feedback() and is_be and root.get_id() in wdefs.aot2_buggy_banks:
             root.set_subversion(45)
             pass
+    # how fun, Dance on Broadway (Wii) v45 has one less field than AoT2 v45, try to autodetect AoT2
+    if version == 45:
+        if not root.has_feedback(): #DoB all .bnk use feedback
+            root.set_subversion(45)
+
     return
 
 

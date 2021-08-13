@@ -1085,11 +1085,9 @@ class _CAkRanSeqCntr(_NodeHelper):
                 self.ntids.append( nitem.find(type='tid') )
                 #self.nweights.append( nitem.find(name='weight') )
         else:
-            # just in case but children aren't ordered (remnant code, probably safe to remove)
+            # in rare cases playlist is empty, seen with "sequence" types though children aren't ordered (Borderlands 3)
             self.ntids = node.find(name='Children').finds(type='tid') 
-            if self.ntids:
-                logging.info("generator: ranseq without playlist  %s %s" % (self.sid, node.get_name()))
-
+            
         #if   self.mode == 0: #random
             #wAvoidRepeatCount: N objects must be played before one is repeated (also depends on normal/shuffle)
             #_bIsUsingWeight: unused? (AkPlaylistItem always has weight)

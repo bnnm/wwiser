@@ -52,6 +52,11 @@ want *TXTP* to handle the later, but they also give consistency and (sometimes) 
 names to the former. In short, for games using Wwise audio don't play `.wem` but use
 *wwiser*'s generated `.txtp`.
 
+Note that the Wwise engine automatically loads `(number).wem` (or `.ogg/wav/xma` in old
+versions) as needed. In rare cases devs can feed `(name).wem` manually (called an *external*),
+but note the extension is always enforced (as confirmed by official docs). Thus, *wwiser*
+only uses `.wem/ogg/wav/xma`.
+
 
 ## WWISER OUTPUT
 Web view or dumped `.xml` shows what is stored in `.bnk`, trying to follow original

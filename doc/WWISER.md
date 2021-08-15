@@ -292,15 +292,15 @@ They'll be automatically used if found in the bank dir (except *wwnames.db3*, th
 must reside in *wwiser*'s dir).
 
 A few games may use **SoundbankInfo.json**, **(bankname).xml** and **(bankname).json**.
-The editor optionally can generate those, but are less common so aren't parsed at
-the moment.
+The editor optionally can generate those, but are less common.
 
 
 ## TXTP GENERATION
 As explained above, Wwise has a bunch of complex features that make playing `.wem`
 directly a hassle (like music segments made of multiple tracks to mimic looping).
 *wwiser* can create TXTP files for *vgmstream* (*https://github.com/losnoco/vgmstream*)
-to play audio simulating Wwise.
+to play audio simulating Wwise. TXTP is a custom text format that tells *vgmstream*
+how to play audio in complex ways.
 
 By default it will try to create .txtp for all common "usable" cases (mainly events
 with audio). If the event uses variables it'll try to make one .txtp per value combo.
@@ -341,8 +341,8 @@ may be a mix of parts to make full sense. For example:
   `.wem`, often used to select different footsteps or random music stems (first
   file in a section is pre-selected, others must manually be selected)
 - `dynamic_bgm01 {s}.txtp`: song with parts that depend on states. Sometimes many
-  `.wem` play at once, but are silenced/enabled using variables (you need to manually
-  silence songs here).
+  `.wem` play at once, but are silenced/enabled using variables (you may need to
+  manually silence songs here).
 - `play_ambience {m}.txtp`: event with sections that loop independently (like some
   short croak sfx + longer river sfx), which isn't simulated at the moment.
 - `complex_bgm1 {!}.txtp`: with some kind of problem (like missing `.wem`, or
@@ -364,7 +364,7 @@ need to make .txtp again when the generator/TXTP are updated with new features.
 Some list of features not simulated at the moment (also see README):
 - Looping Wwise songs can randomly select values during loops (with 'weight' value),
   while .txtp must pre-select one.
-- can't apply volumes (complex mix of parts that are hard to measure)
+- can't apply all volumes exactly (may sound quieter than normal)
 - can't apply most effects (like pitch or filters)
 - fade-ins aren't handled (ex. multiple play events)
 - object's values changed in real time through events (like volume) aren't applied
@@ -376,9 +376,8 @@ Some list of features not simulated at the moment (also see README):
 - switch objects may define transition points (may with helper .wems) when one value
   changes to other (only generates .txtp per state without transitions)
 - playlist object may define custom transition points between segments
-- songs that dynamically silence songs just play all at once (crossfades with RTPCs in
+- songs that dynamically silence songs may play all at once (crossfades with RTPCs in
   Devil May cry 5, states that set -96db volume in Metal Gear Rising, etc)
-  - manually set `#@volume 0.0` to unneeded `.wem`
 - sounds that don't use `.wem` but midi or a plugin (like tone generator) play silence
 - multiple play actions with probability (ex. play A 100% of the time + play B 50% of
   the time) just play all actions
@@ -399,7 +398,7 @@ order could (rarely) create different .txtp names.
 Bank format may change a bit between major Wwise SDK versions, adding new features
 or moving fields around. *wwiser* should handle almost all but there are bugs left:
 - earliest versions used in *Shadowrun (X360)* and *Too Human (X360)* not supported
-- parameters for many custom plugins not parsed (uncommon and time-consuming to add)
+- parameters for custom plugins only partially parsed (uncommon and time-consuming to add)
 - some versions' field names and descriptions may be incorrect (missing SDKs)
 - viewer doesn't work in older (IE11<) browsers
 - some functions may not properly handle repeated IDs on different objects (unlikely

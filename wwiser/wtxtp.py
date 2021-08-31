@@ -77,7 +77,7 @@ class Txtp(object):
         self.spaths = wgamesync.SilencePaths() #states used to mute tracks
         self.txtpcache = txtpcache
         self.rebuilder = rebuilder
-        self.info = wtxtp_info.TxtpInfo(wemnames=txtpcache.wemnames)  # node info to add in output as comment
+        self.info = wtxtp_info.TxtpInfo(txtpcache)  # node info to add in output as comment
 
         # config during printing
         self.selected = None        # current random selection in sub-txtp

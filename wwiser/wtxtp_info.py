@@ -3,13 +3,13 @@ from . import wgamesync
 
 
 class TxtpInfo(object):
-    def __init__(self, wemnames=False):
+    def __init__(self, txtpcache):
         self._depth = 0
         self._ninfo = []
         self._banks = None
         self._wemnames = ''
         self._gsnames = ''
-        self._set_wemnames = wemnames
+        self._txtpcache = txtpcache
         pass
 
     def get_gsnames(self):
@@ -49,7 +49,7 @@ class TxtpInfo(object):
         next = TxtpInfoNode(self._depth + 1, None, nfields, None, source=ntid)
         self._ninfo.append(next)
 
-        if self._set_wemnames:
+        if self._txtpcache.name_wems:
             attrs = ntid.get_attrs()
             wemname = attrs.get('guidname', attrs.get('path'))
             if wemname:
@@ -75,9 +75,8 @@ class TxtpInfo(object):
     def gamesyncs(self, gamesyncs):
         current = self._ninfo[-1]
 
-        current.add_gamesyncs(gamesyncs)
+        current.add_gamesyncs_info(gamesyncs, self._txtpcache.name_vars)
         info = current.get_gamesync_text()
-
         self._gsnames += " " + info
 
 
@@ -94,7 +93,7 @@ class TxtpInfoNode(object):
         self.source = source
         self._info = None
 
-    def add_gamesyncs(self, gamesyncs):
+    def add_gamesyncs_info(self, gamesyncs, name_vars):
         if self.gamesync:
             raise ValueError("multiple gamesyncs in same info node")
 
@@ -117,7 +116,12 @@ class TxtpInfoNode(object):
             else:
                 raise ValueError("unknown gamesync type %i" % (gtype))
 
-            info += type
+            # by default ignore variables like (thing=-) since they tend to get wordy and don't give much info
+            # some cases may look better with them ("play_bgm [music=-]" + play_bgm [music=bgm1] + ..., by default first would be "play_bgm")
+            if not name_vars and value == '-':
+                pass
+            else:
+                info += type
 
         self.gamesync = info
 

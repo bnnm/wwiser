@@ -63,7 +63,8 @@ class Cli(object):
         parser.add_argument('-gde','--txtp-dupes-exact',    help="Only consider dupes TXTP that are exactly the same\n(may create .txtp that sound 99%% the same)", action='store_true')
         parser.add_argument('-gbo','--txtp-bank-order',     help="Generate TXTP in bank order instead of names first\n(alters which .txtp are considered dupes)", action='store_true')
         # txtp options for extra behaviors
-        parser.add_argument('-gwn','--txtp-wemname',        help="Add all .wem names to .txtp filename\n(may create too long filenames when many .wem are used)", action='store_true')
+        parser.add_argument('-gnw','--txtp-name-wems',      help="Add all .wem names to .txtp name\n(may create too long filenames when many .wem are used)", action='store_true')
+        parser.add_argument('-gnv','--txtp-name-vars',      help="Write ignored variables in .txtp name\n(filenames may look more orderly in some cases)", action='store_true')
         parser.add_argument('-gbs','--txtp-bnkskip',        help="Treat internal (in .bnk) .wem as if external", action='store_true')
         parser.add_argument('-gbm','--txtp-bnkmark',        help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
         parser.add_argument('-gae','--txtp-alt-exts',       help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
@@ -192,7 +193,8 @@ class Cli(object):
             generator.set_outdir(args.txtp_outdir)
             generator.set_wemdir(args.txtp_wemdir)
             generator.set_move(args.txtp_move)
-            generator.set_wemnames(args.txtp_wemname)
+            generator.set_name_wems(args.txtp_name_wems)
+            generator.set_name_vars(args.txtp_name_vars)
             generator.set_bnkskip(args.txtp_bnkskip)
             generator.set_bnkmark(args.txtp_bnkmark)
 

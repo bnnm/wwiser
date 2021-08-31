@@ -19,7 +19,8 @@ class TxtpCache(object):
         # process config
         self.outdir = DEFAULT_OUTDIR
         self.wemdir = DEFAULT_WEMDIR
-        self.wemnames = False
+        self.name_wems = False
+        self.name_vars = False
         self.volume_master = None
         self.lang = False
         self.bnkmark = False

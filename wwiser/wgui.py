@@ -143,47 +143,68 @@ class Gui(object):
         frame = ttk.Frame(root)
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
 
+        row = 0
+
         chk = self._chk('txtp_move', frame, "Move .wem referenced in banks to wem subdir")
-        chk.grid(row=0, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky="W")
 
         chk = self._chk('txtp_lang', frame, "Mark .txtp and set .wem subdir per language")
-        chk.grid(row=0, column=1, sticky="W")
+        chk.grid(row=row, column=1, sticky="W")
+
+        row += 1
 
         chk = self._chk('txtp_bnkskip', frame, "Treat internal (in .bnk) .wem as if external")
-        chk.grid(row=1, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky="W")
 
         chk = self._chk('txtp_bnkmark', frame, "Mark .txtp that use internal .bnk (for reference)")
-        chk.grid(row=1, column=1, sticky="W")
+        chk.grid(row=row, column=1, sticky="W")
 
-        chk = self._chk('txtp_wemname', frame, "Add all .wem names to .txtp filename (if found)")
-        chk.grid(row=2, column=0, sticky="W")
+        row += 1
 
         chk = self._chk('txtp_unused', frame, "Generate unused audio (when log complains)")
-        chk.grid(row=2, column=1, sticky="W")
+        chk.grid(row=row, column=0, sticky="W")
+
+        row += 1
+
+        chk = self._chk('txtp_name_wems', frame, "Add all .wem names to .txtp filename (if found)")
+        chk.grid(row=row, column=0, sticky="W")
+
+        chk = self._chk('txtp_name_vars', frame, "Add ignored variables to .txtp filename")
+        chk.grid(row=row, column=1, sticky="W")
+
+        row += 1
 
         chk = self._chk('txtp_alt_exts', frame, "Use TXTP alt extensions (.logg/lwav)")
-        chk.grid(row=3, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky="W")
 
         chk = self._chk('txtp_dupes', frame, "Allow TXTP dupes (WARNING: may create a lot)")
-        chk.grid(row=3, column=1, sticky="W")
+        chk.grid(row=row, column=1, sticky="W")
+
+        row += 1
 
         chk = self._chk('txtp_random_all', frame, "Make multiple .txtp per base 'random' group")
-        chk.grid(row=4, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky="W")
 
         chk = self._chk('txtp_random_multi', frame, "Force multiloops to be selectable like a 'random'")
-        chk.grid(row=4, column=1, sticky="W")
+        chk.grid(row=row, column=1, sticky="W")
+
+        row += 1
 
         chk = self._chk('txtp_random_force', frame, "Force base groups to be selectable like a 'random'")
-        chk.grid(row=5, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky="W")
 
         chk = self._chk('txtp_write_delays', frame, "Don't skip initial delay")
-        chk.grid(row=5, column=1, sticky="W")
+        chk.grid(row=row, column=1, sticky="W")
+
+        row += 1
 
         chk = self._chk('txtp_silence', frame, "Silence parts that crossfade by default")
-        chk.grid(row=6, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky="W")
 
         chk = self._chk('txtp_tagsm3u', frame, "Use shorter .txtp names and put full names in !tags.m3u")
-        chk.grid(row=6, column=1, sticky="W")
+        chk.grid(row=row, column=1, sticky="W")
+
+        row += 1
 
         #----------------------------------------------------------------------
         # log
@@ -398,7 +419,8 @@ class Gui(object):
             generator.set_move(self._fields['txtp_move'].get())
             generator.set_bnkskip(self._fields['txtp_bnkskip'].get())
             generator.set_bnkmark(self._fields['txtp_bnkmark'].get())
-            generator.set_wemnames(self._fields['txtp_wemname'].get())
+            generator.set_name_wems(self._fields['txtp_name_wems'].get())
+            generator.set_name_vars(self._fields['txtp_name_vars'].get())
             generator.set_generate_unused(self._fields['txtp_unused'].get())
             generator.set_alt_exts(self._fields['txtp_alt_exts'].get())
             generator.set_dupes(self._fields['txtp_dupes'].get())

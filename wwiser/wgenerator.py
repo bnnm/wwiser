@@ -85,8 +85,11 @@ class Generator(object):
     def set_lang(self, flag):
         self._txtpcache.lang = flag
 
-    def set_wemnames(self, flag):
-        self._txtpcache.wemnames = flag
+    def set_name_wems(self, flag):
+        self._txtpcache.name_wems = flag
+
+    def set_name_vars(self, flag):
+        self._txtpcache.name_vars = flag
 
     def set_bnkskip(self, flag):
         self._txtpcache.bnkskip = flag

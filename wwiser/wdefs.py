@@ -50,8 +50,12 @@ bank_versions = [
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
     140, #0x8c Wwise 2021.1     (none known)
-    
 ]
+
+bank_mutant_versions = {
+    # Total War: Warhammer 2 (PC) has this weird v122 version with upper bit set, probably unofficial since no apparent diffs vs v120
+    0x8000007A: 120
+}
 
 
 # for extra detection

@@ -3455,6 +3455,10 @@ class Parser(object):
             _unknown = r.u32()
             version = r.u32() #actual version in very early banks
 
+        # extrange variations
+        if version in wdefs.bank_mutant_versions:
+            version = wdefs.bank_mutant_versions[version]
+
         root = bank.get_root()
         root.set_version(version)
         if not self._ignore_version and version not in wdefs.bank_versions:

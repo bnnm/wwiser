@@ -44,17 +44,20 @@ bank_versions = [
     113, #0x71 Wwise 2015.1     [Nier Automata (PC), Doom 2016 (PC), South Park: The Fractured But Whole (PC)]
     118, #0x76 Wwise 2016.1     [WipEout: Omega Collection (PS4), Coffence (PC), Mario + Rabbids Kingdom Battle (Switch)]
     120, #0x78 Wwise 2016.2     [Polyball (PC), Battle Chasers (PC)]
+    122, #0x7A Wwise 2017.1-B?  [Total War: Warhammer 2 (PC)]
     125, #0x7D Wwise 2017.1     [Devil May Cry 5 (PC), Wolfenstein II The New Colossus (PC)]
     128, #0x80 Wwise 2017.2     [Spyro Reignited Trilogy (PC/PS4), Let's Go Pikachu (Switch), Magatsu Wahrheit (Android)]
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
+    136, #0x88 Wwise 2021.1-B?  [Total War Saga: Troy (PC)-update]
     140, #0x8c Wwise 2021.1     (none known)
 ]
 
-bank_mutant_versions = {
-    # Total War: Warhammer 2 (PC) has this weird v122 version with upper bit set, probably unofficial since no apparent diffs vs v120
-    0x8000007A: 120
+# Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions?
+bank_custom_versions = {
+    0x8000007A: 120,  #same as 120
+    0x80000088: 136,  #some diffs vs 135 and 140
 }
 
 
@@ -943,6 +946,7 @@ AkActionType_062 = wfmt.FormatterLUT({
   0x1403: "ResetGameParameter_O",
   0x1F02: "Release",
   0x1F03: "Release_O",
+  0x2303: "PlayEventUnknown_O?", #v136 Troy, points to regular events
 }, zeropad=4)
 AkActionType = None
 

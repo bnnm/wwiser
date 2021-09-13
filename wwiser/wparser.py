@@ -585,7 +585,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
 
     cls.CAkClass__SetInitialFxParams(obj, cls) #_vptr$CAkIndexable + 71 (v135<=), _vptr$IAkEffectSlotsOwner + 70
     
-    if   cls.version <= 135:
+    if   cls.version <= 136:
         pass
     else:
         cls.CAkClass__SetInitialMetadataParams(obj, cls) #_vptr$IAkEffectSlotsOwner + 71
@@ -672,7 +672,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
     #CAkParameterNodeBase::SetPositioningParams
     obj = obj.node('PositioningParams')
 
-    #we reuse this function though, see below
+    # we reuse this function though, see below
     #if cls.version <= 120:
     #    raise wmodel.ParseError("dummy virtual function", obj)
 
@@ -1541,7 +1541,7 @@ def CAkBus__SetInitialFxParams(obj, cls):
     elif cls.version <= 135:
         obj.u8i('uNumFx')
         count = obj.lastval
-    else:
+    else: #136+
         count = 0
 
     if cls.version <= 48:
@@ -1592,7 +1592,7 @@ def CAkBus__SetInitialFxParams(obj, cls):
 
     if cls.version <= 135:
         pass
-    else:
+    else: #136+
         CAkEffectSlots__SetInitialValues(obj, cls) #like the above fx reading though
 
     if cls.version <= 88:
@@ -1790,7 +1790,7 @@ def CAkBus__SetInitialValues(obj, cls):
     else:
         obj.U8x('bOverrideAttachmentParams')
 
-    if   cls.version <= 135:
+    if   cls.version <= 136:
         pass
     else:
         cls.CAkClass__SetInitialMetadataParams(obj, cls) #_vptr$IAkEffectSlotsOwner + 71
@@ -1859,6 +1859,8 @@ def CAkLayer__SetInitialValues(obj, cls):
     obj.u32('ulNumAssoc')
     for elem in obj.list('assocs', 'CAssociatedChildData', obj.lastval):
         elem.tid('ulAssociatedChildID').fnv(wdefs.fnv_no)
+        if cls.version == 136: #not 135/140!
+            elem.u16('unknown') #always 0
         elem.u32('ulCurveSize')
         parse_rtpc_graph(elem) #set on 'assocs'
 
@@ -1957,7 +1959,7 @@ def CAkMusicSegment__SetInitialValues(obj, cls):
 
         if   cls.version <= 62:
             pass
-        elif cls.version <= 135:
+        elif cls.version <= 136:
             #AK::ReadBankStringUtf8
             elem.u32('uStringSize')
             if elem.lastval > 0:
@@ -2329,6 +2331,10 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
             else: #65=DmC/ZoE
                 elem2.U8x('bDestMatchSourceCueName')
 
+        if cls.version == 136: #may be part of the above
+            elem.tid('ulStateGroupID?').fnv(wdefs.fnv_var)
+            elem.tid('ulStateID?').fnv(wdefs.fnv_val)
+
         if cls.version <= 72:
             elem.U8x('bIsTransObjectEnabled')
             has_transobj = True #always! flag is used elsewhere
@@ -2476,7 +2482,7 @@ def CAkAttenuation__SetInitialValues(obj, cls):
     #CAkAttenuation::SetInitialValues
     obj = obj.node('AttenuationInitialValues')
 
-    if   cls.version <= 135:
+    if   cls.version <= 136:
         pass
     else:
         obj.U8x('bIsHeightSpreadEnabled')
@@ -2818,7 +2824,7 @@ def CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_(obj):
 
     obj.sid('ulID') #fnv?
 
-    if    cls.version <= 135:
+    if    cls.version <= 136:
         CAkFxBase__SetInitialValues(obj, cls)
     else:
         CAkAudioDevice__SetInitialValues(obj, cls)
@@ -3352,7 +3358,7 @@ def CAkBankMgr__ProcessCustomPlatformChunk(obj):
     obj.set_name('CustomPlatformChunk')
     version = get_version(obj)
 
-    if version <= 135:
+    if version <= 136:
         obj.u32('uStringSize')
         obj.str('pCustomPlatformName', obj.lastval)
     else:
@@ -3373,7 +3379,7 @@ def CAkBankMgr__ProcessPluginChunk(obj):
     obj.u32('count')
     for elem in obj.list('pAKPluginList', 'IAkPlugin', obj.lastval):
         parse_plugin(elem)
-        if version <= 135:
+        if version <= 136:
             #AK::ReadBankStringUtf8
             elem.u32('uStringSize')
             elem.str('pDLLName', elem.lastval)
@@ -3456,8 +3462,8 @@ class Parser(object):
             version = r.u32() #actual version in very early banks
 
         # extrange variations
-        if version in wdefs.bank_mutant_versions:
-            version = wdefs.bank_mutant_versions[version]
+        if version in wdefs.bank_custom_versions:
+            version = wdefs.bank_custom_versions[version]
 
         root = bank.get_root()
         root.set_version(version)

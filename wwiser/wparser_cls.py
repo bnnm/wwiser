@@ -95,6 +95,8 @@ CAkActionRelease = 'CAkActionRelease'
 CAkActionPlayEvent = 'CAkActionPlayEvent'
 #CAkActionResetPlaylist : CAkActionActive
 CAkActionResetPlaylist = 'CAkActionResetPlaylist'
+#CAkActionResetPlaylist : CAkActionActive
+CAkActionPlayEventUnknown = 'CAkActionPlayEventUnknown'
 #CAkEvent : CAkIndexable
 CAkEvent = 'CAkEvent'
 #CAkRanSeqCntr : CAkContainerBase
@@ -272,6 +274,7 @@ def CAkAction__Create(obj, actionType):
         0x2000: CAkActionSetAkProp, #AkPropID_HPF
         0x2100: CAkActionPlayEvent,
         0x2200: CAkActionResetPlaylist,
+        0x2300: CAkActionPlayEventUnknown,
         0x3000: CAkActionSetAkProp, #AkPropID_HPF
     }
 
@@ -312,6 +315,7 @@ def CAkAction__Create(obj, actionType):
         CAkActionRelease: (wparser.CAkActionRelease__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         CAkActionPlayEvent: (wparser.CAkActionPlayEvent__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         CAkActionResetPlaylist: (wparser.CAkActionActive__SetActionParams, wparser.CAkActionResetPlaylist__SetActionSpecificParams),
+        CAkActionPlayEventUnknown: (wparser.CAkActionPlay__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
     }
 
     if   cls.version == 56:

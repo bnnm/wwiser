@@ -444,6 +444,10 @@ class NodeObject(NodeElement):
         child = NodeList(self, name)
         self.append(child)
 
+        # usually will fail by reading past object but in rare cases can generate too many fields
+        if count > 0x1FFFF: #arbitary max
+            raise ParseError("unlikely count", self)
+
         if subname is None:
             subname = name
         return NodeListIterator(child, self.__r, subname, count)

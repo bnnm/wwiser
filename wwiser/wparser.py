@@ -1859,8 +1859,9 @@ def CAkLayer__SetInitialValues(obj, cls):
     obj.u32('ulNumAssoc')
     for elem in obj.list('assocs', 'CAssociatedChildData', obj.lastval):
         elem.tid('ulAssociatedChildID').fnv(wdefs.fnv_no)
-        if cls.version == 136: #not 135/140!
-            elem.u16('unknown') #always 0
+        if cls.version == 122 or cls.version == 136: # custom field? (not 135/140!)
+            elem.U8x('unknown_custom') #0/1?
+            elem.U8x('unknown_custom') #0/1?
         elem.u32('ulCurveSize')
         parse_rtpc_graph(elem) #set on 'assocs'
 
@@ -2332,8 +2333,8 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
                 elem2.U8x('bDestMatchSourceCueName')
 
         if cls.version == 136: #may be part of the above
-            elem.tid('ulStateGroupID?').fnv(wdefs.fnv_var)
-            elem.tid('ulStateID?').fnv(wdefs.fnv_val)
+            elem.tid('ulStateGroupID?_custom').fnv(wdefs.fnv_var)
+            elem.tid('ulStateID?_custom').fnv(wdefs.fnv_val)
 
         if cls.version <= 72:
             elem.U8x('bIsTransObjectEnabled')

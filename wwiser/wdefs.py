@@ -56,7 +56,7 @@ bank_versions = [
 
 # Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions?
 bank_custom_versions = {
-    0x8000007A: 120,  #same as 120
+    0x8000007A: 122,  #same as 120
     0x80000088: 136,  #some diffs vs 135 and 140
 }
 

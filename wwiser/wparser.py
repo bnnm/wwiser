@@ -619,7 +619,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
     cls.CAkClass__SetInitialParams(obj, cls)
 
 
-    if   cls.version <= 120:
+    if   cls.version <= 122:
         CAkParameterNode__SetPositioningParams(obj, cls) #callback, but only possible value
     else:
         CAkParameterNodeBase__SetPositioningParams(obj, cls)
@@ -647,7 +647,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
             elem.U8x('bIsCustom')
             elem.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
 
-    elif cls.version <= 120:
+    elif cls.version <= 122:
         CAkParameterNodeBase__ReadStateChunk(obj, cls)
 
     elif cls.version <= 125:
@@ -673,12 +673,12 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
     obj = obj.node('PositioningParams')
 
     # we reuse this function though, see below
-    #if cls.version <= 120:
+    #if cls.version <= 122:
     #    raise wmodel.ParseError("dummy virtual function", obj)
 
     #todo 3dPositioning bits depends on version
     #cbPositioningInfoOverrideParent older
-    if cls.version <= 120:
+    if cls.version <= 122:
         fld = obj.U8x('uByVector')
     else:
         fld = obj.U8x('uBitsPositioning')
@@ -694,7 +694,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
         fld.bit('unknown3d', obj.lastval, 5)
         fld.bit('unknown3d', obj.lastval, 6) #always set?
         fld.bit('unknown3d', obj.lastval, 7) #always set?
-    elif cls.version <= 120:
+    elif cls.version <= 122:
         fld.bit('unknown2d', obj.lastval, 1) #flag for next bit
         fld.bit('unknown2d', obj.lastval, 2) #bPriorityOverrideParent? bIsFXOverrideParent?
         fld.bit('cbIs3DPositioningAvailable', obj.lastval, 3)
@@ -731,7 +731,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             has_3d = obj.lastval
             if has_2d:
                 obj.U8x('bPositioningEnablePanner')
-        elif cls.version <= 120:
+        elif cls.version <= 122:
             has_3d = (uBitsPositioning >> 3) & 1
         elif cls.version <= 128:
             has_3d = (uBitsPositioning >> 4) & 1
@@ -784,7 +784,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             eType = (eType >> 0) & 3
             has_automation = (eType != 1)
             has_dynamic = not has_automation
-        elif cls.version <= 120:
+        elif cls.version <= 122:
             e3DPositionType = (uBits3d >> 0) & 3
             has_automation = (e3DPositionType != 1)
             has_dynamic = False
@@ -968,7 +968,7 @@ def CAkActionExcept__SetExceptParams(obj, cls):
     #CAkActionExcept::SetExceptParams
     obj = obj.node('ExceptParams')
 
-    if cls.version <= 120:
+    if cls.version <= 122:
         obj.u32('ulExceptionListSize')
     else:
         obj.var('ulExceptionListSize')
@@ -1290,7 +1290,7 @@ def CAkEvent__SetInitialValues(obj, cls):
     #CAkEvent::SetInitialValues
     obj = obj.node('EventInitialValues')
 
-    if cls.version <= 120:
+    if cls.version <= 122:
         obj.u32('ulActionListSize')
     else:
         obj.var('ulActionListSize')
@@ -1613,7 +1613,7 @@ def CAkBus__SetInitialParams(obj, cls):
     else:
         AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls)
 
-    if cls.version <= 120:
+    if cls.version <= 122:
         pass
     else:
         CAkParameterNodeBase__SetPositioningParams(obj, cls)
@@ -1701,7 +1701,7 @@ def CAkBus__SetInitialParams(obj, cls):
         obj.U8x('bIsHdrBus')
         obj.U8x('bHdrReleaseModeExponential')
 
-    elif cls.version <= 120:
+    elif cls.version <= 122:
         obj.U8x('byBitVector') \
            .bit('bMainOutputHierarchy', obj.lastval, 0) \
            .bit('bIsBackgroundMusic', obj.lastval, 1)
@@ -1804,7 +1804,7 @@ def CAkBus__SetInitialValues(obj, cls):
             elem.U8x('bIsCustom')
             elem.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
 
-    elif cls.version <= 120:
+    elif cls.version <= 122:
         CAkParameterNodeBase__ReadStateChunk(obj, cls)
 
     elif cls.version <= 125:
@@ -2691,7 +2691,7 @@ def CAkFxBase__SetInitialValues(obj, cls):
     if cls.version <= 88:
         pass
     elif cls.version <= 125:
-        if cls.version <= 120:
+        if cls.version <= 122:
             pass
         else:
             obj.U8x('_unused')
@@ -2969,7 +2969,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
         # needed to make txtp with mixed banks
         root.set_id(obj.lastval)
 
-    if version <= 120:
+    if version <= 122:
         obj.u32('dwLanguageID').fmt(wdefs.language_id)
     else:
         obj.sid('dwLanguageID').fnv(wdefs.fnv_com) #hashed lang string
@@ -3248,7 +3248,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
 
     if   version <= 118:
         pass
-    elif version <= 120:
+    elif version <= 122:
         obj.u32('ulNumTextures')
         for elem in obj.list('acousticTextures', 'AkAcousticTexture', obj.lastval):
             elem.tid('ID')
@@ -3281,7 +3281,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
 
     if   version <= 118:
         pass
-    elif version <= 120:
+    elif version <= 122:
         obj.u32('ulNumReverberator')
         for elem in obj.list('pObjects', 'AkDiffuseReverberator', obj.lastval):
             elem.tid('ID')

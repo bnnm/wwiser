@@ -347,7 +347,7 @@ class NodeSource(object):
         version = nroot.get_version()
 
         lang_value = nlangid.value()
-        if version <= 120: #set of values
+        if version <= 122: #set of values
             lang_name = LANGUAGE_IDS.get(lang_value)
         else: #set of hashed names
             # typical values but languages can be anything (redefined in project options)

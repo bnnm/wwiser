@@ -324,7 +324,7 @@ def CAkAction__Create(obj, actionType):
             CAkActionUseState: (wparser.CAkActionSetValue__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         })
 
-    if   cls.version <= 120:
+    if   cls.version <= 122:
         CAkAction_dispatch.update({
             CAkActionStop: (wparser.CAkActionActive__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         })

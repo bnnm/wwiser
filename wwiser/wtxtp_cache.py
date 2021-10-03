@@ -33,9 +33,8 @@ class TxtpCache(object):
         self.random_force = False
         self.write_delays = False
         self.silence = False
-        self.tagsm3u = False
-        self.tagsm3u_add = False
-        self.tagsm3u_limit = None
+
+        self.tags = None
 
         self.x_noloops = False
         self.x_notxtp = False
@@ -61,8 +60,6 @@ class TxtpCache(object):
         self._txtp_hashes = {}
         self._name_hashes = {}
         self._banks = {}
-
-        self._tag_names = {}
 
         self.transition_mark = False
         self.unused_mark = False
@@ -102,12 +99,6 @@ class TxtpCache(object):
     def get_banks(self):
         return self._banks
 
-    def get_tag_names(self):
-        return self._tag_names
-
-    def add_tag_names(self, shortname, longname):
-        self._tag_names[shortname] = longname
-        
 
     # paths for txtp
     def normalize_path(self, path):

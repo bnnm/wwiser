@@ -1,5 +1,5 @@
 import argparse, glob, logging, os, platform
-from . import wparser, wprinter, wnames, wutil, wview, wgenerator
+from . import wparser, wprinter, wnames, wutil, wview, wgenerator, wtags
 from . import wversion
 
 
@@ -75,9 +75,11 @@ class Cli(object):
         parser.add_argument('-grf','--txtp-random-force',   help="Force base section to be selectable like a 'random'\n(ex. make .txtp per layer in all files)", action='store_true')
         parser.add_argument('-gwd','--txtp-write-delays',   help="Don't skip initial delay.\n(some .txtp will start with some delay)", action='store_true')
         parser.add_argument('-gs', '--txtp-silence',        help="Silence by default parts that crossfade", action='store_true')
-        parser.add_argument('-gt', '--txtp-tagsm3u',        help="Use shorter .txtp names and put full names in !tags.m3u", action='store_true')
-        parser.add_argument('-gta','--txtp-tagsm3u-add',    help="Add to existing !tags.m3u instead of overwritting", action='store_true')
-        parser.add_argument('-gtl','--txtp-tagsm3u-limit',  help="Use shorter names + m3u by limiting original names to N", type=int)
+
+        parser.add_argument('-te', '--tags-event',          help="Use shorter .txtp names and put full names in !tags.m3u", action='store_true')
+        parser.add_argument('-tl', '--tags-limit',          help="Use shorter names + m3u by limiting original names to N", type=int)
+        parser.add_argument('-tw', '--tags-wem',            help="Make !tags.m3u for .wem in folder", action='store_true')
+        parser.add_argument('-ta', '--tags-add',            help="Add to existing !tags.m3u instead of overwritting", action='store_true')
 
         parser.add_argument('-gxnl','--txtp-x-noloops',     help="Extra: don't loop sounds", action='store_true')
         parser.add_argument('-gxnt','--txtp-x-notxtp',      help="Extra: don't save .txtp", action='store_true')
@@ -179,6 +181,13 @@ class Cli(object):
             #left open until manually stopped
             viewer.stop()
 
+        # !tags.m3u
+        tags = wtags.Tags(banks, names)
+        tags.set_make_event(args.tags_event)
+        tags.set_make_wem(args.tags_wem)
+        tags.set_add(args.tags_add)
+        tags.set_limit(args.tags_limit)
+
         # generate txtp
         if args.txtp:
             generator = wgenerator.Generator(banks)
@@ -206,9 +215,8 @@ class Cli(object):
             generator.set_random_force(args.txtp_random_force)
             generator.set_write_delays(args.txtp_write_delays)
             generator.set_silence(args.txtp_silence)
-            generator.set_tagsm3u(args.txtp_tagsm3u)
-            generator.set_tagsm3u_add(args.txtp_tagsm3u_add)
-            generator.set_tagsm3u_limit(args.txtp_tagsm3u_limit)
+
+            generator.set_tags(tags)
 
             generator.set_x_noloops(args.txtp_x_noloops)
             generator.set_x_notxtp(args.txtp_x_notxtp)
@@ -216,6 +224,8 @@ class Cli(object):
 
             generator.generate()
 
+        # extra
+        tags.make()
 
         # db manipulation
         if args.dump_type == wprinter.TYPE_NONE and (args.save_lst or args.save_db):

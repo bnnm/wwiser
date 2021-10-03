@@ -1,7 +1,7 @@
 import os, logging, threading, platform
 from tkinter import *
 from tkinter import ttk, font, filedialog, scrolledtext, messagebox
-from . import wnames, wparser, wprinter, wview, wutil, wgenerator, wversion
+from . import wnames, wparser, wprinter, wview, wutil, wgenerator, wversion, wtags
 
 
 class Gui(object):
@@ -37,7 +37,7 @@ class Gui(object):
         # base
 
         root = Tk()
-        root.geometry('680x800')
+        root.geometry('900x800')
         #root.resizable(width=False,height=False)
         #root.iconbitmap(wutil.Loader.get_resource('/resources/wwiser.ico'))
 
@@ -161,20 +161,18 @@ class Gui(object):
 
         row += 1
 
-        chk = self._chk('txtp_unused', frame, "Generate unused audio (when log complains)")
-        chk.grid(row=row, column=0, sticky="W")
-
-        row += 1
-
         chk = self._chk('txtp_name_wems', frame, "Add all .wem names to .txtp filename (if found)")
         chk.grid(row=row, column=0, sticky="W")
 
         chk = self._chk('txtp_name_vars', frame, "Add ignored variables to .txtp filename")
         chk.grid(row=row, column=1, sticky="W")
 
+        chk = self._chk('txtp_alt_exts', frame, "Use TXTP alt extensions (.logg/lwav)")
+        chk.grid(row=row, column=2, sticky="W")
+
         row += 1
 
-        chk = self._chk('txtp_alt_exts', frame, "Use TXTP alt extensions (.logg/lwav)")
+        chk = self._chk('txtp_unused', frame, "Generate unused audio (when log complains)")
         chk.grid(row=row, column=0, sticky="W")
 
         chk = self._chk('txtp_dupes', frame, "Allow TXTP dupes (WARNING: may create a lot)")
@@ -188,23 +186,24 @@ class Gui(object):
         chk = self._chk('txtp_random_multi', frame, "Force multiloops to be selectable like a 'random'")
         chk.grid(row=row, column=1, sticky="W")
 
-        row += 1
-
         chk = self._chk('txtp_random_force', frame, "Force base groups to be selectable like a 'random'")
-        chk.grid(row=row, column=0, sticky="W")
+        chk.grid(row=row, column=2, sticky="W")
+
+        row += 1
 
         chk = self._chk('txtp_write_delays', frame, "Don't skip initial delay")
-        chk.grid(row=row, column=1, sticky="W")
-
-        row += 1
-
-        chk = self._chk('txtp_silence', frame, "Silence parts that crossfade by default")
         chk.grid(row=row, column=0, sticky="W")
 
-        chk = self._chk('txtp_tagsm3u', frame, "Use shorter .txtp names and put full names in !tags.m3u")
+        chk = self._chk('txtp_silence', frame, "Silence parts that crossfade by default")
         chk.grid(row=row, column=1, sticky="W")
 
         row += 1
+
+        chk = self._chk('tags_event', frame, "Use shorter .txtp names and put full names in !tags.m3u")
+        chk.grid(row=row, column=0, sticky="W")
+
+        chk = self._chk('tags_wem', frame, "Make !tags.m3u for .wem in folder")
+        chk.grid(row=row, column=1, sticky="W")
 
         #----------------------------------------------------------------------
         # log
@@ -429,9 +428,16 @@ class Gui(object):
             generator.set_random_force(self._fields['txtp_random_force'].get())
             generator.set_write_delays(self._fields['txtp_write_delays'].get())
             generator.set_silence(self._fields['txtp_silence'].get())
-            generator.set_tagsm3u(self._fields['txtp_tagsm3u'].get())
+
+            tags = wtags.Tags(banks, self.names)
+            tags.set_make_event(self._fields['tags_event'].get())
+            tags.set_make_wem(self._fields['tags_wem'].get())
+            generator.set_tags(tags)
 
             generator.generate()
+
+            # extra
+            tags.make()
 
         except Exception:
             logging.error("gui: generator stopped on error")

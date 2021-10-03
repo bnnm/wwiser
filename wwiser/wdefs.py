@@ -40,6 +40,7 @@ bank_versions = [
      70, #0x46 Wwise 2012.1?   *[Metal Gear Rising (PC/X360)-some banks]
      72, #0x48 Wwise 2012.2     [Metal Gear Rising (PC/X360)-most banks, Saints Row IV (PC), South Park: The Stick of Truth (PC)]
      88, #0x58 Wwise 2013.1/2   [Bayonetta 2 (WiiU), Devil's Third (WiiU)]
+     89, #0x59 Wwise 2013.2?   *[Destiny (PS4)]
     112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy, Plants vs Zombies 2 (Android)]
     113, #0x71 Wwise 2015.1     [Nier Automata (PC), Doom 2016 (PC), South Park: The Fractured But Whole (PC)]
     118, #0x76 Wwise 2016.1     [WipEout: Omega Collection (PS4), Coffence (PC), Mario + Rabbids Kingdom Battle (Switch)]
@@ -1860,7 +1861,7 @@ def setup(version):
         AkRTPC_ParameterID = AkRTPC_ParameterID_065
     elif version <= 72:
         AkRTPC_ParameterID = AkRTPC_ParameterID_072
-    elif version <= 88:
+    elif version <= 89:
         AkRTPC_ParameterID = AkRTPC_ParameterID_088
     elif version <= 113:
         AkRTPC_ParameterID = AkRTPC_ParameterID_113
@@ -1884,7 +1885,7 @@ def setup(version):
         AkActionType = AkActionType_062
 
     global AkBank__AKBKSourceType
-    if  version <= 88:
+    if  version <= 89:
         AkBank__AKBKSourceType = AkBank__AKBKSourceType_088
     else:
         AkBank__AKBKSourceType = AkBank__AKBKSourceType_112
@@ -1894,7 +1895,7 @@ def setup(version):
         AkPropID = AkPropID_062
     elif  version <= 65:
         AkPropID = AkPropID_065
-    elif  version <= 88:
+    elif  version <= 89:
         AkPropID = AkPropID_088
     elif version <= 113:
         AkPropID = AkPropID_113
@@ -1916,7 +1917,7 @@ def setup(version):
         AkBuiltInParam = AkBuiltInParam_128
 
     global AkClipAutomationType
-    if version <= 88:
+    if version <= 89:
         AkClipAutomationType = AkClipAutomationType_088
     else:
         AkClipAutomationType = AkClipAutomationType_112

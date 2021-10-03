@@ -159,7 +159,7 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
     plugin_id = obj.lastval
     PluginType = (plugin_id & 0x0F)
 
-    if   cls.version <= 88:
+    if   cls.version <= 89:
         obj.U32('StreamType').fmt(wdefs.AkBank__AKBKSourceType)
     else:
         obj.U8x('StreamType').fmt(wdefs.AkBank__AKBKSourceType)
@@ -200,6 +200,12 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
             elem.U32('uFileOffset')
             elem.U32('uInMemoryMediaSize')
 
+    elif cls.version <= 89:
+        elem.tid('uFileID') #wem or bnk
+        if stream_type != 1: #memory/prefetch
+            elem.U32('uFileOffset')
+        elem.U32('uInMemoryMediaSize') #assumed
+
     elif cls.version <= 112:
         elem.tid('uFileID') #wem or bnk
         if stream_type != 2: #memory/prefetch
@@ -213,6 +219,11 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
 
     if   cls.version <= 26:
         pass
+    elif cls.version <= 112: #recheck
+        elem.U8x('uSourceBits') \
+            .bit('bIsLanguageSpecific', elem.lastval,0) \
+            .bit('bHasSource', elem.lastval,1) \
+            .bit('bExternallySupplied', elem.lastval,2)
     else:
         elem.U8x('uSourceBits') \
             .bit('bIsLanguageSpecific', elem.lastval,0) \
@@ -253,7 +264,7 @@ def CAkParameterNode__SetAdvSettingsParams(obj, cls):
         obj.U8x('bIsMaxNumInstOverrideParent')
         obj.U8x('bIsVVoicesOptOverrideParent')
 
-    elif cls.version <= 88: #56=KOF13
+    elif cls.version <= 89: #56=KOF13
         obj.U8x('eVirtualQueueBehavior').fmt(wdefs.AkVirtualQueueBehavior)
         obj.U8x('bKillNewest') #MaxReachedBehavior
         obj.U8x('bUseVirtualBehavior') #OverLimitBehavior
@@ -397,7 +408,7 @@ def CAkParameterNodeBase__SetAuxParams(obj, cls):
     #CAkParameterNodeBase::SetAuxParams
     obj = obj.node('AuxParams')
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         obj.U8x('bOverrideGameAuxSends')
         obj.U8x('bUseGameAuxSends')
         obj.U8x('bOverrideUserAuxSends')
@@ -526,13 +537,13 @@ def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
 
         elem.tid('RTPCID').fnv(wdefs.fnv_gme)
 
-        if   cls.version <= 88:
+        if   cls.version <= 89:
             pass
         else:
             elem.U8x('rtpcType').fmt(wdefs.AkRtpcType)
             elem.U8x('rtpcAccum').fmt(wdefs.AkRtpcAccum)
 
-        if   cls.version <= 88:
+        if   cls.version <= 89:
             elem.U32('ParamID').fmt(wdefs.AkRTPC_ParameterID)
         elif cls.version <= 113:
             elem.U8x('ParamID').fmt(wdefs.AkRTPC_ParameterID)
@@ -590,7 +601,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
     else:
         cls.CAkClass__SetInitialMetadataParams(obj, cls) #_vptr$IAkEffectSlotsOwner + 71
 
-    if   cls.version <= 88:
+    if   cls.version <= 89:
         pass
     else:
         obj.U8x('bOverrideAttachmentParams')
@@ -603,7 +614,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
         obj.u8i('bPriorityOverrideParent')
         obj.u8i('bPriorityApplyDistFactor')
         obj.s8i('iDistOffset')
-    elif cls.version <= 88:
+    elif cls.version <= 89:
         obj.U8x('bPriorityOverrideParent')
         obj.U8x('bPriorityApplyDistFactor')
     else:
@@ -685,7 +696,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
 
     fld.bit('bPositioningInfoOverrideParent', obj.lastval, 0)
     fld.bit('bHasListenerRelativeRouting', obj.lastval, 1) #has_3d
-    if cls.version <= 88:
+    if cls.version <= 89:
         pass
     elif cls.version <= 112:
         fld.bit('unknown2d', obj.lastval, 2) #flag for next bit
@@ -724,7 +735,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             has_3d = obj.lastval
             if not has_3d:
                 obj.U8x('bIsPannerEnabled') #part of BaseGenParams
-        elif cls.version <= 88:
+        elif cls.version <= 89:
             obj.U8x('cbIs2DPositioningAvailable')
             has_2d = obj.lastval
             obj.U8x('cbIs3DPositioningAvailable')
@@ -740,7 +751,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
 
     if has_positioning and has_3d:
         #Gen3DParams
-        if   cls.version <= 88:
+        if   cls.version <= 89:
             obj.U32('eType').fmt(wdefs.AkPositioningType)
             eType = obj.lastval
             uBits3d = 0
@@ -768,7 +779,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
                 fld.bit('bHoldListenerOrient', obj.lastval, 5)
                 fld.bit('bEnableDiffraction', obj.lastval, 6)
 
-        if   cls.version <= 88:
+        if   cls.version <= 89:
             obj.tid('uAttenuationID')
             obj.U8x('bIsSpatialized')
         elif cls.version <= 128:
@@ -780,7 +791,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             #eType = eType
             has_automation = (eType == 2) #Ak3DUserDef
             has_dynamic = (eType == 3) #Ak3DGameDef
-        elif cls.version <= 88:
+        elif cls.version <= 89:
             eType = (eType >> 0) & 3
             has_automation = (eType != 1)
             has_dynamic = not has_automation
@@ -806,7 +817,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             obj.U8x('bIsDynamic')
 
         if has_automation:
-            if   cls.version <= 88:
+            if   cls.version <= 89:
                 obj.U32('ePathMode').fmt(wdefs.AkPathMode)
                 obj.U8x('bIsLooping')
                 obj.s32('TransitionTime')
@@ -838,7 +849,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
                 for elem in obj.list('Params', 'Ak3DAutomationParams', obj.lastval):
                     elem.f32('fXRange')
                     elem.f32('fYRange')
-                    if   cls.version <= 88:
+                    if   cls.version <= 89:
                         pass
                     else:
                         elem.f32('fZRange')
@@ -1057,7 +1068,7 @@ def CAkActionSetGameParameter__SetActionSpecificParams(obj, cls):
     #CAkActionSetGameParameter::SetActionSpecificParams
     obj = obj.node('GameParameterActionSpecificParams')
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         pass
     else:
         obj.U8x('bBypassTransition') #when != 0
@@ -1396,7 +1407,7 @@ def CAkRanSeqCntr__SetInitialValues(obj, cls):
         obj.U8x('bIsRestartBackward')
         obj.U8x('bIsContinuous')
         obj.U8x('bIsGlobal')
-    elif cls.version <= 88:
+    elif cls.version <= 89:
         obj.U8x('_bIsUsingWeight') #unused
         obj.U8x('bResetPlayListAtEachPlay')
         obj.U8x('bIsRestartBackward')
@@ -1438,7 +1449,7 @@ def CAkSwitchCntr__SetInitialValues(obj, cls):
 
     CAkParameterNodeBase__SetNodeBaseParams(obj, cls)
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         obj.U32('eGroupType').fmt(wdefs.AkGroupType)
     else:
         obj.U8x('eGroupType').fmt(wdefs.AkGroupType)
@@ -1460,7 +1471,7 @@ def CAkSwitchCntr__SetInitialValues(obj, cls):
     for elem in obj.list('rParams', 'AkSwitchNodeParams', obj.lastval):
         elem.tid('ulNodeID').fnv(wdefs.fnv_no)
 
-        if cls.version <= 88:
+        if cls.version <= 89:
             elem.U8x('bIsFirstOnly')
             elem.U8x('bContinuePlayback')
             elem.U32('eOnSwitchMode').fmt(wdefs.AkOnSwitchMode)
@@ -1595,7 +1606,7 @@ def CAkBus__SetInitialFxParams(obj, cls):
     else: #136+
         CAkEffectSlots__SetInitialValues(obj, cls) #like the above fx reading though
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         pass
     else:
         obj.tid('fxID_0')
@@ -1686,7 +1697,7 @@ def CAkBus__SetInitialParams(obj, cls):
         obj.U8x('_unused')
         obj.U8x('_unused')
 
-    elif cls.version <= 88:
+    elif cls.version <= 89:
         obj.U8x('bPositioningEnabled')
         obj.U8x('bPositioningEnablePanner')
         obj.U8x('bKillNewest') #MaxReachedBehavior
@@ -1785,7 +1796,7 @@ def CAkBus__SetInitialValues(obj, cls):
 
     cls.CAkClass__SetInitialFxParams(obj, cls) #_vptr$CAkIndexable + 71 (v135<=), _vptr$IAkEffectSlotsOwner + 70
 
-    if   cls.version <= 88:
+    if   cls.version <= 89:
         pass
     else:
         obj.U8x('bOverrideAttachmentParams')
@@ -1846,7 +1857,7 @@ def CAkLayer__SetInitialValues(obj, cls):
 
     obj.tid('rtpcID').fnv(wdefs.fnv_gme)
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         pass
     else:
         obj.U8x('rtpcType').fmt(wdefs.AkRtpcType)
@@ -1909,7 +1920,7 @@ def CAkMusicNode__SetMusicNodeParams(obj, cls):
     #CAkMusicNode::SetMusicNodeParams
     obj = obj.node('MusicNodeParams')
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         pass
     else:
         obj.U8x('uFlags') \
@@ -2035,7 +2046,7 @@ def CAkMusicTrack__SetInitialValues(obj, cls):
     #CAkMusicTrack::SetInitialValues
     obj = obj.node('MusicTrackInitialValues')
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         pass
     elif cls.version <= 112:
         obj.U8x('uOverrides') \
@@ -2092,7 +2103,7 @@ def CAkMusicTrack__SetInitialValues(obj, cls):
     else:
         pass
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         obj.u32('eRSType').fmt(wdefs.AkMusicTrackRanSeqType)
     else:
         obj.U8x('eTrackType').fmt(wdefs.AkMusicTrackType)
@@ -2448,7 +2459,7 @@ def parse_playlist_node(obj, cls, count):
             else: #046 (Enslaved)
                 elem.u32('eRSType').fmt(wdefs.RSType)
             elem.s16('Loop')
-            if cls.version <= 88:
+            if cls.version <= 89:
                 pass
             else:
                 elem.s16('LoopMin')
@@ -2522,7 +2533,7 @@ def CAkAttenuation__SetInitialValues(obj, cls):
         elem.f32('fOutsideDegrees') #fOutsideAngle = ToRadians(in_fDegrees) * 0.5
         elem.f32('fOutsideVolume')
         elem.f32('LoPass')
-        if cls.version <= 88:
+        if cls.version <= 89:
             pass
         else:
             elem.f32('HiPass')
@@ -2533,7 +2544,7 @@ def CAkAttenuation__SetInitialValues(obj, cls):
     #    num_curves = ?
     elif cls.version <= 72:
         num_curves = 4
-    elif cls.version <= 88:
+    elif cls.version <= 89:
         num_curves = 5
     else:
         num_curves = 7
@@ -2716,7 +2727,7 @@ def CAkFxBase__SetInitialValues(obj, cls):
     #inline'd in 113<=
     SetInitialRTPC_CAkFxBase_(obj, cls)
 
-    if cls.version <= 88:
+    if cls.version <= 89:
         pass
     elif cls.version <= 125:
         if cls.version <= 122:
@@ -3249,7 +3260,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     for elem in obj.list('pItems', 'SwitchGroups', obj.lastval):
         elem.tid('SwitchGroupID').fnv(wdefs.fnv_var)
         elem.tid('rtpcID').fnv(wdefs.fnv_gme)
-        if version <= 88:
+        if version <= 89:
             pass
         else:
             elem.U8x('rtpcType').fmt(wdefs.AkRtpcType)
@@ -3266,7 +3277,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
         elem.sid('RTPC_ID').fnv(wdefs.fnv_gme) #tid? 113=Doom16? (134=Xeno is sid)
         elem.f32('fValue')
 
-        if version <= 88:
+        if version <= 89:
             pass
         else:
             elem.u32('rampType').fmt(wdefs.AkTransitionRampingType)
@@ -3337,7 +3348,7 @@ def CAkBankMgr__ProcessEnvSettingsChunk(obj):
     obj.set_name('EnvSettingsChunk')
     version = get_version(obj)
 
-    if version <= 88:
+    if version <= 89:
         max_x = 2
         max_y = 2
     else:

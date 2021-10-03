@@ -339,6 +339,11 @@ class NodeObject(NodeElement):
     def gap(self, name, size):
         return self.field(TYPE_GAP, name, size=size).fmt(wdefs.fmt_hex)
 
+    def peek32(self):
+        value = self.__r.u32()
+        self.__r.skip(-4)
+        return value
+
     # register new field and add value to object
     def field(self, type, name, value=None, size=None):
         r = self.__r

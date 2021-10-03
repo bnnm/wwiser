@@ -436,6 +436,9 @@ class Names(object):
     # parsed as simple text to increase performance.
     # 
     # Devs may generate one .xml per bnk instead but this is much less common
+    #
+    # Also some version docs say Wwise generates "SoundbankInfo.xml" (singular) but from SDK samples
+    # it's always plural (some games like Far Cry 5 has a SoundbankInfo.xml but format is different).
     def parse_xml(self, filename=None):
         if not filename:
             filename = self._make_filepath('SoundbanksInfo.xml')

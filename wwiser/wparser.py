@@ -1859,7 +1859,7 @@ def CAkLayer__SetInitialValues(obj, cls):
     obj.u32('ulNumAssoc')
     for elem in obj.list('assocs', 'CAssociatedChildData', obj.lastval):
         elem.tid('ulAssociatedChildID').fnv(wdefs.fnv_no)
-        if cls.version == 122 or cls.version == 136: # custom field? (not 135/140!)
+        if cls.version == 122 or cls.version == 136: #custom field (not 120/135/140/etc)
             elem.U8x('unknown_custom') #0/1?
             elem.U8x('unknown_custom') #0/1?
         elem.u32('ulCurveSize')
@@ -1968,6 +1968,9 @@ def CAkMusicSegment__SetInitialValues(obj, cls):
         else:
             #AK::ReadBankStringUtf8
             elem.stz('pMarkerName') #pszName
+
+    if cls.version == 122:
+        obj.u32('unknown_custom')
     return
 
 #-
@@ -2115,13 +2118,31 @@ def CAkBankMgr__ReadSourceParent_CAkMusicTrack_(obj):
 #******************************************************************************
 # HIRC: Music Switch
 
-def parse_tree_node(obj, cls, count, cur_depth, max_depth):
+def parse_tree_node(obj, cls, count, count_max, cur_depth, max_depth):
 
     nodes = []
     for elem in obj.list('pNodes', 'Node', count):
         elem.tid('key').fnv(wdefs.fnv_val) #0/default or gamesync
 
-        if cur_depth == max_depth:
+        # Trees "should" reach max depth, but somehow v122 has dialogue trees
+        # mixing depth 3 and 2 [battle_vo_orders__core.bnk's 50994472].
+        # Technically could be possible by manually calling ResolveDialogueEvent with
+        # 2 args instead of 3. Key doesn't seem to affect if tree ends (seen all combos
+        # of 0/0/123, 0/123/0, 123/123/0, ... then 123/0), ::_ResolvePath doesn't look
+        # like doing special detection, and only in a few leafs so may just be a bnk bug.
+
+        # try to autodetect based on next value:
+        if cls.version == 122:
+            id_ch = elem.peek32()
+            uidx = (id_ch >> 0)  & 0xFFFF
+            ucnt = (id_ch >> 16) & 0xFFFF
+            is_id = uidx > count_max or ucnt > count_max  # reliable enough...
+        else:
+            is_id = False
+
+        is_max = cur_depth == max_depth
+
+        if is_max or is_id:
             elem.tid('audioNodeId').fnv(wdefs.fnv_no)
             children_count = 0
         else:
@@ -2144,7 +2165,7 @@ def parse_tree_node(obj, cls, count, cur_depth, max_depth):
 
     for elem, children_count in nodes:
         if children_count > 0:
-            parse_tree_node(elem, cls, children_count, cur_depth+1, max_depth)
+            parse_tree_node(elem, cls, children_count, count_max, cur_depth+1, max_depth)
 
     return
 
@@ -2156,39 +2177,43 @@ def AkDecisionTree__SetTree(obj, cls, size, depth):
     obj = obj.node('AkDecisionTree')
     obj.omax(size)
 
-    # this tree is a linear array of AkDecisionTree::Node, used in
+    # This tree is a linear array of AkDecisionTree::Node, used in
     # AkDecisionTree::ResolvePath rather than pre-parsed, and selects
     # an ID typically based on probability and weight + states.
-
-    # format: node > all children from node > all children of first child,
+    #
+    # Format: node > all children from node > all children of first child,
     # repeat until max depth (nodes always have children up to max).
     # idx is where the children start in the array. example:
-
-    #node[0]            idx=1, chl=1, dp=0   (max depth=4)
-    #  node[1]          idx=2, chl=2, dp=1   (parent: [0])
-    #    node[2]        idx=4, chl=2, dp=2   (parent: [1])
-    #    node[3]        idx=8, chl=1, dp=2   (parent: [1])
-    #      node[4]      idx=6, chl=1, dp=3   (parent: [2])
-    #      node[5]      idx=7, chl=1, dp=3   (parent: [2])
-    #        node[6]    audio node,   dp=4   (parent: [4])
-    #        node[7]    audio node,   dp=4   (parent: [5])
-    #      node[8]      idx=9, chl=1, dp=3   (parent: [3])
-    #        node[9]    audio node,   dp=4   (parent: [8])
-
-    # we parse it to represents the final tree rather than the array, but
+    #
+    # node[0]            idx=1, chl=1, dp=0   (max depth=4)
+    #   node[1]          idx=2, chl=2, dp=1   (parent: [0])
+    #     node[2]        idx=4, chl=2, dp=2   (parent: [1])
+    #     node[3]        idx=8, chl=1, dp=2   (parent: [1])
+    #       node[4]      idx=6, chl=1, dp=3   (parent: [2])
+    #       node[5]      idx=7, chl=1, dp=3   (parent: [2])
+    #         node[6]    audio node,   dp=4   (parent: [4])
+    #         node[7]    audio node,   dp=4   (parent: [5])
+    #       node[8]      idx=9, chl=1, dp=3   (parent: [3])
+    #         node[9]    audio node,   dp=4   (parent: [8])
+    #
+    # We parse it to represents the final tree rather than the array, but
     # indexes get moved around and children idx makes less sense
     # (it's possible to read linearly but harder to know when it's an audio node)
-    parse_tree_node(obj, cls, 1,  0, depth)
 
-#    #UFC needs weight while AoT2 (in 45/44/38 bnks) doesn't, both trees called in CAkDialogueEvent, 36 has feedback
-#    # other 38/44 games don't seem to have trees to crossreference
-#    if   cls.version <= 36: #36=UFC
-#        count = size // 0x0c
-#    elif cls.version <= 45: #45=AoT2
-#        count = size // 0x08
-#    else:
-#        count = size // 0x0C
-#
+    # see parse tree node
+    if   cls.version <= 29:  #29=AoT2 test banks
+        count_max = size // 0x08
+    elif cls.version <= 36: #36=UFC
+        count_max = size // 0x0c
+    elif cls.version <= 45: #45=AoT2
+        count_max = size // 0x08
+    else:
+        count_max = size // 0x0C
+
+    children_count = 1
+    parse_tree_node(obj, cls, children_count, count_max, 0, depth)
+
+#    linear parse for tests
 #    for elem in obj.list('pNodes', 'Node', count):
 #        elem.tid('key')
 #
@@ -2198,7 +2223,9 @@ def AkDecisionTree__SetTree(obj, cls, size, depth):
 #            elem.u16('children.uIdx')
 #            elem.u16('children.uCount')
 #
-#        if   cls.version <= 36: #36=UFC
+#        if   cls.version <= 29: #29=AoT2 test banks
+#            pass
+#        elif cls.version <= 36: #36=UFC
 #            elem.u16('uWeight')
 #            elem.u16('uProbability')
 #        elif cls.version <= 45: #45=AoT2
@@ -2332,7 +2359,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
             else: #65=DmC/ZoE
                 elem2.U8x('bDestMatchSourceCueName')
 
-        if cls.version == 136: #may be part of the above
+        if cls.version == 122 or cls.version == 136: #custom field (not 120/135/140/etc), may be part of the above
             elem.tid('ulStateGroupID?_custom').fnv(wdefs.fnv_var)
             elem.tid('ulStateID?_custom').fnv(wdefs.fnv_val)
 

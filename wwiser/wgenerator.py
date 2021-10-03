@@ -420,6 +420,8 @@ class Generator(object):
     #--------------------------------------------------------------------------
 
     def _write_tagsm3u(self):
+        if not self._banks:
+            return
         if not self._txtpcache.tagsm3u:
             return
         tags = self._txtpcache.get_tag_names()
@@ -464,6 +466,8 @@ class Generator(object):
     def _read_externals(self):
         #if not self._txtpcache.externals_set:
         #    return
+        if not self._banks:
+            return
 
         # take first bank as base folder (like .txtp), not sure if current (wwiser's) would be beter
         basepath = self._banks[0].get_root().get_path()

@@ -2135,7 +2135,7 @@ def parse_tree_node(obj, cls, count, count_max, cur_depth, max_depth):
     for elem in obj.list('pNodes', 'Node', count):
         elem.tid('key').fnv(wdefs.fnv_val) #0/default or gamesync
 
-        # Trees "should" reach max depth, but somehow v122 has dialogue trees
+        # Trees "should" reach max depth, but somehow v122 (and some v134) has dialogue trees
         # mixing depth 3 and 2 [battle_vo_orders__core.bnk's 50994472].
         # Technically could be possible by manually calling ResolveDialogueEvent with
         # 2 args instead of 3. Key doesn't seem to affect if tree ends (seen all combos
@@ -2143,13 +2143,10 @@ def parse_tree_node(obj, cls, count, count_max, cur_depth, max_depth):
         # like doing special detection, and only in a few leafs so may just be a bnk bug.
 
         # try to autodetect based on next value:
-        if cls.version == 122:
-            id_ch = elem.peek32()
-            uidx = (id_ch >> 0)  & 0xFFFF
-            ucnt = (id_ch >> 16) & 0xFFFF
-            is_id = uidx > count_max or ucnt > count_max  # reliable enough...
-        else:
-            is_id = False
+        id_ch = elem.peek32()
+        uidx = (id_ch >> 0)  & 0xFFFF
+        ucnt = (id_ch >> 16) & 0xFFFF
+        is_id = uidx > count_max or ucnt > count_max  # reliable enough...
 
         is_max = cur_depth == max_depth
 

@@ -711,10 +711,17 @@ class _NodeHelper(object):
 
     def _build_tree_nodes(self, node, args, depth, nnodes, gamesyncs):
         if depth >= len(args):
-            return None #shouldn't get here
+            return #shouldn't get here
         gtype, ngname = args[depth]
 
-        for nnode in nnodes.get_children():
+        # in case of short branch
+        if not nnodes:
+            return
+        nchildren = nnodes.get_children()
+        if not nchildren:
+            return
+
+        for nnode in nchildren:
             ngvalue = nnode.find1(name='key')
             nsubnodes = nnode.find1(name='pNodes')
 

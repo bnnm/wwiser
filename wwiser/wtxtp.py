@@ -333,21 +333,21 @@ class Txtp(object):
             name = guidname
         else:
             #get usable name
+            name = None
+
             nroot = node.get_root()
             bankname = os.path.basename(nroot.get_filename()) #[:-4] #
             bankname = os.path.splitext(bankname)[0]
 
-            name = None
-            if bankname.isnumeric(): #try using hashname from bankname
-                nbnk = nroot.find1(name='BankHeader')
-                nbid = nbnk.find(name='dwSoundBankID')
-                battrs = nbid.get_attrs()
+            # use bank's hashname if available
+            nbnk = nroot.find1(name='BankHeader')
+            nbid = nbnk.find(name='dwSoundBankID')
+            battrs = nbid.get_attrs()
+            hashname = battrs.get('hashname')
+            if hashname:
+                name = hashname
 
-                hashname = battrs.get('hashname')
-                if hashname:
-                    name = hashname
-                #maybe could add language name?
-
+            # otherwise use bank's name
             if not name:
                 name = bankname
 

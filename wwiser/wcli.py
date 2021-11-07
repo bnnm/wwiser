@@ -1,4 +1,4 @@
-import argparse, glob, logging, os, platform
+import sys, argparse, glob, logging, os, platform
 from . import wparser, wprinter, wnames, wutil, wview, wgenerator, wtags
 from . import wversion
 
@@ -6,9 +6,10 @@ from . import wversion
 class Cli(object):
 
     def __init__(self):
-        pass
+        self._parser = None
+        return
 
-    def _parse(self):
+    def _parse_init(self):
         title = 'wwiser'
         version = ''
         if wversion.WWISER_VERSION:
@@ -32,8 +33,9 @@ class Cli(object):
 
         parser = argparse.ArgumentParser(prog="wwiser", description=description, epilog=epilog, formatter_class=argparse.RawTextHelpFormatter)
         # main options
-        parser.add_argument('files', help="Files to get (wildcards work)", nargs='+')
+        parser.add_argument('files', help="Files to get (wildcards work)", nargs='*')
         parser.add_argument('-m',  '--multi',           help="Treat files as multiple separate files", action='store_true')
+        parser.add_argument('-c',  '--config',          help="Set config text file\nAllows same CLI options but in a text file\n(may use lines freely, write '#@new' to start a new config)")
         parser.add_argument('-d',  '--dump-type',       help="Set dump type: txt|xml|xsl|xsl_s|none|empty (default: auto)")
         parser.add_argument('-dn', '--dump-name',       help="Set dump filename (default: auto)")
         parser.add_argument('-l',  '--log',             help="Write info to wwiser log (has extra messages)", action='store_true')
@@ -86,7 +88,59 @@ class Cli(object):
         parser.add_argument('-gxnt','--txtp-x-notxtp',      help="Extra: don't save .txtp", action='store_true')
         parser.add_argument('-gxni','--txtp-x-nameid',      help="Extra: add ID to generic names", action='store_true')
 
-        return parser.parse_args()
+        self._parser = parser
+
+    # read config file's lines to make one (or many) configs, and pass to argparse
+    def _handle_config(self, args):
+        defaults = sys.argv[1:]
+        configs = []
+
+        current = []
+        current += defaults
+        configs.append(current)
+
+        config_name = args.config
+        if config_name == '*':
+            config_name = 'wwconfig.txt'
+
+        with open(args.config, 'r', encoding='utf-8-sig') as f:
+            for line in f:
+                line = line.strip()
+
+                # start a new config 'chunk' (useful to set different filters/config per bank)
+                if line == '#@new' or line == '# @new':
+                    current = []
+                    current += defaults
+                    configs.append(current)
+                    continue
+
+                if line.startswith('#'):
+                    continue
+
+                parts = line.split(" ")
+                for part in parts:
+                    part = part.strip()
+                    if part:
+                        current.append(part)
+
+        # reset config + parse parse config args (per config chunk)
+        for config in configs:
+            if len(config) == 0:
+                continue
+            args = self._parser.parse_args(config)
+            self._run(args)
+
+        return
+
+    def start(self):
+        wutil.setup_cli_logging()
+        self._parse_init()
+
+        args = self._parser.parse_args()
+        if args.config:
+            self._handle_config(args)
+        else:
+            self._run(args)
 
 
     def _is_filename_ok(self, filenames, filename):
@@ -98,10 +152,7 @@ class Cli(object):
             return False
         return True
 
-
-    def start(self):
-        wutil.setup_cli_logging()
-        args = self._parse()
+    def _run(self, args):
         if args.log:
             wutil.setup_file_logging()
 

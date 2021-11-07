@@ -174,16 +174,19 @@ variables aren't related to music, or could be shortened and still make sense. F
 cases you can tell *wwiser* how to rename parts of the `.txtp`, in the form of `text-in:text-out`.
 
 For example with:
-- `play_bgm (ST_PLAYERSTATE=ST_PLAYER_ALIVE) (ST_READY=ST_READ_ON) (ST_MISSION_TYPE=ST_M01)`
+- `play_bgm (ST_PLAYERSTATE=ST_PLAYER_ALIVE) (ST_READY=ST_READ_ON) (ST_MISSION_STATE=ST_M01)`
 - `play_bgm (ST_PLAYERSTATE=ST_PLAYER_DEAD) (ST_READY=ST_READ_OFF)`
 And these renames (note that order matters):
 - `(ST_PLAYERSTATE=ST_PLAYER_ALIVE):`
-- `ST_MISSION_TYPE=:`
-- `ST_READY=*:`
+- `ST_PLAYERSTATE=:STATE=`
+- `ST_MISSION_STATE=:MISSION`
+- `ST_:`
 You would get:
-- `play_bgm (ST_M01)`
-- `play_bgm (ST_PLAYER_DEAD)`
+- `play_bgm (MISSION=M01)`
+- `play_bgm (STATE=PLAYER_DEAD)`
 
+While you can mutate anything to anything, I recommend shortening but respecting the original
+naming style (mainly removing superflous stems and useless states, avoiding making up text).
 
 ## LIMITATIONS
 This tool is not, and will never be, a `.bnk` editor (can't replace files). It's only

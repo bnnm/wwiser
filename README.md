@@ -166,6 +166,23 @@ Some tricks you can do with filters:
   you can filter by `music*` **and** pass the option to *"generate rest of files after
   filtering"*. This reorders so `music01_fields` goes first, then `jukebox01` (now a
   dupe = ignored).
+- Skip layered sounds, like SFX noise pasted on top of music, using sub-node filters
+
+### TXTP renames
+Games with many variables may end up generating `.txtp` with *very* long filenames. Often those
+variables aren't related to music, or could be shortened and still make sense. For those
+cases you can tell *wwiser* how to rename parts of the `.txtp`, in the form of `text-in:text-out`.
+
+For example with:
+- `play_bgm (ST_PLAYERSTATE=ST_PLAYER_ALIVE) (ST_READY=ST_READ_ON) (ST_MISSION_TYPE=ST_M01)`
+- `play_bgm (ST_PLAYERSTATE=ST_PLAYER_DEAD) (ST_READY=ST_READ_OFF)`
+And these renames (note that order matters):
+- `(ST_PLAYERSTATE=ST_PLAYER_ALIVE):`
+- `ST_MISSION_TYPE=:`
+- `ST_READY=*:`
+You would get:
+- `play_bgm (ST_M01)`
+- `play_bgm (ST_PLAYER_DEAD)`
 
 
 ## LIMITATIONS

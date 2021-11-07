@@ -1,4 +1,5 @@
 import math, os
+from . import wtxtp_namer
 
 DEFAULT_OUTDIR = 'txtp/'
 DEFAULT_WEMDIR = 'wem/'
@@ -34,7 +35,9 @@ class TxtpCache(object):
         self.write_delays = False
         self.silence = False
 
+        # helpers
         self.tags = None
+        self.renamer = wtxtp_namer.TxtpRenamer()
 
         self.x_noloops = False
         self.x_notxtp = False

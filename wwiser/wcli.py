@@ -55,13 +55,14 @@ class Cli(object):
         parser.add_argument('-go', '--txtp-outdir',         help="Set TXTP output dir (default: auto)")
         parser.add_argument('-gw', '--txtp-wemdir',         help="Set TXTP .wem dir (default: auto)")
         parser.add_argument('-gm', '--txtp-move',           help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
-        # txtp options related to filtering
+        # txtp options related to filtering and altering txtp
         parser.add_argument('-gf', '--txtp-filter',         help="Set TXTP targets name/id/classname/bnk (default: auto)", nargs='+')
         parser.add_argument('-gfr','--txtp-filter-rest',    help="Generate rest of files after filtering\n(allows prioritizing names in filter then creating\nrest, altering dupe order)", action='store_true')
         parser.add_argument('-gp', '--txtp-params',         help="Set TXTP parameters (default: auto)", nargs='*')
         parser.add_argument('-gd', '--txtp-dupes',          help="Generate TXTP duplicates\n(may create a lot of .txtp)", action='store_true')
         parser.add_argument('-gde','--txtp-dupes-exact',    help="Only consider dupes TXTP that are exactly the same\n(may create .txtp that sound 99%% the same)", action='store_true')
         parser.add_argument('-gbo','--txtp-bank-order',     help="Generate TXTP in bank order instead of names first\n(alters which .txtp are considered dupes)", action='store_true')
+        parser.add_argument('-gr', '--txtp-renames',        help="Set TXTP renames in the form of text-in:text-out (default: auto)", nargs='+')
         # txtp options for extra behaviors
         parser.add_argument('-gnw','--txtp-name-wems',      help="Add all .wem names to .txtp name\n(may create too long filenames when many .wem are used)", action='store_true')
         parser.add_argument('-gnv','--txtp-name-vars',      help="Write ignored variables in .txtp name\n(filenames may look more orderly in some cases)", action='store_true')
@@ -198,6 +199,7 @@ class Cli(object):
             generator.set_dupes(args.txtp_dupes)
             generator.set_dupes_exact(args.txtp_dupes_exact)
             generator.set_bank_order(args.txtp_bank_order)
+            generator.set_renames(args.txtp_renames)
 
             generator.set_outdir(args.txtp_outdir)
             generator.set_wemdir(args.txtp_wemdir)

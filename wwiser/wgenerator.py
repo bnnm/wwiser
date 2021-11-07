@@ -1,5 +1,5 @@
-import logging, os, fnmatch
-from . import wgenerator_filter, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
+import logging, os
+from . import wgenerator_filter, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache 
 
 
 # Tries to write .txtp from a list of HIRC objects. Each object parser adds some part to final
@@ -68,6 +68,9 @@ class Generator(object):
             return
         self._default_params = wgamesync.GamesyncParams(self._txtpcache)
         self._default_params.set_params(params)
+
+    def set_renames(self, items):
+        self._txtpcache.renamer.add(items)
 
     #--------------------------------------------------------------------------
 

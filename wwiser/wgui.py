@@ -115,29 +115,43 @@ class Gui(object):
 
         frame = ttk.Frame(root)
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
+        row = 0
 
-        box = self._box('txtp_filter', frame, "Filter:", "List of allowed HIRCs ID/name/classnames", width=50)
-        box[0].grid(row=0, column=0, sticky="E")
-        box[1].grid(row=0, column=1, sticky="W")
-        box[2].grid(row=0, column=2, sticky="W")
+        box = self._box('txtp_filter', frame, "Filter:", "List of allowed HIRCs ID/name/classnames", width=75)
+        box[0].grid(row=row, column=0, sticky="E")
+        box[1].grid(row=row, column=1, sticky="W")
+        box[2].grid(row=row, column=2, sticky="W")
+        row += 1
 
-        box = self._box('txtp_params', frame, "Params:", "List of '(state=value) [switch=value] ...'", width=50)
-        box[0].grid(row=1, column=0, sticky="E")
-        box[1].grid(row=1, column=1, sticky="W")
-        box[2].grid(row=1, column=2, sticky="W")
+        box = self._box('txtp_params', frame, "Params:", "List of '(state=value) [switch=value] ...' to force (instead of all)", width=75)
+        box[0].grid(row=row, column=0, sticky="E")
+        box[1].grid(row=row, column=1, sticky="W")
+        box[2].grid(row=row, column=2, sticky="W")
+        row += 1
+
+        box = self._box('txtp_renames', frame, "Renames:", "List of 'text-in:text-out ...' parts to rename in .txtp", width=75)
+        box[0].grid(row=row, column=0, sticky="E")
+        box[1].grid(row=row, column=1, sticky="W")
+        box[2].grid(row=row, column=2, sticky="W")
+        row += 1
 
         chk = self._chk('txtp_filter_rest', frame, "Generate rest of files after filtering (use to prioritize some names over other dupes)")
-        chk.grid(row=2, column=1, columnspan=3, sticky="W")
+        chk.grid(row=row, column=1, columnspan=3, sticky="W")
+        row += 1
+
         chk = self._chk('txtp_bank_order', frame, "Generate TXTP in bank order instead of names first (alters which txtp are considered dupes)")
-        chk.grid(row=3, column=1, columnspan=3, sticky="W")
+        chk.grid(row=row, column=1, columnspan=3, sticky="W")
+        row += 1
 
         frame = ttk.Frame(root)
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
+        row = 0
 
         box = self._box('txtp_volume', frame, "Volume:", "Set master TXTP volume (2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%)", width=10)
-        box[0].grid(row=2, column=0, sticky="E")
-        box[1].grid(row=2, column=1, sticky="W")
-        box[2].grid(row=2, column=2, sticky="W")
+        box[0].grid(row=row, column=0, sticky="E")
+        box[1].grid(row=row, column=1, sticky="W")
+        box[2].grid(row=row, column=2, sticky="W")
+        row += 1
 
 
         frame = ttk.Frame(root)
@@ -401,16 +415,20 @@ class Gui(object):
         try:
             filter = None
             params = None
+            renames = None
             if self._fields['txtp_filter'].get() != '':
                 filter = self._fields['txtp_filter'].get().split()
             if self._fields['txtp_params'].get() != '':
                 params = self._fields['txtp_params'].get().split()
+            if self._fields['txtp_renames'].get() != '':
+                renames = self._fields['txtp_renames'].get().split()
 
             generator = wgenerator.Generator(banks)
             generator.set_filter(filter)
             generator.set_filter_rest(self._fields['txtp_filter_rest'].get())
             generator.set_params(params)
             generator.set_bank_order(self._fields['txtp_bank_order'].get())
+            generator.set_renames(renames)
             #generator.set_outdir(self.fields['txtp_outdir'].get())
             generator.set_wemdir(self._fields['txtp_wemdir'].get())
             generator.set_volume(self._fields['txtp_volume'].get())

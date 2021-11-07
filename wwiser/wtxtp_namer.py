@@ -1,4 +1,4 @@
-import logging, os
+import logging, os, re
 
 # use a bit less than 255 so files can be moved around dirs
 # long paths can be enabled on Windows + python but detection+support is messy...
@@ -59,6 +59,9 @@ class TxtpNamer(object):
         # shouldn't happen but just in case
         for rpl in ['*','?',':','<','>','|']: #'\\','/'
             name = name.replace(rpl, "_")
+
+        # rename txtp (before saving to tags)
+        name = txtp.txtpcache.renamer.apply_renames(name)
 
         # change longname into shortname depending on config
         longname = None
@@ -269,4 +272,61 @@ class TxtpNamer(object):
 
         name = "%s-%05i" % (bankname, txtp.txtpcache.names)
 
+        return name
+
+
+class TxtpRenamer(object):
+    def __init__(self):
+        self._items = []
+
+    def add(self, items):
+        if not items:
+            return
+        for item in items:
+            parts = item.split(":")
+            if len(parts) != 2:
+                continue
+
+            text_in = parts[0]
+            text_out = parts[1]
+            regex = None
+            #if '*' in text_in:
+            #    regex_in = text_in
+            #    regex_in = regex_in.replace('(', '\(')
+            #    regex_in = regex_in.replace('[', '\[')
+            #    regex_in = regex_in.replace(')', '\)')
+            #    regex_in = regex_in.replace(']', '\]')
+            #    regex_in = regex_in.replace('*', '.*')
+            #    regex = re.compile(regex_in)
+
+            self._items.append( (text_in, text_out, regex) )
+        return
+
+    def apply_renames(self, name):
+        if not self._items:
+            return name
+        name_in = name
+
+        # base renames
+        for text_in, text_out, regex in self._items:
+            if regex:
+                name = regex.sub(text_out, name)
+            else:
+                name = name.replace(text_in, text_out)
+
+        # clean extra stuff after cleanup            
+        name = name.replace("(=", "(")
+        name = name.replace("[=", "[")
+        name = name.replace("=)", ")")
+        name = name.replace("=]", "]")
+        name = name.replace("()", "")
+        name = name.replace("[]", "")
+        while '  ' in name:
+            name = name.replace("  ", " ")
+
+        #if name_in != name:
+        #    print("- i: ", name_in)
+        #    print("+ o: ", name)
+
+        name.strip()
         return name

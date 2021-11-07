@@ -1,4 +1,14 @@
-import os
+import logging, os
+
+# use a bit less than 255 so files can be moved around dirs
+# long paths can be enabled on Windows + python but detection+support is messy...
+# (if not trimmed python may give an error on open W, even if individual path elems are less than 255)
+WINDOWS_MAX_PATH = 240
+
+# use a bit less than 255 for "base" filenames, too
+# (max filename length on Linux is 255, even if dirs + name can be more than that
+MAX_FILENAME_LENGTH = 240
+
 
 class TxtpNamer(object):
     # info
@@ -31,9 +41,74 @@ class TxtpNamer(object):
         self.ntid = None
         self.ntidsub = None
 
+    def update_config(self, node, nname, ntid, ntidsub):
+        self.node = node
+        self.nname = nname
+        self.ntid = ntid
+        self.ntidsub = ntidsub
 
 
-    def get_fullname(self, printer, is_new=True):
+    def clean_name(self, name):
+        txtp = self.txtp
+
+        # same name but different txtp, rarely happens when banks repeat events ids that are actually different
+        if not txtp.txtpcache.register_name(name):
+            logging.debug("txtp: renaming to '%s'", name)
+            name += '#%03i' % (txtp.txtpcache.names)
+
+        # shouldn't happen but just in case
+        for rpl in ['*','?',':','<','>','|']: #'\\','/'
+            name = name.replace(rpl, "_")
+
+        # change longname into shortname depending on config
+        longname = None
+        tags = txtp.txtpcache.tags
+        if tags and tags.shortevent:
+            longname = name
+            if not tags.limit:
+                shortname = self.get_shortname() #todo should probably store after trimming
+            else:
+                if len(longname) > tags.limit:
+                    cutname = longname[0:tags.limit] 
+                    shortname = "%s~%04i" % (cutname, txtp.txtpcache.created)
+                else:
+                    shortname = longname
+            name = shortname
+
+            shortname += ".txtp"
+            tags.add_tag_names(shortname, longname)
+
+        name += ".txtp"
+
+        return name
+
+    def get_outname(self, name, outdir):
+        txtp = self.txtp
+
+
+        # enforce max filename (few OSes support more than that)
+        if len(name) > MAX_FILENAME_LENGTH:
+            #if not longname:
+            #    longname = name
+            name = "%s~%04i%s" % (name[0:MAX_FILENAME_LENGTH], txtp.txtpcache.created, '.txtp')
+            txtp.txtpcache.trims += 1
+            logging.debug("txtp: trimmed name '%s'", name)
+
+        outname = outdir + name
+
+        # final name after path can be a bit too big
+        if  txtp.txtpcache.is_windows:
+            fullpath = txtp.txtpcache.basedir + '/' + outname
+            if len(fullpath) > WINDOWS_MAX_PATH:
+                maxlen = WINDOWS_MAX_PATH - len(txtp.txtpcache.basedir) - 10
+                outname = "%s~%04i%s" % (outname[0:maxlen], txtp.txtpcache.created, '.txtp')
+                txtp.txtpcache.trims += 1
+                logging.debug("txtp: trimmed path '%s'", outname)
+
+        return outname
+
+    # gets final txtp name, full version (without .txtp)
+    def get_longname(self, printer, is_new=True):
         txtp = self.txtp
         node = self.node #named based on default node, usually an event
 
@@ -150,6 +225,7 @@ class TxtpNamer(object):
 
         if printer.has_unsupported:
             name += " {!}"
+
         if not is_new: #dupe
             #if is_not_exact_dupe:
             #    name += " {D}"
@@ -164,7 +240,6 @@ class TxtpNamer(object):
         #name += ".txtp"
 
         return name
-
 
     def _get_sparams(self):
         txtp = self.txtp
@@ -183,6 +258,7 @@ class TxtpNamer(object):
 
         return info
 
+    # gets final txtp name, short version (without .txtp)
     def get_shortname(self):
         txtp = self.txtp
         node = self.node #named based on default node, usually an event

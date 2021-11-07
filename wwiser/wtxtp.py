@@ -1,16 +1,6 @@
 import logging, os
 from . import wgamesync, wtxtp_tree, wtxtp_info, wtxtp_namer, wversion
 
-
-# use a bit less than 255 so files can be moved around dirs
-# long paths can be enabled on Windows + python but detection+support is messy...
-# (if not trimmed python may give an error on open W, even if individual path elems are less than 255)
-WINDOWS_MAX_PATH = 240
-
-# use a bit less than 255 for "base" filenames, too
-# (max filename length on Linux is 255, even if dirs + name can be more than that
-MAX_FILENAME_LENGTH = 240
-
 # Builds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
 #
 # For example a path like this:
@@ -78,10 +68,7 @@ class Txtp(object):
         # for names
         if not ntid:
             ntid = node.find1(type='sid')
-        self._namer.node = node
-        self._namer.nname = nname
-        self._namer.ntid = ntid
-        self._namer.ntidsub = ntidsub
+        self._namer.update_config(node, nname, ntid, ntidsub)
 
         self._basepath = node.get_root().get_path()
 
@@ -174,39 +161,16 @@ class Txtp(object):
             text_simpler = printer.generate(simpler=True)
             texthash = hash(text_simpler)
 
-        # check hash
+        # get name and check hash
         is_new = self.txtpcache.register_txtp(texthash, printer)
-        name = self._get_name(printer, is_new)
+        name = self._namer.get_longname(printer, is_new)
         if not is_new and not self.txtpcache.dupes:
             logging.debug("txtp: ignore '%s' (repeat of %s)", name, texthash)
             return False
 
-        # same name but different txtp, rarely happens when banks repeat events ids that are actually different
-        if not self.txtpcache.register_name(name):
-            logging.debug("txtp: renaming to '%s'", name)
-            name += '#%03i' % (self.txtpcache.names)
-
-        for rpl in ['*','?',':','<','>','|']: #'\\','/'
-            name = name.replace(rpl, "_")
-
-        longname = None
-        tags = self.txtpcache.tags
-        if tags and tags.shortevent:
-            longname = name
-            if not self.txtpcache.tags.limit:
-                shortname = self._get_shortname() #todo should probably store after trimming
-            else:
-                if len(longname) > tags.limit:
-                    cutname = longname[0:tags.limit] 
-                    shortname = "%s~%04i" % (cutname, self.txtpcache.created)
-                else:
-                    shortname = longname
-            name = shortname
-
-            shortname += ".txtp"
-            tags.add_tag_names(shortname, longname)
-
-        name += ".txtp"
+        # get final name, that may be changed/shorter depending on config
+        longname = name  #save full name in case it's cut to print in info
+        name = self._namer.clean_name(name)
         logging.debug("txtp: saving '%s' (%s)", name, texthash)
 
         outdir = self.txtpcache.outdir
@@ -214,26 +178,8 @@ class Txtp(object):
             outdir = os.path.join(self._basepath, outdir)
             os.makedirs(outdir, exist_ok=True)
 
-        # enforce max filename (few OSes support more than that)
-        if len(name) > MAX_FILENAME_LENGTH:
-            if not longname:
-                longname = name
-            name = "%s~%04i%s" % (name[0:MAX_FILENAME_LENGTH], self.txtpcache.created, '.txtp')
-            self.txtpcache.trims += 1
-            logging.debug("txtp: trimmed name '%s'", name)
-
-        outname = outdir + name
-
+        outname = self._namer.get_outname(name, outdir)
         info = self._get_info(name, longname)
-
-        # some variable combos or multi .wem names get too wordy
-        if  self.txtpcache.is_windows:
-            fullpath = self.txtpcache.basedir + '/' + outname
-            if len(fullpath) > WINDOWS_MAX_PATH:
-                maxlen = WINDOWS_MAX_PATH - len(self.txtpcache.basedir) - 10
-                outname = "%s~%04i%s" % (outname[0:maxlen], self.txtpcache.created, '.txtp')
-                self.txtpcache.trims += 1
-                logging.debug("txtp: trimmed path '%s'", outname)
 
         if self.txtpcache.x_notxtp:
             return
@@ -295,13 +241,6 @@ class Txtp(object):
         return self._current
 
     #--------------------------------------------------------------------------
-
-    def _get_name(self, printer, is_new=True):
-        self._namer.sparams = self.sparams
-        return self._namer.get_fullname(printer, is_new)
-
-    def _get_shortname(self):
-        return self._namer.get_shortname()
 
     def _get_info(self, name, longname):
 

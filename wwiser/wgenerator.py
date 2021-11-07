@@ -31,6 +31,10 @@ class Generator(object):
         self._filter_rest = False           # generate rest after filtering (rather than just filtered nodes)
         self._bank_order = False            # use bank order to generate txtp (instead of prioritizing named nodes)
 
+        self._default_hircs = self._rebuilder.get_generated_hircs()
+        self._filter.set_default_hircs(self._default_hircs)
+        self._rebuilder.set_filter(self._filter)
+
         self._default_params = None
 
         self._object_sources = {
@@ -278,7 +282,6 @@ class Generator(object):
         nodes_filtered = []
         nodes_named = []
         nodes_unnamed = []
-        default_hircs = self._rebuilder.get_generated_hircs()
 
         # save candidate nodes to generate
         for node in items.get_children():
@@ -286,12 +289,12 @@ class Generator(object):
             nsid = node.find1(type='sid')
             if not nsid:
                 continue
-            sid = nsid.value()
+            #sid = nsid.value()
 
             generate = False
 
             if self._filter.active:
-                generate = self._filter.check_generate(default_hircs, node, nsid, classname=classname)
+                generate = self._filter.generate_outer(node, nsid, classname=classname)
 
                 if generate:
                     item = node
@@ -303,7 +306,7 @@ class Generator(object):
                     if not self._filter_rest:
                         continue
 
-            if not generate and classname in default_hircs:
+            if not generate and classname in self._default_hircs:
                 generate = True
 
             if not generate:
@@ -525,8 +528,10 @@ class Generator(object):
 
 class GeneratorFilterItem(object):
     def __init__(self, value):
-        # wheter when node matches this filter node is included or excluded
+        # whether when node matches this filter node is included or excluded
         self.excluded = False
+        # whether node matches outer (base events) or inner (objects part of event)
+        self.inner = False
         # filter must compare value vs a sid/bank/class. 
         self.use_sid = False
         self.use_bank = False
@@ -537,6 +542,10 @@ class GeneratorFilterItem(object):
         self.value = None
 
         value = value.lower()
+        if value.startswith('@'):
+            self.inner = True
+            value = value[1:]
+
         if value.startswith('-') or value.startswith('/') :
             self.excluded = True
             value = value[1:]
@@ -556,9 +565,8 @@ class GeneratorFilterItem(object):
             pass
 
         return
-        
-    def match(self, sid, hashname, classname, bankname):
 
+    def match(self, sid, hashname, classname, bankname):
         if   self.use_sid:
             comps = [str(sid)]
         elif self.use_bank:
@@ -579,48 +587,80 @@ class GeneratorFilterItem(object):
 
         return False
     
+class GeneratorFilterConfig(object):
+    def __init__(self, inner, filters):
+        self.inner = inner
+        self.generate_all = False
+        self.default_generate = False
+        self.filters = []
+        self.valid_hircs = []
+        self._load(filters)
+
+    def _load(self, filters):
+        has_includes = False
+        has_all = False
+        for filter in filters:
+            if self.inner and not filter.inner:
+                continue
+            if not self.inner and filter.inner:
+                continue
+
+            self.filters.append(filter)
+
+            if not filter.excluded:
+                has_includes = True
+            if filter.use_class:
+                has_all = True
+            if filter.use_sid and not filter.excluded:
+                has_all = True
+                
+        # if filter only has "includes", default must be "exclude everything but these",
+        # while only "excludes" default is "include everything but these".
+        # If both are set, first has priority (?).
+        if has_includes:
+            self.default_generate = False
+        else:
+            self.default_generate = True
+
+        # for outer nodes, by default only Event types are generated (generate_all is false).
+        # for inner nodes, by default all objects are generated (generate_all is true).
+        if self.inner:
+            self.generate_all = True
+        else:
+            self.generate_all = False
+
+        # filtering by class or id means generating all
+        if has_all:
+            self.generate_all = True
+
+        return
 
 class GeneratorFilter(object):
     def __init__(self):
         self.active = False
-        self._filters = []
-        self._default_generate = False
-        self._generate_all = False
-        None
+        self._default_hircs = []
+        self._inner_cfg = None
+        self._outer_cfg = None
+        
+    def set_default_hircs(self, items):
+        self._default_hircs = items
 
     def add(self, items):
         if not items:
             return
 
         self.active = True
-        has_includes = False
-        has_all = False
+
+        filters = []
         for item in items:
             gfi = GeneratorFilterItem(item)
-            if not gfi.excluded:
-                has_includes = True
-            if gfi.use_class:
-                has_all = True
-            if gfi.use_sid and not gfi.excluded:
-                has_all = True
-            self._filters.append(gfi)
+            filters.append(gfi)
 
-        # if filter only has "includes", default must be "exclude everything but these",
-        # while only "excludes" default is "include everything but these".
-        # If both are set, first has priority (?).
-        if has_includes:
-            self._default_generate = False
-        else:
-            self._default_generate = True
-
-        # by default only Event types are generated, but filtering by class or id means 
-        # generating not only events
-        if has_all:
-            self._generate_all = True
-
+        self._outer_cfg = GeneratorFilterConfig(False, filters)
+        self._inner_cfg = GeneratorFilterConfig(True, filters)
         return
 
-    def check_generate(self, default_hircs, node, nsid=None, hashname=None, classname=None, bankname=None):
+    def _generate(self, inner, node, nsid=None, hashname=None, classname=None, bankname=None):
         if not nsid:
             nsid = node.find1(type='sid')
         if not nsid:
@@ -633,13 +673,28 @@ class GeneratorFilter(object):
         classname = classname or node.get_name().lower()
         bankname = bankname or node.get_root().get_filename().lower()
 
-        if not self._generate_all and classname not in default_hircs:
+        if inner:
+            cfg = self._inner_cfg
+        else:
+            cfg = self._outer_cfg
+
+        if not cfg.generate_all and classname not in self._default_hircs:
             return False
 
-        generate = self._default_generate
-        for filter in self._filters:
+        generate = cfg.default_generate
+        for filter in cfg.filters:
             if filter.match(sid, hashname, classname, bankname):
                 generate = not filter.excluded
 
-
         return generate
+
+    # Checks if an outer object should be generated, depending on outer filters.
+    def generate_outer(self, node, nsid=None, hashname=None, classname=None, bankname=None):
+        return self._generate(False, node, nsid, hashname, classname, bankname)
+
+    # Checks if an inner object should be generated, depending on inner filters.
+    # The difference between inner/outer being, if filter is 123456789 (outer) it should generate
+    # only that ID *and* generate all sub-nodes inside (inner). While if filter >123456789 it
+    # should generate any ID *and* generate only sub-nodes with that ID.
+    def generate_inner(self, node, nsid=None, hashname=None, classname=None, bankname=None):
+        return self._generate(True, node, nsid, hashname, classname, bankname)

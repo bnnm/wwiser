@@ -30,6 +30,8 @@ class Rebuilder(object):
         self._unknown_props = {}            # object properties that need to be investigated
         self._transition_objects = 0        # info for future support
 
+        self._filter = None
+
         # after regular generation we want a list of nodes that weren't used, and
         # generate TXTP for them, but ordered by types since generating some types
         # may end up using other unused types
@@ -110,6 +112,9 @@ class Rebuilder(object):
         ]
 
         return
+
+    def set_filter(self, filter):
+        self._filter = filter
 
     def get_missing_nodes_loaded(self):
         return self._missing_nodes_loaded
@@ -426,6 +431,12 @@ class _NodeHelper(object):
         bnode = self.builder._get_bnode_by_ref(bank_id, tid, sid_info=self.sid, nbankid_info=nbankid)
         if not bnode:
             return
+
+        # filter HIRC nodes (for example drop unwanted calls to layered ActionPlay)
+        if self.builder._filter and self.builder._filter.active:
+            generate = self.builder._filter.generate_inner(bnode.node, bnode.nsid)
+            if not generate:
+                return
 
         #logging.debug("next: %s %s > %s", self.node.get_name(), self.sid, tid)
         bnode.make_txtp(txtp)

@@ -148,6 +148,8 @@ to generate `.txtp` that match those. Add a `-` or `/` before to generate defaul
 - `play_bgm_*`: only event .txtp that start with `play_bgm_`
 - `-play_sfx_*`: all event .txtp except those that play sfx
 - `/play_sfx_*`: same (alt since command line gets confused by `-`)
+- `@12345`: include sub-node used inside generated objects (filters txtp parts)
+- `@-12345`: exclude sub-node used inside generated objects (filters txtp parts)
 
 Some tricks you can do with filters:
 - testing: if you have a big `.txtp` with lots of groups, you can pass a single ID and

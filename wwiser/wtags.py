@@ -138,7 +138,6 @@ class Tags(object):
         # try in current dir
         basepath = self._get_basepath()
         files = self._get_files(basepath)
-        print("base:", basepath, 'files', len(files))
 
         if len(files) == 0:
             # try in wem dir
@@ -146,7 +145,6 @@ class Tags(object):
             basepath = os.path.join(basepath, self._txtpcache.wemdir)
             if os.path.isdir(basepath):
                 files = self._get_files(basepath)
-            print("base2:", basepath, 'files', len(files))
 
         if len(files) == 0:
             return

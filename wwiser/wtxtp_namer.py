@@ -290,14 +290,12 @@ class TxtpRenamer(object):
             text_in = parts[0]
             text_out = parts[1]
             regex = None
-            #if '*' in text_in:
-            #    regex_in = text_in
-            #    regex_in = regex_in.replace('(', '\(')
-            #    regex_in = regex_in.replace('[', '\[')
-            #    regex_in = regex_in.replace(')', '\)')
-            #    regex_in = regex_in.replace(']', '\]')
-            #    regex_in = regex_in.replace('*', '.*')
-            #    regex = re.compile(regex_in)
+            if '*' in text_in:
+                replaces = { '(':'\(', ')':'\)', '[':'\[', ']':'\]', '.':'\.', '*':'.*?' }
+                regex_in = text_in
+                for key, val in replaces.items():
+                    regex_in = regex_in.replace(key, val)
+                regex = re.compile(regex_in)
 
             self._items.append( (text_in, text_out, regex) )
         return
@@ -315,18 +313,11 @@ class TxtpRenamer(object):
                 name = name.replace(text_in, text_out)
 
         # clean extra stuff after cleanup            
-        name = name.replace("(=", "(")
-        name = name.replace("[=", "[")
-        name = name.replace("=)", ")")
-        name = name.replace("=]", "]")
-        name = name.replace("()", "")
-        name = name.replace("[]", "")
+        replaces = { '(=':'(', '[=':'[', '=)':')', '=]':']', '()':'', '[]':'' }
+        for key, val in replaces.items():
+            name = name.replace(key, val)
         while '  ' in name:
             name = name.replace("  ", " ")
-
-        #if name_in != name:
-        #    print("- i: ", name_in)
-        #    print("+ o: ", name)
 
         name.strip()
         return name

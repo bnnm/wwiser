@@ -176,12 +176,14 @@ cases you can tell *wwiser* how to rename parts of the `.txtp`, in the form of `
 For example with:
 - `play_bgm (ST_PLAYERSTATE=ST_PLAYER_ALIVE) (ST_READY=ST_READY_ON) (ST_MISSION_STATE=ST_M01)`
 - `play_bgm (ST_PLAYERSTATE=ST_PLAYER_DEAD) (ST_READY=ST_READY_OFF)`
+
 And these renames (note that order matters):
 - `(ST_PLAYERSTATE=ST_PLAYER_ALIVE):`
 - `ST_PLAYERSTATE=:STATE=`
 - `(ST_READY=*):`
 - `ST_MISSION_STATE=:MISSION`
 - `ST_:`
+
 You would get:
 - `play_bgm (MISSION=M01)`
 - `play_bgm (STATE=PLAYER_DEAD)`

@@ -129,7 +129,7 @@ class Gui(object):
         box[2].grid(row=row, column=2, sticky="W")
         row += 1
 
-        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float ..' to force (affects crossfacing txtp with \{\s\}", width=75)
+        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float ..' to force (affects crossfacing txtp with {s}", width=75)
         box[0].grid(row=row, column=0, sticky="E")
         box[1].grid(row=row, column=1, sticky="W")
         box[2].grid(row=row, column=2, sticky="W")

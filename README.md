@@ -189,6 +189,16 @@ You would get:
 While you can mutate anything to anything, I recommend shortening but respecting the original
 naming style (mainly removing superflous stems and useless states, avoiding making up text).
 
+### TXTP crossfades
+In some cases games change volume of a part of the song based on a in-game value. Those are
+detected and marked as `{s}`. 
+
+By default all will play at default volume, but you can mimic an specific value by passing
+"gamevars" (RTPC) config. For example `bgm_srank_param=0.0` would silence some beat layer,
+while `4.0` will start to add it, and `7.0` would peak. Min/max values are developer-defined
+and depend on the RTPC itself though.
+
+
 ## LIMITATIONS
 This tool is not, and will never be, a `.bnk` editor (can't replace files). It's only
 meant to show bank data and generate TXTP. But feel free to use info here to make

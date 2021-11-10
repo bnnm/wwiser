@@ -129,6 +129,12 @@ class Gui(object):
         box[2].grid(row=row, column=2, sticky="W")
         row += 1
 
+        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float ..' to force (affects crossfacing txtp with \{\s\}", width=75)
+        box[0].grid(row=row, column=0, sticky="E")
+        box[1].grid(row=row, column=1, sticky="W")
+        box[2].grid(row=row, column=2, sticky="W")
+        row += 1
+
         box = self._box('txtp_renames', frame, "Renames:", "List of 'text-in:text-out ...' parts to rename in .txtp", width=75)
         box[0].grid(row=row, column=0, sticky="E")
         box[1].grid(row=row, column=1, sticky="W")
@@ -406,6 +412,15 @@ class Gui(object):
         self._thread_txtp = threading.Thread(target = self._generate_txtp_start)
         self._thread_txtp.start()
 
+    def _get_list(self, name):
+        items = None
+        if self._fields[name].get() != '':
+            items = self._fields[name].get().split()
+        return items
+
+    def _get_item(self, name):
+        return self._fields[name].get()
+
     def _generate_txtp_start(self):
         banks = self.parser.get_banks()
         if not banks:
@@ -413,43 +428,34 @@ class Gui(object):
             return
 
         try:
-            filter = None
-            params = None
-            renames = None
-            if self._fields['txtp_filter'].get() != '':
-                filter = self._fields['txtp_filter'].get().split()
-            if self._fields['txtp_params'].get() != '':
-                params = self._fields['txtp_params'].get().split()
-            if self._fields['txtp_renames'].get() != '':
-                renames = self._fields['txtp_renames'].get().split()
-
             generator = wgenerator.Generator(banks)
-            generator.set_filter(filter)
-            generator.set_filter_rest(self._fields['txtp_filter_rest'].get())
-            generator.set_params(params)
-            generator.set_bank_order(self._fields['txtp_bank_order'].get())
-            generator.set_renames(renames)
-            #generator.set_outdir(self.fields['txtp_outdir'].get())
-            generator.set_wemdir(self._fields['txtp_wemdir'].get())
-            generator.set_volume(self._fields['txtp_volume'].get())
-            generator.set_lang(self._fields['txtp_lang'].get())
-            generator.set_move(self._fields['txtp_move'].get())
-            generator.set_bnkskip(self._fields['txtp_bnkskip'].get())
-            generator.set_bnkmark(self._fields['txtp_bnkmark'].get())
-            generator.set_name_wems(self._fields['txtp_name_wems'].get())
-            generator.set_name_vars(self._fields['txtp_name_vars'].get())
-            generator.set_generate_unused(self._fields['txtp_unused'].get())
-            generator.set_alt_exts(self._fields['txtp_alt_exts'].get())
-            generator.set_dupes(self._fields['txtp_dupes'].get())
-            generator.set_random_all(self._fields['txtp_random_all'].get())
-            generator.set_random_multi(self._fields['txtp_random_multi'].get())
-            generator.set_random_force(self._fields['txtp_random_force'].get())
-            generator.set_write_delays(self._fields['txtp_write_delays'].get())
-            generator.set_silence(self._fields['txtp_silence'].get())
+            generator.set_filter( self._get_list('txtp_filter') )
+            generator.set_filter_rest( self._get_item('txtp_filter_rest') )
+            generator.set_params( self._get_list('txtp_params') )
+            generator.set_bank_order( self._get_item('txtp_bank_order') )
+            generator.set_gamevars( self._get_list('txtp_gamevars') )
+            generator.set_renames( self._get_list('txtp_renames') )
+
+            generator.set_wemdir( self._get_item('txtp_wemdir') )
+            generator.set_volume( self._get_item('txtp_volume') )
+            generator.set_lang( self._get_item('txtp_lang') )
+            generator.set_move( self._get_item('txtp_move') )
+            generator.set_bnkskip( self._get_item('txtp_bnkskip') )
+            generator.set_bnkmark( self._get_item('txtp_bnkmark') )
+            generator.set_name_wems( self._get_item('txtp_name_wems') )
+            generator.set_name_vars( self._get_item('txtp_name_vars') )
+            generator.set_generate_unused( self._get_item('txtp_unused') )
+            generator.set_alt_exts( self._get_item('txtp_alt_exts') )
+            generator.set_dupes( self._get_item('txtp_dupes') )
+            generator.set_random_all( self._get_item('txtp_random_all') )
+            generator.set_random_multi( self._get_item('txtp_random_multi') )
+            generator.set_random_force( self._get_item('txtp_random_force') )
+            generator.set_write_delays( self._get_item('txtp_write_delays') )
+            generator.set_silence( self._get_item('txtp_silence') )
 
             tags = wtags.Tags(banks, self.names)
-            tags.set_make_event(self._fields['tags_event'].get())
-            tags.set_make_wem(self._fields['tags_wem'].get())
+            tags.set_make_event( self._get_item('tags_event') )
+            tags.set_make_wem( self._get_item('tags_wem') )
             generator.set_tags(tags)
 
             generator.generate()
@@ -472,7 +478,7 @@ class Gui(object):
         #self.txt_log_main.config(state=DISABLED)
 
     def _change_log(self):
-        if self._fields['log'].get():
+        if  self._get_item('log'):
             wutil.setup_file_logging()
         else:
             wutil.setup_gui_logging(self.txt_log)

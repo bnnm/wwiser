@@ -69,6 +69,9 @@ class Generator(object):
         self._default_params = wgamesync.GamesyncParams(self._txtpcache)
         self._default_params.set_params(params)
 
+    def set_gamevars(self, items):
+        self._txtpcache.gamevars.add(items)
+
     def set_renames(self, items):
         self._txtpcache.renamer.add(items)
 

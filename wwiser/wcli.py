@@ -1,5 +1,5 @@
 import sys, argparse, glob, logging, os, platform
-from . import wparser, wprinter, wnames, wutil, wview, wgenerator, wtags
+from . import wparser, wprinter, wnames, wutil, wview, wgenerator, wtags, wtests
 from . import wversion
 
 
@@ -61,6 +61,7 @@ class Cli(object):
         parser.add_argument('-gf', '--txtp-filter',         help="Set TXTP targets name/id/classname/bnk (default: auto)", nargs='+')
         parser.add_argument('-gfr','--txtp-filter-rest',    help="Generate rest of files after filtering\n(allows prioritizing names in filter then creating\nrest, altering dupe order)", action='store_true')
         parser.add_argument('-gp', '--txtp-params',         help="Set TXTP parameters (default: auto)", nargs='*')
+        parser.add_argument('-gg', '--txtp-gamevars',       help="Set TXTP game variables like RTPCs (default: auto)", nargs='*')
         parser.add_argument('-gd', '--txtp-dupes',          help="Generate TXTP duplicates\n(may create a lot of .txtp)", action='store_true')
         parser.add_argument('-gde','--txtp-dupes-exact',    help="Only consider dupes TXTP that are exactly the same\n(may create .txtp that sound 99%% the same)", action='store_true')
         parser.add_argument('-gbo','--txtp-bank-order',     help="Generate TXTP in bank order instead of names first\n(alters which .txtp are considered dupes)", action='store_true')
@@ -87,6 +88,7 @@ class Cli(object):
         parser.add_argument('-gxnl','--txtp-x-noloops',     help="Extra: don't loop sounds", action='store_true')
         parser.add_argument('-gxnt','--txtp-x-notxtp',      help="Extra: don't save .txtp", action='store_true')
         parser.add_argument('-gxni','--txtp-x-nameid',      help="Extra: add ID to generic names", action='store_true')
+        parser.add_argument('-x','--tests',                 help="Extra: debug", action='store_true')
 
         self._parser = parser
 
@@ -247,6 +249,7 @@ class Cli(object):
             generator.set_filter(args.txtp_filter)
             generator.set_filter_rest(args.txtp_filter_rest)
             generator.set_params(args.txtp_params)
+            generator.set_gamevars(args.txtp_gamevars)
             generator.set_dupes(args.txtp_dupes)
             generator.set_dupes_exact(args.txtp_dupes_exact)
             generator.set_bank_order(args.txtp_bank_order)
@@ -289,16 +292,5 @@ class Cli(object):
             names.save_db(save_all=args.save_all, save_companion=args.save_companion)
         names.close() #in case DB was open
 
-        #try:
-            #import objgraph
-            #objgraph.show_most_common_types()
-
-            #from guppy import hpy; h=hpy()
-            #h.heap()
-
-            #from . import wmodel
-            #import sys
-            #print("NodeElement: %x" % sys.getsizeof(wmodel.NodeElement(None, 'test')))
-            #getsizeof(wmodel.NodeElement()), getsizeof(Wrong())
-        #except:
-            #pass
+        if args.tests:
+            wtests.Tests().main()

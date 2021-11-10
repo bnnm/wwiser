@@ -65,12 +65,13 @@ TYPE_SOUNDS = {
 # is mostly fixed, then tweak to get final tree, that may change as TXTP features are added)
 
 class TxtpNode(object):
-    def __init__(self, parent, config, sound=None):
+    def __init__(self, parent, config, sound=None, txtpcache=None):
         self.parent = parent
         self.config = config #_NodeConfig
         self.sound = sound #_NodeSound
         self.transition = None #_NodeTransition
         self.type = TYPE_GROUP_ROOT
+        self.txtpcache = txtpcache
         if sound:
             self.type = TYPE_SOUND_LEAF
         self.children = []
@@ -85,7 +86,7 @@ class TxtpNode(object):
         self.envelopes = []
 
         # copy value as may need to simplify tree config (ex. multiple objects can set infinite loop)
-        # but changing config directly is no good (Wwise objects repeat)
+        # but changing config directly is no good (Wwise objects are reused)
         self.volume = config.volume
         self.makeupgain = config.makeupgain
         self.pitch = config.pitch
@@ -115,6 +116,18 @@ class TxtpNode(object):
             self.has_others = True
             self.has_debug = True
 
+        # sometimes volumes are controlled by RPTCs. By default volume isn't touched (not realistic as Init.bnk
+        # sets a default), but may manually set a RTPC value:
+        # - check if any of object's RTPCs have a manual value set
+        # - if so, use this value (x) to get current volume (y) according to RTPC.
+        if txtpcache.gamevars.active:
+            gv = txtpcache.gamevars
+            for rtpc in config.rtpcs:
+                if gv.is_value(rtpc.id):
+                    rtcp_x = gv.get_value(rtpc.id)
+                    #overwrite based on config and current value (otherwise couldn't set -96db)
+                    self.volume = rtpc.get(rtcp_x, self.volume)
+                    #break #unsure what happens in case of conflicting RTPCs
 
         # allowed to separate "loop not set" and "loop set but not looping"
         #if self.loop == 1:
@@ -542,7 +555,7 @@ class TxtpPrinter(object):
         new_transition = copy.copy(node.transition)
 
         #new_node = copy.copy(node)
-        new_node = TxtpNode(new_parent, sound=new_sound, config=new_config)
+        new_node = TxtpNode(new_parent, sound=new_sound, config=new_config, txtpcache=self.txtpcache)
         new_node.type = node.type
         new_node.transition = new_transition
 

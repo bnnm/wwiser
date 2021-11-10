@@ -551,6 +551,21 @@ class _NodeHelper(object):
             if value != 0: #default to 0 if not set
                 self.nfields.append(nprop)
 
+    def _build_rtpc_config(self, node):
+        if not node:
+            return
+        nrtpcs = node.finds(name='RTPC')
+        if not nrtpcs:
+            return
+        for nrtpc in nrtpcs:
+            rtpc = wtxtp_util.NodeRtpc(nrtpc)
+            if not rtpc.is_volume:
+                continue
+            self.config.rtpcs.append(rtpc)
+            self.config.crossfaded = True
+            self.nfields.append(rtpc.nid)
+
+        return
 
     def _build_audio_config(self, node):
         name = node.get_name()
@@ -585,15 +600,8 @@ class _NodeHelper(object):
                             self.nfields.append((nstategroupid, nstateid))
 
         if nbase and check_rtpc:
-            # RTPC linked to volume (ex. DMC5 battle rank layers)
-            nrtpc = nbase.find1(name='RTPC')
-            if nrtpc:
-                nparam = nrtpc.find1(name='ParamID')
-                if nparam and nparam.value() == 0: #volume
-                    self.config.crossfaded = True
-                    #logging.info("generator: RTPC silence found %s %s" % (self.sid, node.get_name()))
-                    nrptcid = nrtpc.find1(name='RTPCID')
-                    self.nfields.append(nrptcid)
+            # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)
+            self._build_rtpc_config(nbase)
 
         # find other parameters
         ninit = node.find1(name='NodeInitialParams')
@@ -1171,14 +1179,7 @@ class _CAkLayerCntr(_NodeHelper):
         nlayers = node.find1(name='pLayers')
         if nlayers:
             # RTPC linked to volume (ex. AC2 bgm+crowds)
-            nrtpcs = nlayers.finds(name='InitialRTPC')
-            for nrtpc in nrtpcs:
-                nparam = nrtpc.find1(name='ParamID')
-                if nparam and nparam.value() == 0: #volume
-                    self.config.crossfaded = True
-                    #logging.info("generator: layer silence found %s %s" % (self.sid, node.get_name()))
-                    nrptcid = nrtpc.find1(name='RTPCID')
-                    self.nfields.append(nrptcid)
+            self._build_rtpc_config(nlayers)
 
         if nmode:
             self.nfields.append(nmode)

@@ -375,7 +375,7 @@ AkPluginType_id = wfmt.FormatterLUT({
 #046>= 062<=
 AkCurveScaling_062 = wfmt.FormatterLUT({
   0x0: "None",
-  0x1: "db_255", #~046<=
+  0x1: "db_255", #~046<=, not implemented in other versions
   0x2: "dB_96_3",
   0x3: "Frequency_20_20000",
   0x4: "dB_96_3_NoCheck",
@@ -383,10 +383,10 @@ AkCurveScaling_062 = wfmt.FormatterLUT({
 #065<=
 AkCurveScaling_065 = wfmt.FormatterLUT({
   0x0: "None",
-  0x1: "db_255?",
-  0x2: "dB_96_3/dB?",
-  0x3: "Frequency_20_20000/Log?",
-  0x4: "dB_96_3_NoCheck/dBToLin?",
+  0x1: "Unsupported",
+  0x2: "dB_96_3",
+  0x3: "Frequency_20_20000/",
+  0x4: "dB_96_3_NoCheck",
 })
 #072>=
 AkCurveScaling_072 = wfmt.FormatterLUT({
@@ -1203,6 +1203,7 @@ AkRTPC_ParameterID_053 = wfmt.FormatterLUT({
   0xC: "Positioning_Cone_Attenuation_ON_OFF",
   0xD: "Positioning_Cone_Attenuation",
   0xE: "Positioning_Cone_LPF",
+  0xF: "Unknown?", #ACB
   0x14: "Position_PAN_RL",
   0x15: "Position_PAN_FR",
   0x16: "Position_Radius_SIM_ON_OFF",

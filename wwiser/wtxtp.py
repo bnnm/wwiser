@@ -62,7 +62,7 @@ class Txtp(object):
     # start of txtp generation
     def begin(self, node, root_config, nname=None, ntid=None, ntidsub=None):
         # tree
-        self._root = wtxtp_tree.TxtpNode(None, root_config)
+        self._root = wtxtp_tree.TxtpNode(None, root_config, txtpcache=self.txtpcache)
         self._current = self._root
 
         # for names
@@ -229,14 +229,14 @@ class Txtp(object):
         return self._source_add(sound, config)
 
     def _group_add(self, config):
-        node = wtxtp_tree.TxtpNode(self._current, config=config)
+        node = wtxtp_tree.TxtpNode(self._current, config=config, txtpcache=self.txtpcache)
 
         self._current.append(node)
         self._current = node
         return node
 
     def _source_add(self, sound, config):
-        node = wtxtp_tree.TxtpNode(self._current, sound=sound, config=config)
+        node = wtxtp_tree.TxtpNode(self._current, sound=sound, config=config, txtpcache=self.txtpcache)
         self._current.append(node)
         return self._current
 

@@ -371,3 +371,57 @@ class SilenceParams(object):
 
     def items(self):
         return self._elems.values()
+
+#******************************************************************************
+
+# stores gamevars (rtpc) config
+class GamevarsParams(object):
+    def __init__(self):
+        self.active = False
+        self._elems = {} #OrderedDict()
+        self._fnv = wfnv.Fnv()
+        pass
+
+    def add(self, items):
+        #if items is None: #allow []
+        #    return
+
+        if not items:
+            return
+        self.active = True
+        for item in items:
+            parts = item.split('=')
+            if len(parts) == 1:
+                key = parts[0]
+                val = None #?
+            elif len(parts) == 2:
+                key = parts[0]
+                val = parts[1]
+            else:
+                key = None
+                val = None
+
+            try:
+                if not key.isnumeric():
+                    key = self._fnv.get_hash(key)
+                key = int(key)
+                val = float(val)
+            except:
+                key = None
+                val = None
+
+            if key is None or val is None:
+                logging.info('gamesync: ignored %s', item)
+                continue
+
+            self._elems[key] = val
+
+    def is_value(self, id):
+        id = int(id)
+        return id in self._elems
+
+    def get_value(self, id):
+        id = int(id)
+        if id in self._elems:
+            return self._elems[id]
+        return None

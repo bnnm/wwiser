@@ -1,5 +1,5 @@
 import logging
-from . import wtxtp_util, wgamesync
+from . import wtxtp_util, wgamesync, wtxtp_info
 
 
 # Takes the parsed bank nodes and rebuilds them to simpler objects with quick access
@@ -398,8 +398,7 @@ class _NodeHelper(object):
             self.sid = self.nsid.value()
 
         self.config = wtxtp_util.NodeConfig()
-        self.nfields = []   #main node fields, for printing (tuples for composite info)
-        self.nattrs = []    #node attributes, in generic (key,value) form
+        self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
         self.stingers = []
 
         self._build(node)
@@ -506,7 +505,7 @@ class _NodeHelper(object):
                 #missing useful effects:
                 #TransitionTime: used in play events to fade-in event
 
-                self.nfields.append((nkey, nval))
+                self.fields.keyval(nkey, nval)
 
         #todo ranged values
         nranges = ninit.find(name='AkPropBundle<RANGED_MODIFIERS<AkPropValue>>')
@@ -517,7 +516,7 @@ class _NodeHelper(object):
                 nmin = nprop.find(name='min')
                 nmax = nprop.find(name='max')
 
-                self.nfields.append((nkey, nmin, nmax))
+                self.fields.keyminmax(nkey, nmin, nmax)
 
         return nvalues or nranges
 
@@ -549,7 +548,7 @@ class _NodeHelper(object):
                 self.config.idelay = value
 
             if value != 0: #default to 0 if not set
-                self.nfields.append(nprop)
+                self.fields.prop(nprop)
 
     def _build_rtpc_config(self, node):
         if not node:
@@ -563,7 +562,7 @@ class _NodeHelper(object):
                 continue
             self.config.rtpcs.append(rtpc)
             self.config.crossfaded = True
-            self.nfields.append(rtpc.nid)
+            self.fields.rtpc(rtpc.nid, rtpc.minmax())
 
         return
 
@@ -597,7 +596,7 @@ class _NodeHelper(object):
                         nstateid = nstategroup.find1(name='ulStateID')
                         if nstategroupid and nstateid:
                             self.config.add_silence_state(nstategroupid, nstateid)
-                            self.nfields.append((nstategroupid, nstateid))
+                            self.fields.keyval(nstategroupid, nstateid)
 
         if nbase and check_rtpc:
             # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)
@@ -624,7 +623,7 @@ class _NodeHelper(object):
                 self.config.volume = value #also min/max
 
             if value != 0: #default to 0 if not set
-                self.nfields.append(nprop)
+                self.fields.prop(nprop)
 
     def _build_transitions(self, node, is_switch):
         #AkMeterInfo: into for transitions
@@ -800,7 +799,7 @@ class _NodeHelper(object):
 
     def make_txtp(self, txtp):
         try:
-            txtp.info.next(self.node, self.nfields, nattrs=self.nattrs, nsid=self.nsid)
+            txtp.info.next(self.node, self.fields, nsid=self.nsid)
             self._process_txtp(txtp)
             txtp.info.done()
         except Exception: #as e #autochained
@@ -1129,7 +1128,7 @@ class _CAkRanSeqCntr(_NodeHelper):
             #    self._barf("unknown loop mode in ranseq seq step")
             self.config.loop = None
 
-        self.nfields.extend([nmode, nrandom, nloop, ncontinuous, navoidrepeat])
+        self.fields.props([nmode, nrandom, nloop, ncontinuous, navoidrepeat])
         return
 
     def _process_txtp(self, txtp):
@@ -1182,7 +1181,7 @@ class _CAkLayerCntr(_NodeHelper):
             self._build_rtpc_config(nlayers)
 
         if nmode:
-            self.nfields.append(nmode)
+            self.fields.prop(nmode)
         return
 
     def _process_txtp(self, txtp):
@@ -1205,7 +1204,7 @@ class _CAkSound(_NodeHelper):
         nloop = node.find(name='Loop')
         if nloop: #older
             self.config.loop = nloop.value()
-            self.nfields.append(nloop)
+            self.fields.prop(nloop)
             #there is min/max too
 
         nitem = node.find(name='AkBankSourceData')
@@ -1215,9 +1214,9 @@ class _CAkSound(_NodeHelper):
         #if self._is_node(ntid): #source is an object (like FX)
         #    pass
 
-        self.nfields.append(source.nstreamtype)
+        self.fields.prop(source.nstreamtype)
         if source.nsourceid != source.nfileid:
-            self.nfields.append(source.nfileid)
+            self.fields.prop(source.nfileid)
         return
 
     def _process_txtp(self, txtp):
@@ -1379,10 +1378,11 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
 
             item = _CAkMusicRanSeqCntr_Item()
             item.nitem = nitem
-            item.nfields = [ntype, nloop]
             item.ntid = ntid
             item.type = type
             item.config.loop = nloop.value()
+            item.fields.props([ntype, nloop])
+             
             items.append(item)
 
             self._playlist(node, nsubplaylist, item.items)
@@ -1404,7 +1404,7 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
             type = item.type
             subitems = item.items
 
-            txtp.info.next(item.nitem, item.nfields)
+            txtp.info.next(item.nitem, item.fields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
             if type == -1 or item.ntid:
                 transition = wtxtp_util.NodeTransition()
@@ -1439,10 +1439,10 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
 class _CAkMusicRanSeqCntr_Item():
     def __init__(self):
         self.nitem = None
-        self.nfields = []
         self.ntid = None
         self.type = None
         self.config = wtxtp_util.NodeConfig()
+        self.fields = wtxtp_info.TxtpFields()
         self.items = []
 
 
@@ -1463,7 +1463,7 @@ class _CAkMusicSegment(_NodeHelper):
         #AkMeterInfo: for switches
         nfdur = node.find(name='fDuration')
         self.config.duration = nfdur.value()
-        self.nfields.append(nfdur)
+        self.fields.prop(nfdur)
 
         nmarkers = node.find(name='pArrayMarkers')
         if nmarkers:
@@ -1487,9 +1487,9 @@ class _CAkMusicSegment(_NodeHelper):
             self.config.entry = nmpos1.value()
             self.config.exit = nmpos2.value()
 
-            self.nfields.append((nmarker1, nmpos1))
-            self.nfields.append((nmarker2, nmpos2))
-            #self.nfields.append(nm2.get_parent())
+            self.fields.keyval(nmarker1, nmpos1)
+            self.fields.keyval(nmarker2, nmpos2)
+            #self.fields.prop(nm2.get_parent())
         else:
             self._barf('markers not found')
 
@@ -1536,7 +1536,7 @@ class _CAkMusicTrack(_NodeHelper):
         nloop = node.find(name='Loop')
         if nloop: #older
             self.config.loop = nloop.value()
-            self.nfields.append(nloop)
+            self.fields.prop(nloop)
             #there is min/max too
 
         # loops in MusicTracks are meaningless, ignore to avoid confusing the parser
@@ -1597,7 +1597,7 @@ class _CAkMusicTrack(_NodeHelper):
                 index = ngvalue.get_parent().get_index()
                 self.gvalue_index[gvalue] = (index, ngvalue)
 
-        self.nfields.extend([ntype, ncount, ])
+        self.fields.props([ntype, ncount])
         return
 
     def _build_clip(self, streaminfos, nsrc):
@@ -1610,8 +1610,8 @@ class _CAkMusicTrack(_NodeHelper):
 
         clip = _CAkMusicTrack_Clip()
         clip.nitem = nsrc
-        clip.nfields = [nsourceid, neventid, nfpa, nfbt, nfet, nfsd]
         clip.neid = neventid
+        clip.fields.props([nsourceid, neventid, nfpa, nfbt, nfet, nfsd])
 
         clip.sound.fpa = nfpa.value()
         clip.sound.fbt = nfbt.value()
@@ -1625,9 +1625,9 @@ class _CAkMusicTrack(_NodeHelper):
             clip.sound.source = source
             clip.sound.nsrc = source.nsourceid
 
-            clip.nfields.append(source.nstreamtype)
+            clip.fields.prop(source.nstreamtype)
             if source.nsourceid != source.nfileid:
-                clip.nfields.append(source.nfileid)
+                clip.fields.prop(source.nfileid)
 
         return clip
 
@@ -1754,7 +1754,7 @@ class _CAkMusicTrack(_NodeHelper):
             else:
                 sconfig = wtxtp_util.NodeConfig()
                 sound = clip.sound
-                txtp.info.next(clip.nitem, clip.nfields)
+                txtp.info.next(clip.nitem, clip.fields)
                 txtp.info.source(clip.sound.nsrc, clip.sound.source)
                 txtp.info.done()
                 txtp.source_sound(clip.sound, sconfig)
@@ -1764,11 +1764,11 @@ class _CAkMusicTrack(_NodeHelper):
 class _CAkMusicTrack_Clip(_NodeHelper):
     def __init__(self):
         self.nitem = None
-        self.nfields = []
         self.ntid = None
         self.neid = None
         self.sound = wtxtp_util.NodeSound()
         self.sound.clip = True
+        self.fields = wtxtp_info.TxtpFields()
 
 class _CAkMusicTrack_ClipAutomation(_NodeHelper):
     def __init__(self):

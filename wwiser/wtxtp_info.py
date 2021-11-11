@@ -48,11 +48,11 @@ class TxtpInfo(object):
         return banks
 
     def source(self, ntid, source):
-        nfields = None
+        fields = TxtpFields()
         if source:
-            nfields = [source.nplugin]
+            fields.prop(source.nplugin)
 
-        next = TxtpInfoNode(self._depth + 1, None, nfields, None, source=ntid)
+        next = TxtpInfoNode(self._depth + 1, None, fields, None, source=ntid)
         self._ninfo.append(next)
 
         if self._txtpcache.name_wems:
@@ -66,10 +66,10 @@ class TxtpInfo(object):
                 if finalname not in self._wemnames:
                     self._wemnames += ' ' + finalname
 
-    def next(self, node, nfields, nattrs=None, nsid=None):
+    def next(self, node, fields, nsid=None):
         self._depth += 1
 
-        next = TxtpInfoNode(self._depth, node, nfields, nattrs, nsid=nsid)
+        next = TxtpInfoNode(self._depth, node, fields, nsid=nsid)
         self._ninfo.append(next)
 
     def done(self):
@@ -90,12 +90,11 @@ class TxtpInfo(object):
 class TxtpInfoNode(object):
     OBJECT_NAMES = ['hashname', 'guidname', 'path', 'objpath']
 
-    def __init__(self, depth, node, nfields, nattrs, nsid=None, source=None):
+    def __init__(self, depth, node, fields, nsid=None, source=None):
         self.depth = depth
         self.node = node
         self.nsid = nsid
-        self.nfields = nfields
-        self.nattrs = nattrs
+        self.fields = fields
         self.gstext_long = ''
         self.gstext_short = ''
         self.source = source
@@ -187,51 +186,12 @@ class TxtpInfoNode(object):
             self._info.append( '#%s- %s: %s\n' % (self.padding, key, val) )
 
     def _generate_fields(self):
-        if not self.nfields:
+        if not self.fields:
             return
-        for nfield in self.nfields:
-            if not nfield:
-                continue
-                #raise ValueError("empty field (old version?)")
 
-            if isinstance(nfield, tuple):
-                if   len(nfield) == 2:
-                    nkey, nval = nfield
-                    kattrs = nkey.get_attrs()
-                    vattrs = nval.get_attrs()
-
-                    kname = kattrs.get('name')
-                    kvalue = kattrs.get('valuefmt', kattrs.get('hashname'))
-                    if not kvalue:
-                        kvalue = kattrs.get('value')
-
-                    if not kvalue:
-                        key = "%s" % (kname)
-                    else:
-                        key = "%s %s" % (kname, kvalue)
-
-                    val = vattrs.get('valuefmt', vattrs.get('hashname'))
-                    if not val:
-                        val = vattrs.get('value')
-
-                elif len(nfield) == 3:
-                    nkey, nmin, nmax = nfield
-                    kattrs = nkey.get_attrs()
-                    minattrs = nmin.get_attrs()
-                    maxattrs = nmax.get_attrs()
-                    key = "%s %s" % (kattrs.get('name'), kattrs.get('valuefmt', kattrs.get('value')))
-                    val = "(%s, %s)" % (minattrs.get('valuefmt', minattrs.get('value')), maxattrs.get('valuefmt', maxattrs.get('value')))
-
-                else:
-                    raise ValueError("bad tuple")
-            else:
-                attrs = nfield.get_attrs()
-                key = attrs.get('name')
-                val = attrs.get('valuefmt', attrs.get('hashname'))
-                if not val:
-                    val = attrs.get('value')
-
-            self._info.append( '#%s* %s: %s\n' % (self.padding, key, val) )
+        lines = self.fields.generate()
+        for line in lines:
+            self._info.append( '#%s%s\n' % (self.padding, line) )
 
     def _generate_gamesync(self):
         if not self.gstext_long:
@@ -254,3 +214,98 @@ class TxtpInfoNode(object):
             if not key in names:
                 continue
             self._info.append( '#%s- %s: %s\n' % (self.padding, key, val) )
+
+# meh...
+FIELD_TYPE_PROP = 0
+FIELD_TYPE_KEYVAL = 1
+FIELD_TYPE_KEYMINMAX = 2
+FIELD_TYPE_RTPC = 3
+
+class TxtpFields(object):
+    def __init__(self):
+        self._fields = []
+
+    def prop(self, nfield):
+        if nfield:
+            self._fields.append((FIELD_TYPE_PROP, nfield))
+
+    def props(self, fields):
+        for field in fields:
+            self.prop(field)
+
+    def keyval(self, nkey, nval):
+        if nkey:
+            self._fields.append((FIELD_TYPE_KEYVAL, nkey, nval))
+
+    def keyminmax(self, nkey, nmin, nmax):
+        if nkey:
+            self._fields.append((FIELD_TYPE_KEYMINMAX, nkey, nmin, nmax))
+
+    def rtpc(self, nrtpc, minmax):
+        if nrtpc:
+            self._fields.append((FIELD_TYPE_RTPC, nrtpc, minmax))
+
+    def generate(self):
+        lines = []
+
+        for field in self._fields:
+            if not field:
+                continue
+                #raise ValueError("empty field (old version?)")
+
+            type = field[0]
+
+            if   type == FIELD_TYPE_PROP:
+                _, nfield = field
+                attrs = nfield.get_attrs()
+
+                key = attrs.get('name')
+                val = attrs.get('valuefmt', attrs.get('hashname'))
+                if not val:
+                    val = attrs.get('value')
+
+            elif type == FIELD_TYPE_KEYVAL:
+                _, nkey, nval = field
+                kattrs = nkey.get_attrs()
+                vattrs = nval.get_attrs()
+
+                kname = kattrs.get('name')
+                kvalue = kattrs.get('valuefmt', kattrs.get('hashname'))
+                if not kvalue:
+                    kvalue = kattrs.get('value')
+
+                if not kvalue:
+                    key = "%s" % (kname)
+                else:
+                    key = "%s %s" % (kname, kvalue)
+
+                val = vattrs.get('valuefmt', vattrs.get('hashname'))
+                if not val:
+                    val = vattrs.get('value')
+
+            elif type == FIELD_TYPE_KEYMINMAX:
+                _, nkey, nmin, nmax = field
+                kattrs = nkey.get_attrs()
+                minattrs = nmin.get_attrs()
+                maxattrs = nmax.get_attrs()
+
+                key = "%s %s" % (kattrs.get('name'), kattrs.get('valuefmt', kattrs.get('value')))
+                val = "(%s, %s)" % (minattrs.get('valuefmt', minattrs.get('value')), maxattrs.get('valuefmt', maxattrs.get('value')))
+
+            elif   type == FIELD_TYPE_RTPC:
+                _, nfield, minmax = field
+                attrs = nfield.get_attrs()
+
+                key = attrs.get('name')
+                val = attrs.get('valuefmt', attrs.get('hashname'))
+                if not val:
+                    val = attrs.get('value')
+
+                val += " {%s, %s}" % minmax
+
+            else:
+                raise ValueError("bad field")
+
+            lines.append("* %s: %s" % (key, val))
+
+        return lines

@@ -215,10 +215,11 @@ class GamesyncParams(object):
             #pop values to simulate dynamic changes, though isn't normally necessary
             value = values.pop()
 
-        #logging.info("GS get: %i, %i, %i" % (type, name, value))
+        logging.debug("gamesync: get %i, %i, %i" % (type, name, value))
         return value
 
     def add_param(self, type, key, val):
+        logging.debug("gamesync: add t=%s, k=%s, v=%s", type, key, val)
         if key is None or val is None:
             return
         if not key.isnumeric():
@@ -233,6 +234,26 @@ class GamesyncParams(object):
     def set_params(self, params):
         self.empty = False #even if passed list is empty (to simulate "nothing set")
         self.external = True #external params behave a bit differently
+
+        if not params:
+            return
+
+        # split '(key=var)(key=var)', as output by wwiser
+        final_params = []
+        for param in params:
+            replaces = {')(':'):(', '][': ']:[', ')[': '):[', '](': ']:('}
+            is_split = False
+            for repl_key, repl_val in replaces.items():
+                if repl_key in param:
+                    param = param.replace(repl_key, repl_val)
+                    is_split = True
+
+            if is_split:
+                splits = param.split(':')
+                final_params += splits
+            else:
+                final_params.append(param)
+        params = final_params
 
         pattern_st = re.compile(r"\((.+)=(.+)\)")
         pattern_sw = re.compile(r"\[(.+)=(.+)\]")

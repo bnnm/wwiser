@@ -257,6 +257,9 @@ class Txtp(object):
         if gs_s != gs_l:
             info += '# * full vars: %s\n' % (gs_l)
 
+        if self.txtpcache.gamevars.active:
+             info += '# * gamevars: %s\n' % (self.txtpcache.gamevars.get_info())
+
         #bank info
         banks = self.info.get_banks()
         #info += '#\n'

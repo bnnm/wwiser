@@ -401,6 +401,7 @@ class GamevarsParams(object):
         self.active = False
         self._elems = {} #OrderedDict()
         self._fnv = wfnv.Fnv()
+        self._info = ''
         pass
 
     def add(self, items):
@@ -435,7 +436,12 @@ class GamevarsParams(object):
                 logging.info('gamesync: ignored %s', item)
                 continue
 
+            self._info += item + ' ' 
             self._elems[key] = val
+        self._info = self._info.strip()
+
+    def get_info(self):
+        return self._info
 
     def is_value(self, id):
         id = int(id)

@@ -58,6 +58,8 @@ TYPE_SOUNDS = {
     TYPE_SOUND_LEAF,
 }
 
+VOLUME_DB_MAX = 96.3
+
 # Represents a TXTP tree node, that can be a "sound" (leaf file) or a "group" (includes files or groups).
 # The rough tree is created by the rebuilder, then simplified progressively to make a cleaner .txtp file,
 # transforming from Wwise concepts to TXTP commands.
@@ -96,14 +98,33 @@ class TxtpNode(object):
 
         self.crossfaded = config.crossfaded
         self.silenced = False
+        self._adjust_volume()
 
-        if self.volume and self.volume <= -96.0:
-            self.volume = None
-            self.silenced = True
 
-        if self.makeupgain and self.makeupgain <= -96.0:
-            self.makeupgain = None
-            self.silenced = True
+        # allowed to separate "loop not set" and "loop set but not looping"
+        #if self.loop == 1:
+        #    self.loop = None
+        self.loop_anchor = False #flag to force anchors in sound
+        self.loop_end = False #flag to force loop end anchors
+        self.loop_killed = False #flag to show which nodes had loop killed due to trapping
+
+        # clip loop meaning is a bit different and handled automatically
+        if sound and sound.clip:
+            self.loop = None
+
+        self.self_loop = False
+        self.force_selectable = False
+
+    def _adjust_volume(self):
+        gv = self.txtpcache.gamevars
+        if not gv.active:
+            if self.volume and self.volume <= -96.0:
+                self.volume = None
+                self.silenced = True
+
+            if self.makeupgain and self.makeupgain <= -96.0:
+                self.makeupgain = None
+                self.silenced = True
 
         # MakeUpGain is a secondary volume value, where first you set a "HDR window" in the container bus,
         # and sounds volumes are altered depending on window and MakeUpGain (meant for temp focus on some sfxs).
@@ -120,29 +141,22 @@ class TxtpNode(object):
         # sets a default), but may manually set a RTPC value:
         # - check if any of object's RTPCs have a manual value set
         # - if so, use this value (x) to get current volume (y) according to RTPC.
-        if txtpcache.gamevars.active:
-            gv = txtpcache.gamevars
-            for rtpc in config.rtpcs:
+        if gv.active:
+            for rtpc in self.config.rtpcs:
                 if gv.is_value(rtpc.id):
                     rtcp_x = gv.get_value(rtpc.id)
                     #overwrite based on config and current value (otherwise couldn't set -96db)
                     self.volume = rtpc.get(rtcp_x, self.volume)
                     #break #unsure what happens in case of conflicting RTPCs
+            self.clamp_volume()
 
-        # allowed to separate "loop not set" and "loop set but not looping"
-        #if self.loop == 1:
-        #    self.loop = None
-        self.loop_anchor = False #flag to force anchors in sound
-        self.loop_end = False #flag to force loop end anchors
-        self.loop_killed = False #flag to show which nodes had loop killed due to trapping
-
-        # clip loop meaning is a bit different and handled automatically
-        if sound and sound.clip:
-            self.loop = None
-
-        self.self_loop = False
-        self.force_selectable = False
-
+    def clamp_volume(self):
+        if not self.volume:
+            return
+        if self.volume > VOLUME_DB_MAX:
+            self.volume = VOLUME_DB_MAX
+        elif self.volume < -VOLUME_DB_MAX:
+            self.volume = -VOLUME_DB_MAX
 
     def single(self, transition=None):
         self.type = TYPE_GROUP_SINGLE
@@ -555,7 +569,7 @@ class TxtpPrinter(object):
         new_transition = copy.copy(node.transition)
 
         #new_node = copy.copy(node)
-        new_node = TxtpNode(new_parent, sound=new_sound, config=new_config, txtpcache=self.txtpcache)
+        new_node = TxtpNode(new_parent, sound=new_sound, config=new_config, txtpcache=node.txtpcache)
         new_node.type = node.type
         new_node.transition = new_transition
 
@@ -921,6 +935,7 @@ class TxtpPrinter(object):
 
         if basenode.volume:
             basenode.volume += self._volume_master
+            basenode.clamp_volume()
             self._volume_master = 0
             return
 
@@ -941,6 +956,7 @@ class TxtpPrinter(object):
                 if not subnode.volume:
                     subnode.volume = 0
                 subnode.volume += self._volume_master
+                subnode.clamp_volume()
             # only if there are subnodes to pass info, otherwise it's set at the end
             self._volume_master = 0
 

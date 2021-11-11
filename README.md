@@ -179,14 +179,14 @@ For example with:
 
 And these renames (note that order matters):
 - `(ST_PLAYERSTATE=ST_PLAYER_ALIVE):`
-- `ST_PLAYERSTATE=:STATE=`
+- `ST_PLAYERSTATE=:PLAYER=`
 - `(ST_READY=*):`
 - `ST_MISSION_STATE=:MISSION`
 - `ST_:`
 
 You would get:
 - `play_bgm (MISSION=M01)`
-- `play_bgm (STATE=PLAYER_DEAD)`
+- `play_bgm (PLAYER=PLAYER_DEAD)`
 
 While you can mutate anything to anything, I recommend shortening but respecting the original
 naming style (mainly removing superflous stems and useless states, avoiding making up text).

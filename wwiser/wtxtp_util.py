@@ -720,16 +720,20 @@ class NodeRtpc(object):
             return value
         y = self.graph.get(x)
 
+        if value is None:
+            value = 0
+
+        #TODO: check how exclusive works
         if self.version < RTPC_NEW_ACCUM:
             if self.accum == 0: #exclusive
-                return y
+                return y + value #??? (sounds better with volumes?)
             if self.accum == 1: #additive
                 return y + value
             if self.accum == 2: #multiply
                 return y * value
         else:
             if self.accum == 1: #exclusive
-                return y
+                return y + value #??? (sounds better with volumes?)
             if self.accum == 2: #additive
                 return y + value
             if self.accum == 3: #multiply
@@ -738,4 +742,17 @@ class NodeRtpc(object):
                 return y or value #???
 
         raise ValueError("unknown accum")
+
+    def minmax(self):
+        ps = self.graph.points
+        if not ps:
+            return (0.0, 0.0)
+
+        p1 = ps[0]
+        if len(ps) == 1:
+            p2 = p1
+        else:
+            p2 = ps[len(ps)-1]
+
+        return (p1.x, p2.x)
 

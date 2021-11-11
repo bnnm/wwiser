@@ -723,25 +723,28 @@ class NodeRtpc(object):
         if value is None:
             value = 0
 
-        #TODO: check how exclusive works
-        if self.version < RTPC_NEW_ACCUM:
-            if self.accum == 0: #exclusive
-                return y + value #??? (sounds better with volumes?)
-            if self.accum == 1: #additive
-                return y + value
-            if self.accum == 2: #multiply
-                return y * value
-        else:
-            if self.accum == 1: #exclusive
-                return y + value #??? (sounds better with volumes?)
-            if self.accum == 2: #additive
-                return y + value
-            if self.accum == 3: #multiply
-                return y * value
-            if self.accum == 4: #boolean
-                return y or value #???
+        # accum type seems to affect how value is added to current, but volume looks fixed to "additive",
+        # ignoring actual value that may be set to "exclusive" (at least in Wwise editor value modifies
+        # current volume). Docs also mention property behavior is fixed per property
+        return y + value
 
-        raise ValueError("unknown accum")
+        #if self.version < RTPC_NEW_ACCUM:
+        #    if self.accum == 0: #exclusive
+        #        return y + value #??? (sounds better with volumes?)
+        #    if self.accum == 1: #additive
+        #        return y + value
+        #    if self.accum == 2: #multiply
+        #        return y * value
+        #else:
+        #    if self.accum == 1: #exclusive
+        #        return y + value #??? (sounds better with volumes?)
+        #    if self.accum == 2: #additive
+        #        return y + value
+        #    if self.accum == 3: #multiply
+        #        return y * value
+        #    if self.accum == 4: #boolean
+        #        return y or value #???
+        #raise ValueError("unknown accum")
 
     def minmax(self):
         ps = self.graph.points

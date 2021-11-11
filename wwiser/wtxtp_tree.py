@@ -58,7 +58,7 @@ TYPE_SOUNDS = {
     TYPE_SOUND_LEAF,
 }
 
-VOLUME_DB_MAX = 96.3
+VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but allowed editable max is +-200
 
 # Represents a TXTP tree node, that can be a "sound" (leaf file) or a "group" (includes files or groups).
 # The rough tree is created by the rebuilder, then simplified progressively to make a cleaner .txtp file,

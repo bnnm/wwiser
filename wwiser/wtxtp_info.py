@@ -1,6 +1,9 @@
 import logging, os
 from . import wgamesync
 
+###
+# saves a printable info tree
+
 
 class TxtpInfo(object):
     def __init__(self, txtpcache):
@@ -8,12 +11,15 @@ class TxtpInfo(object):
         self._ninfo = []
         self._banks = None
         self._wemnames = ''
-        self._gsnames = ''
+        self._gsnames_long = ''
+        self._gsnames_short = ''
         self._txtpcache = txtpcache
         pass
 
-    def get_gsnames(self):
-        return self._gsnames
+    def get_gsnames(self, long=False):
+        if long:
+            return self._gsnames_long
+        return self._gsnames_short
 
     def get_wemnames(self):
         return self._wemnames
@@ -76,8 +82,9 @@ class TxtpInfo(object):
         current = self._ninfo[-1]
 
         current.add_gamesyncs_info(gamesyncs, self._txtpcache.name_vars)
-        info = current.get_gamesync_text()
-        self._gsnames += " " + info
+        
+        self._gsnames_long += " " + current.gstext_long
+        self._gsnames_short += " " + current.gstext_short
 
 
 class TxtpInfoNode(object):
@@ -89,15 +96,17 @@ class TxtpInfoNode(object):
         self.nsid = nsid
         self.nfields = nfields
         self.nattrs = nattrs
-        self.gamesync = '' #text
+        self.gstext_long = ''
+        self.gstext_short = ''
         self.source = source
         self._info = None
 
     def add_gamesyncs_info(self, gamesyncs, name_vars):
-        if self.gamesync:
+        if self.gstext_long or self.gstext_short:
             raise ValueError("multiple gamesyncs in same info node")
 
-        info = ''
+        info_long = ''
+        info_short = ''
         for gtype, ngname, ngvalue in gamesyncs:
 
             name = ngname.get_attrs().get('hashname')
@@ -116,17 +125,17 @@ class TxtpInfoNode(object):
             else:
                 raise ValueError("unknown gamesync type %i" % (gtype))
 
-            # by default ignore variables like (thing=-) since they tend to get wordy and don't give much info
+            # By default ignore variables like (thing=-) since they tend to get wordy and don't give much info
             # some cases may look better with them ("play_bgm [music=-]" + play_bgm [music=bgm1] + ..., by default first would be "play_bgm")
+            # Only for "short" version of text info, that is used as name (standard version is written inside txtp)
             if not name_vars and value == '-':
                 pass
             else:
-                info += type
+                info_short += type
+            info_long += type
 
-        self.gamesync = info
-
-    def get_gamesync_text(self):
-        return self.gamesync
+        self.gstext_long = info_long
+        self.gstext_short = info_short
 
     def get_node(self):
         return self.node
@@ -225,9 +234,9 @@ class TxtpInfoNode(object):
             self._info.append( '#%s* %s: %s\n' % (self.padding, key, val) )
 
     def _generate_gamesync(self):
-        if not self.gamesync:
+        if not self.gstext_long:
             return
-        self._info.append( '#%s~ %s\n' % (self.padding, self.gamesync) )
+        self._info.append( '#%s~ %s\n' % (self.padding, self.gstext_long) )
 
     def _generate_source(self):
         ntid = self.source

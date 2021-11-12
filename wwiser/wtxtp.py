@@ -1,5 +1,5 @@
 import logging, os
-from . import wgamesync, wtxtp_tree, wtxtp_info, wtxtp_namer, wversion
+from . import wgamesync, wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer, wversion
 
 # Builds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
 #
@@ -77,7 +77,7 @@ class Txtp(object):
     #--------------------------------------------------------------------------
 
     def write(self):
-        printer = wtxtp_tree.TxtpPrinter(self, self._root)
+        printer = wtxtp_printer.TxtpPrinter(self, self._root)
         printer.prepare() #simplify tree
 
         # may have files but all silent

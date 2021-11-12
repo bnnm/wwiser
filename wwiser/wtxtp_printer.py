@@ -1,0 +1,1420 @@
+import logging, math, copy
+from . import wtxtp_util, wtxtp_tree
+
+
+TXTP_SPACES = 1
+
+DEBUG_PRINT_TREE_PRE = False
+DEBUG_PRINT_TREE_POST = False
+DEBUG_PRINT_GROUP_HEADER = False
+
+
+VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but allowed editable max is +-200
+
+#******************************************************************************
+
+# Takes the TXTP tree pre-build and readjusts + prints it to create a final usable .txtp
+# Uses txtp "groups" to handle multi layer/sequences/etc
+#
+# Wwise can trim/pad/modify .wem to get a final time, but can also set segment duration and entry/exit "markers"
+# (to use in musicranseqs, relative to trimmed .wem), combined for loop points. Sometimes events use rather strange
+# time combos, since the editor allows fiddling with each part separatedly:
+#
+# A file from 0..100s, that should loop from 10..90s, could be weirdly defined like:
+#  event > play > musicranseq   > musicsegment    > musictrack    > 1.wem
+#                 * sequence    | * duration: 12s                   * trims: 0..8s (end part is silence)
+#                 * loops 2nd   | * markers: 0s/10s
+#                               \ musicsegment    > musictrack    > 1.wem
+#                                 * duration: 120s                  * trims: 8..150 (after 100s just repeats)
+#                                 * markers: 2s/82s [relative to segment]
+#
+# Could written like:
+#   #sequence of 2
+#     #sequence of 1
+#       1.wem       #b 8.0
+#     group = 1S1   #b 10.0
+#     #sequence of 1
+#       1.wem       #r 8.0 #b 150.0
+#     group = 1S1   #r 2.0  #b 82.0
+#   group = 1S2
+#   loop_start_segment = 2
+#
+# But could be rewritten as:
+#   1.wem   #b 8.0  #P 2.0              # b10.0 - b8.0 = P2.0
+#   1.wem   #r 10.0 #b 90.0             # r8.0 + r8.0 = r10.0, b82.0 + r8.0
+# loop_state_segment = 2
+#
+# A musicranseq is just a playlist defining segments (like: A, B, C), but segment play time depends
+# on "transitions". Transitions are set between 2 segments (like A-to-B), and decide A's final exit
+# point/time and B's entry point/time (usually exit/entry) markers, plus if audio after exit/before
+# entry may play. If music loops (like A,A,B,C) is would defines both A-to-A and A-to-B (see EDITOR.md).
+# So A (100s segment) may set exit at 90s into B's 10s
+#
+# When making TXTP, segments' final play time is calculated first, then adjusted depending on entry
+# points given in transitions objects. Audio before/after entry may overlap in Wwise but currently
+# it's ignored.
+
+class TxtpPrinter(object):
+    def __init__(self, txtp, tree):
+        self._tree = tree
+        self._txtp = txtp
+        self._txtpcache = txtp.txtpcache
+        self._rebuilder = txtp.rebuilder
+
+        self._volume_master = self._txtpcache.volume_master or 0 #copy since may need to modify
+
+        # during write
+        self._lines = None
+        self._depth = None
+        self._simpler = False   # when set skips some configs to ease comparing similar txtp
+                                # (some games have an event + same softer or slightly delayed = useless)
+
+        # during process
+        self._sound_count = 0
+        self._transition_count = 0
+        self._loop_groups = 0
+        self._loop_sounds = 0
+
+        # output flags
+        self.lang_name = None
+        self.has_random_continuous = False
+        self.has_random_steps = False   # some parts contain randoms
+        self.has_silences = False       # may use silences to change/crossfade songs
+        self.has_self_loops = False     # hack for smoother looping
+        self.has_streams = False        # stream .wem
+        self.has_internals = False      # internal .wem (inside .bnk)
+        self.has_externals = False      # special "external sources"
+        self.has_unsupported = False    # missing audio/unsupported plugins
+        self.has_multiloops = False     # multiple layers have infinite loops
+        self.has_others = False         # misc marks
+        self.has_debug = False          # special mark for testing
+
+        self.selectable_count = 0       # number of selectable (in the first node only), for flags below
+        self.is_random_select = False   # has selectable random group
+        self.is_multi_select = False    # has selectable multilooping group
+        self.is_force_select = False    # has selectable forced group
+        
+        self.externals = []
+
+    def prepare(self):
+        self._modify()
+
+    def generate(self, simpler=False):
+        self._depth = 0
+        self._lines = []
+        self._simpler = simpler
+
+        self._write()
+        text = ''.join(self._lines)
+        return text
+
+    def has_sounds(self):
+        return self._sound_count > 0
+
+    def has_noloops(self):
+        return self._loop_groups == 0 and self._loop_sounds == 0
+
+    #--------------------------------------------------------------------------
+
+    # simplifies tree to simulate some Wwise features with TXTP
+    def _modify(self):
+        if DEBUG_PRINT_TREE_PRE:
+            logging.info("*** tree pre:")
+            self._mdepth = 0
+            self._print_tree(self._tree, False)
+            logging.info("")
+
+        #todo join some of these to minimize loops
+        self._clean_tree(self._tree)
+        self._set_self_loops(self._tree)
+        self._set_props(self._tree)
+        self._set_times(self._tree)
+        self._reorder_wem(self._tree)
+        self._find_loops(self._tree)
+        self._set_extra(self._tree)
+        self._set_volume(self._tree)
+
+
+        if DEBUG_PRINT_TREE_POST:
+            logging.info("*** tree post:")
+            self._mdepth = 0
+            self._print_tree(self._tree, True)
+            logging.info("")
+        return
+
+
+    def _print_tree(self, node, post):
+        line1 = ''
+        line2 = ''
+        config1 = ''
+        config2 = ''
+
+        if post:
+            if node.loop is not None:       config1 += " lpn=%s" % (node.loop)
+            if node.volume is not None:     config1 += " vol=%s" % (node.volume)
+            if node.ignorable():            config1 += " [i]"
+
+            if node.body_time:              config2 += ' bt={0:.5f}'.format(node.body_time)
+            if node.pad_begin:              config2 += ' pb={0:.5f}'.format(node.pad_begin)
+            if node.trim_begin:             config2 += ' tb={0:.5f}'.format(node.trim_begin)
+            if node.trim_end:               config2 += ' te={0:.5f}'.format(node.trim_end)
+            if node.pad_end:                config2 += ' pb={0:.5f}'.format(node.pad_end)
+
+        else:
+            if node.config.loop is not None: config1 += " lpn=%s" % (node.config.loop)
+            if node.config.delay:           config1 += " dly=%s" % (node.config.delay)
+            if node.config.idelay:          config1 += " idl=%s" % (node.config.idelay)
+            if node.config.volume:          config1 += " vol=%s" % (node.config.volume)
+            if node.transition:             config1 += " (trn)"
+
+            if node.config.entry or node.config.exit:
+                dur = '{0:.5f}'.format(node.config.duration)
+                ent = '{0:.5f}'.format(node.config.entry)
+                exi = '{0:.5f}'.format(node.config.exit)
+                config2 += " (dur=%s, ent=%s, exi=%s)" % (dur, ent, exi)
+
+            if node.sound and node.sound.clip:
+                fsd = '{0:.5f}'.format(node.sound.fsd)
+                fpa = '{0:.5f}'.format(node.sound.fpa)
+                fbt = '{0:.5f}'.format(node.sound.fbt)
+                fet = '{0:.5f}'.format(node.sound.fet)
+                config2 += " (fsd=%s, fpa=%s, fbt=%s, fet=%s)" % (fsd, fpa, fbt, fet)
+
+        if node.type in wtxtp_tree.TYPE_SOUNDS:
+            tid = None
+            if node.sound.source:
+                tid = node.sound.source.tid
+            line1 += "%s %s" % (node.type, tid)
+            line1 += config1
+            line2 += config2
+        else:
+            line1 += "%s%i" % (node.type, len(node.children))
+            line1 += config1
+            line2 += config2
+
+        logging.info("%s%s", ' ' * self._mdepth, line1)
+        if line2:
+            logging.info("%s%s", ' ' * self._mdepth, line2)
+
+
+        self._mdepth += 1
+        for subnode in node.children:
+            self._print_tree(subnode, post)
+        self._mdepth -= 1
+
+    #--------------------------------------------------------------------------
+
+    # get first non-ignorable children
+    def _get_first_child(self, node):
+        if not node.ignorable():
+            return node
+
+        # logically this will stop in a sound (leaf) node or a node with N children,
+        # while skipping nodes with 1 children that have no config
+        for subnode in node.children:
+            child = self._get_first_child(subnode)
+            if child:
+                return child
+
+        return None
+
+    #--------------------------------------------------------------------------
+
+    # removes and simplifies nodes that aren't directly usable
+    def _clean_tree(self, node):
+
+        # iter over copy, since we may need to drop children
+        for subnode in list(node.children):
+            self._clean_tree(subnode)
+
+        # kill nodes *after* iterating (bottom to top)
+
+
+        # kill sound nodes that don't actually play anything, like rumble helpers (seen in AC2, MK Home Circuit)
+        if node.type in wtxtp_tree.TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_ignorable:
+            self._kill_node(node)
+            return
+
+        # kill group nodes that don't have children since they mess up some calcs
+        if node.type in wtxtp_tree.TYPE_GROUPS and node.parent:
+            is_empty = len(node.children) == 0
+
+            # kill segments that don't play (would generate empty silence),
+            # seen in Doom Eternal (no duration) and mass effect 2 (duration but no exit)
+            is_nosound = node.config.duration == 0 or node.config.exit == 0
+
+            if is_empty or is_nosound:
+                self._kill_node(node)
+
+        # find random with all options the same (ex. No Straight Roads)
+        if self._has_random_repeats(node):
+            subnode = node.children[0] #use first only
+            node.children = [subnode]
+
+        # set externals flag
+        if node.type in wtxtp_tree.TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_external:
+            self.has_externals = True
+            if node.sound.source.tid not in self.externals:
+                self.externals.append(node.sound.source.tid)
+
+        return
+
+    def _kill_node(self, node):
+        node.parent.children.remove(node)
+
+    def _has_random_repeats(self, node):
+        if node.type not in wtxtp_tree.TYPE_GROUPS_STEPS or len(node.children) <= 1:
+            return False
+
+        prev_id = None
+        for subnode in node.children:
+            id = self._tree_get_id(subnode)
+            if not id:
+                return False
+            if prev_id is None:
+                prev_id = id
+            elif prev_id != id:
+                return False
+
+        return True
+
+    # parent's infinite loops can be removed in favor of children (since wwise loops innermost object)
+    # to make txtp loop calcs a bit simpler, ex.
+    # - S2 (l=0) > N1 (l=0) > ..
+    # - S2 (l=0) > N1       > ..
+    #            \ N1 (l=0) > ..
+    # - S2 (l=0) > S2       > N1       > ..
+    #                       \ N1 (l=0) > ..
+    # - L2 (l=0) > N1 (l=0)
+    #            \ N1 (l=0)
+    def _has_iloops(self, node):
+        if node.loop == 0:
+            return True
+
+        for subnode in node.children:
+            if self._has_iloops(subnode):
+                return True
+        return False
+
+    def _tree_get_id(self, node):
+        if node.type in wtxtp_tree.TYPE_SOUNDS:
+            if not node.sound.source:
+                return None # handle plugins/silences?
+            return node.sound.source.tid
+
+        # may handle only simple groups
+        if len(node.children) != 1:
+            return None
+        return self._tree_get_id(node.children[0])
+
+    #--------------------------------------------------------------------------
+
+    # Hack for objects that loops to itself like: mranseq (loop=0) > item [transitions] > segment
+    # There are 2 transitions used: "nothing to segment start" and "segment to segment",
+    # so we need a segment that plays "play_before" and loop that doesn't (since overlapped
+    # transitions don't work ATM)
+    def _set_self_loops(self, node):
+
+        if self._make_self_loop(node):
+            pass #?
+
+        for subnode in node.children:
+            self._set_self_loops(subnode)
+
+        return
+
+    def _make_self_loop(self, node):
+        if node.loop is None or node.loop == 1: #must loop
+            return False
+
+        if len(node.children) != 1: #loops to itself
+            return False
+
+        subnode = node.children[0]
+        if not subnode.transition: #next part is a transition
+            return False
+
+        if len(subnode.children) != 1: #loops to itself
+            return False
+
+        subsubnode = subnode.children[0]
+        if not subsubnode.config.duration or subsubnode.config.entry == 0: #next part must be a segment
+            return False
+
+        threshold = 1 / 48000.0
+        if subsubnode.config.entry <= threshold: #min len
+            return False
+
+
+        # self loop: make a clone branch (new loop), then mark the original:
+        # - subnode (original): 0..entry (no loop)
+        # - new_subnode (clone): entry..exit (loops)
+        node.type = wtxtp_tree.TYPE_GROUP_SEQUENCE_CONTINUOUS
+        new_subnode = self._make_copy(node, subnode)
+
+        subnode.self_loop = True #mark transition node
+        subnode.loop = None  #0..entry
+        new_subnode.loop = node.loop #mark loop node
+        node.loop = None
+
+        return True
+
+    def _make_copy(self, new_parent, node):
+        # semi-shallow copy (since some nodes have parser nodes that shouldn't be copied)
+
+        #todo maybe implement __copy__
+        new_config = copy.copy(node.config)
+        new_sound = copy.copy(node.sound)
+        new_transition = copy.copy(node.transition)
+
+        #new_node = copy.copy(node)
+        new_node = wtxtp_tree.TxtpNode(new_parent, sound=new_sound, config=new_config, txtpcache=node.txtpcache)
+        new_node.type = node.type
+        new_node.transition = new_transition
+
+        for envelope in node.envelopes:
+            new_envelope = copy.copy(envelope)
+            new_node.envelopes.append(new_envelope)
+
+        new_parent.append(new_node)
+
+        for subnode in node.children:
+            self._make_copy(new_node, subnode)
+
+        return new_node
+
+    #--------------------------------------------------------------------------
+
+    # simplify props by moving them out from single groups to child, to minimize total groups
+    def _set_props(self, node):
+        # do 2 passes because sometimes when moving props down it stops when same prop exists right below,
+        # but after all subnodes have been processes (and props were moved down) prop can be moved again
+        #todo improve (ex. Detroit  129941368 + (C05_Music_State=C05_OnNest))
+        self._set_props_move(node)
+        self._set_props_move(node)
+
+        self._set_props_config(node)
+
+    def _set_props_move(self, node):
+
+        if node.type in wtxtp_tree.TYPE_GROUPS:
+            is_single = len(node.children) == 1
+            if is_single:
+                self._move_group_props(node)
+
+        for subnode in node.children:
+            self._set_props_move(subnode)
+
+        return
+
+    def _move_group_props(self, node):
+        # for single groups only
+
+        # simplify any type (done here rather than on clean tree after self-loops)
+        node.type = wtxtp_tree.TYPE_GROUP_SINGLE
+
+        subnode = node.children[0]
+
+        # move loop (not to sounds since loop is applied over finished track)
+        #todo maybe can apply on some sounds (ex. S1 l=0 > L2 --- = S1 --- > L2 l=0)
+        if subnode.type in wtxtp_tree.TYPE_GROUPS:
+            is_noloop_subnode = subnode.loop is None or subnode.loop == 1
+            is_bothloop = node.loop == 0 and subnode.loop == 0
+            if is_noloop_subnode or is_bothloop:
+                subnode.loop = node.loop
+                node.loop = None
+
+        # move delay (ok in sounds, ignore in clips)
+        is_noloop_node = node.loop is None or node.loop == 1
+        is_clip_subnode = subnode.sound and subnode.sound.clip #probably ok, but may mess-up transition calcs
+        if not subnode.delay and is_noloop_node and not is_clip_subnode:
+            subnode.delay = node.delay
+            node.delay = None
+
+        if not subnode.idelay and is_noloop_node and not is_clip_subnode:
+            subnode.idelay = node.idelay
+            node.idelay = None
+
+
+        # move various props closer to source = better (less txtp groups)
+
+        if not subnode.volume:
+            subnode.volume = node.volume
+            node.volume = None
+        elif node.volume and subnode.volume and subnode.type == wtxtp_tree.TYPE_GROUP_SINGLE:
+            # fuse volumes to make less groups sometimes
+            subnode.volume += node.volume
+            node.volume = None
+
+        if not subnode.crossfaded:
+            subnode.crossfaded = node.crossfaded
+            node.crossfaded = None
+
+        if not subnode.silenced:
+            subnode.silenced = node.silenced
+            node.silenced = None
+
+        if not subnode.makeupgain:
+            subnode.makeupgain = node.makeupgain
+            node.makeupgain = None
+
+        if not subnode.pitch:
+            subnode.pitch = node.pitch
+            node.pitch = None
+
+    def _set_props_config(self, node):
+        for subnode in node.children:
+            self._set_props_config(subnode)
+
+        # whole group config
+        if node.type in wtxtp_tree.TYPE_GROUPS:
+            self._apply_group(node)
+
+        # info
+        if node.loop == 0:
+            if node.type in wtxtp_tree.TYPE_GROUPS:
+                self._loop_groups += 1
+            elif node.type in wtxtp_tree.TYPE_SOUNDS and not node.sound.clip: #clips can't loop forever, flag just means intra-loop
+                self._loop_sounds += 1
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    # applies clip and transition times to nodes
+    def _set_times(self, node):
+        # find leaf clips and set duration
+        if node.type in wtxtp_tree.TYPE_SOUNDS:
+            if not node.sound.silent:
+                self._sound_count += 1
+
+            # convert musictrack's clip values to TXTP flags
+            if node.sound.clip:
+                self._apply_clip(node)
+            else:
+                self._apply_sfx(node)
+            self._apply_automations(node)
+
+        for subnode in node.children:
+            self._set_times(subnode)
+
+        if node.config.duration:
+            self._set_duration(node, node)
+
+        if node.transition:
+            self._set_transition(node, node, None)
+        return
+
+    def _set_duration(self, node, snode):
+        if node != snode and node.config.duration:
+            logging.info("txtp: found duration inside duration")
+            return
+
+        if node.sound and node.sound.clip:
+            self._apply_duration(node, snode.config)
+
+        for subnode in node.children:
+            self._set_duration(subnode, snode)
+
+    def _set_transition(self, node, tnode, snode):
+        if node != tnode and node.transition:
+            #logging.info("txtp: transition inside transition")
+            #this is possible in stuff like: switch (tnode) > mranseq (node)
+            return
+
+        is_segment = node.config.duration is not None #(node.config.exit or node.config.entry)
+        if is_segment and snode:
+            logging.info("txtp: double segment")
+            return
+
+        if is_segment:
+            snode = node
+            self._transition_count += 1
+
+        if node.sound and node.sound.clip:
+            self._apply_transition(node, tnode, snode)
+
+        for subnode in node.children:
+            self._set_transition(subnode, tnode, snode)
+
+    #--------------------------------------------------------------------------
+
+    # in layered groups .wem is ordered by segment/track ids but final wem ID can move around,
+    # reorder to make modding .txtp a bit easier. ex:
+    # S2 > L2 > 123.wem
+    #    |    > 321.wem
+    #    \ L2 > 321.wem  !! (reorder to match the above)
+    #         > 123.wem
+    def _reorder_wem(self, node):
+
+        for subnode in node.children:
+            self._reorder_wem(subnode)
+
+        # must only reorder layers
+        # (check *after* subnode loops since this goes bottom to top)
+        if node.type not in wtxtp_tree.TYPE_GROUPS_LAYERS:
+            return
+
+        # find children ID
+        ids = []
+        for subnode in node.children:
+            id = self._tree_get_id(subnode)
+            if not id: #can't reorder this branch
+                return
+            ids.append((id, subnode))
+
+        # may reorder now (by id only (defaults to [N+1] on equals but can't compare nodes,
+        # plus same nodes must not be ordered)
+        ids.sort(key=lambda x: x[0])
+        node.children = []
+        for id, subnode in ids:
+            node.children.append(subnode)
+        return
+
+    #--------------------------------------------------------------------------
+
+    # handle some complex loop cases
+    # (assumes groups have been simplifies when no children are present)
+    def _find_loops(self, node):
+        if  self.has_noloops():
+            return
+
+        self._find_loops_internal(node)
+
+    def _find_loops_internal(self, node):
+
+        for subnode in node.children:
+            self._find_loops(subnode)
+
+        #try bottom-to-top
+
+        # multiloops: layered groups with children that loop independently not in sync.
+        # Wwise internally sets "playlists" with loops that are more like "repeats" (item ends > play item again).
+        # If one layer has 2 playlists that loop, items may have different loop end times = multiloop.
+        # * find if layer has multiple children and at least 1 infinite loops (vgmstream can't replicate ATM)
+        # * one layer not looping while other does it's considered multiloop
+        if node.type in wtxtp_tree.TYPE_GROUPS_LAYERS and not self.has_multiloops:
+            for subnode in node.children:
+                if self._has_iloops(subnode):
+                    self.has_multiloops = True
+                    break
+
+        # looping steps behave like continuous, since they get "trapped" repeating at this level (ex. Nier Automata)
+        if node.loop == 0:
+            if node.type == wtxtp_tree.TYPE_GROUP_RANDOM_STEP:
+                node.type = wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS
+            if node.type == wtxtp_tree.TYPE_GROUP_SEQUENCE_STEP:
+                node.type = wtxtp_tree.TYPE_GROUP_SEQUENCE_CONTINUOUS
+
+        # normal (or looping) continuous with all looping children can be treated as steps (ex. Nier Automata)
+        if node.type == wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS: #looping sequences are handled below
+            iloops = 0
+            for subnode in node.children:
+                if self._has_iloops(subnode):
+                    iloops += 1
+
+            if iloops == len(node.children): #N iloops = children are meant to be shuffled songs
+                node.type = wtxtp_tree.TYPE_GROUP_RANDOM_STEP
+                node.loop = None # plus removes on looping on higher level to simplify behavior
+
+
+        # tweak sequences
+        if node.type in wtxtp_tree.TYPE_GROUPS_CONTINUOUS:
+            i = 0
+            loop_ends = 0
+            for subnode in node.children:
+                child = self._get_first_child(subnode) #may include subnode
+                i += 1
+
+                if not child:
+                    continue
+
+                # loop resequences: sometimes a sequence mixes simple sounds with groups, that can be simplified (ex. Mario Rabbids)
+                # * S2 > sound1, N1 (> sound2) == S2 > sound1, sound2
+                if child.loop == 0 and child.type == wtxtp_tree.TYPE_GROUP_SINGLE and child.ignorable(skiploop=True):
+                    subchild = self._get_first_child(child.children[0])
+                    if subchild and subchild.loop is None:
+                        subchild.loop = child.loop
+                        if subchild.type in wtxtp_tree.TYPE_SOUNDS:
+                            subchild.loop_anchor = True
+                        child.loop = None
+                        child = subchild
+
+                # loop traps: when N segment items set loop first one "traps" the playlist and repeats forever, never reaching others (ex. Magatsu Wahrheit)
+                # * find if segment has multiple children and loops before last children (add mark)
+                if child.loop == 0:
+                    if (i < len(node.children) or loop_ends > 0):
+                        loop_ends += 1 #last segment is only marked if there are other segments with loop end first
+                        child.loop_end = True
+                    # todo maybe only if node is first usable node
+                    node.loop = None #remove parent loop to simulate trapping
+                    node.loop_killed = True
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    # extra stuff
+    def _set_extra(self, node):
+
+        # simplify first node
+        basenode = self._get_first_child(node)
+        if not basenode:
+            return
+
+        self._set_initial_delay(basenode)
+        self._set_selectable(basenode)
+        return
+
+    def _set_initial_delay(self, node):
+        # Sometimes games have events where "play" and similar objects starts delayed.
+        # Not very useful and sometimes the same event without delay exists, so it's removed by default.
+
+        if self._txtpcache.write_delays:
+            return
+        #only with first sfx/group, not clips (don't have delay and padding has other meaning)
+        if node.type in wtxtp_tree.TYPE_SOUNDS and node.sound and node.sound.clip:
+            return
+        node.pad_begin = 0
+        node.idelay = None
+        node.delay = None
+
+
+    def _set_selectable(self, node):
+        if node.type not in wtxtp_tree.TYPE_GROUPS:
+            return
+
+        count = len(node.children)
+        if len(node.children) <= 1:
+            return
+
+        # set total layers/segment/randoms in the main/upper group (can be used to generate 1 .txtp per type)
+        # depending on flags (may set only one or all)
+        # - flag to make random groups + group is random
+        random_all = self._txtpcache.random_all and node.type in wtxtp_tree.TYPE_GROUPS_STEPS
+        # - flag to make multiloops only + group isn't regular random
+        random_multi = self._txtpcache.random_multi and self.has_multiloops
+        # - flag to make others
+        random_force = self._txtpcache.random_force and not node.type in wtxtp_tree.TYPE_GROUPS_STEPS
+
+        if random_all or random_multi or random_force:
+            self.selectable_count = count
+            node.force_selectable = True
+            # set flags taking into account priority (r > m > f)
+            if   random_all:
+                self.is_random_select = True
+            elif random_multi:
+                self.is_multi_select = True
+            elif random_force:
+                self.is_force_select = True
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    # Simplify volume stuff
+    #
+    # Volumes in Wwise are also a mix of buses, ActorMixers, state-set volumes and other things,
+    # but usually (hopefully) volumes set on object level make the .txtp sound fine in most cases.
+    #
+    # However some games set low volume in base objects (ex. SFZ -14dB), since output bus volumes alter
+    # this, and Wwise can normalize on realtime, plus may be used in only a few tracks as normalization
+    # (ex. Dirt Rally 4, Halo Wars menus), so we need keep it. To handle this, "master volume" can be set
+    # manually and it's used to alter this base volume.
+    def _set_volume(self, node):
+
+        # negative volumes are applied per source
+        if self._volume_master <= 0:
+            return
+
+        # find base node and cancel its volume if possible
+        basenode = self._get_first_child(node)
+        if not basenode:
+            return
+
+        if basenode.volume:
+            basenode.volume += self._volume_master
+            basenode.clamp_volume()
+            self._volume_master = 0
+            return
+
+        # sometimes we can pass volume to lower leafs if base node didn't have volume and
+        # there aren't more groups in between (better volume cancelling)
+        subnodes = []
+        for subnode in basenode.children:
+            subbasenode = self._get_first_child(subnode)
+            if not subbasenode:
+                continue
+            # all should be sounds
+            if not subbasenode.type in wtxtp_tree.TYPE_SOUNDS:
+                return
+            subnodes.append(subbasenode)
+
+        if subnodes:
+            for subnode in subnodes:
+                if not subnode.volume:
+                    subnode.volume = 0
+                subnode.volume += self._volume_master
+                subnode.clamp_volume()
+            # only if there are subnodes to pass info, otherwise it's set at the end
+            self._volume_master = 0
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    # translates Wwise clip values to TXTP config:
+    # - fsd (fSrcDuration): original base file duration, for calcs (not final time)
+    # - fpa (fPlayAt): moves/pads track from start (>0=right, <0=left)
+    # - fbt (fBeginTrimOffset): mods beginning (>0=trim begin, <0=add end repeat)
+    # - fet (fEndTrimOffset): mods end (<0=trim end, >0=add start repeat)
+    #
+    # ex. with fsd=30s (#b 30.0)
+    # fpa=+10 fbt=0   fet=0     > #p 10.0           (moves right = adds padding)
+    # fpa=-10 fbt=*   fet=0     > -                 (moves left before beginning, but always comes with a trim)
+    # fpa=0   fbt=+10 fet=0     > #r 10.0 #p 10.0   (trims beginning + moves left)
+    # fpa=+10 fbt=+10 fet=0     > #r 10.0 #p 20.0   (moves right + trims beginning + moves right)
+    # fpa=0   fbt=0   fet=-10   > #R 10.0           (trims end)
+    # fpa=0   fbt=-10 fet=+10   > !!!               (this case adds repeats)
+    # fpa=-5, fbt=-5, fet=0     > !!!               (shouldn't be possible)
+    #
+    # clips' "repeat" parts are N partial loops (can't loop forever, only full loops):
+    #    (  << repeat/-fbt  | base/fsd   |  repeat/+fet >>  )
+    #    (67|0123456789|0123456789|0123456789|12)  > bte -12s, fsd=10s, fet=+12s
+    #
+    # reworded for TXTP (body N times + trims: 1 base + N from negative fbt + N from positive fet)
+    #   fpa=-   fbt=-40 fet=+40   > #r 20.0 #b 150.0 #R 20.0
+    #       * base:         (repeat-10|repeat-30|clip+30|repeat+30|repeat+10)
+    #       * mod:   trim+20(clip+10|clip+30|clip+30|clip+30|clip+10)
+
+    def _apply_clip(self, node):
+        sound = node.sound
+        #config = node.config
+
+        if node.delay or node.idelay:
+            raise ValueError("found delay/idelay in clip (%s, %s)" % (node.delay, node.idelay))
+
+        body_time = 0.0
+        pad_begin = 0.0
+        trim_begin = 0.0
+        trim_end = 0.0
+        pad_end = 0.0
+
+        threshold = 1.0 / 48000.0
+
+        # remove repeats that are too small to even make a sample since they tend to create big trims
+        # that end up consuming a whole loop = useless (mini trims are ok, will be removed later)
+        if sound.fbt < 0 and sound.fbt > -threshold:
+            #sound.fpa += sound.fbt ?
+            sound.fbt = 0
+            if sound.fet > 0 and sound.fet < threshold:
+                sound.fet = 0
+
+
+        body_time = sound.fsd
+
+        #handle begin pad (may be negative, should be cancelled by bft)
+        pad_begin += sound.fpa
+
+        # handle begin trim (>0) or begin repeat (<0)
+        if sound.fbt >= 0:
+            trim_begin += sound.fbt
+            pad_begin += sound.fbt
+        else:
+            repeat = math.fabs(sound.fbt)
+            trim = math.fabs(sound.fbt % sound.fsd)
+
+            body_time += repeat + trim
+            trim_begin += trim
+            pad_begin -= repeat
+
+        # handle end trim (<0) or end repeat (>0)
+        if sound.fet <= 0:
+            trim_end += math.fabs(sound.fet)
+        else:
+            repeat = sound.fet
+            body_time += repeat
+
+        # clean very small negative values that happen due to rounding, ex. South Park TFBH's
+        #  3283341: fpa=-321.158447971784 + fbt=321.158447971783 = -0.000000000001
+        if pad_begin < 0 and pad_begin > -threshold:
+            pad_begin = 0
+        if trim_begin < 0 and trim_begin > -threshold:
+            trim_begin = 0
+
+        # validations
+        #if sound.fpa < 0 and -sound.fpa != sound.fbt:
+        #    # possible with some delta, ex. -5166.66666666666 vs 5166.66666666667
+        #    raise ValueError("negative fpa with different fbt: %s vs %s" % (sound.fpa, sound.fbt))
+        if body_time < 0 or pad_begin < 0 or trim_begin < 0 or trim_end < 0:
+            raise ValueError("negative TXTP clip values: b=%s, p=%s, r=%s, R=%s" % (body_time, pad_begin, trim_begin, trim_end) )
+        if body_time - trim_begin - trim_end < 0:
+            raise ValueError("wrong TXTP clip values")
+
+        # clean a bit (also done by TXTP but makes simpler .txtp)
+        if trim_end and trim_end <= body_time:
+            body_time -= trim_end
+            trim_end = 0
+
+        node.pad_begin = pad_begin
+        node.trim_begin = trim_begin
+        node.body_time = body_time
+        node.trim_end = trim_end
+        node.pad_end = pad_end
+        return
+
+    def _apply_sfx(self, node):
+        if not node.pad_begin:
+            node.pad_begin = 0
+
+        if node.idelay:
+            node.pad_begin += node.idelay
+        if node.delay: #only seen if passed from group nodes to sfx
+            node.pad_begin += node.delay
+        return
+
+    def _apply_automations(self, node):
+        sound = node.sound
+
+        if not sound.automations:
+            return
+
+        # automations are relative to clip start, after applying trims/padding, that should correspond to this
+        # time in seconds, unlike clip values
+        base_time =  node.pad_begin / 1000.0
+
+        # transform wwise automations to txtp envelopes
+        # wwise defines points (A,B,C) and autocalcs combos like (A,B),(B,C).
+        # for txtp we need to make combos
+        # ch(type)(position)(time-start)+(time-length)
+        # ch^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
+        for am in sound.automations:
+            #self.has_debug = True
+
+            version = sound.source.version
+
+            max = len(am.points)
+            for i in range(0, max):
+                if (i + 1 >= max):
+                    continue
+
+                p1 = am.points[i]
+                p2 = am.points[i+1]
+                envelope = wtxtp_util.NodeEnvelope(am, p1, p2, version, base_time)
+                if not envelope.usable:
+                    continue
+
+                #todo apply delays
+
+                node.envelopes.append(envelope)
+
+    def _apply_group(self, node):
+
+        if not node.pad_begin:
+            node.pad_begin = 0
+
+        if node.idelay:
+            node.pad_begin += node.idelay
+        if node.delay:
+            node.pad_begin += node.delay
+        return
+
+    # apply musicsegment's duration to converted clip values. Duration is typically max clip length,
+    # but can extended beyond, though that is usually undone by musicranseqs transitions
+    def _apply_duration(self, node, pconfig):
+        if not pconfig or not pconfig.duration:
+            return
+
+        # maybe should only apply to clip if segment has only 1 children, otherwise just apply to
+        # group (more clear), but may make easier to copypaste wems if applied to clips
+
+        body_full = node.pad_begin + node.body_time - node.trim_begin - node.trim_end
+        #delta = 0.00000000001 #some leeway after calcs
+        # possible
+        #if pconfig.duration + delta < body_full and pconfig.exit and pconfig.duration != pconfig.exit:
+        #    logging.info("txtp: segment duration smaller %s than clip %s", pconfig.duration, body_full)
+        if pconfig.exit and pconfig.duration < pconfig.exit :
+            logging.info("txtp: segment duration smaller %s than exit %s", pconfig.duration, pconfig.exit)
+
+        if pconfig.duration > body_full:
+            node.pad_end = pconfig.duration - body_full
+
+        # for silences
+        if not node.body_time and node.pad_end:
+            node.body_time = node.pad_end
+            node.pad_end = 0
+
+    # apply musicranseq transition config/times between segments (ex. 100s segment may play from 10..90s)
+    # wwise allows to overlap entry/exit audio but it's not simulated ATM
+    # previous simplification detects self-loops and clones 2 segments, then this parts adjust segment times:
+    # if entry=10, exit=100: segment1 = 0..10, segment2 = 10..100
+    # since each segment may have N tracks, this applies directly to their config (body/padding/etc) values.
+    def _apply_transition(self, node, tnode, snode):
+        #if not snode:
+        #    logging.info("generator: empty segment?")
+        #    return
+
+        #transition = tnode.transition
+        pconfig = snode.config
+
+        body = node.pad_begin + node.body_time - node.trim_begin - node.trim_end + node.pad_end
+        entry = pconfig.entry
+        exit = pconfig.exit
+
+
+        #since we don't simulate pre-entry, just play it if it's first segment
+        play_before = self._transition_count == 1 #todo load + check transition.play_begin
+        #print("transition: entry=%s, exit=%s, before=%s" % (entry, exit, play_before))
+ 
+        #print("**A b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))
+
+        # hack for self-looping files: 
+        if play_before and tnode.self_loop:
+            # settings for 0..entry
+            entry = 0
+            exit = pconfig.entry
+            self.has_self_loops = True
+
+        #todo fix
+        #for envelope in node.envelopes:
+        #    print(tnode.self_loop, play_before, entry, exit, envelope.time1, envelope.time2)
+        #    pass
+
+        if not play_before:
+            # settings for entry..exit
+            time = entry
+
+            remove = time
+            #print("*remove end: ", remove, node.pad_begin)
+            if remove > node.pad_begin:
+                remove = node.pad_begin
+            #print("remove end: ", remove)
+            node.pad_begin -= remove
+            time -= remove
+
+            node.trim_begin += time
+
+
+        if body < exit:
+            time = (exit - body)
+            node.pad_end += time
+        else:
+            #print("*b", body, exit, time)
+            time = (body - exit)
+            removed = time
+            if removed > node.pad_end:
+                removed = node.pad_end
+            node.pad_end -= removed
+
+            time -= removed
+            removed = time
+            if removed > node.body_time:
+                removed = node.body_time
+            node.body_time -= removed
+            
+            # in odd cases entry may fall in the padding, so body doesn't play
+            # since vgmstream needs a body ATM and this code is just a hack,
+            # make some fake, tiny body (would be fixed with an overlapped layout)
+            if not node.body_time:
+                threshold = 5.0 / 48000.0 * 1000.0 #5 samples
+                node.body_time = threshold
+                #maybe should try adding to trim_end but not sure if works
+
+            time -= removed
+            removed = time
+            if removed > node.pad_begin:
+                removed = node.pad_begin
+            node.pad_begin -= removed
+
+            time -= removed
+            if time:
+                raise ValueError("non-trimmed transition %s" % (time))
+
+        #body = node.pad_begin + node.body_time - node.trim_begin - node.trim_end + node.pad_end
+        #print("**B b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))
+
+        return
+
+    #--------------------------------------------------------------------------
+
+    # prints tree as a .txtp
+    def _write(self):
+        # generic nodes
+        self._write_node(self._tree)
+        self._lines.append('\n')
+
+        # apply increasing master volume after all other volumes
+        # (lowers chances of clipping due to vgmstream's pcm16)
+        if self._volume_master > 0 and not self._simpler:
+            line = 'commands = #v %sdB' % (self._volume_master)
+            self._lines.append('%s\n' % (line))
+
+        return
+
+
+    def _write_node(self, node):
+        if not node.ignorable(simpler=self._simpler):
+            self._depth += 1
+
+        if   node.type in wtxtp_tree.TYPE_SOUNDS:
+            self._write_sound(node)
+        elif node.type in wtxtp_tree.TYPE_GROUPS:
+            self._write_group_header(node)
+
+        for subnode in node.children:
+            self._write_node(subnode)
+
+        # TXTP groups need to go to the end
+        if node.type in wtxtp_tree.TYPE_GROUPS:
+            self._write_group(node)
+
+        if not node.ignorable(simpler=self._simpler):
+            self._depth -= 1
+
+        # set flag with final tree since randoms of a single file can be simplified
+        if node.type == wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS and len(node.children) > 1:
+            self.has_random_continuous = True
+        if node.type in wtxtp_tree.TYPE_GROUPS_STEPS and len(node.children) > 1:
+            self.has_random_steps = True
+        if node.silenced or node.crossfaded:
+            self.has_silences = True
+
+
+    # make a TXTP group
+    def _write_group(self, node):
+        #ignore dumb nodes that don't contribute (children are output though)
+        if node.ignorable(simpler=self._simpler):
+            return
+
+        # ex. -L2: at position N (auto), layers previous 2 files
+        type_text = wtxtp_tree.TYPE_GROUPS_TYPE[node.type]
+        count = len(node.children)
+        ignored = False #self._ignore_next #or count <= 1 #allow 1 for looping full segments
+
+        line = ''
+        mods = ''
+        info = ''
+        if ignored:
+            line += '#'
+
+        # add base group
+        line += 'group = -%s%s' % (type_text, count)
+        if    node.type in wtxtp_tree.TYPE_GROUPS_STEPS or node.force_selectable:
+            selection = self._txtp.selected or 1
+            line += '>%s' % (selection)
+            #info += "  ##select >N of %i" % (count)
+        elif node.type == wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS: #in TYPE_GROUPS_CONTINUOUS: #not for sequence since it's looks a bit strange
+            line += '>-'
+
+        # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
+        if node.volume and not self._simpler:
+            mods += '  #v %sdB' % (node.volume)
+
+        # wwise seems to mix untouched then use volumes to tweak
+        if node.type in wtxtp_tree.TYPE_GROUPS_LAYERS:
+            mods += ' #@layer-v'
+
+        # add delay config
+        if not self._simpler:
+            mods += self._get_ms(' #p', node.pad_begin)
+
+
+        # add loops/anchors
+        if node.loop is not None: #and node.loop_anchor: #groups always use anchors
+            if   node.loop == 0:
+                mods += ' #@loop'
+                if node.loop_end:
+                    mods += ' #@loop-end'
+            elif node.loop > 1:
+                mods += ' #E #l %i.0' % (node.loop)
+
+
+        # extra info
+        if node.loop_killed:
+            info += '  ##loop'
+            if node.loop_end:
+                info += ' #loop-end'
+
+        if node.crossfaded or node.silenced:
+            if self._txtpcache.silence or self._has_silent_state(node):
+                mods += '  #v 0'
+            info += '  ##fade'
+            self.has_others = True
+
+        #if node.makeupgain:
+        #    info += '  ##gain'
+        #    self.has_others = True
+
+        if node.pitch:
+            info += '  ##pitch %s' % (node.pitch)
+            self.has_others = True
+
+
+        # final result
+        pad = self._get_padding() #padded for clarity
+        self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
+
+
+    # make a TXTP group header
+    def _write_group_header(self, node):
+        if not DEBUG_PRINT_GROUP_HEADER:
+            return #not too useful
+        if node.ignorable(simpler=self._simpler):
+            return
+
+        line = ''
+
+        line += '#%s of %s' % (wtxtp_tree.TYPE_GROUPS_INFO[node.type], len(node.children))
+        if node.loop is not None:
+            if   node.loop == 0:
+                line += ' (N loops)'
+            elif node.loop > 1:
+                line += ' (%i loops)' % (node.loop)
+
+        pad = self._get_padding()
+        self._lines.append('%s%s\n' % (pad, line))
+
+
+    # write a TXTP sound wem
+    def _write_sound(self, node):
+        sound = node.sound
+        ignored = False #self._ignore_next
+
+        line = ''
+        mods = ''
+        info = ''
+        if ignored:
+            line += '#'
+        silence_line = False
+
+        name = ''
+        if sound.source and sound.source.plugin_wmid:
+            name += '?'
+            self.has_unsupported = True
+
+        name += self._txtpcache.wemdir
+        if sound.source and self._txtpcache.lang:
+            lang = sound.source.lang()
+            if lang: #in case it's blank for some sources yet filled for others
+                self.lang_name = lang
+            name += sound.source.subdir()
+
+        # add source
+        if   sound.silent:
+            #silent/empty subtrack (ignored)
+            name = "?.silent"
+
+        elif sound.source.plugin_id:
+            # generator plugin
+            name = "?.plugin-%s" % (sound.source.plugin_name)
+
+            if sound.source.plugin_id == 0x00650002: #silence
+                mods += self._get_ms(' #B', sound.source.plugin_fx.duration)
+            else:
+                self.has_unsupported = True
+
+        elif sound.source.plugin_external:
+            # "external" ID (set at runtime)
+            if self._txtp.external_path:
+                # set during txtp process
+                name = "%s" % (self._txtp.external_path)
+            else:
+                # unknown
+                name = "?" + name
+                name += "(?).wem"
+
+            # external tid (a hashname) seems shared for multiple objects, needs to print object's sid to avoid being dupes
+            info += "  ##external %s [obj %s]" % (sound.source.tid, sound.source.src_sid)
+
+        elif sound.source.internal and not self._txtpcache.bnkskip:
+            # internal/memory stream
+            bankname = sound.nsrc.get_root().get_filename()
+            media = self._rebuilder.get_media_index(bankname, sound.source.tid)
+            extension = sound.source.extension
+            if self._txtpcache.alt_exts:
+                extension = sound.source.extension_alt
+
+            if media:
+                bankname, index = media
+                name += "%s #s%s" % (bankname, index + 1)
+                info += "  ##%s.%s" % (sound.source.tid, extension) #to check source in info tree
+                if sound.source.plugin_wmid:
+                    info += " ##unsupported wmid"
+            else:
+                name = "?" + name + "%s.%s" % (sound.source.tid, extension)
+                info += "  ##other bnk?"
+                self.has_unsupported = True
+            self.has_internals = True
+            self._txtpcache.register_bank(bankname)
+
+        else:
+            # regular stream
+            extension = sound.source.extension
+            if self._txtpcache.alt_exts:
+                extension = sound.source.extension_alt
+
+            name += "%s.%s" % (sound.source.tid, extension)
+            self.has_streams = True
+
+
+        line += name
+
+        # add config
+        if sound.clip: #CAkMusicTrack's clip
+            mods += self._get_clip(sound, node)
+        else: #CAkSound
+            mods += self._get_sfx(sound, node)
+
+        # add envelopes
+        if node.envelopes:
+            # ch(type)(position)(time-start)+(time-length)
+            # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
+            for envelope in node.envelopes:
+                vol_st = self._get_sec(envelope.vol1)
+                vol_ed = self._get_sec(envelope.vol2)
+                shape = envelope.shape
+                time_st = self._get_sec(envelope.time1)
+                time_ed = self._get_sec(envelope.time2)
+                # todo: seems to reapply on loops (time becomes 0 again)
+                info += ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
+
+        # apply decreasing master volume to wems and mixing with other volumes
+        # (better performance and lowers chances of clipping due to vgmstream's pcm16)
+        node_volume = node.volume or 0
+        if self._volume_master < 0:
+            # cancel master dB and node's dB for cleaner results
+            node_volume += self._volume_master
+        if node_volume and not self._simpler:
+            mods += '  #v %sdB' % (node_volume)
+
+        # add anchors
+        if node.loop_anchor:
+            mods += ' #@loop'
+            if node.loop_end:
+                mods += ' #@loop-end'
+
+
+        # extra info
+        if node.loop_killed:
+            info += '  ##loop'
+            if node.loop_end:
+                info += ' #loop-end'
+
+        if node.crossfaded or node.silenced:
+            if self._txtpcache.silence or self._has_silent_state(node):
+                silence_line = True
+                #mods += '  #v 0' #set "?" below as it's a bit simpler to use
+            info += '  ##fade'
+
+        #if node.makeupgain:
+        #    info += '  ##gain'
+        #    self.has_others = True
+
+        if node.pitch:
+            info += '  ##pitch %s' % (node.pitch)
+            self.has_others = True
+
+        if silence_line:
+            line = "?" + line
+
+        # final result
+        pad = self._get_padding() #padded for clarity
+        self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
+
+
+    def _get_sfx(self, sound, node):
+        #sfx are mostly pre-modified before generation, so main config is looping
+        mods = ''
+
+        # we don't go parsing whole .wems to figure out loops so always write flags
+        # (rarely .wem has loop points while loop is not set at all, but must not loop to play ok)
+        if node.loop is None or node.loop == 1:
+            mods += ' #i'
+        else:
+            #uses internal loops if set, or full loops otherwise
+            if not self._txtpcache.x_noloops: #force disable as some games don't seem to follow this (KOF12/13)
+                mods += ' #e'
+            # 0=infinite
+            if node.loop > 1:
+                mods += ' #l %s.0' % (node.loop)
+
+        # add delay config (remove for comparision if flag is set)
+        if not self._simpler:
+            mods += self._get_ms(' #p', node.pad_begin)
+
+        return mods
+
+
+    def _get_clip(self, sound, node):
+        mods = ''
+
+        # final body time goes over 1 loop (not using loop flag since it seems to depend on final trim, see examples)
+        # some files slightly over duration (ex. 5000 samples) and are meant to be looped as segments, it's normal
+
+        loops = not sound.silent and node.body_time - node.trim_end > sound.fsd  # trim_begin not included
+
+        if sound.silent:
+            pass
+        elif loops:
+            mods += ' #E' #clips only do full loops
+        else:
+            mods += ' #i' #just in case
+
+        #clips don't have delay and don't need it removed when _simpler is set
+
+        mods += self._get_ms(' #p', node.pad_begin)
+        if loops: #forces disabling fades, that get in the way when playing separate music tracks
+            mods += self._get_ms(' #B', node.body_time)
+        else:
+            mods += self._get_ms(' #b', node.body_time)
+        mods += self._get_ms(' #r', node.trim_begin)
+        mods += self._get_ms(' #R', node.trim_end)
+        mods += self._get_ms(' #P', node.pad_end)
+
+        return mods
+
+    def _get_float_str(self, value_sec):
+        if not value_sec:
+            return ''
+        value_str = str(value_sec) #default, no 0 padding
+        if 'e' in value_str:
+            # has scientific notation, use format to fix/truncate (9.22e-06 > 0.0000092213114704)
+            # there may be some precission loss but shouldn't matter (wwise doesn't seem to round up)
+            value_str = '{0:.10f}'.format(value_sec)
+            if not float(value_str): # truncated result may be 0.000000
+                return ''
+        #todo ignore trims that end up being 0 samples (value * second = sample)
+
+        return value_str
+
+    def _get_ms(self, param, value_ms):
+        if not value_ms:
+            return ''
+        value_sec = value_ms / 1000
+        value_str = self._get_float_str(value_sec)
+        if not value_str:
+            return ''
+        out = '%s %s' % (param, value_str)
+        return out
+
+    def _get_sec(self, value_sec):
+        value_str = self._get_float_str(value_sec)
+        if not value_str:
+            return '0.0'
+        return value_str
+
+
+    def _get_padding(self):
+        return ' ' * (self._depth - 1) * TXTP_SPACES
+
+    # Some nodes are silenced via states, test if those are currently set.
+    # This info isn't passed around so must find (possibly ignored) parent node that has it.
+    #todo do in prepare()?
+    def _has_silent_state(self, node):
+        if node.config.silence_states:
+            return self._txtp.sparams and self._txtp.sparams.is_silent(node.config.silence_states)
+
+        if node.parent:
+            return self._has_silent_state(node.parent)
+
+        return False

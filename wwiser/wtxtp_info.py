@@ -82,9 +82,11 @@ class TxtpInfo(object):
         current = self._ninfo[-1]
 
         current.add_gamesyncs_info(gamesyncs, self._txtpcache.name_vars)
-        
-        self._gsnames_long += " " + current.gstext_long
-        self._gsnames_short += " " + current.gstext_short
+
+        if current.gstext_long:
+            self._gsnames_long += " " + current.gstext_long
+        if current.gstext_short:
+            self._gsnames_short += " " + current.gstext_short
 
 
 class TxtpInfoNode(object):

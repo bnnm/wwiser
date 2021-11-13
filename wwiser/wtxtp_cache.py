@@ -1,5 +1,5 @@
 import math, os
-from . import wtxtp_namer, wgamesync
+from . import wtxtp_namer, wgamesync_gamevars
 
 DEFAULT_OUTDIR = 'txtp/'
 DEFAULT_WEMDIR = 'wem/'
@@ -38,7 +38,7 @@ class TxtpCache(object):
         # helpers
         self.tags = None
         self.renamer = wtxtp_namer.TxtpRenamer()
-        self.gamevars = wgamesync.GamevarsParams()
+        self.gamevars = wgamesync_gamevars.GamevarsParams()
 
         self.x_noloops = False
         self.x_notxtp = False

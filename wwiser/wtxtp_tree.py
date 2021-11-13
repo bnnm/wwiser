@@ -33,24 +33,6 @@ TYPE_GROUPS_STEPS = {
 TYPE_GROUPS_LAYERS = {
     TYPE_GROUP_LAYER,
 }
-
-TYPE_GROUPS_TYPE = {
-    TYPE_GROUP_SINGLE: 'S',
-    TYPE_GROUP_SEQUENCE_CONTINUOUS: 'S',
-    TYPE_GROUP_SEQUENCE_STEP: 'S',
-    TYPE_GROUP_RANDOM_CONTINUOUS: 'R',
-    TYPE_GROUP_RANDOM_STEP: 'R',
-    TYPE_GROUP_LAYER: 'L',
-}
-TYPE_GROUPS_INFO = {
-    TYPE_GROUP_SINGLE: 'single',
-    TYPE_GROUP_SEQUENCE_CONTINUOUS: 'sequence-continuous',
-    TYPE_GROUP_SEQUENCE_STEP: 'sequence-step',
-    TYPE_GROUP_RANDOM_CONTINUOUS: 'random-continuous',
-    TYPE_GROUP_RANDOM_STEP: 'random-step',
-    TYPE_GROUP_LAYER: 'layer',
-}
-
 TYPE_SOUNDS = {
     TYPE_SOUND_LEAF,
 }
@@ -66,11 +48,12 @@ VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but all
 class TxtpNode(object):
     def __init__(self, parent, config, sound=None, txtpcache=None):
         self.parent = parent
+        self.txtpcache = txtpcache
         self.config = config #_NodeConfig
         self.sound = sound #_NodeSound
         self.transition = None #_NodeTransition
+
         self.type = TYPE_GROUP_ROOT
-        self.txtpcache = txtpcache
         if sound:
             self.type = TYPE_SOUND_LEAF
         self.children = []
@@ -160,7 +143,8 @@ class TxtpNode(object):
 
     def single(self, transition=None):
         self.type = TYPE_GROUP_SINGLE
-        self.transition = transition
+        if (transition): #don't overwrite just in case
+            self.transition = transition
         return self
 
     def sequence_continuous(self):
@@ -182,6 +166,40 @@ class TxtpNode(object):
     def layer(self):
         self.type = TYPE_GROUP_LAYER
         return self
+
+    #--------------------------------------------------------------------------
+
+    def is_sound(self):
+        return self.type in TYPE_SOUNDS
+
+    def is_group(self):
+        return self.type in TYPE_GROUPS
+
+    def is_group_single(self):
+        return self.type in TYPE_GROUP_SINGLE
+
+    def is_group_steps(self):
+        return self.type in TYPE_GROUPS_STEPS
+
+    def is_group_layers(self):
+        return self.type in TYPE_GROUPS_LAYERS
+
+    def is_group_continuous(self):
+        return self.type in TYPE_GROUPS_CONTINUOUS
+
+    def is_group_sequence_step(self):
+        return self.type in TYPE_GROUP_SEQUENCE_STEP
+
+    def is_group_sequence_continuous(self):
+        return self.type in TYPE_GROUP_SEQUENCE_CONTINUOUS
+
+    def is_group_random_step(self):
+        return self.type in TYPE_GROUP_RANDOM_STEP
+
+    def is_group_random_continuous(self):
+        return self.type in TYPE_GROUP_RANDOM_CONTINUOUS
+
+    #--------------------------------------------------------------------------
 
     # nodes that don't contribute to final .txtp so they don't need to be written
     # also loads some values

@@ -8,6 +8,23 @@ DEBUG_PRINT_TREE_PRE = False
 DEBUG_PRINT_TREE_POST = False
 DEBUG_PRINT_GROUP_HEADER = False
 
+GROUPS_TYPE = {
+    wtxtp_tree.TYPE_GROUP_SINGLE: 'S',
+    wtxtp_tree.TYPE_GROUP_SEQUENCE_CONTINUOUS: 'S',
+    wtxtp_tree.TYPE_GROUP_SEQUENCE_STEP: 'S',
+    wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS: 'R',
+    wtxtp_tree.TYPE_GROUP_RANDOM_STEP: 'R',
+    wtxtp_tree.TYPE_GROUP_LAYER: 'L',
+}
+GROUPS_INFO = {
+    wtxtp_tree.TYPE_GROUP_SINGLE: 'single',
+    wtxtp_tree.TYPE_GROUP_SEQUENCE_CONTINUOUS: 'sequence-continuous',
+    wtxtp_tree.TYPE_GROUP_SEQUENCE_STEP: 'sequence-step',
+    wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS: 'random-continuous',
+    wtxtp_tree.TYPE_GROUP_RANDOM_STEP: 'random-step',
+    wtxtp_tree.TYPE_GROUP_LAYER: 'layer',
+}
+
 
 VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but allowed editable max is +-200
 
@@ -93,7 +110,7 @@ class TxtpPrinter(object):
         self.is_random_select = False   # has selectable random group
         self.is_multi_select = False    # has selectable multilooping group
         self.is_force_select = False    # has selectable forced group
-        
+
         self.externals = []
 
     def prepare(self):
@@ -180,7 +197,7 @@ class TxtpPrinter(object):
                 fet = '{0:.5f}'.format(node.sound.fet)
                 config2 += " (fsd=%s, fpa=%s, fbt=%s, fet=%s)" % (fsd, fpa, fbt, fet)
 
-        if node.type in wtxtp_tree.TYPE_SOUNDS:
+        if node.is_sound():
             tid = None
             if node.sound.source:
                 tid = node.sound.source.tid
@@ -231,12 +248,12 @@ class TxtpPrinter(object):
 
 
         # kill sound nodes that don't actually play anything, like rumble helpers (seen in AC2, MK Home Circuit)
-        if node.type in wtxtp_tree.TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_ignorable:
+        if node.is_sound() and node.sound.source and node.sound.source.plugin_ignorable:
             self._kill_node(node)
             return
 
         # kill group nodes that don't have children since they mess up some calcs
-        if node.type in wtxtp_tree.TYPE_GROUPS and node.parent:
+        if node.is_group() and node.parent:
             is_empty = len(node.children) == 0
 
             # kill segments that don't play (would generate empty silence),
@@ -252,7 +269,7 @@ class TxtpPrinter(object):
             node.children = [subnode]
 
         # set externals flag
-        if node.type in wtxtp_tree.TYPE_SOUNDS and node.sound.source and node.sound.source.plugin_external:
+        if node.is_sound() and node.sound.source and node.sound.source.plugin_external:
             self.has_externals = True
             if node.sound.source.tid not in self.externals:
                 self.externals.append(node.sound.source.tid)
@@ -263,7 +280,7 @@ class TxtpPrinter(object):
         node.parent.children.remove(node)
 
     def _has_random_repeats(self, node):
-        if node.type not in wtxtp_tree.TYPE_GROUPS_STEPS or len(node.children) <= 1:
+        if node.is_group_steps() or len(node.children) <= 1:
             return False
 
         prev_id = None
@@ -297,7 +314,7 @@ class TxtpPrinter(object):
         return False
 
     def _tree_get_id(self, node):
-        if node.type in wtxtp_tree.TYPE_SOUNDS:
+        if node.is_sound():
             if not node.sound.source:
                 return None # handle plugins/silences?
             return node.sound.source.tid
@@ -349,7 +366,7 @@ class TxtpPrinter(object):
         # self loop: make a clone branch (new loop), then mark the original:
         # - subnode (original): 0..entry (no loop)
         # - new_subnode (clone): entry..exit (loops)
-        node.type = wtxtp_tree.TYPE_GROUP_SEQUENCE_CONTINUOUS
+        node.sequence_continuous()
         new_subnode = self._make_copy(node, subnode)
 
         subnode.self_loop = True #mark transition node
@@ -397,9 +414,9 @@ class TxtpPrinter(object):
 
     def _set_props_move(self, node):
 
-        if node.type in wtxtp_tree.TYPE_GROUPS:
-            is_single = len(node.children) == 1
-            if is_single:
+        if node.is_group():
+            is_group_single = len(node.children) == 1
+            if is_group_single:
                 self._move_group_props(node)
 
         for subnode in node.children:
@@ -411,13 +428,12 @@ class TxtpPrinter(object):
         # for single groups only
 
         # simplify any type (done here rather than on clean tree after self-loops)
-        node.type = wtxtp_tree.TYPE_GROUP_SINGLE
-
+        node.single()
         subnode = node.children[0]
 
         # move loop (not to sounds since loop is applied over finished track)
         #todo maybe can apply on some sounds (ex. S1 l=0 > L2 --- = S1 --- > L2 l=0)
-        if subnode.type in wtxtp_tree.TYPE_GROUPS:
+        if subnode.is_group():
             is_noloop_subnode = subnode.loop is None or subnode.loop == 1
             is_bothloop = node.loop == 0 and subnode.loop == 0
             if is_noloop_subnode or is_bothloop:
@@ -441,7 +457,7 @@ class TxtpPrinter(object):
         if not subnode.volume:
             subnode.volume = node.volume
             node.volume = None
-        elif node.volume and subnode.volume and subnode.type == wtxtp_tree.TYPE_GROUP_SINGLE:
+        elif node.volume and subnode.volume and subnode.is_group_single():
             # fuse volumes to make less groups sometimes
             subnode.volume += node.volume
             node.volume = None
@@ -467,14 +483,14 @@ class TxtpPrinter(object):
             self._set_props_config(subnode)
 
         # whole group config
-        if node.type in wtxtp_tree.TYPE_GROUPS:
+        if node.is_group():
             self._apply_group(node)
 
         # info
         if node.loop == 0:
-            if node.type in wtxtp_tree.TYPE_GROUPS:
+            if node.is_group():
                 self._loop_groups += 1
-            elif node.type in wtxtp_tree.TYPE_SOUNDS and not node.sound.clip: #clips can't loop forever, flag just means intra-loop
+            elif node.is_sound() and not node.sound.clip: #clips can't loop forever, flag just means intra-loop
                 self._loop_sounds += 1
 
         return
@@ -484,7 +500,7 @@ class TxtpPrinter(object):
     # applies clip and transition times to nodes
     def _set_times(self, node):
         # find leaf clips and set duration
-        if node.type in wtxtp_tree.TYPE_SOUNDS:
+        if node.is_sound():
             if not node.sound.silent:
                 self._sound_count += 1
 
@@ -552,7 +568,7 @@ class TxtpPrinter(object):
 
         # must only reorder layers
         # (check *after* subnode loops since this goes bottom to top)
-        if node.type not in wtxtp_tree.TYPE_GROUPS_LAYERS:
+        if not node.is_group_layers():
             return
 
         # find children ID
@@ -593,7 +609,7 @@ class TxtpPrinter(object):
         # If one layer has 2 playlists that loop, items may have different loop end times = multiloop.
         # * find if layer has multiple children and at least 1 infinite loops (vgmstream can't replicate ATM)
         # * one layer not looping while other does it's considered multiloop
-        if node.type in wtxtp_tree.TYPE_GROUPS_LAYERS and not self.has_multiloops:
+        if node.is_group_layers() and not self.has_multiloops:
             for subnode in node.children:
                 if self._has_iloops(subnode):
                     self.has_multiloops = True
@@ -601,25 +617,25 @@ class TxtpPrinter(object):
 
         # looping steps behave like continuous, since they get "trapped" repeating at this level (ex. Nier Automata)
         if node.loop == 0:
-            if node.type == wtxtp_tree.TYPE_GROUP_RANDOM_STEP:
-                node.type = wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS
-            if node.type == wtxtp_tree.TYPE_GROUP_SEQUENCE_STEP:
-                node.type = wtxtp_tree.TYPE_GROUP_SEQUENCE_CONTINUOUS
+            if node.is_group_random_step():
+                node.random_continuous()
+            if node.is_group_sequence_step():
+                node.sequence_continuous()
 
         # normal (or looping) continuous with all looping children can be treated as steps (ex. Nier Automata)
-        if node.type == wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS: #looping sequences are handled below
+        if node.is_group_random_continuous(): #looping sequences are handled below
             iloops = 0
             for subnode in node.children:
                 if self._has_iloops(subnode):
                     iloops += 1
 
             if iloops == len(node.children): #N iloops = children are meant to be shuffled songs
-                node.type = wtxtp_tree.TYPE_GROUP_RANDOM_STEP
+                node.random_step()
                 node.loop = None # plus removes on looping on higher level to simplify behavior
 
 
         # tweak sequences
-        if node.type in wtxtp_tree.TYPE_GROUPS_CONTINUOUS:
+        if node.is_group_continuous():
             i = 0
             loop_ends = 0
             for subnode in node.children:
@@ -631,11 +647,11 @@ class TxtpPrinter(object):
 
                 # loop resequences: sometimes a sequence mixes simple sounds with groups, that can be simplified (ex. Mario Rabbids)
                 # * S2 > sound1, N1 (> sound2) == S2 > sound1, sound2
-                if child.loop == 0 and child.type == wtxtp_tree.TYPE_GROUP_SINGLE and child.ignorable(skiploop=True):
+                if child.loop == 0 and child.is_group_single() and child.ignorable(skiploop=True):
                     subchild = self._get_first_child(child.children[0])
                     if subchild and subchild.loop is None:
                         subchild.loop = child.loop
-                        if subchild.type in wtxtp_tree.TYPE_SOUNDS:
+                        if subchild.is_sound():
                             subchild.loop_anchor = True
                         child.loop = None
                         child = subchild
@@ -673,7 +689,7 @@ class TxtpPrinter(object):
         if self._txtpcache.write_delays:
             return
         #only with first sfx/group, not clips (don't have delay and padding has other meaning)
-        if node.type in wtxtp_tree.TYPE_SOUNDS and node.sound and node.sound.clip:
+        if node.is_sound() and node.sound and node.sound.clip:
             return
         node.pad_begin = 0
         node.idelay = None
@@ -681,7 +697,7 @@ class TxtpPrinter(object):
 
 
     def _set_selectable(self, node):
-        if node.type not in wtxtp_tree.TYPE_GROUPS:
+        if not node.is_group():
             return
 
         count = len(node.children)
@@ -691,11 +707,11 @@ class TxtpPrinter(object):
         # set total layers/segment/randoms in the main/upper group (can be used to generate 1 .txtp per type)
         # depending on flags (may set only one or all)
         # - flag to make random groups + group is random
-        random_all = self._txtpcache.random_all and node.type in wtxtp_tree.TYPE_GROUPS_STEPS
+        random_all = self._txtpcache.random_all and node.is_group_steps()
         # - flag to make multiloops only + group isn't regular random
         random_multi = self._txtpcache.random_multi and self.has_multiloops
         # - flag to make others
-        random_force = self._txtpcache.random_force and not node.type in wtxtp_tree.TYPE_GROUPS_STEPS
+        random_force = self._txtpcache.random_force and not node.is_group_steps()
 
         if random_all or random_multi or random_force:
             self.selectable_count = count
@@ -746,7 +762,7 @@ class TxtpPrinter(object):
             if not subbasenode:
                 continue
             # all should be sounds
-            if not subbasenode.type in wtxtp_tree.TYPE_SOUNDS:
+            if not subbasenode.is_sound():
                 return
             subnodes.append(subbasenode)
 
@@ -1056,25 +1072,25 @@ class TxtpPrinter(object):
         if not node.ignorable(simpler=self._simpler):
             self._depth += 1
 
-        if   node.type in wtxtp_tree.TYPE_SOUNDS:
+        if   node.is_sound():
             self._write_sound(node)
-        elif node.type in wtxtp_tree.TYPE_GROUPS:
+        elif node.is_group():
             self._write_group_header(node)
 
         for subnode in node.children:
             self._write_node(subnode)
 
         # TXTP groups need to go to the end
-        if node.type in wtxtp_tree.TYPE_GROUPS:
+        if node.is_group():
             self._write_group(node)
 
         if not node.ignorable(simpler=self._simpler):
             self._depth -= 1
 
         # set flag with final tree since randoms of a single file can be simplified
-        if node.type == wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS and len(node.children) > 1:
+        if node.is_group_random_continuous() and len(node.children) > 1:
             self.has_random_continuous = True
-        if node.type in wtxtp_tree.TYPE_GROUPS_STEPS and len(node.children) > 1:
+        if node.is_group_steps() and len(node.children) > 1:
             self.has_random_steps = True
         if node.silenced or node.crossfaded:
             self.has_silences = True
@@ -1087,7 +1103,7 @@ class TxtpPrinter(object):
             return
 
         # ex. -L2: at position N (auto), layers previous 2 files
-        type_text = wtxtp_tree.TYPE_GROUPS_TYPE[node.type]
+        type_text = GROUPS_TYPE[node.type]
         count = len(node.children)
         ignored = False #self._ignore_next #or count <= 1 #allow 1 for looping full segments
 
@@ -1099,11 +1115,11 @@ class TxtpPrinter(object):
 
         # add base group
         line += 'group = -%s%s' % (type_text, count)
-        if    node.type in wtxtp_tree.TYPE_GROUPS_STEPS or node.force_selectable:
+        if    node.is_group_steps() or node.force_selectable:
             selection = self._txtp.selected or 1
             line += '>%s' % (selection)
             #info += "  ##select >N of %i" % (count)
-        elif node.type == wtxtp_tree.TYPE_GROUP_RANDOM_CONTINUOUS: #in TYPE_GROUPS_CONTINUOUS: #not for sequence since it's looks a bit strange
+        elif node.is_group_random_continuous(): #not for sequence since it looks a bit strange
             line += '>-'
 
         # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
@@ -1111,7 +1127,7 @@ class TxtpPrinter(object):
             mods += '  #v %sdB' % (node.volume)
 
         # wwise seems to mix untouched then use volumes to tweak
-        if node.type in wtxtp_tree.TYPE_GROUPS_LAYERS:
+        if node.is_group_layers():
             mods += ' #@layer-v'
 
         # add delay config
@@ -1164,7 +1180,7 @@ class TxtpPrinter(object):
 
         line = ''
 
-        line += '#%s of %s' % (wtxtp_tree.TYPE_GROUPS_INFO[node.type], len(node.children))
+        line += '#%s of %s' % (GROUPS_INFO[node.type], len(node.children))
         if node.loop is not None:
             if   node.loop == 0:
                 line += ' (N loops)'

@@ -123,11 +123,23 @@ class TxtpNode(object):
         # - if so, use this value (x) to get current volume (y) according to RTPC.
         if gv.active:
             for rtpc in self.config.rtpcs:
-                if gv.is_value(rtpc.id):
-                    rtcp_x = gv.get_value(rtpc.id)
-                    #overwrite based on config and current value (otherwise couldn't set -96db)
-                    self.volume = rtpc.get(rtcp_x, self.volume)
-                    #break #unsure what happens in case of conflicting RTPCs
+                item = gv.get_item(rtpc.id)
+                if not item:
+                    continue
+
+                if item.min:
+                    rtpc_x = rtpc.min()
+                elif item.max:
+                    rtpc_x = rtpc.max()
+                else:
+                    rtpc_x = item.value
+
+                # update value based on config
+                self.volume = rtpc.get(rtpc_x, self.volume)
+
+                # unsure what happens in case of conflicting RTPCs (assumed to be added, maybe depends on exclusive/etc config)
+                #break
+
             self.clamp_volume()
 
     def clamp_volume(self):

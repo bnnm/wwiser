@@ -395,60 +395,102 @@ class SilenceParams(object):
 
 #******************************************************************************
 
+class GamevarItem(object):
+    def __init__(self, key, val, keyname=None):
+        self.ok = False
+        self.key = None
+        self.value = None
+        self.min = False
+        self.max = False
+        self.keyname = keyname
+
+        try:
+            self.key = int(key)
+        except:
+            return
+
+        if val == 'min':
+            self.value = 0.0
+            self.min = True
+        elif val == 'max':
+            self.value = 0.0
+            self.max = True
+        elif not val:
+            val = 0.0
+        else:
+            try:
+                val = float(val)
+            except:
+                return
+        self.value = val
+
+        self.ok = True
+
+    def info(self):
+        if self.keyname:
+            key = self.keyname
+        else:
+            key = self.key
+
+        if self.min:
+            val = 'min'
+        elif self.max:
+            val = 'max'
+        elif not self.value:
+            val = self.value
+        return "%s=%s" % (key, val)
+
 # stores gamevars (rtpc) config
 class GamevarsParams(object):
     def __init__(self):
         self.active = False
-        self._elems = {} #OrderedDict()
+        self._items = {} #OrderedDict()
         self._fnv = wfnv.Fnv()
-        self._info = ''
-        pass
+        #self._info = ''
 
-    def add(self, items):
-        #if items is None: #allow []
-        #    return
-
-        if not items:
+    def add(self, elems):
+        if not elems:
             return
+
         self.active = True
-        for item in items:
-            parts = item.split('=')
-            if len(parts) == 1:
-                key = parts[0]
-                val = None #?
-            elif len(parts) == 2:
-                key = parts[0]
-                val = parts[1]
+        for elem in elems:
+            parts = elem.split('=')
+            if len(parts) != 2:
+                continue
+            key = parts[0]
+            val = parts[1]
+
+            if not key.isnumeric():
+                keyname = key
+                key = self._fnv.get_hash(key)
             else:
-                key = None
-                val = None
+                keyname = None
 
-            try:
-                if not key.isnumeric():
-                    key = self._fnv.get_hash(key)
-                key = int(key)
-                val = float(val)
-            except:
-                key = None
-                val = None
+            if ',' in val:
+                item = None
+            else:
+                item = GamevarItem(key, val, keyname)
 
-            if key is None or val is None:
-                logging.info('gamesync: ignored %s', item)
+            if not item or not item.ok:
+                logging.info('gamesync: ignored %s', elem)
                 continue
 
-            self._info += item + ' ' 
-            self._elems[key] = val
-        self._info = self._info.strip()
+            #self._info += elem + ' ' 
+            self._items[item.key] = item
+        #self._info = self._info.strip()
 
     def get_info(self):
-        return self._info
+        info =''
+        for item in self._items.values():
+            info += item.info() + ' '
+
+        #return self._info
+        return info.strip()
 
     def is_value(self, id):
         id = int(id)
-        return id in self._elems
+        return id in self._items
 
-    def get_value(self, id):
+    def get_item(self, id):
         id = int(id)
-        if id in self._elems:
-            return self._elems[id]
-        return None
+        return self._items.get(id)

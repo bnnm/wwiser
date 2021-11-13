@@ -198,7 +198,7 @@ detected and marked as `{s}`.
 By default all will play at default volume, but you can mimic an specific value by passing
 "gamevars" (RTPC) config. For example `bgm_srank_param=0.0` would silence some beat layer,
 while `4.0` will start to add it, and `7.0` would peak. Min/max values are developer-defined
-and depend on the RTPC itself though.
+and depend on the RTPC itself though. You can also use `min` or `max` as values.
 
 
 ## LIMITATIONS

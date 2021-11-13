@@ -600,7 +600,7 @@ class NodeGraph(object):
                 v = self._linearToFrequency_20_20000(v)
 
             else:
-                raise ValueError("unknown rtcp scaling")
+                raise ValueError("unknown rtpc scaling")
 
         else:
             if sc == 0: #no scaling
@@ -619,7 +619,7 @@ class NodeGraph(object):
                 v = self._dBToLin(v)
 
             else:
-                raise ValueError("unknown rtcp scaling")
+                raise ValueError("unknown rtpc scaling")
 
         return v
 
@@ -759,3 +759,8 @@ class NodeRtpc(object):
 
         return (p1.x, p2.x)
 
+    def min(self):
+        return self.minmax()[0]
+
+    def max(self):
+        return self.minmax()[1]

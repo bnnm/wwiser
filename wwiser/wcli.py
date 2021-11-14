@@ -100,6 +100,7 @@ class Cli(object):
         current = []
         current += defaults
         configs.append(current)
+        empty = True
 
         config_name = args.config
         if config_name == '*':
@@ -110,11 +111,16 @@ class Cli(object):
                 line = line.strip()
 
                 # start a new config 'chunk' (useful to set different filters/config per bank)
-                if line == '#@new' or line == '# @new':
+                if line == '#@new' or line == '# @new' and not empty:
                     current = []
                     current += defaults
                     configs.append(current)
+                    empty = True
                     continue
+
+                # stop config (useful quick testing of new configs)
+                if line == '#@break' or line == '# @break':
+                    break
 
                 if line.startswith('#'):
                     continue
@@ -124,6 +130,7 @@ class Cli(object):
                     part = part.strip()
                     if part:
                         current.append(part)
+                        empty = False
 
         # reset config + parse parse config args (per config chunk)
         for config in configs:

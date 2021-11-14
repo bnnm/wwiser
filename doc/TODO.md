@@ -44,7 +44,6 @@ Low priority TODOs
 - improve internal init
 
 ## txtp
-- option to hide marks {r} {s} {!} (instead of mark banks?)
 - unsure if txtp should round up numbers: 1/48000 ~= 0.0000208333 * 48000 = 0.999999 > 1 or 0?
 - overlapped transitions
   - needs fades (games use fading transition to smooth out loops)

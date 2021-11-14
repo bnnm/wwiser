@@ -139,7 +139,7 @@ class Tags(object):
         basepath = self._get_basepath()
         files = self._get_files(basepath)
 
-        if len(files) == 0:
+        if len(files) == 0 and self._txtpcache:
             # try in wem dir
             basepath = os.path.join(basepath, self._txtpcache.outdir)
             basepath = os.path.join(basepath, self._txtpcache.wemdir)
@@ -147,6 +147,7 @@ class Tags(object):
                 files = self._get_files(basepath)
 
         if len(files) == 0:
+            logging.info("tags: no wem found")
             return
         files.sort()
 
@@ -179,6 +180,7 @@ class Tags(object):
                         outfile.write("# %%OBJPATH  %s\n" %(row.objpath))
                 outfile.write('%s\n' % (file))
 
+        logging.info("tags: wrote %s", outname)
         return
 
     def _get_basepath(self):

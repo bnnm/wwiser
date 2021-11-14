@@ -722,9 +722,14 @@ class _NodeHelper(object):
         # [(gtype1, ngname1, ngvalue1), (gtype2, ngname2, ngvalue2), ...] > ntid
         gamesyncs = [None] * len(nargs) #temp list
 
-        nnodes = ntree.find1(name='pNodes').find1(name='Node').find1(name='pNodes') #base
-        if nnodes: #may be empty
-            self._build_tree_nodes(node, self.args, 0, nnodes, gamesyncs)
+        nnodes = ntree.find1(name='pNodes') #always
+        nnode = nnodes.find1(name='Node') #always
+        nsubnodes = nnode.find1(name='pNodes') #may be empty
+        if nsubnodes:
+            self._build_tree_nodes(node, self.args, 0, nsubnodes, gamesyncs)
+        elif nnode:
+            # in rare cases may only contain one node for key 0, no depth (NMH3)
+            self.ntid = nnode.find1(name='audioNodeId')
 
 
     def _build_tree_nodes(self, node, args, depth, nnodes, gamesyncs):
@@ -898,6 +903,7 @@ class _CAkDialogueEvent(_NodeHelper):
         super(_CAkDialogueEvent, self).__init__()
         #self.paths = []
         #self.npaths = []
+        self.ntid = None
 
     def _build(self, node):
         self._build_audio_config(node)
@@ -909,6 +915,13 @@ class _CAkDialogueEvent(_NodeHelper):
             self._build_tree(node, ntree)
 
     def _process_txtp(self, txtp):
+
+        if self.ntid:
+            # tree plays a single object with any state
+            txtp.group_single(self.config)
+            self._process_next(self.ntid, txtp)
+            txtp.group_done()
+            return
 
         if not txtp.params:
             # find all possible gamesyncs paths (won't generate txtp)
@@ -996,7 +1009,7 @@ class _CAkActionPlay(_CAkAction):
             self.nbankid = nbankid
 
     def _process_txtp(self, txtp):
-        
+
         txtp.group_single(self.config) # rare but may contain config
         self._process_next(self.ntid, txtp, self.nbankid)
         txtp.group_done()
@@ -1233,6 +1246,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
         self.ngname = None
         self.gvalue_ntid = {}
         self.has_tree = None
+        self.ntid = False
         #tree config
         #self.paths = []
         #self.npaths = []
@@ -1271,6 +1285,14 @@ class _CAkMusicSwitchCntr(_NodeHelper):
                 self.gvalue_ntid[gvalue] = (ntid, ngvalue)
 
     def _process_txtp(self, txtp):
+
+        if self.ntid:
+            # rarely tree plays a single object with any state
+            txtp.group_single(self.config)
+            self._process_next(self.ntid, txtp)
+            txtp.group_done()
+            return
+
         if self.has_tree:
 
             if not txtp.params:

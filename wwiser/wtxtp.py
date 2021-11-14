@@ -271,7 +271,9 @@ class Txtp(object):
 
         # config info
         if self.txtpcache.volume_master:
-            info += '# ~ master volume %sdB\n' % (self.txtpcache.volume_master)
+            info += '# ~ master volume: %sdB\n' % (self.txtpcache.volume_master)
+        if self.txtpcache.volume_master_auto:
+            info += '# ~ master volume: auto\n'
 
         if self.selected:
             extra = ''

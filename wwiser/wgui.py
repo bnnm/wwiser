@@ -153,7 +153,7 @@ class Gui(object):
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
         row = 0
 
-        box = self._box('txtp_volume', frame, "Volume:", "Set master TXTP volume (2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%)", width=10)
+        box = self._box('txtp_volume', frame, "Volume:", "Set master TXTP volume (2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%, *=autoadjust)", width=10)
         box[0].grid(row=row, column=0, sticky="E")
         box[1].grid(row=row, column=1, sticky="W")
         box[2].grid(row=row, column=2, sticky="W")

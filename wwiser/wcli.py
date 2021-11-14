@@ -73,7 +73,7 @@ class Cli(object):
         parser.add_argument('-gbm','--txtp-bnkmark',        help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
         parser.add_argument('-gae','--txtp-alt-exts',       help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
         parser.add_argument('-gl', '--txtp-lang',           help="Mark .txtp and set .wem subdir per language\n(some games put voices/songs in 'English(US)' and such)", action='store_true')
-        parser.add_argument('-gv', '--txtp-volume',         help="Set master TXTP volume, in percent or decibels\nexamples: 2.0=200%%, 0.5=50%%, -6dB=50%%, 6dB=200%%\n(negative dB needs equals: -gv=-6dB)")
+        parser.add_argument('-gv', '--txtp-volume',         help="Set master TXTP volume, in percent or decibels\nexamples: 2.0=200%%, 0.5=50%%, -6dB=50%%, 6dB=200, *=autoadjust%%\n(negative dB needs equals: -gv=-6dB)")
         parser.add_argument('-gra','--txtp-random-all',     help="Make multiple .txtp per base 'random' group", action='store_true')
         parser.add_argument('-grm','--txtp-random-multi',   help="Force multiloops to be selectable like a 'random'\n(ex. make .txtp per layer in multiloops files)", action='store_true')
         parser.add_argument('-grf','--txtp-random-force',   help="Force base section to be selectable like a 'random'\n(ex. make .txtp per layer in all files)", action='store_true')

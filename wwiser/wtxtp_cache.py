@@ -23,6 +23,7 @@ class TxtpCache(object):
         self.name_wems = False
         self.name_vars = False
         self.volume_master = None
+        self.volume_master_auto = False
         self.lang = False
         self.bnkmark = False
         self.bnkskip = False
@@ -127,10 +128,16 @@ class TxtpCache(object):
         if not volume:
             return
 
+        auto = False
         try:
             # use dB for easier mixing with Wwise's values
-            if volume.lower().endswith('db'):
+            if volume == '*':
+                master_db = 0.0
+                auto = True
+
+            elif volume.lower().endswith('db'):
                 master_db = float(volume[:-2])
+
             else:
                 if volume.lower().endswith('%'):
                     master_db = float(volume[:-1]) / 100.0
@@ -141,8 +148,9 @@ class TxtpCache(object):
                 master_db = VOLUME_PERCENT_TO_DB.get(master_db, math.log10(master_db) * 20.0)
 
             self.volume_master = master_db
+            self.volume_master_auto = auto
         except ValueError: #not a float
             pass
 
-        if volume and not self.volume_master:
+        if volume and not self.volume_master and not auto:
             logging.info("parser: ignored incorrect volume %s", volume)

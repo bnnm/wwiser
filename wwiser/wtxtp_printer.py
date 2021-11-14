@@ -172,14 +172,17 @@ class TxtpPrinter(object):
         self._write_node(self._tree)
         self._lines.append('\n')
 
-        # apply increasing master volume after all other volumes
-        # (lowers chances of clipping due to vgmstream's pcm16)
-        if self._simplifier.volume_master > 0 and not self._simpler:
-            line = 'commands = #v %sdB' % (self._simplifier.volume_master)
-            self._lines.append('%s\n' % (line))
-
+        self._write_commands()
         return
 
+    def _write_commands(self):
+        # apply increasing master volume after all other volumes
+        # (lowers chances of clipping due to vgmstream's pcm16)
+        vol = self._simplifier.volume_master
+        if vol and vol > 0 and not self._simpler:
+            line = 'commands = #v %sdB' % (vol)
+            self._lines.append('%s\n' % (line))
+        return
 
     def _write_node(self, node):
         if not node.ignorable(simpler=self._simpler):

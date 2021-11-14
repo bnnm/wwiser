@@ -39,8 +39,6 @@ class TxtpPrinter(object):
         self._txtpcache = txtp.txtpcache
         self._rebuilder = txtp.rebuilder
 
-        self.volume_master = self._txtpcache.volume_master or 0 #copy since may need to modify
-
         # during write
         self._lines = None
         self._depth = None
@@ -176,8 +174,8 @@ class TxtpPrinter(object):
 
         # apply increasing master volume after all other volumes
         # (lowers chances of clipping due to vgmstream's pcm16)
-        if self.volume_master > 0 and not self._simpler:
-            line = 'commands = #v %sdB' % (self.volume_master)
+        if self._simplifier.volume_master > 0 and not self._simpler:
+            line = 'commands = #v %sdB' % (self._simplifier.volume_master)
             self._lines.append('%s\n' % (line))
 
         return
@@ -409,14 +407,9 @@ class TxtpPrinter(object):
                 # todo: seems to reapply on loops (time becomes 0 again)
                 info += ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
 
-        # apply decreasing master volume to wems and mixing with other volumes
-        # (better performance and lowers chances of clipping due to vgmstream's pcm16)
-        node_volume = node.volume or 0
-        if self.volume_master < 0:
-            # cancel master dB and node's dB for cleaner results
-            node_volume += self._volume_master
-        if node_volume and not self._simpler:
-            mods += '  #v %sdB' % (node_volume)
+        # add volume
+        if node.volume and not self._simpler:
+            mods += '  #v %sdB' % (node.volume)
 
         # add anchors
         if node.loop_anchor:

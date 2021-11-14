@@ -49,6 +49,9 @@ class TxtpSimplifier(object):
         self._tree = tree
         self._txtpcache = txtp.txtpcache
 
+        # used during process and in printer
+        self.volume_master = self._txtpcache.volume_master or 0 #copy since may need to modify
+
         # flags
         self._sound_count = 0
         self._transition_count = 0
@@ -602,21 +605,48 @@ class TxtpSimplifier(object):
     # this, and Wwise can normalize on realtime, plus may be used in only a few tracks as normalization
     # (ex. Dirt Rally 4, Halo Wars menus), so we need keep it. To handle this, "master volume" can be set
     # manually and it's used to alter this base volume.
+    #
+    # Decreasing master volume is applied to wems (lowers chances of clipping due to vgmstream's pcm16)
+    # While increasing volume is applied to outmost group ()
     def _set_volume(self, node):
 
-        # negative volumes are applied per source
-        if self._printer.volume_master <= 0:
+        if self.volume_master == 0:
+            # no actual volume
             return
 
-        # find base node and cancel its volume if possible
+        if self.volume_master < 0:
+            # negative volumes are applied per source
+            self._set_volume_negative(node)
+            self.volume_master = 0 #always consumed
+        else:
+            # positive volumes are applied in the first group that has volumes, or sound leafs otherwise
+            self._set_volume_positive(node)
+            # consumed manually
+            return
+
+    def _set_volume_negative(self, node):
+        if node.is_sound():
+            node_volume = node.volume or 0
+            node_volume += self.volume_master
+            node.volume = node_volume
+            node.clamp_volume()
+
+        for subnode in node.children:
+            self._set_volume_negative(subnode)
+
+        return
+
+    def _set_volume_positive(self, node):
+
         basenode = self._get_first_child(node)
         if not basenode:
             return
 
+        # find base node and cancel its volume if possible
         if basenode.volume:
-            basenode.volume += self._printer.volume_master
+            basenode.volume += self.volume_master
             basenode.clamp_volume()
-            self._printer.volume_master = 0
+            self.volume_master = 0
             return
 
         # sometimes we can pass volume to lower leafs if base node didn't have volume and
@@ -635,10 +665,10 @@ class TxtpSimplifier(object):
             for subnode in subnodes:
                 if not subnode.volume:
                     subnode.volume = 0
-                subnode.volume += self._printer.volume_master
+                subnode.volume += self.volume_master
                 subnode.clamp_volume()
             # only if there are subnodes to pass info, otherwise it's set at the end
-            self._printer.volume_master = 0
+            self.volume_master = 0
 
         return
 

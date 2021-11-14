@@ -89,8 +89,6 @@ class Generator(object):
 
     def set_volume(self, volume):
         self._txtpcache.set_volume(volume)
-        if volume and not self._txtpcache.volume_master:
-            logging.info("generator: ignored incorrect volume %s", volume)
 
     def set_lang(self, flag):
         self._txtpcache.lang = flag

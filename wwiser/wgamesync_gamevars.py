@@ -85,7 +85,7 @@ class GamevarsParams(object):
                 item = GamevarItem(key, val, keyname)
 
             if not item or not item.ok:
-                logging.info('gamesync: ignored %s', elem)
+                logging.info('parser: ignored incorrect gamevar %s', elem)
                 continue
 
             #self._info += elem + ' ' 

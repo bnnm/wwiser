@@ -1,4 +1,4 @@
-import math, os
+import logging, math, os
 from . import wtxtp_namer, wgamesync_gamevars
 
 DEFAULT_OUTDIR = 'txtp/'
@@ -142,4 +142,7 @@ class TxtpCache(object):
 
             self.volume_master = master_db
         except ValueError: #not a float
-            return
+            pass
+
+        if volume and not self.volume_master:
+            logging.info("parser: ignored incorrect volume %s", volume)

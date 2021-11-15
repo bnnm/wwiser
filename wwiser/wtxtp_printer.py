@@ -47,6 +47,8 @@ class TxtpPrinter(object):
 
         # during simplify
         self._simplifier = wtxtp_simplifier.TxtpSimplifier(self, txtp, tree)
+        self.externals = []
+        self.gamevars = []
 
         # output flags (loaded during simplify or write)
         self.lang_name = None
@@ -67,7 +69,6 @@ class TxtpPrinter(object):
         self.is_multi_select = False    # has selectable multilooping group
         self.is_force_select = False    # has selectable forced group
 
-        self.externals = []
 
     def prepare(self):
         self._modify()

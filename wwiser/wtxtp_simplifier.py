@@ -143,6 +143,16 @@ class TxtpSimplifier(object):
             if node.sound.source.tid not in self._printer.externals:
                 self._printer.externals.append(node.sound.source.tid)
 
+        # apply RTPCs
+        if self._txtpcache.gamevars.active:
+            used = node.apply_gamevars(self._txtpcache.gamevars)
+            if used:
+                gvs = self._printer.gamevars
+                for item in used:
+                    if item in gvs:
+                        continue
+                    gvs.append(item)
+
         return
 
     def _kill_node(self, node):
@@ -254,7 +264,7 @@ class TxtpSimplifier(object):
         new_transition = copy.copy(node.transition)
 
         #new_node = copy.copy(node)
-        new_node = wtxtp_tree.TxtpNode(new_parent, sound=new_sound, config=new_config, txtpcache=node.txtpcache)
+        new_node = wtxtp_tree.TxtpNode(new_parent, sound=new_sound, config=new_config)
         new_node.type = node.type
         new_node.transition = new_transition
 

@@ -40,17 +40,12 @@ class GamevarItem(object):
         self.ok = True
 
     def info(self):
-        if self.keyname:
-            key = self.keyname
-        else:
-            key = self.key
-
+        key = self.keyname or self.key
+        val = self.value or 0.0
         if self.min:
             val = 'min'
         elif self.max:
             val = 'max'
-        elif not self.value:
-            val = self.value
         return "%s=%s" % (key, val)
 
 # stores gamevars (rtpc) config

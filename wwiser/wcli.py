@@ -1,4 +1,4 @@
-import sys, argparse, glob, logging, os, platform
+import sys, argparse, glob, logging, os, platform, shlex
 from . import wparser, wprinter, wnames, wutil, wview, wgenerator, wtags, wtests
 from . import wversion
 
@@ -125,7 +125,8 @@ class Cli(object):
                 if line.startswith('#'):
                     continue
 
-                parts = line.split(" ")
+                #parts = line.split(" ") #don't split between quotes: "bla blah"
+                parts = shlex.split(line)
                 for part in parts:
                     part = part.strip()
                     if part:

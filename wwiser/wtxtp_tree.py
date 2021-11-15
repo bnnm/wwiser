@@ -95,52 +95,88 @@ class TxtpNode(object):
         self.self_loop = False
         self.force_selectable = False
 
-    def _adjust_volume(self):
-        gv = self.txtpcache.gamevars
-        if not gv.active:
-            if self.volume and self.volume <= -96.0:
-                self.volume = None
-                self.silenced = True
+    def apply_gamevars(self, gv):
+        if not gv or not gv.active:
+            return None
+        rtpcs = self.config.rtpcs
+        if not rtpcs:
+            return None
 
-            if self.makeupgain and self.makeupgain <= -96.0:
-                self.makeupgain = None
-                self.silenced = True
+        volume = self.volume or 0.0
+        if self.silenced and not volume:
+            volume = 96.0
+
+        used_gamevars = []
+        for rtpc in rtpcs:
+            item = gv.get_item(rtpc.id)
+            if not item:
+                continue
+
+            if item.min:
+                rtpc_x = rtpc.min()
+            elif item.max:
+                rtpc_x = rtpc.max()
+            else:
+                rtpc_x = item.value
+
+            # update value based on config
+            volume = rtpc.get(rtpc_x, volume)
+            self.clamp_volume()
+            used_gamevars.append(item)
+
+            # unsure what happens in case of conflicting RTPCs (assumed to be added, maybe depends on exclusive/etc config)
+            #break
+
+        if used_gamevars:
+            self.volume = volume
+        return used_gamevars
+
+    def _adjust_volume(self):
+        #gv = self.txtpcache.gamevars
+        #if not gv.active:
+
+        if self.volume and self.volume <= -96.0:
+            self.volume = None
+            self.silenced = True
+
+        if self.makeupgain and self.makeupgain <= -96.0:
+            self.makeupgain = None
+            self.silenced = True
 
         # MakeUpGain is a secondary volume value, where first you set a "HDR window" in the container bus,
         # and sounds volumes are altered depending on window and MakeUpGain (meant for temp focus on some sfxs).
         # When HRD window has default settings it seems to behave like regular volume (ex. Gunslinger Stratos).
         if self.makeupgain:
-            if not self.volume:
-                self.volume = 0
-            self.volume += self.makeupgain
+            volume = self.volume or 0.0
+            self.volume = volume + self.makeupgain
             #self.makeupgain = 0 #todo leave gain for info in txtp?
             self.has_others = True
-            self.has_debug = True
+            #self.has_debug = True
 
         # sometimes volumes are controlled by RPTCs. By default volume isn't touched (not realistic as Init.bnk
         # sets a default), but may manually set a RTPC value:
-        # - check if any of object's RTPCs have a manual value set
-        # - if so, use this value (x) to get current volume (y) according to RTPC.
-        if gv.active:
-            for rtpc in self.config.rtpcs:
-                item = gv.get_item(rtpc.id)
-                if not item:
-                    continue
+        ## - check if any of object's RTPCs have a manual value set
+        ## - if so, use this value (x) to get current volume (y) according to RTPC.
+        #if gv.active:
+        #    for rtpc in self.config.rtpcs:
+        #        item = gv.get_item(rtpc.id)
+        #        if not item:
+        #            continue
 
-                if item.min:
-                    rtpc_x = rtpc.min()
-                elif item.max:
-                    rtpc_x = rtpc.max()
-                else:
-                    rtpc_x = item.value
+        #        if item.min:
+        #            rtpc_x = rtpc.min()
+        #        elif item.max:
+        #            rtpc_x = rtpc.max()
+        #        else:
+        #            rtpc_x = item.value
 
-                # update value based on config
-                self.volume = rtpc.get(rtpc_x, self.volume)
+        #        # update value based on config
+        #        self.volume = rtpc.get(rtpc_x, self.volume)
 
-                # unsure what happens in case of conflicting RTPCs (assumed to be added, maybe depends on exclusive/etc config)
-                #break
+        #        # unsure what happens in case of conflicting RTPCs (assumed to be added, maybe depends on exclusive/etc config)
+        #        #break
 
-            self.clamp_volume()
+        #    self.clamp_volume()
 
     def clamp_volume(self):
         if not self.volume:

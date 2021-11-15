@@ -197,6 +197,8 @@ class TxtpNamer(object):
             else:
                 name += " {s}"
         name += self._get_sparams()
+        name += self._get_gamevars(printer)
+
 
         name += txtp.info.get_wemnames()
 
@@ -261,6 +263,20 @@ class TxtpNamer(object):
 
         return info
 
+    def _get_gamevars(self, printer):
+        gvs = printer.gamevars
+        info = ''
+        if not gvs:
+            return info
+        
+        if printer.has_silences:
+            info += '='
+        else:
+            info += ' '
+        for gv in gvs:
+            info += "{%s}" % (gv.info())
+        return info
+
     # gets final txtp name, short version (without .txtp)
     def get_shortname(self):
         txtp = self.txtp
@@ -303,7 +319,6 @@ class TxtpRenamer(object):
     def apply_renames(self, name):
         if not self._items:
             return name
-        name_in = name
 
         # base renames
         for text_in, text_out, regex in self._items:

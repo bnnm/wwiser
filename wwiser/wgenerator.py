@@ -28,7 +28,6 @@ class Generator(object):
         self._move = False                  # move sources to wem dir
         self._moved_sources = {}            # ref
         self._filter = wgenerator_filter.GeneratorFilter()  # filter nodes
-        self._filter_rest = False           # generate rest after filtering (rather than just filtered nodes)
         self._bank_order = False            # use bank order to generate txtp (instead of prioritizing named nodes)
 
         self._default_hircs = self._rebuilder.get_generated_hircs()
@@ -48,7 +47,7 @@ class Generator(object):
         self._filter.add(filter)
 
     def set_filter_rest(self, flag):
-        self._filter_rest = flag
+        self._filter.rest = flag
 
     def set_bank_order(self, flag):
         self._bank_order = flag
@@ -150,8 +149,10 @@ class Generator(object):
 
             self._setup()
             self._read_externals()
-            self._write()
+            self._write_main()
+            self._write_main_transitions()
             self._write_unused()
+            self._write_unused_transitions()
             self._report()
 
         except Exception: # as e
@@ -164,8 +165,11 @@ class Generator(object):
         reb = self._rebuilder
         txc = self._txtpcache
 
+        if self._filter.active and self._generate_unused and not self._filter.rest:
+            logging.info("generator: NOTICE! can't generate unused when partially filtering nodes")
+
         if reb.has_unused() and not self._generate_unused:
-            logging.info("generator: WARNING! possibly unused audio? (find+load more banks?)")
+            logging.info("generator: NOTICE! possibly unused audio? (find+load more banks?)")
             logging.info("*** set 'generate unused' option to include, may not create anything")
 
         if reb.get_missing_media():
@@ -270,12 +274,13 @@ class Generator(object):
         return
 
 
-    def _write(self):
+    def _write_main(self):
         # save nodes in bank order rather than all together (allows fine tuning bank load order)
+
+        logging.info("generator: processing nodes")
+
         for bank in self._banks:
             self._write_bank(bank)
-
-        self._write_transitions()
         return
 
     def _write_bank(self, bank):
@@ -288,7 +293,8 @@ class Generator(object):
         nodes_unnamed = []
 
         # save candidate nodes to generate
-        for node in items.get_children():
+        nodes = items.get_children()
+        for node in nodes:
             classname = node.get_name()
             nsid = node.find1(type='sid')
             if not nsid:
@@ -307,7 +313,7 @@ class Generator(object):
                 else:
                     # ignore node if not in filter and not marked to include rest after filter
                     # (with flag would register valid non-filtered nodes below, written after filtered nodes)
-                    if not self._filter_rest:
+                    if not self._filter.rest:
                         continue
 
             if not generate and classname in self._default_hircs:
@@ -342,35 +348,62 @@ class Generator(object):
         for node in nodes:
             self._make_txtp(node)
 
+    def _write_main_transitions(self):
+        self._write_transitions()
+        return
+
     def _write_transitions(self):
-        if self._filter.active and not self._filter_rest:
+        nodes = self._rebuilder.get_transition_segments()
+        if not nodes:
             return
+        
+        # can't detect transitions from nodes we want
+        #if self._filter.active and not self._filter.rest:
+        #    return
+
+        logging.info("generator: processing transitions")
 
         self._txtpcache.transition_mark = True
-        for node in self._rebuilder.get_transition_segments():
+
+        for node in nodes:
+            # handle separate as transition nodes should always be written (default nodes only do events)
             self._make_txtp(node)
+
         self._txtpcache.transition_mark = False
-        self._rebuilder.reset_transition_segments() #restart for unused
+        self._rebuilder.reset_transition_segments() #restart for unused transitions
 
     def _write_unused(self):
-        if self._filter.active and not self._filter_rest:
+        if not self._generate_unused:
             return
         if not self._rebuilder.has_unused():
             return
 
-        if not self._generate_unused:
+        # when filtering nodes without 'rest' (i.e. only generating a few nodes) can't generate unused,
+        # as every non-filtered node would be considered so (generate first then add to filter list?)
+        if self._filter.active and not self._filter.rest:
             return
 
         logging.info("generator: processing unused")
 
         self._txtpcache.unused_mark = True
         #self._txtpcache.set_making_unused(True) #maybe set '(bank)-unused-(name) filename?
-        for name in self._rebuilder.get_unused_names():
-            for node in self._rebuilder.get_unused_list(name):
-                self._make_txtp(node)
-        self._txtpcache.unused_mark = False
 
+        for name in self._rebuilder.get_unused_names():
+            nodes = self._rebuilder.get_unused_list(name)
+
+            for node in nodes:
+                self._make_txtp(node)
+
+        self._txtpcache.unused_mark = False
+        return
+
+    def _write_unused_transitions(self):
+        if not self._generate_unused:
+            return
+
+        self._txtpcache.unused_mark = True
         self._write_transitions()
+        self._txtpcache.unused_mark = False
         return
 
     def _make_txtp(self, node):

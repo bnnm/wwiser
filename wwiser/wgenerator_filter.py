@@ -116,7 +116,10 @@ class GeneratorFilter(object):
         self._default_hircs = []
         self._inner_cfg = None
         self._outer_cfg = None
-        
+        self.rest = False # generate rest after filtering (rather than just filtered nodes)
+        #self.transitions = False # filter transition objects
+        #self.unused = False # filter transition objects
+
     def set_default_hircs(self, items):
         self._default_hircs = items
 

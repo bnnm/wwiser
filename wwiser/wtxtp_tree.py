@@ -46,9 +46,8 @@ VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but all
 # is mostly fixed, then tweak to get final tree, that may change as TXTP features are added)
 
 class TxtpNode(object):
-    def __init__(self, parent, config, sound=None, txtpcache=None):
+    def __init__(self, parent, config, sound=None):
         self.parent = parent
-        self.txtpcache = txtpcache
         self.config = config #_NodeConfig
         self.sound = sound #_NodeSound
         self.transition = None #_NodeTransition
@@ -132,9 +131,6 @@ class TxtpNode(object):
         return used_gamevars
 
     def _adjust_volume(self):
-        #gv = self.txtpcache.gamevars
-        #if not gv.active:
-
         if self.volume and self.volume <= -96.0:
             self.volume = None
             self.silenced = True
@@ -153,30 +149,6 @@ class TxtpNode(object):
             self.has_others = True
             #self.has_debug = True
 
-        # sometimes volumes are controlled by RPTCs. By default volume isn't touched (not realistic as Init.bnk
-        # sets a default), but may manually set a RTPC value:
-        ## - check if any of object's RTPCs have a manual value set
-        ## - if so, use this value (x) to get current volume (y) according to RTPC.
-        #if gv.active:
-        #    for rtpc in self.config.rtpcs:
-        #        item = gv.get_item(rtpc.id)
-        #        if not item:
-        #            continue
-
-        #        if item.min:
-        #            rtpc_x = rtpc.min()
-        #        elif item.max:
-        #            rtpc_x = rtpc.max()
-        #        else:
-        #            rtpc_x = item.value
-
-        #        # update value based on config
-        #        self.volume = rtpc.get(rtpc_x, self.volume)
-
-        #        # unsure what happens in case of conflicting RTPCs (assumed to be added, maybe depends on exclusive/etc config)
-        #        #break
-
-        #    self.clamp_volume()
 
     def clamp_volume(self):
         if not self.volume:

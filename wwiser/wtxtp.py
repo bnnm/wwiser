@@ -181,7 +181,7 @@ class Txtp(object):
             os.makedirs(outdir, exist_ok=True)
 
         outname = self._namer.get_outname(name, outdir)
-        info = self._get_info(name, longname)
+        info = self._get_info(name, longname, printer)
 
         if self.txtpcache.x_notxtp:
             return
@@ -244,7 +244,7 @@ class Txtp(object):
 
     #--------------------------------------------------------------------------
 
-    def _get_info(self, name, longname):
+    def _get_info(self, name, longname, printer):
 
         # base info
         info  = '\n\n'
@@ -261,7 +261,7 @@ class Txtp(object):
         if gs_s != gs_l:
             info += '# * full vars: %s\n' % (gs_l)
 
-        if self.txtpcache.gamevars.active:
+        if self.txtpcache.gamevars.active and printer.gamevars:
             info += '# * gamevars: %s\n' % (self.txtpcache.gamevars.get_info())
 
         if self.txtpcache.volume_master:

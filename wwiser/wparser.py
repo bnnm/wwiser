@@ -709,7 +709,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
         fld.bit('unknown2d', obj.lastval, 1) #flag for next bit
         fld.bit('unknown2d', obj.lastval, 2) #bPriorityOverrideParent? bIsFXOverrideParent?
         fld.bit('cbIs3DPositioningAvailable', obj.lastval, 3)
-    elif cls.version <= 128:
+    elif cls.version <= 129:
         fld.bit('unknown2d', obj.lastval, 1) #?
         fld.bit('unknown2d', obj.lastval, 2) #flag for next bit
         fld.bit('unknown2d', obj.lastval, 3) #bPriorityOverrideParent? bIsFXOverrideParent?
@@ -744,7 +744,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
                 obj.U8x('bPositioningEnablePanner')
         elif cls.version <= 122:
             has_3d = (uBitsPositioning >> 3) & 1
-        elif cls.version <= 128:
+        elif cls.version <= 129:
             has_3d = (uBitsPositioning >> 4) & 1
         else:
             has_3d = (uBitsPositioning >> 1) & 1
@@ -782,7 +782,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
         if   cls.version <= 89:
             obj.tid('uAttenuationID')
             obj.U8x('bIsSpatialized')
-        elif cls.version <= 128:
+        elif cls.version <= 129:
             obj.tid('uAttenuationID')
         else:
             pass
@@ -803,7 +803,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             e3DPositionType = (uBits3d >> 4) & 1
             has_automation = (e3DPositionType != 1)
             has_dynamic = False
-        elif cls.version <= 128:
+        elif cls.version <= 129:
             e3DPositionType = (uBits3d >> 6) & 1
             has_automation = (e3DPositionType != 1)
             has_dynamic = False
@@ -1870,7 +1870,7 @@ def CAkLayer__SetInitialValues(obj, cls):
     obj.u32('ulNumAssoc')
     for elem in obj.list('assocs', 'CAssociatedChildData', obj.lastval):
         elem.tid('ulAssociatedChildID').fnv(wdefs.fnv_no)
-        if cls.version == 122 or cls.version == 136: #custom field (not 120/135/140/etc)
+        if cls.version == 122 or cls.version == 129 or cls.version == 136: #custom field (not in others)
             elem.U8x('unknown_custom') #0/1?
             elem.U8x('unknown_custom') #0/1?
         elem.u32('ulCurveSize')
@@ -1980,8 +1980,14 @@ def CAkMusicSegment__SetInitialValues(obj, cls):
             #AK::ReadBankStringUtf8
             elem.stz('pMarkerName') #pszName
 
-    if cls.version == 122:
-        obj.u32('unknown_custom')
+    if cls.version == 122 or cls.version == 129: #custom field (not in others)
+        obj.u32('ulNumUnknown_custom')
+        for elem in obj.list('p_unknown_custom', 'Unknown_custom', obj.lastval):
+            elem.u32('unknown') #some ID, may repeat
+            elem.u32('unknown') #sometimes 0?
+            elem.u32('unknown') #always 0x40nnnnnn?
+            elem.u32('unknown') #always 0?
+
     return
 
 #-
@@ -2367,7 +2373,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
             else: #65=DmC/ZoE
                 elem2.U8x('bDestMatchSourceCueName')
 
-        if cls.version == 122 or cls.version == 136: #custom field (not 120/135/140/etc), may be part of the above
+        if cls.version == 122 or cls.version == 129 or cls.version == 136: #custom field (not in others)
             elem.tid('ulStateGroupID?_custom').fnv(wdefs.fnv_var)
             elem.tid('ulStateID?_custom').fnv(wdefs.fnv_val)
 

@@ -48,6 +48,7 @@ bank_versions = [
     122, #0x7A Wwise 2017.1-B?  [Total War: Warhammer 2 (PC)-update]
     125, #0x7D Wwise 2017.1     [Devil May Cry 5 (PC), Wolfenstein II The New Colossus (PC)]
     128, #0x80 Wwise 2017.2     [Spyro Reignited Trilogy (PC/PS4), Let's Go Pikachu (Switch), Magatsu Wahrheit (Android)]
+    129, #0x7A Wwise 2017.2-B?  [Total War: Three Kingdoms (PC)]
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
@@ -55,9 +56,11 @@ bank_versions = [
     140, #0x8c Wwise 2021.1     (none known)
 ]
 
-# Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions? (has special fields)
+# Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions?
+# (has special custom fields that always exist in those only).
 bank_custom_versions = {
-    0x8000007A: 122,  #same as 120 except some custom field
+    0x8000007A: 122,  #same as 120
+    0x80000081: 129,  #same as 129
     0x80000088: 136,  #some diffs vs 135 and 140
 }
 

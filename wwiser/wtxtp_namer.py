@@ -40,7 +40,7 @@ class TxtpNamer(object):
         self.nname = None
         self.ntid = None
         self.ntidsub = None
-        self.callers = None
+        self.ncaller = None
 
     def update_config(self, node, nname, ntid, ntidsub):
         self.node = node
@@ -134,12 +134,9 @@ class TxtpNamer(object):
 
         extra_name = False
 
-        if not hashname and txtp.txtpcache.transition_mark:
-            if self.callers and len(self.callers) == 1:
-                caller = list(self.callers)[0] #set to list b/c no getters in set
-
-                hashname = caller.get_attrs().get('hashname')
-                extra_name = True
+        if not hashname and self.ncaller:
+            hashname = self.ncaller.get_attrs().get('hashname')
+            extra_name = True
 
         is_stinger = ntidsub is not None
 

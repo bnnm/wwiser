@@ -13,6 +13,7 @@ class Rebuilder(object):
     def __init__(self):
         self._DEFAULT_CLASS = rn._CAkNone
 
+        # nodes (default parser nodes) and bnodes (rebuilt simplified nodes)
         self._ref_to_node = {}              # bank + sid > parser node
         self._id_to_refs = {}               # sid > bank + sid list
         self._node_to_bnode = {}            # parser node > rebuilt node
@@ -36,7 +37,6 @@ class Rebuilder(object):
         # may end up using other unused types
         self._used_node = {}                # marks which node_refs has been used
         self._hircname_to_nodes = {}        # registered types > list of nodes
-        self._transition_nodes = {}         # transitions (separate to avoid counting as unused)
 
         self._generated_hircs =  [
             'CAkEvent',
@@ -140,6 +140,9 @@ class Rebuilder(object):
     def get_generated_hircs(self):
         return self._generated_hircs
 
+    def report_transition_object(self):
+        self._transition_objects += 1
+
     #--------------------------------------------------------------------------
 
     # info about loaded banks
@@ -190,41 +193,19 @@ class Rebuilder(object):
             node = self._ref_to_node.get(ref)
         return node
 
-    def add_transition_segment(self, ntid):
+    def _get_transition_node(self, ntid):
         # transition nodes in switches don't get used, register to generate at the end
         if not ntid:
-            return
+            return None
 
         bank_id = ntid.get_root().get_id()
         tid = ntid.value()
         if not tid:
-            return
+            return None
 
         node = self._get_node_by_ref(bank_id, tid)
-        if not node:
-            return
-
-        #save transition and a list of 'caller' nodes (like events) for info later
-        key = id(node)
-        items = self._transition_nodes.get(key)
-        if not items:
-            callers = set()
-            items = (node, callers)
-        
-        root_ntid = None
-        if self._root_node:
-            root_ntid = self._root_node.find1(type='sid')
-        items[1].add(root_ntid)
-
-        self._transition_nodes[key] = items
-        __ = self._get_bnode(node) #force parse/register, but don't use yet
-        return
-
-    def get_transition_segments(self):
-        return self._transition_nodes.values()
-
-    def reset_transition_segments(self):
-        self._transition_nodes = {}
+        __ = self._get_bnode(node) #force parse/register (so doesn't appear as unused), but don't use yet
+        return node
 
 
     def has_unused(self):

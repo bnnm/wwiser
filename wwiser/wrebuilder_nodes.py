@@ -68,7 +68,8 @@ class _NodeHelper(object):
     # info when generating transitions
     def _register_transitions(self, txtp):
         for ntid in self.ntransitions:
-            self.builder.add_transition_segment(ntid)
+            node = self.builder._get_transition_node(ntid)
+            txtp.transitions.add(node)
         return
 
     #--------------------------------------------------------------------------
@@ -273,7 +274,7 @@ class _NodeHelper(object):
                     self.ntransitions.append(ntid)
                 else:
                     # rare in playlists (Polyball, Spiderman)
-                    self.builder._transition_objects += 1
+                    self.builder.report_transition_object()
 
         return
 

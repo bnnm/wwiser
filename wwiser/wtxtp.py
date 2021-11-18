@@ -43,12 +43,13 @@ from . import wgamesync, wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer, wve
 
 class Txtp(object):
 
-    def __init__(self, txtpcache, mediaindex, params=None):
+    def __init__(self, txtpcache, mediaindex, params=None, transitions=None):
         self.params = params  #current gamesync "path" config (default/empty means must find paths)
         self.ppaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
         self.spaths = wgamesync_silences.SilencePaths() #states used to mute tracks
         self.txtpcache = txtpcache
         self.mediaindex = mediaindex
+        self.transitions = transitions
         self.info = wtxtp_info.TxtpInfo(txtpcache)  # node info to add in output as comment
 
         # config during printing
@@ -59,7 +60,6 @@ class Txtp(object):
 
         # for info
         self._namer = wtxtp_namer.TxtpNamer(self)
-        self._callers = None
         return
 
     # start of txtp generation
@@ -79,9 +79,8 @@ class Txtp(object):
 
     #--------------------------------------------------------------------------
 
-    def set_callers(self, callers):
-        self._callers = callers
-        self._namer.callers = callers
+    def set_ncaller(self, ncaller):
+        self._namer.ncaller = ncaller
 
     def write(self):
         printer = wtxtp_printer.TxtpPrinter(self, self._root)
@@ -268,11 +267,6 @@ class Txtp(object):
 
         if self.txtpcache.gamevars.active and printer.gamevars:
             info += '# * gamevars: %s\n' % (self.txtpcache.gamevars.get_info())
-
-        if self._callers:
-            info += '# * callers:\n'
-            for caller in self.info.get_callers(self._callers):
-                info += '# - %s\n' % (caller)
 
         if self.txtpcache.volume_master:
             info += '# * master volume: %sdB\n' % (self.txtpcache.volume_master)

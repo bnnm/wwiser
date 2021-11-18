@@ -1,5 +1,8 @@
 import logging, os
-from . import wgenerator_filter, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache, wgenerator_mediaindex
+from . import wgenerator_filter, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
+from . import wgenerator_mediaindex as gmi
+from . import wgenerator_helpers as gh
+
 
 
 # Tries to write .txtp from a list of HIRC objects. Each object parser adds some part to final
@@ -22,7 +25,7 @@ class Generator(object):
 
         self._rebuilder = wrebuilder.Rebuilder()
         self._txtpcache = wtxtp_cache.TxtpCache()
-        self._mediaindex = wgenerator_mediaindex.MediaIndex(banks)
+        self._mediaindex = gmi.MediaIndex(banks)
 
         # options
         self._generate_unused = False       # generate unused after regular txtp
@@ -151,9 +154,7 @@ class Generator(object):
             self._setup()
             self._read_externals()
             self._write_main()
-            self._write_main_transitions()
             self._write_unused()
-            self._write_unused_transitions()
             self._report()
 
         except Exception: # as e
@@ -344,26 +345,6 @@ class Generator(object):
         for node in nodes:
             self._make_txtp(node)
 
-    def _write_main_transitions(self):
-        self._write_transitions()
-        return
-
-    def _write_transitions(self):
-        items = self._rebuilder.get_transition_segments()
-        if not items:
-            return
-
-        logging.info("generator: processing transitions")
-
-        self._txtpcache.transition_mark = True
-
-        # handle transitions of current files (so filtered nodes don't appear)
-        for node, callers in items:
-            self._make_txtp(node, callers=callers)
-
-        self._txtpcache.transition_mark = False
-        self._rebuilder.reset_transition_segments() #restart for unused transitions
-
     def _write_unused(self):
         if not self._generate_unused:
             return
@@ -389,37 +370,28 @@ class Generator(object):
         self._txtpcache.unused_mark = False
         return
 
-    def _write_unused_transitions(self):
-        if not self._generate_unused:
-            return
-
-        self._txtpcache.unused_mark = True
-        self._write_transitions()
-        self._txtpcache.unused_mark = False
-        return
-
-    def _make_txtp(self, node, callers=None):
+    def _make_txtp(self, node):
         # When default_params aren't set and objects need them, Txtp finds possible params, added
         # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then ""music=b02")
 
+        transitions = gh.Transitions(node)
+
         try:
             # base .txtp
-            txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=self._default_params)
+            txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=self._default_params, transitions=transitions)
             self._rebuilder.begin_txtp(txtp, node)
 
             ppaths = txtp.ppaths  # gamesync "paths" found during process
             if ppaths.empty:
                 # single .txtp (no variables)
-                txtp.set_callers(callers)
                 txtp.write()
             else:
                 # .txtp per variable combo
                 combos = ppaths.combos()
                 for combo in combos:
                     #logging.info("generator: combo %s", combo.elems)
-                    txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=combo)
+                    txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=combo, transitions=transitions)
                     self._rebuilder.begin_txtp(txtp, node)
-                    txtp.set_callers(callers)
                     txtp.write()
 
             # triggers are handled a bit differently
@@ -428,8 +400,22 @@ class Generator(object):
                 for stinger in ppaths.stingers:
                     txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=params)
                     self._rebuilder.begin_txtp_stinger(txtp, stinger)
-                    txtp.set_callers(None)
                     txtp.write()
+
+            tr_nodes = transitions.get_nodes()
+            if tr_nodes:
+                self._txtpcache.transition_mark = True
+
+                # handle transitions of current files (so filtered nodes don't appear)
+                for ncaller, transition in tr_nodes:
+                    txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=self._default_params)
+                    self._rebuilder.begin_txtp(txtp, transition)
+                    txtp.set_ncaller(ncaller)
+                    txtp.write()
+
+                #for ncaller, tnode in tr_nodes:
+                #    self._make_txtp(tnode, ncaller=ncaller)
+                self._txtpcache.transition_mark = False
 
         except Exception: #as e
             sid = 0

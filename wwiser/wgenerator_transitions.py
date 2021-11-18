@@ -1,5 +1,3 @@
-import logging
-
 
 # transition musicsegments in switches/playlists don't get used, register to generate at the end
 

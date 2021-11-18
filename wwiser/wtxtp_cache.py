@@ -1,5 +1,7 @@
 import logging, math, os
-from . import wtxtp_namer, wgamesync_gamevars
+
+from wwiser import wgenerator_externals
+from . import wtxtp_namer, wgamesync_gamevars, wgenerator_externals
 
 DEFAULT_OUTDIR = 'txtp/'
 DEFAULT_WEMDIR = 'wem/'
@@ -36,10 +38,11 @@ class TxtpCache(object):
         self.write_delays = False
         self.silence = False
 
-        # helpers
+        # process helpers (passed around)
         self.tags = None
         self.renamer = wtxtp_namer.TxtpRenamer()
         self.gamevars = wgamesync_gamevars.GamevarsParams()
+        self.externals = wgenerator_externals.Externals()
 
         self.x_noloops = False
         self.x_notxtp = False
@@ -55,8 +58,6 @@ class TxtpCache(object):
         self.internals = 0
         self.names = 0
 
-        # externals
-        self.externals = None
 
         # other helpers
         self.is_windows = os.name == WINDOWS_INTERNAL_NAME

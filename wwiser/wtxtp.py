@@ -98,7 +98,7 @@ class Txtp(object):
 
         # in case of externals, we can preload a .txt file that maps event tid > N paths
         # then a .txtp per external will be created
-        if printer.has_externals and self.txtpcache.externals:
+        if printer.has_externals and self.txtpcache.externals.active:
             # get external IDs #todo for now only one
             if len(printer.externals) > 1:
                 logging.warn("generator: ignoring multiple externals (report)")

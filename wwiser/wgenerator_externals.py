@@ -1,5 +1,7 @@
 import logging, os
 
+# Reads a externals.txt list to get "externals", a type of .wem definition.
+# Devs can manually set a "id <> filename" relation, and this simulates it.
 
 class Externals(object):
     def __init__(self):

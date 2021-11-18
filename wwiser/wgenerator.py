@@ -1,7 +1,8 @@
 import logging, os
-from . import wgenerator_filter, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
-from . import wgenerator_mediaindex as gmi
-from . import wgenerator_transitions as gt
+
+from wwiser import wgenerator_mover
+from . import wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
+from . import wgenerator_filter, wgenerator_mediaindex, wgenerator_transitions, wgenerator_mover
 
 
 
@@ -25,12 +26,11 @@ class Generator(object):
 
         self._rebuilder = wrebuilder.Rebuilder()
         self._txtpcache = wtxtp_cache.TxtpCache()
-        self._mediaindex = gmi.MediaIndex(banks)
+        self._mediaindex = wgenerator_mediaindex.MediaIndex(banks)
 
         # options
         self._generate_unused = False       # generate unused after regular txtp
         self._move = False                  # move sources to wem dir
-        self._moved_sources = {}            # ref
         self._filter = wgenerator_filter.GeneratorFilter()  # filter nodes
         self._bank_order = False            # use bank order to generate txtp (instead of prioritizing named nodes)
 
@@ -39,6 +39,8 @@ class Generator(object):
         self._rebuilder.set_filter(self._filter)
 
         self._default_params = None
+
+        self._moved_sources = {}            # ref
 
         self._object_sources = {
             'CAkSound': 'AkBankSourceData',
@@ -240,6 +242,7 @@ class Generator(object):
         return
 
     def _setup_nodes(self):
+        mover_nodes = []
         for bank in self._banks:
             root = bank.get_root()
             bank_id = root.get_id()
@@ -262,13 +265,14 @@ class Generator(object):
 
                 self._rebuilder.add_node_ref(bank_id, sid, node)
 
-                # move wems to folder for nodes that can contain sources
+                # for nodes that can contain sources save them to move later
                 if self._move:
                     node_name = self._object_sources.get(name)
                     if node_name:
                         nsources = node.finds(name=node_name)
-                        for nsource in nsources:
-                            self._move_wem(nsource)
+                        mover_nodes.extend(nsources)
+        
+        self._move_wems(mover_nodes)
         return
 
     def _write_main(self):
@@ -374,7 +378,7 @@ class Generator(object):
         # When default_params aren't set and objects need them, Txtp finds possible params, added
         # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then ""music=b02")
 
-        transitions = gt.Transitions(node)
+        transitions = wgenerator_transitions.Transitions(node)
 
         try:
             # base .txtp
@@ -432,75 +436,13 @@ class Generator(object):
 
     #--------------------------------------------------------------------------
 
-    # reads a externals.txt list for externals
     def _read_externals(self):
         self._txtpcache.externals.load(self._banks)
         return
 
-    #--------------------------------------------------------------------------
-
-    # Moves 123.wem to /txtp/wem/123.wem, or 123.ogg/logg to /txtp/wem/123.logg if alt_exts is set
-    #todo cleanup (same as rebuilder)
-    def _move_wem(self, node):
-        if not node:
+    def _move_wems(self, nodes):
+        if not nodes:
             return
-
-        source = wtxtp_util.NodeSource(node, None)
-        if not source or not source.tid: #?
-            return
-        if source.tid in self._moved_sources:
-            return
-        if source.plugin_external or source.plugin_id: #not audio:
-            return
-        if source.internal and not self._txtpcache.bnkskip:
-            return
-
-        self._moved_sources[source.tid] = True #skip dupes
-
-        dir = self._txtpcache.get_txtp_dir()
-        if self._txtpcache.lang:
-            dir += source.subdir()
-
-        nroot = node.get_root()
-        in_dir = nroot.get_path()
-        out_dir = in_dir
-        if dir:
-            out_dir = os.path.join(out_dir, dir)
-            os.makedirs(out_dir, exist_ok=True)
-
-        in_extension = source.extension
-        out_extension = source.extension
-        if self._txtpcache.alt_exts:
-            #in_extension = source.extension_alt #handled below
-            out_extension = source.extension_alt
-
-        in_name = "%s.%s" % (source.tid, in_extension)
-        in_name = os.path.join(in_dir, in_name)
-        in_name = os.path.normpath(in_name)
-        out_name = "%s.%s" % (source.tid, out_extension)
-        out_name = os.path.join(out_dir, out_name)
-        out_name = os.path.normpath(out_name)
-
-        if os.path.exists(out_name):
-            if os.path.exists(in_name):
-                logging.info("generator: cannot move %s (exists on output folder)", in_name)
-            return
-
-        bank = nroot.get_filename()
-        if not os.path.exists(in_name):
-            if self._txtpcache.alt_exts:
-                in_name = "%s.%s" % (source.tid, source.extension_alt)
-                in_name = os.path.join(in_dir, in_name)
-                in_name = os.path.normpath(in_name)
-                if not os.path.exists(in_name):
-                    logging.info("generator: cannot move %s (file not found) / %s", in_name, bank)
-                    return
-            else:
-                logging.info("generator: cannot move %s (file not found) / %s", in_name, bank)
-                return
-
-        #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)
-        os.rename(in_name, out_name)
-        logging.debug("generator: moved %s / %s", in_name, bank)
-
+        mover = wgenerator_mover.Mover(self._txtpcache)
+        mover.move_wems(nodes)
         return

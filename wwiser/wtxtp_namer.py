@@ -40,6 +40,7 @@ class TxtpNamer(object):
         self.nname = None
         self.ntid = None
         self.ntidsub = None
+        self.callers = None
 
     def update_config(self, node, nname, ntid, ntidsub):
         self.node = node
@@ -131,6 +132,15 @@ class TxtpNamer(object):
         hashname = attrs.get('hashname')
         guidname = attrs.get('guidname')
 
+        extra_name = False
+
+        if not hashname and txtp.txtpcache.transition_mark:
+            if self.callers and len(self.callers) == 1:
+                caller = list(self.callers)[0] #set to list b/c no getters in set
+
+                hashname = caller.get_attrs().get('hashname')
+                extra_name = True
+
         is_stinger = ntidsub is not None
 
         #todo cache info
@@ -157,9 +167,12 @@ class TxtpNamer(object):
             # otherwise use bank's name
             if not name:
                 name = bankname
+            extra_name = True
 
+        # add extra info to the name
+        if extra_name:
             if is_stinger:
-                info = "{stinger=%s~%s}" % (ntid.value(), ntidsub.value())
+                info = "{stinger-%s=~%s}" % (ntid.value(), ntidsub.value())
                 is_stinger = False
             else:
                 attrs_node = node.get_attrs()

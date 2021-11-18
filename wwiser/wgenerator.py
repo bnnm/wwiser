@@ -353,21 +353,17 @@ class Generator(object):
         return
 
     def _write_transitions(self):
-        nodes = self._rebuilder.get_transition_segments()
-        if not nodes:
+        items = self._rebuilder.get_transition_segments()
+        if not items:
             return
-        
-        # can't detect transitions from nodes we want
-        #if self._filter.active and not self._filter.rest:
-        #    return
 
         logging.info("generator: processing transitions")
 
         self._txtpcache.transition_mark = True
 
-        for node in nodes:
-            # handle separate as transition nodes should always be written (default nodes only do events)
-            self._make_txtp(node)
+        # handle transitions of current files (so filtered nodes don't appear)
+        for node, callers in items:
+            self._make_txtp(node, callers=callers)
 
         self._txtpcache.transition_mark = False
         self._rebuilder.reset_transition_segments() #restart for unused transitions
@@ -406,7 +402,7 @@ class Generator(object):
         self._txtpcache.unused_mark = False
         return
 
-    def _make_txtp(self, node):
+    def _make_txtp(self, node, callers=None):
         # When default_params aren't set and objects need them, Txtp finds possible params, added
         # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then ""music=b02")
 
@@ -418,6 +414,7 @@ class Generator(object):
             ppaths = txtp.ppaths  # gamesync "paths" found during process
             if ppaths.empty:
                 # single .txtp (no variables)
+                txtp.set_callers(callers)
                 txtp.write()
             else:
                 # .txtp per variable combo
@@ -426,6 +423,7 @@ class Generator(object):
                     #logging.info("generator: combo %s", combo.elems)
                     txtp = wtxtp.Txtp(self._txtpcache, self._rebuilder, params=combo)
                     self._rebuilder.begin_txtp(txtp, node)
+                    txtp.set_callers(callers)
                     txtp.write()
 
             # triggers are handled a bit differently
@@ -434,6 +432,7 @@ class Generator(object):
                 for stinger in ppaths.stingers:
                     txtp = wtxtp.Txtp(self._txtpcache, self._rebuilder, params=params)
                     self._rebuilder.begin_txtp_stinger(txtp, stinger)
+                    txtp.set_callers(None)
                     txtp.write()
 
         except Exception: #as e

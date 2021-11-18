@@ -88,6 +88,30 @@ class TxtpInfo(object):
         if current.gstext_short:
             self._gsnames_short += " " + current.gstext_short
 
+    def get_callers(self, callers):
+        caller_info = []
+        if not callers:
+            return caller_info
+        for ntid in callers:
+            info = NameInfo(ntid)
+
+            name = info.name
+            if not name:
+                name = str(info.id)
+            caller_info.append(name)
+        return caller_info
+
+class NameInfo(object):
+    def __init__(self, ntid=None):
+
+        self.id = None
+        self.name = None
+        if not ntid:
+            return
+
+        self.id = ntid.value()
+        attrs = ntid.get_attrs()
+        self.name = attrs.get('hashname')
 
 class TxtpInfoNode(object):
     OBJECT_NAMES = ['hashname', 'guidname', 'path', 'objpath']

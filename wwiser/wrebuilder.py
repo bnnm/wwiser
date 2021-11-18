@@ -30,7 +30,8 @@ class Rebuilder(object):
         self._unknown_props = {}            # object properties that need to be investigated
         self._transition_objects = 0        # info for future support
 
-        self._filter = None
+        self._filter = None                 # used for inner node filtering
+        self._root_node = None              # for info
 
         # after regular generation we want a list of nodes that weren't used, and
         # generate TXTP for them, but ordered by types since generating some types
@@ -196,9 +197,10 @@ class Rebuilder(object):
         return node
 
     def add_transition_segment(self, ntid):
-        # transition nodes in switches don't get used, register manually to generate at the end
+        # transition nodes in switches don't get used, register to generate at the end
         if not ntid:
             return
+
         bank_id = ntid.get_root().get_id()
         tid = ntid.value()
         if not tid:
@@ -208,7 +210,19 @@ class Rebuilder(object):
         if not node:
             return
 
-        self._transition_nodes[id(node)] = node
+        #save transition and a list of 'caller' nodes (like events) for info later
+        key = id(node)
+        items = self._transition_nodes.get(key)
+        if not items:
+            callers = set()
+            items = (node, callers)
+        
+        root_ntid = None
+        if self._root_node:
+            root_ntid = self._root_node.find1(type='sid')
+        items[1].add(root_ntid)
+
+        self._transition_nodes[key] = items
         __ = self._get_bnode(node) #force parse/register, but don't use yet
         return
 
@@ -356,9 +370,13 @@ class Rebuilder(object):
         if not bnode:
             return
 
+        self._root_node = node #info for transitions
+
         root_config = wtxtp_util.NodeConfig()
         txtp.begin(node, root_config)
         bnode.make_txtp(txtp)
+
+        self._root_node = None #info for transitions
         return
 
     def begin_txtp_stinger(self, txtp, stinger):
@@ -439,6 +457,14 @@ class _NodeHelper(object):
 
         #logging.debug("next: %s %s > %s", self.node.get_name(), self.sid, tid)
         bnode.make_txtp(txtp)
+        return
+
+    #--------------------------------------------------------------------------
+
+    # info when generating transitions
+    def _register_transitions(self, txtp):
+        for ntid in self.ntransitions:
+            self.builder.add_transition_segment(ntid)
         return
 
     #--------------------------------------------------------------------------
@@ -639,7 +665,7 @@ class _NodeHelper(object):
             ntid = nmto.find1(name='segmentID')
             if ntid and ntid.value() != 0:
                 if is_switch:
-                    self.builder.add_transition_segment(ntid)
+                    self.ntransitions.append(ntid)
                 else:
                     # rare in playlists (Polyball, Spiderman)
                     self.builder._transition_objects += 1
@@ -1247,6 +1273,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
         self.gvalue_ntid = {}
         self.has_tree = None
         self.ntid = False
+        self.ntransitions = []
         #tree config
         #self.paths = []
         #self.npaths = []
@@ -1285,6 +1312,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
                 self.gvalue_ntid[gvalue] = (ntid, ngvalue)
 
     def _process_txtp(self, txtp):
+        self._register_transitions(txtp)
 
         if self.ntid:
             # rarely tree plays a single object with any state
@@ -1351,6 +1379,7 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
     def __init__(self):
         super(_CAkMusicRanSeqCntr, self).__init__()
         self.items = []
+        self.ntransitions = []
 
     def _build(self, node):
         self._build_audio_config(node)
@@ -1411,6 +1440,8 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
         return
 
     def _process_txtp(self, txtp):
+        self._register_transitions(txtp)
+
         if not txtp.params:
             txtp.ppaths.add_stingers(self.stingers)
 

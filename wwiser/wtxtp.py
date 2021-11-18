@@ -59,6 +59,7 @@ class Txtp(object):
 
         # for info
         self._namer = wtxtp_namer.TxtpNamer(self)
+        self._callers = None
         return
 
     # start of txtp generation
@@ -77,6 +78,10 @@ class Txtp(object):
         return
 
     #--------------------------------------------------------------------------
+
+    def set_callers(self, callers):
+        self._callers = callers
+        self._namer.callers = callers
 
     def write(self):
         printer = wtxtp_printer.TxtpPrinter(self, self._root)
@@ -263,6 +268,11 @@ class Txtp(object):
 
         if self.txtpcache.gamevars.active and printer.gamevars:
             info += '# * gamevars: %s\n' % (self.txtpcache.gamevars.get_info())
+
+        if self._callers:
+            info += '# * callers:\n'
+            for caller in self.info.get_callers(self._callers):
+                info += '# - %s\n' % (caller)
 
         if self.txtpcache.volume_master:
             info += '# * master volume: %sdB\n' % (self.txtpcache.volume_master)

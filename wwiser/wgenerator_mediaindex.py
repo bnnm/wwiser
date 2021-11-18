@@ -21,14 +21,15 @@ class MediaIndex(object):
 
             # preload indexes for internal wems for bigger banks
             nindex = bank.find(name='MediaIndex')
-            if nindex:
-                nsids = nindex.finds(type='sid')
-                for nsid in nsids:
-                    sid = nsid.value()
-                    attrs = nsid.get_parent().get_attrs()
-                    index = attrs.get('index')
-                    if index is not None:
-                        self._add_media_index(bankname, sid, index)
+            if not nindex:
+                continue
+            nsids = nindex.finds(type='sid')
+            for nsid in nsids:
+                sid = nsid.value()
+                attrs = nsid.get_parent().get_attrs()
+                index = attrs.get('index')
+                if index is not None:
+                    self._add_media_index(bankname, sid, index)
 
         return
 

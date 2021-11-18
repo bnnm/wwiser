@@ -11,7 +11,7 @@ from . import wrebuilder_nodes as rn
 
 class Rebuilder(object):
     def __init__(self):
-        self.DEFAULT_CLASS = rn._CAkNone
+        self._DEFAULT_CLASS = rn._CAkNone
 
         self._ref_to_node = {}              # bank + sid > parser node
         self._id_to_refs = {}               # sid > bank + sid list
@@ -316,7 +316,7 @@ class Rebuilder(object):
         # rebuild node with a helper class and save to cache
         # (some banks get huge and call the same things again and again, it gets quite slow to parse every time)
         hircname = node.get_name()
-        bclass = self._hircs.get(hircname, self.DEFAULT_CLASS)
+        bclass = self._hircs.get(hircname, self._DEFAULT_CLASS)
 
         bnode = bclass()
         bnode.init_builder(self)
@@ -338,7 +338,7 @@ class Rebuilder(object):
 
         root_config = wtxtp_util.NodeConfig()
         txtp.begin(node, root_config)
-        bnode.make_txtp(txtp)
+        bnode._make_txtp(txtp)
 
         self._root_node = None #info for transitions
         return
@@ -357,5 +357,5 @@ class Rebuilder(object):
         #self._process_next(ntid, txtp)
         root_config = wtxtp_util.NodeConfig()
         txtp.begin(stinger.node, root_config, nname=stinger.ntrigger, ntid=stinger.ntrigger, ntidsub=stinger.ntid)
-        bnode.make_txtp(txtp)
+        bnode._make_txtp(txtp)
         return

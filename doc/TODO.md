@@ -50,7 +50,7 @@ Low priority TODOs
   - next segment and looping to itself may have different transitions
   - randoms also need transitions from A to B/C/D/E/F to G
 - transition objects in mranseq (Polyball)
-- clean values that don't make samples, `#r 1.5000000000000002`
+- round values that don't make samples, `#r 1.5000000000000002`
 - resampler for demo music, pokemon, sor4
 - apply transition delays: fTransitionTime in all ranseqs, TransitionTime, etc
 - recheck TTime in earlier games (ex. Trine 2)
@@ -61,3 +61,9 @@ Low priority TODOs
 - mark loop inside inner group (double loop) as multiloop (ex. DmC last boss)
 - use bankid for internals when possible instead of auto-using current+any bank?
 - giant playlist + random + wem name options: only write selected wem (ex. Tony Hawk Shred Wii)
+- set multiple rtpc and generate combos: VALUE=0.0,1.0 to make 2 txtp (ex. Batman Arkham City)
+  - multi-rtpc combine all: VALUE1=0.0,1.0 + VALUE2=2.0,3.0 = to make 4 txtp
+- rtpc of makeupgain?
+- apply rtcp default? option to use it? print in tree?
+
+

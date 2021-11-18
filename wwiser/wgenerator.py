@@ -248,24 +248,26 @@ class Generator(object):
 
             # register sids/nodes first since banks can point to each other
             items = bank.find(name='listLoadedItem')
-            if items: # media-only banks don't have items
-                for node in items.get_children():
-                    name = node.get_name()
-                    nsid = node.find1(type='sid')
-                    if not nsid:
-                        logging.info("generator: not found for %s in %s", name, bankname) #???
-                        continue
-                    sid = nsid.value()
+            if not items: # media-only banks don't have items
+                continue
 
-                    self._rebuilder.add_node_ref(bank_id, sid, node)
+            for node in items.get_children():
+                name = node.get_name()
+                nsid = node.find1(type='sid')
+                if not nsid:
+                    logging.info("generator: not found for %s in %s", name, bankname) #???
+                    continue
+                sid = nsid.value()
 
-                    # move wems to folder for nodes that can contain sources
-                    if self._move:
-                        node_name = self._object_sources.get(name)
-                        if node_name:
-                            nsources = node.finds(name=node_name)
-                            for nsource in nsources:
-                                self._move_wem(nsource)
+                self._rebuilder.add_node_ref(bank_id, sid, node)
+
+                # move wems to folder for nodes that can contain sources
+                if self._move:
+                    node_name = self._object_sources.get(name)
+                    if node_name:
+                        nsources = node.finds(name=node_name)
+                        for nsource in nsources:
+                            self._move_wem(nsource)
         return
 
     def _write_main(self):

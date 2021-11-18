@@ -60,7 +60,7 @@ class _NodeHelper(object):
                 return
 
         #logging.debug("next: %s %s > %s", self.node.get_name(), self.sid, tid)
-        bnode.make_txtp(txtp)
+        bnode._make_txtp(txtp)
         return
 
     #--------------------------------------------------------------------------
@@ -433,7 +433,7 @@ class _NodeHelper(object):
 
     #--------------------------------------------------------------------------
 
-    def make_txtp(self, txtp):
+    def _make_txtp(self, txtp):
         try:
             txtp.info.next(self.node, self.fields, nsid=self.nsid)
             self._process_txtp(txtp)
@@ -455,7 +455,7 @@ class _CAkNone(_NodeHelper):
         #ignore
         return
 
-    def make_txtp(self, txtp):
+    def _make_txtp(self, txtp):
         #don't print node info in txtp
         return
 
@@ -486,7 +486,7 @@ class _CAkState(_NodeHelper):
         #save config (used to check silences)
         return
 
-    def make_txtp(self, txtp):
+    def _make_txtp(self, txtp):
         #don't print node info in txtp
         return
 
@@ -504,7 +504,7 @@ class _CAkFxCustom(_NodeHelper):
         self.fx = self._parse_sfx(node, plugin_id)
         return
 
-    def make_txtp(self, txtp):
+    def _make_txtp(self, txtp):
         #don't print node info in txtp
         return
 

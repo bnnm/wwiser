@@ -1,5 +1,5 @@
 import logging, os
-from . import wgenerator_filter, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache 
+from . import wgenerator_filter, wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache, wgenerator_mediaindex
 
 
 # Tries to write .txtp from a list of HIRC objects. Each object parser adds some part to final
@@ -22,6 +22,7 @@ class Generator(object):
 
         self._rebuilder = wrebuilder.Rebuilder()
         self._txtpcache = wtxtp_cache.TxtpCache()
+        self._mediaindex = wgenerator_mediaindex.MediaIndex(banks)
 
         # options
         self._generate_unused = False       # generate unused after regular txtp
@@ -164,6 +165,7 @@ class Generator(object):
     def _report(self):
         reb = self._rebuilder
         txc = self._txtpcache
+        mdi = self._mediaindex
 
         if self._filter.active and self._generate_unused and not self._filter.rest:
             logging.info("generator: NOTICE! can't generate unused when partially filtering nodes")
@@ -172,8 +174,8 @@ class Generator(object):
             logging.info("generator: NOTICE! possibly unused audio? (find+load more banks?)")
             logging.info("*** set 'generate unused' option to include, may not create anything")
 
-        if reb.get_missing_media():
-            missing = len(reb.get_missing_media())
+        if mdi.get_missing_media():
+            missing = len(mdi.get_missing_media())
             logging.info("generator: WARNING! missing %s memory audio (load more banks?)", missing)
 
         if reb.get_missing_nodes_loaded():
@@ -232,6 +234,11 @@ class Generator(object):
 
 
     def _setup(self):
+        self._setup_nodes()
+        self._mediaindex.load()
+        return
+
+    def _setup_nodes(self):
         for bank in self._banks:
             root = bank.get_root()
             bank_id = root.get_id()
@@ -259,20 +266,7 @@ class Generator(object):
                             nsources = node.finds(name=node_name)
                             for nsource in nsources:
                                 self._move_wem(nsource)
-
-            # preload indexes for internal wems for bigger banks
-            nindex = bank.find(name='MediaIndex')
-            if nindex:
-                nsids = nindex.finds(type='sid')
-                for nsid in nsids:
-                    sid = nsid.value()
-                    attrs = nsid.get_parent().get_attrs()
-                    index = attrs.get('index')
-                    if index is not None:
-                        self._rebuilder.add_media_index(bankname, sid, index)
-
         return
-
 
     def _write_main(self):
         # save nodes in bank order rather than all together (allows fine tuning bank load order)
@@ -408,7 +402,7 @@ class Generator(object):
 
         try:
             # base .txtp
-            txtp = wtxtp.Txtp(self._txtpcache, self._rebuilder, params=self._default_params)
+            txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=self._default_params)
             self._rebuilder.begin_txtp(txtp, node)
 
             ppaths = txtp.ppaths  # gamesync "paths" found during process
@@ -421,7 +415,7 @@ class Generator(object):
                 combos = ppaths.combos()
                 for combo in combos:
                     #logging.info("generator: combo %s", combo.elems)
-                    txtp = wtxtp.Txtp(self._txtpcache, self._rebuilder, params=combo)
+                    txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=combo)
                     self._rebuilder.begin_txtp(txtp, node)
                     txtp.set_callers(callers)
                     txtp.write()
@@ -430,7 +424,7 @@ class Generator(object):
             if ppaths.stingers:
                 params = self._default_params #?
                 for stinger in ppaths.stingers:
-                    txtp = wtxtp.Txtp(self._txtpcache, self._rebuilder, params=params)
+                    txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=params)
                     self._rebuilder.begin_txtp_stinger(txtp, stinger)
                     txtp.set_callers(None)
                     txtp.write()

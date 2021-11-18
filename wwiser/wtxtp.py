@@ -43,12 +43,12 @@ from . import wgamesync, wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer, wve
 
 class Txtp(object):
 
-    def __init__(self, txtpcache, rebuilder, params=None):
+    def __init__(self, txtpcache, mediaindex, params=None):
         self.params = params  #current gamesync "path" config (default/empty means must find paths)
         self.ppaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
         self.spaths = wgamesync_silences.SilencePaths() #states used to mute tracks
         self.txtpcache = txtpcache
-        self.rebuilder = rebuilder
+        self.mediaindex = mediaindex
         self.info = wtxtp_info.TxtpInfo(txtpcache)  # node info to add in output as comment
 
         # config during printing

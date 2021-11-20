@@ -203,14 +203,14 @@ class Generator(object):
             logging.info("generator: WARNING! no .txtp were created (find+load banks with events?)")
 
         if reb.get_transition_objects():
-            logging.info("generator: WARNING! transition object in playlists (report)")
+            logging.info("generator: REPORT! transition object in playlists")
         if reb.get_unknown_props():
-            logging.info("generator: WARNING! unknown properties in some objects (report)")
+            logging.info("generator: REPORT! unknown properties in some objects")
             for prop in reb.get_unknown_props():
                 logging.info("- %s" % (prop))
 
         if txc.trims:
-            logging.info("generator: WARNING! trimmed %s long filenames (use shorter dirs?)", txc.trims)
+            logging.info("generator: NOTICE! trimmed %s long filenames (use shorter dirs?)", txc.trims)
             logging.info("*** set 'tags.m3u' option for shorter names + tag file with full names")
 
         if txc.multitrack and not self._default_params:
@@ -305,7 +305,7 @@ class Generator(object):
             generate = False
 
             if self._filter.active:
-                generate = self._filter.generate_outer(node, nsid, classname=classname)
+                generate = self._filter.allow_outer(node, nsid, classname=classname)
 
                 if generate:
                     item = node
@@ -338,7 +338,11 @@ class Generator(object):
         # prepare nodes in final order
         nodes = []
         nodes += nodes_filtered
-        nodes_named.sort() # usually gives better results with dupes
+
+        # usually gives better results with dupes
+        # older python(?) may choke when trying to sort name+nodes, set custom handler to force hashname only
+        nodes_named.sort(key=lambda x: x[0] )
+
         for __, node in nodes_named:
             nodes.append(node)
         for __, node in nodes_unnamed:
@@ -406,19 +410,16 @@ class Generator(object):
                     self._rebuilder.begin_txtp_stinger(txtp, stinger)
                     txtp.write()
 
+            # transitions found during process
             tr_nodes = transitions.get_nodes()
             if tr_nodes:
-                self._txtpcache.transition_mark = True
-
                 # handle transitions of current files (so filtered nodes don't appear)
+                self._txtpcache.transition_mark = True
                 for ncaller, transition in tr_nodes:
                     txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=self._default_params)
                     self._rebuilder.begin_txtp(txtp, transition)
                     txtp.set_ncaller(ncaller)
                     txtp.write()
-
-                #for ncaller, tnode in tr_nodes:
-                #    self._make_txtp(tnode, ncaller=ncaller)
                 self._txtpcache.transition_mark = False
 
         except Exception: #as e

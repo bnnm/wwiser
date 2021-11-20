@@ -55,7 +55,7 @@ class _NodeHelper(object):
 
         # filter HIRC nodes (for example drop unwanted calls to layered ActionPlay)
         if self.builder._filter and self.builder._filter.active:
-            generate = self.builder._filter.generate_inner(bnode.node, bnode.nsid)
+            generate = self.builder._filter.allow_inner(bnode.node, bnode.nsid)
             if not generate:
                 return
 

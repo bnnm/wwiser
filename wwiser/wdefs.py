@@ -52,12 +52,12 @@ bank_versions = [
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
-    136, #0x88 Wwise 2021.1-B?  [Total War Saga: Troy (PC)-update]
+    136, #0x88 Wwise 2019.2-B?  [Total War Saga: Troy (PC)-update]
     140, #0x8c Wwise 2021.1     (none known)
 ]
 
 # Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions?
-# (has special custom fields that always exist in those only).
+# (all have special custom fields, that don't exist for regular versions).
 bank_custom_versions = {
     0x8000007A: 122,  #same as 120
     0x80000081: 129,  #same as 129

@@ -312,7 +312,8 @@ class TxtpFields(object):
                 key = attrs.get('name')
                 val = attrs.get('valuefmt', attrs.get('hashname'))
                 if not val:
-                    val = attrs.get('value')
+                    val = str(attrs.get('value'))
+
 
                 val += " {%s, %s}" % minmax
 

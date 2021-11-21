@@ -263,10 +263,12 @@ class TxtpSimplifier(object):
         new_sound = copy.copy(node.sound)
         new_transition = copy.copy(node.transition)
 
-        #new_node = copy.copy(node)
+        #new_node = copy.copy(node) #don't clone to avoid props? (recheck)
         new_node = wtxtp_tree.TxtpNode(new_parent, sound=new_sound, config=new_config)
         new_node.type = node.type
         new_node.transition = new_transition
+        # volumes can be adjusted via RTPCs after constructor
+        new_node.volume = node.volume
 
         for envelope in node.envelopes:
             new_envelope = copy.copy(envelope)

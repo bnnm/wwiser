@@ -44,8 +44,9 @@ class TxtpCache(object):
         self.gamevars = wgamesync_gamevars.GamevarsParams()
         self.externals = wgenerator_externals.Externals()
 
+        self.no_txtp = False
+
         self.x_noloops = False
-        self.x_notxtp = False
         self.x_nameid = False
 
         # process info

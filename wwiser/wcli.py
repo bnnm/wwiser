@@ -60,6 +60,8 @@ class Cli(object):
         # txtp options related to filtering and altering txtp
         parser.add_argument('-gf', '--txtp-filter',         help="Set TXTP targets name/id/classname/bnk (default: auto)", nargs='+')
         parser.add_argument('-gfr','--txtp-filter-rest',    help="Generate rest of files after filtering\n(allows prioritizing names in filter then creating\nrest, altering dupe order)", action='store_true')
+        parser.add_argument('-gfn','--txtp-filter-normal',  help="Skip normal files\n(allows writting unused only)", action='store_true')
+        parser.add_argument('-gfu','--txtp-filter-unused',  help="Skip unused files\n(for testing)", action='store_true')
         parser.add_argument('-gp', '--txtp-params',         help="Set TXTP parameters (default: auto)", nargs='*')
         parser.add_argument('-gg', '--txtp-gamevars',       help="Set TXTP game variables like RTPCs (default: auto)", nargs='*')
         parser.add_argument('-gd', '--txtp-dupes',          help="Generate TXTP duplicates\n(may create a lot of .txtp)", action='store_true')
@@ -86,7 +88,6 @@ class Cli(object):
         parser.add_argument('-ta', '--tags-add',            help="Add to existing !tags.m3u instead of overwritting", action='store_true')
 
         parser.add_argument('-gxnl','--txtp-x-noloops',     help="Extra: don't loop sounds", action='store_true')
-        parser.add_argument('-gxnt','--txtp-x-notxtp',      help="Extra: don't save .txtp", action='store_true')
         parser.add_argument('-gxni','--txtp-x-nameid',      help="Extra: add ID to generic names", action='store_true')
         parser.add_argument('-x','--tests',                 help="Extra: debug", action='store_true')
 
@@ -125,8 +126,8 @@ class Cli(object):
                 if line.startswith('#'):
                     continue
 
-                #parts = line.split(" ") #don't split between quotes: "bla blah"
-                parts = shlex.split(line)
+                #parts = line.split(" ") #splits between quotes: "bla blah"
+                parts = shlex.split(line) #doesn't split between quotes
                 for part in parts:
                     part = part.strip()
                     if part:
@@ -256,6 +257,8 @@ class Cli(object):
             generator.set_generate_unused(args.txtp_unused)
             generator.set_filter(args.txtp_filter)
             generator.set_filter_rest(args.txtp_filter_rest)
+            generator.set_filter_normal(args.txtp_filter_normal)
+            generator.set_filter_unused(args.txtp_filter_unused)
             generator.set_params(args.txtp_params)
             generator.set_gamevars(args.txtp_gamevars)
             generator.set_dupes(args.txtp_dupes)
@@ -283,7 +286,6 @@ class Cli(object):
             generator.set_tags(tags)
 
             generator.set_x_noloops(args.txtp_x_noloops)
-            generator.set_x_notxtp(args.txtp_x_notxtp)
             generator.set_x_nameid(args.txtp_x_nameid)
 
             generator.generate()

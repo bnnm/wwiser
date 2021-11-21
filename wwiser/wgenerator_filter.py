@@ -58,8 +58,10 @@ class GeneratorFilterItem(object):
             self.use_index = True
             # ignore errors
             parts = value.split('-')
-            self.value = parts[0] + '.bnk'
-            self.value_index = int(parts[1])
+            bankname = parts[0]
+            index = parts[1].split('~')[0] #remove possible extra parts
+            self.value = bankname + '.bnk'
+            self.value_index = int(index)
         else:
             # event names
             pass
@@ -97,10 +99,9 @@ class GeneratorFilterItem(object):
 class GeneratorFilterConfig(object):
     def __init__(self, mode, filters):
         self.mode = mode
-        self.allow_all = False
+        self.allow_all_objects = False
         self.default_allow = False
         self.filters = []
-        self.valid_hircs = []
         self._load(filters)
 
     def _load(self, filters):
@@ -127,16 +128,16 @@ class GeneratorFilterConfig(object):
         else:
             self.default_allow = True
 
-        # for outer nodes, by default only Event types are generated (allow_all is false).
-        # for inner nodes, by default all objects are generated (allow_all is true).
-        if self.mode in [_MODE_INNER, _MODE_UNUSED]:
-            self.allow_all = True
-        else:
-            self.allow_all = False
+        # unused + filter should not generate anything unless some filter is set (does weird stuff otherwise)
+        if self.mode in [_MODE_UNUSED] and not self.filters:
+            self.default_allow = False
 
-        # filtering by class or id means generating all
+        # for outer nodes, by default only Event types are generated (allow_all_objects is false).
+        # for inner/unused nodes, by default all objects are generated (allow_all_objects is true).
+        self.allow_all_objects = self.mode in [_MODE_INNER, _MODE_UNUSED]
         if has_all:
-            self.allow_all = True
+            # filtering by class or id means generating all
+            self.allow_all_objects = True
 
         return
 
@@ -145,9 +146,9 @@ class GeneratorFilter(object):
         self.active = False
         self._default_hircs = []
         self._cfgs = {}
-        self.rest = False # generate rest after filtering (rather than just filtered nodes)
-        #self.transitions = False # filter transition objects
-        #self.unused = False # filter transition objects
+        self.generate_rest = False # flag only: generate rest after filtering (rather than just filtered nodes)
+        self.skip_normal = False # flag only: generate but don't write normal files
+        self.skip_unused = False # flag only: generate but don't write unused files
 
     def set_default_hircs(self, items):
         self._default_hircs = items
@@ -187,7 +188,7 @@ class GeneratorFilter(object):
 
         cfg = self._cfgs[mode]
 
-        if not cfg.allow_all and classname not in self._default_hircs:
+        if not cfg.allow_all_objects and classname not in self._default_hircs:
             return False
 
         allow = cfg.default_allow
@@ -201,9 +202,19 @@ class GeneratorFilter(object):
     def allow_outer(self, node, nsid=None, hashname=None, classname=None, bankname=None, index=None):
         return self._allow(_MODE_OUTER, node, nsid, hashname, classname, bankname, index)
 
-    # Checks if an inner object should be generated, depending on inner filters.
-    # The difference between inner/outer being, if filter is 123456789 (outer) it should generate
-    # only that ID *and* generate all sub-nodes inside (inner). While if filter >123456789 it
-    # should generate any ID *and* generate only sub-nodes with that ID.
+    # Same, the difference between inner/outer being, if filter is 123456789 (outer) it should generate
+    # only that ID *and* generate any sub-nodes inside (inner). While if filter @/123456789 it
+    # should exclude sub-nodes with that ID.
     def allow_inner(self, node, nsid=None, hashname=None, classname=None, bankname=None, index=None):
         return self._allow(_MODE_INNER, node, nsid, hashname, classname, bankname, index)
+
+    # Same for unused. When filtering regular nodes, any others become "unused", so they are excluded by
+    # default. You can include them back here.
+    def allow_unused(self, node, nsid=None, hashname=None, classname=None, bankname=None, index=None):
+        return self._allow(_MODE_UNUSED, node, nsid, hashname, classname, bankname, index)
+
+    def _has_mode(self, mode):
+        return bool(self._cfgs[mode].filters)
+
+    def has_unused(self):
+        return self._has_mode(_MODE_UNUSED)

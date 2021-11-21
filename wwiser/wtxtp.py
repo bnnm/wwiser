@@ -187,7 +187,7 @@ class Txtp(object):
         outname = self._namer.get_outname(name, outdir)
         info = self._get_info(name, longname, printer)
 
-        if self.txtpcache.x_notxtp:
+        if self.txtpcache.no_txtp:
             return
 
         with open(outname, 'w', encoding='utf-8') as outfile:

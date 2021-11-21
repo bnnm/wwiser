@@ -53,7 +53,13 @@ class Generator(object):
         self._filter.add(filter)
 
     def set_filter_rest(self, flag):
-        self._filter.rest = flag
+        self._filter.generate_rest = flag
+
+    def set_filter_normal(self, flag):
+        self._filter.skip_normal = flag
+
+    def set_filter_unused(self, flag):
+        self._filter.skip_unused = flag
 
     def set_bank_order(self, flag):
         self._bank_order = flag
@@ -141,9 +147,6 @@ class Generator(object):
     def set_x_noloops(self, flag):
         self._txtpcache.x_noloops = flag
 
-    def set_x_notxtp(self, flag):
-        self._txtpcache.x_notxtp = flag
-
     def set_x_nameid(self, flag):
         self._txtpcache.x_nameid = flag
 
@@ -155,7 +158,7 @@ class Generator(object):
 
             self._setup()
             self._read_externals()
-            self._write_main()
+            self._write_normal()
             self._write_unused()
             self._report()
 
@@ -169,9 +172,6 @@ class Generator(object):
         reb = self._rebuilder
         txc = self._txtpcache
         mdi = self._mediaindex
-
-        if self._filter.active and self._generate_unused and not self._filter.rest:
-            logging.info("generator: NOTICE! can't generate unused when partially filtering nodes")
 
         if reb.has_unused() and not self._generate_unused:
             logging.info("generator: NOTICE! possibly unused audio? (find+load more banks?)")
@@ -275,13 +275,17 @@ class Generator(object):
         self._move_wems(mover_nodes)
         return
 
-    def _write_main(self):
+    def _write_normal(self):
         # save nodes in bank order rather than all together (allows fine tuning bank load order)
 
         logging.info("generator: processing nodes")
 
+        self._txtpcache.no_txtp = self._filter.skip_normal
+
         for bank in self._banks:
             self._write_bank(bank)
+
+        self._txtpcache.no_txtp = False
         return
 
     def _write_bank(self, bank):
@@ -289,7 +293,7 @@ class Generator(object):
         if not items:
             return
 
-        nodes_filtered = []
+        nodes_allow = []
         nodes_named = []
         nodes_unnamed = []
 
@@ -302,28 +306,28 @@ class Generator(object):
                 continue
             #sid = nsid.value()
 
-            generate = False
-
+            # how nodes are accepted:
+            # - filter not active: accept certain objects, and put them into named/unnamed lists (affects dupes)
+            # - filter is active: accept allowed objects only, and put non-accepted into named/unnamed if "rest" flag is set (lower priority)
+            allow = False
             if self._filter.active:
-                generate = self._filter.allow_outer(node, nsid, classname=classname)
-
-                if generate:
-                    item = node
-                    nodes_filtered.append(item)
+                allow = self._filter.allow_outer(node, nsid, classname=classname)
+                if allow:
+                    nodes_allow.append(node)
                     continue
+                elif not self._filter.generate_rest:
+                    continue # ignore non-"rest" nodes
                 else:
-                    # ignore node if not in filter and not marked to include rest after filter
-                    # (with flag would register valid non-filtered nodes below, written after filtered nodes)
-                    if not self._filter.rest:
-                        continue
+                    pass #rest nodes are clasified below
 
-            if not generate and classname in self._default_hircs:
-                generate = True
+            # include non-filtered nodes, or filtered but in rest
+            if not allow and classname in self._default_hircs:
+                allow = True
 
-            if not generate:
+            if not allow:
                 continue
 
-            # When making txtp, put named nodes in a list to generate first, then unnamed nodes.
+            # put named nodes in a list to generate first, then unnamed nodes.
             # Useful when multiple events do the same thing, but we only have wwnames for one
             # (others may be leftovers). This way named ones are generated and others are ignored
             # as dupes. Can be disabled to treat all as unnamed = in bank order.
@@ -337,7 +341,7 @@ class Generator(object):
 
         # prepare nodes in final order
         nodes = []
-        nodes += nodes_filtered
+        nodes += nodes_allow
 
         # usually gives better results with dupes
         # older python(?) may choke when trying to sort name+nodes, set custom handler to force hashname only
@@ -347,11 +351,14 @@ class Generator(object):
             nodes.append(node)
         for __, node in nodes_unnamed:
             nodes.append(node)
-        logging.debug("generator: writting bank nodes (names: %s, unnamed: %s, filtered: %s)", len(nodes_named), len(nodes_unnamed), len(nodes_filtered))
+
+        logging.debug("generator: writting bank nodes (names: %s, unnamed: %s, filtered: %s)", len(nodes_named), len(nodes_unnamed), len(nodes_allow))
 
         # make txtp for nodes
         for node in nodes:
             self._make_txtp(node)
+
+        return
 
     def _write_unused(self):
         if not self._generate_unused:
@@ -361,21 +368,34 @@ class Generator(object):
 
         # when filtering nodes without 'rest' (i.e. only generating a few nodes) can't generate unused,
         # as every non-filtered node would be considered so (generate first then add to filter list?)
-        if self._filter.active and not self._filter.rest:
-            return
+        #if self._filter.active and not self._filter.generate_rest:
+        #    return
 
         logging.info("generator: processing unused")
+        if self._filter.active and not self._filter.generate_rest and not self._filter.has_unused():
+            logging.info("generator: NOTICE! when using 'normal' filters must add 'unused' filters")
 
+        self._txtpcache.no_txtp = self._filter.skip_unused
         self._txtpcache.unused_mark = True
-        #self._txtpcache.set_making_unused(True) #maybe set '(bank)-unused-(name) filename?
 
         for name in self._rebuilder.get_unused_names():
             nodes = self._rebuilder.get_unused_list(name)
 
             for node in nodes:
+
+                allow = True
+                if self._filter.active:
+                    allow = self._filter.allow_unused(node)
+                    #if self._filter.generate_rest: #?
+                    #    allow = True
+
+                if not allow:
+                    continue
+
                 self._make_txtp(node)
 
         self._txtpcache.unused_mark = False
+        self._txtpcache.no_txtp = False
         return
 
     def _make_txtp(self, node):

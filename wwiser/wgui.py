@@ -117,12 +117,6 @@ class Gui(object):
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
         row = 0
 
-        box = self._box('txtp_filter', frame, "Filter:", "List of allowed HIRCs ID/name/classnames", width=75)
-        box[0].grid(row=row, column=0, sticky="E")
-        box[1].grid(row=row, column=1, sticky="W")
-        box[2].grid(row=row, column=2, sticky="W")
-        row += 1
-
         box = self._box('txtp_params', frame, "Params:", "List of '(state=value) [switch=value] ...' to force (instead of all)", width=75)
         box[0].grid(row=row, column=0, sticky="E")
         box[1].grid(row=row, column=1, sticky="W")
@@ -141,8 +135,25 @@ class Gui(object):
         box[2].grid(row=row, column=2, sticky="W")
         row += 1
 
+        box = self._box('txtp_filter', frame, "Filter:", "List of allowed HIRCs ID/name/classnames/etc (use - to exclude)", width=75)
+        box[0].grid(row=row, column=0, sticky="E")
+        box[1].grid(row=row, column=1, sticky="W")
+        box[2].grid(row=row, column=2, sticky="W")
+        row += 1
+
+        frame = ttk.Frame(root)
+        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
+        row = 0
+
         chk = self._chk('txtp_filter_rest', frame, "Generate rest of files after filtering (use to prioritize some names over other dupes)")
-        chk.grid(row=row, column=1, columnspan=3, sticky="W")
+        chk.grid(row=row, column=1, columnspan=1, sticky="W")
+
+        chk = self._chk('txtp_filter_normal', frame, "Skip normal files")
+        chk.grid(row=row, column=2, columnspan=1, sticky="W")
+
+        chk = self._chk('txtp_filter_unused', frame, "Skip unused files")
+        chk.grid(row=row, column=3, columnspan=1, sticky="W")
+
         row += 1
 
         chk = self._chk('txtp_bank_order', frame, "Generate TXTP in bank order instead of names first (alters which txtp are considered dupes)")
@@ -431,6 +442,8 @@ class Gui(object):
             generator = wgenerator.Generator(banks)
             generator.set_filter( self._get_list('txtp_filter') )
             generator.set_filter_rest( self._get_item('txtp_filter_rest') )
+            generator.set_filter_normal( self._get_item('txtp_filter_normal') )
+            generator.set_filter_unused( self._get_item('txtp_filter_unused') )
             generator.set_params( self._get_list('txtp_params') )
             generator.set_bank_order( self._get_item('txtp_bank_order') )
             generator.set_gamevars( self._get_list('txtp_gamevars') )

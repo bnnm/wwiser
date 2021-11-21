@@ -266,9 +266,11 @@ Sometimes unused `.wem` (not referenced by any bank) exist too, so keep an eye t
 ### Dupes and name order 
 Some Wwise events and variable combos end up generating the same results, like paths point to the same thing, or simply repeated commands like `play_bgm01` and `play_bgm01_ex` that end up being the same song. *wwiser* automatically ignores duplicates.
 
-Named events are prioritized, so `play_bgm01` (event with known name) goes before `bgm-0010-event` (unknown). In rare cases you may get worse/undesirable names, like `gallery_mode_bgm01` before `play_bgm01` (dupe). You can alter this order by setting filters (explained later). `.bnk` loading order also matters (try loading `bgm.bnk` and suck names first).
+Named events are prioritized, so `play_bgm01` (event with known name) goes before `bgm-0010-event` (unknown). In rare cases you may get worse/undesirable names, like `gallery_mode_bgm01` before `play_bgm01` (dupe). You can alter this order by setting filters (explained later). `.bnk` loading order also matters (try loading `bgm.bnk` and such first).
 
 There is an option to allow dupes, created marked with `{d}`. Mainly useful for testing and when checking name order (use the "log" setting to check dupe relations too). This option may end up creating *tons* more files though.
+
+Note that some events that aren't exactly the same but *very* similar (for example, sound starts with some delay) are considered dupes, but some cases do sound 100% the same yet aren't, as they are too complex to detect (see *wwiser-utils* for clean-up scripts).
 
 
 ### Wem folders and extensions
@@ -313,7 +315,7 @@ In some cases parts of the song silence/change volume based on a in-game value. 
 
 Inside the `.txtp` crossfade parts are marked with `##fade` near `.wem`, and RTPC info is down in the comment tree. You can also silence those by put `?` in front of `.wem`, or `#v 0` before `##fade`.
 
-In rare cases `{s}` means the sound is silenced via states, which should be handled automatically (makes one per state).
+In rare cases `{s}` means the sound is silenced via states, which should be handled automatically (makes one per state). Also rarely, audio may be silenced by default (volume is -96dB) but since games can control volumes manually, `txtp` is also marked with `{s}` yet play normally without silencing.
 
 
 ### Multi-loops mark {m}
@@ -370,26 +372,46 @@ By default *wwise* makes all possible combinations of events and variables, but 
 
 
 ### Passing filters
-By default *wwiser* generates all `.txtp` that are considered "usable". This mainly means events (`CAkEvent`), prioritizing those with known names.
+By default *wwiser* generates all `.txtp` that are considered "usable". This mainly means events, prioritizing those with known names. You can use a list of "filters" to alter this, passing multiple `(filter) (filter) ...` to generate only certain *Wwise objects*.
 
-You can use add a list of "filters" to alter this, passing multiple `(filter) (filter) ...` to generate only those. Add a `-` or `/` before to generate defaults *excluding* those. Wildcards are allowed too. Examples:
+Filter types:
+- `(number)`: by object ID (event, or any kind of usable part)
+- `(classname)`: by object class (any kind of usable part)
+- `(name)`: by object event name (wildcards are allowed)
+- `(bankname).bnk`: by bank name
+- `(bankname)-(index)`: by object index/position in bank
+
+Filter prefixes:
+- (no prefix): affect "outer" objects
+- `@`: affect "inner" nodes (part of an "outer" object")
+- `~`: affect "unused" nodes (any objects not referenced)
+- `/` or `-`: exclude (`/` is needed for the command line)
+
+Examples:
 - `123456`: make only object with that ID (could be an ID of an *event*, or "music segment" and similar objects)
 - `CAkMusicSegment`: .txtp only from "music segment" objects
 - `play_bgm_001`: only event .txtp that are named like that
 - `music.bnk`: only event .txtp in said bank
 - `music-1234`: create object number 1234 from `music` bank
 - `play_bgm_*`: only event .txtp that start with `play_bgm_`
-- `-play_sfx_*`: all event .txtp *except* those that play sfx
 - `/play_sfx_*`: same, alt since command line gets confused by `-`
 - `@/12345`: exclude sub-node used inside generated objects (filters txtp parts)
 - `@12345`: not working (in effect filters everything)
+- `~12345`: include unused node (when filtering nodes)
+- `~/12345`: exclude unused node (use only when using *Skip normal*, otherwise gets odd results)
 
 Some tricks you can do with filters:
-- testing: if you have a big `.txtp` with lots of groups, you can pass a single ID and output just the part you want.
-- ignore sfx: maybe you have `common.bnk` with lots of sfx but a handful of jingles. Pass `jingle_*` (if named) or an event ID list to ignore sfx events, or pass `/play_sfx_*` to ignore SFX if you have names.
-- load many banks: sometimes games separate and load `.bnk` in non-obvious ways. You could just load everything then filter by `music.bnk` to get music but ensure all needed banks are there (ignoring sfx or voice banks).
-- Alter `.txtp` order: some games have several events that do the same thing. For example `jukebox01` then `music01_fields` in that order may be clones. By default `.txtp` order is as found, meaning you get `jukebox01` and `music01_fields` is ignored (dupe). But the later name is more descriptive and would be preferable. To fix this, you can filter by `music*` **and** pass the option to *"generate rest of files after filtering"*. This reorders so `music01_fields` goes first, then `jukebox01` (now a dupe = ignored).
+- Testing: if you have a big `.txtp` with lots of groups, you can pass a single ID and output just the part you want.
+- Ignore sfx: maybe you have `common.bnk` with lots of sfx but a handful of jingles. Pass `jingle_*` (if named) or an event ID list to ignore sfx events, or pass `/play_sfx_*` to ignore SFX if you have names.
+- Load many banks: sometimes games separate and load `.bnk` in non-obvious ways. You could just load everything then filter by `music.bnk` to get music but ensure all needed banks are there (ignoring sfx or voice banks).
 - Skip layered sounds, like SFX noise pasted on top of music, using sub-node filters
+- Alter `.txtp` order: set *generate rest* and apply filters to force filtered names to generate first (alters detected dupes)
+
+*Generate rest* option is useful to alter name order. Some games have several events that do the same thing, for example `jukebox01` then `music01_fields` (dupe). The later, being a dupe, would be ignored but the name is more descriptive and preferable. To fix this, you can filter by `music*` *and* pass the option to *"generate rest of files after filtering"*. This reorders so `music01_fields` goes first, then `jukebox01` (now a dupe = ignored).
+
+When using the "generate unused" option and filtering nodes, by default no "unused" nodes are created for technical reasons (everything that didn't make it into a `.txtp` is considered unused, including anything filtered). You can manually include unused objects by including "unused" filters with a `~` prefixes.
+
+You can set *Skip normal* to ignore all regular (non-unused) `.txtp`. It's a bit special in that everything is generated but simply not written, so totals reflect this. This allows to write unused only, and also apply "exclude unused" filters.
 
 
 ### Passing renames
@@ -410,7 +432,7 @@ You would get:
 - `play_bgm (MISSION=M01)`
 - `play_bgm (PLAYER=PLAYER_DEAD)`
 
-While you can mutate anything to anything, I recommend shortening but respecting the original naming style (mainly removing superflous stems and useless states, avoiding making up text). If *really* want to make up names, like changing `123456789` to `BGM01` (*not recommended*), try using some identifiable mark like `#` (`#BGM01`), as original Wwise names can't use `#`.
+While you can mutate anything to anything, I recommend shortening but respecting the original naming style (mainly removing superflous stems and useless states, avoiding making up text). If *really* want to make up names, like changing `123456789` to `BGM01` (*not recommended*), try adding some identifiable mark like `#` (`#BGM01`), as original Wwise names can't use `#`.
 
 
 ## KNOWN ISSUES

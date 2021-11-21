@@ -27,6 +27,8 @@ class GeneratorFilterItem(object):
 
         value = value.lower()
 
+        value = value.split('#')[0] #remove comments
+
         if value.startswith('~'):
             self.mode = _MODE_UNUSED
             value = value[1:]

@@ -148,6 +148,12 @@ class Cli(object):
         self._parse_init()
 
         args = self._parser.parse_args()
+
+        # detect special filename to simplify config
+        if len(args.files) == 1 and args.files[0] in ['!wwconfig.txt', 'wwconfig.txt']:
+           args.config = args.files[0]
+           args.files = []
+
         if args.config:
             self._handle_config(args)
         else:

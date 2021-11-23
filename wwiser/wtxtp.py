@@ -177,6 +177,9 @@ class Txtp(object):
         # get final name, that may be changed/shorter depending on config
         longname = name + '.txtp'  #save full name in case it's cut to print in info
         name = self._namer.clean_name(name)
+        if self.txtpcache.renamer.skip:
+            return
+
         logging.debug("txtp: saving '%s' (%s)", name, texthash)
 
         outdir = self.txtpcache.outdir

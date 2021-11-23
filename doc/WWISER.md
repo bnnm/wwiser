@@ -434,6 +434,8 @@ You would get:
 
 While you can mutate anything to anything, I recommend shortening but respecting the original naming style (mainly removing superflous stems and useless states, avoiding making up text). If *really* want to make up names, like changing `123456789` to `BGM01` (*not recommended*), try adding some identifiable mark like `#` (`#BGM01`), as original Wwise names can't use `#`.
 
+As a "quick delete" hack, if a `text-out` is `<skip>` (such as `ST_SILENT=:<skip>`), any `.txtp` matching that rename will not be written out.
+
 
 ## KNOWN ISSUES
 Bank format may change a bit between major Wwise SDK versions, adding new features or moving fields around. *wwiser* should handle almost all but there are bugs left:

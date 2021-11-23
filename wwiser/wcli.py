@@ -139,6 +139,11 @@ class Cli(object):
             if len(config) == 0:
                 continue
             args = self._parser.parse_args(config)
+            try:
+                args.files.remove(config_name)
+            except ValueError:
+                pass
+
             self._run(args)
 
         return

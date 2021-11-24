@@ -25,6 +25,12 @@ def has_feedback(obj):
     root = obj.get_root()
     return root.has_feedback()
 
+# has custom fieldd (not in standard versions)
+def is_custom(obj):
+    root = obj.get_root()
+    return root.is_custom()
+
+
 #******************************************************************************
 # HIRC: COMMON
 
@@ -426,6 +432,8 @@ def CAkParameterNodeBase__SetAuxParams(obj, cls):
             obj.tid('auxID')
 
     if cls.version <= 134:
+        pass
+    elif cls.version <= 135 and is_custom(obj):
         pass
     else:
         obj.tid('reflectionsAuxBus')
@@ -1870,7 +1878,7 @@ def CAkLayer__SetInitialValues(obj, cls):
     obj.u32('ulNumAssoc')
     for elem in obj.list('assocs', 'CAssociatedChildData', obj.lastval):
         elem.tid('ulAssociatedChildID').fnv(wdefs.fnv_no)
-        if cls.version == 122 or cls.version == 129 or cls.version == 136: #custom field (not in others)
+        if is_custom(obj):
             elem.U8x('unknown_custom') #0/1?
             elem.U8x('unknown_custom') #0/1?
         elem.u32('ulCurveSize')
@@ -1980,7 +1988,7 @@ def CAkMusicSegment__SetInitialValues(obj, cls):
             #AK::ReadBankStringUtf8
             elem.stz('pMarkerName') #pszName
 
-    if cls.version == 122 or cls.version == 129: #custom field (not in others)
+    if is_custom(obj) and cls.version <= 129:
         obj.u32('ulNumUnknown_custom')
         for elem in obj.list('p_unknown_custom', 'Unknown_custom', obj.lastval):
             elem.u32('unknown') #some ID, may repeat
@@ -2373,7 +2381,7 @@ def CAkMusicTransAware__SetMusicTransNodeParams(obj, cls):
             else: #65=DmC/ZoE
                 elem2.U8x('bDestMatchSourceCueName')
 
-        if cls.version == 122 or cls.version == 129 or cls.version == 136: #custom field (not in others)
+        if is_custom(obj):
             elem.tid('ulStateGroupID?_custom').fnv(wdefs.fnv_var)
             elem.tid('ulStateID?_custom').fnv(wdefs.fnv_val)
 
@@ -3006,7 +3014,10 @@ def CAkBankMgr__ProcessBankHeader(obj):
         # no actual id so use timestamp below
         #root.set_id(root.get_bankname())
     else:
-        obj.u32('dwBankGeneratorVersion')
+        if is_custom(obj):
+            obj.U32('dwBankGeneratorVersion')
+        else:
+            obj.u32('dwBankGeneratorVersion')
         obj.sid('dwSoundBankID').fnv(wdefs.fnv_com)
         # needed to make txtp with mixed banks
         root.set_id(obj.lastval)
@@ -3483,6 +3494,7 @@ class Parser(object):
 
 
     def _check_header(self, r, bank):
+        root = bank.get_root()
         current = r.current()
 
         fourcc = r.fourcc()
@@ -3498,6 +3510,7 @@ class Parser(object):
 
         _size = r.u32()
 
+
         version = r.u32()
         if version == 0 or version == 1:
             _unknown = r.u32()
@@ -3506,8 +3519,8 @@ class Parser(object):
         # extrange variations
         if version in wdefs.bank_custom_versions:
             version = wdefs.bank_custom_versions[version]
+            root.set_custom(True)
 
-        root = bank.get_root()
         root.set_version(version)
         if not self._ignore_version and version not in wdefs.bank_versions:
             raise wmodel.VersionError("unsupported bank version %i" % (version), -1)

@@ -40,19 +40,20 @@ bank_versions = [
      70, #0x46 Wwise 2012.1?   *[Metal Gear Rising (PC/X360)-some banks]
      72, #0x48 Wwise 2012.2     [Metal Gear Rising (PC/X360)-most banks, Saints Row IV (PC), South Park: The Stick of Truth (PC)]
      88, #0x58 Wwise 2013.1/2   [Bayonetta 2 (WiiU), Devil's Third (WiiU)]
-     89, #0x59 Wwise 2013.2?   *[Destiny (PS4)]
+     89, #0x59 Wwise 2013.2-B? *[Destiny (PS4)]
     112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy, Plants vs Zombies 2 (Android)]
     113, #0x71 Wwise 2015.1     [Nier Automata (PC), Doom 2016 (PC), South Park: The Fractured But Whole (PC)]
     118, #0x76 Wwise 2016.1     [WipEout: Omega Collection (PS4), Coffence (PC), Mario + Rabbids Kingdom Battle (Switch)]
     120, #0x78 Wwise 2016.2     [Polyball (PC), Battle Chasers (PC)]
-    122, #0x7A Wwise 2017.1-B?  [Total War: Warhammer 2 (PC)-update]
+    122, #0x7A Wwise 2017.1-B? *[Total War: Warhammer 2 (PC)-update]
     125, #0x7D Wwise 2017.1     [Devil May Cry 5 (PC), Wolfenstein II The New Colossus (PC)]
     128, #0x80 Wwise 2017.2     [Spyro Reignited Trilogy (PC/PS4), Let's Go Pikachu (Switch), Magatsu Wahrheit (Android)]
-    129, #0x7A Wwise 2017.2-B?  [Total War: Three Kingdoms (PC)]
+    129, #0x7A Wwise 2017.2-B? *[Total War: Three Kingdoms (PC)]
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
+   #135, #0x87 Wwise 2019.1-B? *[Total War Saga: Troy (PC)-base]
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
-    136, #0x88 Wwise 2019.2-B?  [Total War Saga: Troy (PC)-update]
+    136, #0x88 Wwise 2019.2-B? *[Total War Saga: Troy (PC)-update]
     140, #0x8c Wwise 2021.1     (none known)
 ]
 
@@ -60,7 +61,8 @@ bank_versions = [
 # (all have special custom fields, that don't exist for regular versions).
 bank_custom_versions = {
     0x8000007A: 122,  #same as 120
-    0x80000081: 129,  #same as 129
+    0x80000081: 129,  #same as 128
+    0x80000087: 135,  #same as 134 (not like 135)
     0x80000088: 136,  #some diffs vs 135 and 140
 }
 

@@ -1248,6 +1248,7 @@ class _CAkMusicTrack(_NodeHelper):
             nswitches = node.find(name='SwitchParams')
             self.gtype = nswitches.find(name='eGroupType').value()
             self.ngname = nswitches.find(name='uGroupID')
+            ngvdefault = nswitches.find(name='uDefaultSwitch')
             self.gvalue_index = {}
 
             ngvalues = nswitches.finds(name='ulSwitchAssoc')
@@ -1255,6 +1256,15 @@ class _CAkMusicTrack(_NodeHelper):
                 gvalue = ngvalue.value()
                 index = ngvalue.get_parent().get_index()
                 self.gvalue_index[gvalue] = (index, ngvalue)
+
+            # NMH3 uses default to play no subtrack (base) + one ulSwitchAssoc to play subtrack (base+extra)
+            # maybe should also add "value none"
+            gvdefault = ngvdefault.value()
+            if gvdefault not in self.gvalue_index:
+                 self.gvalue_index[gvdefault] = (None, ngvdefault) #None to force "don't play any subtrack"
+
+            # maybe should include "any other state"?
+            #self.gvalue_index[None] = (None, 0) #None to force "don't play any subtrack"
 
         self.fields.props([ntype, ncount])
         return
@@ -1360,9 +1370,12 @@ class _CAkMusicTrack(_NodeHelper):
 
             if not txtp.params:
                 # find all possible gamesyncs paths (won't generate txtp)
-                for index, ngvalue in self.gvalue_index.values(): #order doesn't matter
-                    gvalue = ngvalue.value()
-                    txtp.ppaths.add(gtype, gname, ngvalue.value())
+                for __, ngvalue in self.gvalue_index.values(): #order doesn't matter
+                    if not ngvalue:
+                        gvalue = 0
+                    else:
+                        gvalue = ngvalue.value()
+                    txtp.ppaths.add(gtype, gname, gvalue)
                     #no subnodes
                     txtp.ppaths.done()
                 return
@@ -1378,8 +1391,12 @@ class _CAkMusicTrack(_NodeHelper):
             #play subtrack based on index (assumed to follow order as defined)
             txtp.info.gamesync(gtype, self.ngname, ngvalue)
 
+            if index is None:
+                return # no subtrack, after adding path to gamesync (NHM3)
+            subtrack = self.subtracks[index]
+
             txtp.group_single(self.config)
-            self._process_clips(self.subtracks[index], txtp)
+            self._process_clips(subtrack, txtp)
             txtp.group_done()
 
         else:
@@ -1390,7 +1407,7 @@ class _CAkMusicTrack(_NodeHelper):
     def _process_clips(self, subtrack, txtp):
         if not subtrack:
             #logging.info("generator: found empty subtrack %s" % (self.sid))
-            #todo improve
+            # rarely may happen with default = no track = silence (NMH3)
             sound = self._build_silence(self.node, True)
             config = wtxtp_util.NodeConfig()
             sconfig = wtxtp_util.NodeConfig()

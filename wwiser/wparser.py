@@ -237,7 +237,7 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
             .bit('bNonCachable', elem.lastval, 3) \
             .bit('bHasSource', elem.lastval, 7)
 
-    if cls.version <= 125:
+    if cls.version <= 126:
         has_param = (PluginType == 2 or PluginType == 5)
     else:
         has_param = (PluginType == 2)
@@ -467,7 +467,7 @@ def CAkStateAware__ReadStateChunk(obj, cls):
     for elem in obj.list('stateProps', 'AkStatePropertyInfo', obj.lastval):
         elem.var('PropertyId')
         elem.U8x('accumType').fmt(wdefs.AkRtpcAccum)
-        if   cls.version <= 125:
+        if   cls.version <= 126:
             pass
         else:
             elem.U8x('inDb') #bool
@@ -669,7 +669,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
     elif cls.version <= 122:
         CAkParameterNodeBase__ReadStateChunk(obj, cls)
 
-    elif cls.version <= 125:
+    elif cls.version <= 126:
         CAkStateAware__ReadStateChunk(obj, cls)
 
     else:
@@ -679,7 +679,7 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
     SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
 
 
-    if   cls.version <= 125:
+    if   cls.version <= 126:
         CAkParameterNodeBase__ReadFeedbackInfo(obj, cls)
     else:
         pass
@@ -769,7 +769,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             uBits3d = obj.lastval
 
             #todo bit meanings may vary more in older versions
-            if   cls.version <= 125:
+            if   cls.version <= 126:
                 fld.bit('eSpatializationMode', obj.lastval, 0, mask=1, fmt=wdefs.Ak3DSpatializationMode)
             else:
                 fld.bit('eSpatializationMode', obj.lastval, 0, mask=3, fmt=wdefs.Ak3DSpatializationMode)
@@ -807,7 +807,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             e3DPositionType = (uBits3d >> 0) & 3
             has_automation = (e3DPositionType != 1)
             has_dynamic = False
-        elif cls.version <= 125:
+        elif cls.version <= 126:
             e3DPositionType = (uBits3d >> 4) & 1
             has_automation = (e3DPositionType != 1)
             has_dynamic = False
@@ -927,7 +927,7 @@ def CAkState__SetInitialValues(obj, cls):
         else:
             pass
 
-    elif cls.version <= 125:
+    elif cls.version <= 126:
         AkPropBundle_float___SetInitialParams(obj, cls)
     else:
         AkPropBundle_float_unsigned_short___SetInitialParams(obj, cls)
@@ -1166,7 +1166,7 @@ def CAkActionPlay__SetActionParams(obj, cls):
 
     if   cls.version <= 26:
         pass
-    elif cls.version <= 125:
+    elif cls.version <= 126:
         obj.tid('fileID').fnv(wdefs.fnv_com) #same as bankID
     else:
         obj.tid('bankID').fnv(wdefs.fnv_com)
@@ -1764,7 +1764,7 @@ def CAkBus__SetInitialValues(obj, cls):
     obj = obj.node('BusInitialValues')
 
     obj.tid('OverrideBusId').fnv(wdefs.fnv_bus)
-    if cls.version <= 125:
+    if cls.version <= 126:
         pass
     else:
         if obj.lastval == 0:
@@ -1826,14 +1826,14 @@ def CAkBus__SetInitialValues(obj, cls):
     elif cls.version <= 122:
         CAkParameterNodeBase__ReadStateChunk(obj, cls)
 
-    elif cls.version <= 125:
+    elif cls.version <= 126:
         CAkStateAware__ReadStateChunk(obj, cls)
 
     else:
         cls.CAkClass__ReadStateChunk(obj, cls) #callback but same
 
 
-    if   cls.version <= 125:
+    if   cls.version <= 126:
         CAkParameterNodeBase__ReadFeedbackInfo(obj, cls)
     else:
         pass
@@ -2740,7 +2740,7 @@ def CAkFxBase__SetInitialValues(obj, cls):
 
     if cls.version <= 89:
         pass
-    elif cls.version <= 125:
+    elif cls.version <= 126:
         if cls.version <= 122:
             pass
         else:
@@ -2937,7 +2937,7 @@ def get_hirc_dispatch(obj):
             0x13: CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_, #052>=
             0x14: CAkBankMgr__StdBankRead_CAkAuxBus_CAkParameterNodeBase_, #072>= (06x>=?)
         })
-    elif version <= 125:
+    elif version <= 126:
         hirc_dispatch.update({
             #0x10/11 in theory use CAkBankReader__Skip in SDK, but can be found in test banks
             0x10: CAkBankMgr__StdBankRead_CAkFeedbackBus_CAkParameterNodeBase_,
@@ -3033,7 +3033,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
     else:
         pass
 
-    if version <= 125:
+    if version <= 126:
         obj.U32('bFeedbackInBank') #bFeedbackSupported
         #in later versions seems 16b=feedback + 16b=?, but this is how it's read/checked
         root.set_feedback(obj.lastval & 1) #not (obj.lastval ^ 1)
@@ -3238,7 +3238,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     else:
         obj.u16('maxNumVoicesLimitInternal')
 
-    if version <= 125:
+    if version <= 126:
         pass
     else:
         obj.u16('maxNumDangerousVirtVoicesLimitInternal')

@@ -39,16 +39,17 @@ bank_versions = [
      65, #0x41 Wwise 2011.3?   *[Assassin's Creed III (X360), DmC (PC), Zone of the Enders HD (X360)]
      70, #0x46 Wwise 2012.1?   *[Metal Gear Rising (PC/X360)-some banks]
      72, #0x48 Wwise 2012.2     [Metal Gear Rising (PC/X360)-most banks, Saints Row IV (PC), South Park: The Stick of Truth (PC)]
-     88, #0x58 Wwise 2013.1/2   [Bayonetta 2 (WiiU), Devil's Third (WiiU)]
+     88, #0x58 Wwise 2013.1/2   [Bayonetta 2 (WiiU), Devil's Third (WiiU), Total War: Rome (PC)]
      89, #0x59 Wwise 2013.2-B? *[Destiny (PS4)]
-    112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy, Plants vs Zombies 2 (Android)]
+    112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy, Plants vs Zombies 2 (Android), Total War: Attila (PC)]
     113, #0x71 Wwise 2015.1     [Nier Automata (PC), Doom 2016 (PC), South Park: The Fractured But Whole (PC)]
     118, #0x76 Wwise 2016.1     [WipEout: Omega Collection (PS4), Coffence (PC), Mario + Rabbids Kingdom Battle (Switch)]
     120, #0x78 Wwise 2016.2     [Polyball (PC), Battle Chasers (PC)]
     122, #0x7A Wwise 2017.1-B? *[Total War: Warhammer 2 (PC)-update]
     125, #0x7D Wwise 2017.1     [Devil May Cry 5 (PC), Wolfenstein II The New Colossus (PC)]
+    126, #0x7E Wwise 2017.1-B? *[Total War: Thrones of Britannia (PC)]
     128, #0x80 Wwise 2017.2     [Spyro Reignited Trilogy (PC/PS4), Let's Go Pikachu (Switch), Magatsu Wahrheit (Android)]
-    129, #0x7A Wwise 2017.2-B? *[Total War: Three Kingdoms (PC)]
+    129, #0x81 Wwise 2017.2-B? *[Total War: Three Kingdoms (PC)]
     132, #0x84 Wwise 2018.1     [Astral Chain (Switch), John Wick Hex (PC), Spyro Reignited Trilogy (Switch)]
     134, #0x86 Wwise 2019.1     [Doom Eternal (PC), Girl Cafe Gun (Android)]
    #135, #0x87 Wwise 2019.1-B? *[Total War Saga: Troy (PC)-base]
@@ -61,6 +62,7 @@ bank_versions = [
 # (all have special custom fields, that don't exist for regular versions).
 bank_custom_versions = {
     0x8000007A: 122,  #same as 120
+    0x8000007E: 126,  #same as 125
     0x80000081: 129,  #same as 128
     0x80000087: 135,  #same as 134 (not like 135)
     0x80000088: 136,  #some diffs vs 135 and 140
@@ -161,7 +163,7 @@ language_id = wfmt.FormatterLUT({
 })
 
 #046>= 125<=
-AkBank__AKBKHircType_125 = wfmt.FormatterLUT({
+AkBank__AKBKHircType_126 = wfmt.FormatterLUT({
   0x01: "State",
   0x02: "Sound",
   0x03: "Action",
@@ -592,7 +594,7 @@ AkPropID_113 = wfmt.FormatterLUT({
   0x3B: "InitialDelay",
 })
 #118>= 125<=
-AkPropID_125 = wfmt.FormatterLUT({
+AkPropID_126 = wfmt.FormatterLUT({
   0x0: "Volume",
   0x1: "LFE",
   0x2: "Pitch",
@@ -971,7 +973,7 @@ AkMusicTrackType = wfmt.FormatterLUT({
 })
 
 #112>= 125<=
-AkBuiltInParam_125 = wfmt.FormatterLUT({
+AkBuiltInParam_126 = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "Start/Distance",
   0x2: "Azimuth",
@@ -1905,20 +1907,20 @@ def setup(version):
         AkPropID = AkPropID_088
     elif version <= 113:
         AkPropID = AkPropID_113
-    elif version <= 125:
-        AkPropID = AkPropID_125
+    elif version <= 126:
+        AkPropID = AkPropID_126
     else:
         AkPropID = AkPropID_128
 
     global AkBank__AKBKHircType
-    if version <= 125:
-        AkBank__AKBKHircType = AkBank__AKBKHircType_125
+    if version <= 126:
+        AkBank__AKBKHircType = AkBank__AKBKHircType_126
     else:
         AkBank__AKBKHircType = AkBank__AKBKHircType_128
 
     global AkBuiltInParam
-    if version <= 125:
-        AkBuiltInParam = AkBuiltInParam_125
+    if version <= 126:
+        AkBuiltInParam = AkBuiltInParam_126
     else:
         AkBuiltInParam = AkBuiltInParam_128
 

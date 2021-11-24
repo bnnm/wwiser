@@ -274,7 +274,10 @@ class Txtp(object):
         if self.txtpcache.volume_master:
             info += '# * master volume: %sdB\n' % (self.txtpcache.volume_master)
         if self.txtpcache.volume_master_auto:
-            info += '# * master volume: auto\n'
+            db = printer.volume_auto or 0.0
+            if db == -0.0:
+                db = 0.0
+            info += '# * master volume: auto (%sdB)\n' % (db)
 
         if self.selected:
             extra = ''

@@ -673,29 +673,25 @@ class TxtpSimplifier(object):
 
     def _set_volume_auto(self, node):
         if not self.volume_master_auto:
-            #print("noauto")
             return
 
-        self._depth2 = 0
         output = self._get_output_volume(node)
-        #print("auto output: ", output)
         self.volume_master = -output
+        self._printer.volume_auto = -output
         return
 
     def _get_output_volume(self, node):
         
         output_max = None
-        self._depth2 += 1
         for subnode in node.children:
             output_sub = self._get_output_volume(subnode)
-            #print(' ' * self._depth2, "sub: ", output_sub, ", max ", output_max)
             if output_max is None or output_max < output_sub :
                 output_max = output_sub
-        self._depth2 -= 1
+
         output_self = node.volume or 0.0
         if output_max is not None:
             output_self += output_max
-        #print(' ' * self._depth2, "node: ", output_self)
+
         return output_self
 
     def _set_volume_negative(self, node):

@@ -306,6 +306,7 @@ class TxtpRenamer(object):
 
     def __init__(self):
         self._items = []
+        self._skips = []
         self.skip = False
 
     def add(self, items):
@@ -326,23 +327,19 @@ class TxtpRenamer(object):
                     regex_in = regex_in.replace(key, val)
                 regex = re.compile(regex_in)
 
-            self._items.append( (text_in, text_out, regex) )
+            item = (text_in, text_out, regex)
+            if text_out == self.SKIP_FLAG:
+                self._skips.append(item)
+            else:
+                self._items.append(item)
         return
 
     def apply_renames(self, name):
-        if not self._items:
+        if not self._items and not self._skips:
             return name
-
-        # special "skip this txtp if rename matches" flag (for variables), lasts until next call
-        self.skip = False
 
         # base renames
         for text_in, text_out, regex in self._items:
-            if text_out == self.SKIP_FLAG:
-                if text_in in name or regex and regex.match(name):
-                    self.skip = True
-                    continue
-
             if regex:
                 name = regex.sub(text_out, name)
             else:
@@ -356,4 +353,14 @@ class TxtpRenamer(object):
             name = name.replace("  ", " ")
 
         name.strip()
+
+        # special "skip this txtp if rename matches" flag (for variables), lasts until next call
+        # at the end b/c it should go after cleanup (extra spaces) and final name
+        self.skip = False
+
+        for text_in, text_out, regex in self._skips:
+            if text_in in name or regex and regex.match(name):
+                self.skip = True
+                break
+
         return name

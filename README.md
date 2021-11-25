@@ -15,6 +15,8 @@ Or from the command line: `wwiser [options] (files)`
   - (loads all .bnk in the dir and starts the viewer)
 - `wwiser -g bgm.bnk`
   - (generates TXTP files from banks to use with vgmstream)
+- `wwiser wwconfig.txt`
+  - (loads a text list of any CLI commands, to simplify complex usage)
 - `wwiser -h`
   - (shows all available actions)
 

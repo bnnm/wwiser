@@ -520,6 +520,12 @@ class TxtpPrinter(object):
         if not value_ms:
             return ''
         value_sec = value_ms / 1000
+
+        # useful when 2 musictrack using the same are slightly different?
+        # (ex. AC:B BORGIATOWERS 149.341643661262 vs 149.34014099656)
+        #if self._simpler:
+        #    value_sec = round(value_sec, 2)
+
         value_str = self._get_float_str(value_sec)
         if not value_str:
             return ''

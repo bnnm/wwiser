@@ -325,7 +325,9 @@ class TxtpRenamer(object):
                 regex_in = text_in
                 for key, val in replaces.items():
                     regex_in = regex_in.replace(key, val)
-                regex = re.compile(regex_in)
+                regex = re.compile(regex_in, re.IGNORECASE)
+            else:
+                regex = re.compile(re.escape(text_in), re.IGNORECASE)
 
             item = (text_in, text_out, regex)
             if text_out == self.SKIP_FLAG:
@@ -359,7 +361,7 @@ class TxtpRenamer(object):
         self.skip = False
 
         for text_in, text_out, regex in self._skips:
-            if text_in in name or regex and regex.match(name):
+            if regex and regex.match(name) or text_in in name:
                 self.skip = True
                 break
 

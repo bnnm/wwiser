@@ -745,6 +745,9 @@ class Names(object):
 
         logging.info("names: saving %s" % (outname))
         with open(outname, 'w', encoding='utf-8') as outfile:
+            if self._disable_fuzzy:
+                outfile.write('#@nofuzzy\n')
+
             names = self._names.values()
             for row in names:
                 #save hashnames only, as they can be safely shared between games

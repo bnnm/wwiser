@@ -1,5 +1,5 @@
-import logging, math, copy
-from . import wtxtp_util, wtxtp_tree, wtxtp_simplifier
+import logging
+from . import wtxtp_tree, wtxtp_simplifier
 
 
 TXTP_SPACES = 1

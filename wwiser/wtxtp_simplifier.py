@@ -133,9 +133,11 @@ class TxtpSimplifier(object):
                 self._kill_node(node)
 
         # find random with all options the same (ex. No Straight Roads)
-        if self._has_random_repeats(node):
-            subnode = node.children[0] #use first only
-            node.children = [subnode]
+        # TODO: not working properly, should detect times and limit cases (may misdetect loops with the
+        #  same .wem and different config), besides NSR doesn't work properly anyway
+        #if self._has_random_repeats(node):
+        #    subnode = node.children[0] #use first only
+        #    node.children = [subnode]
 
         # set externals flag
         if node.is_sound() and node.sound.source and node.sound.source.plugin_external:
@@ -158,22 +160,22 @@ class TxtpSimplifier(object):
     def _kill_node(self, node):
         node.parent.children.remove(node)
 
-    def _has_random_repeats(self, node):
-        if node.is_group_steps() or len(node.children) <= 1:
-            return False
-
-        prev_id = None
-        for subnode in node.children:
-            id = self._tree_get_id(subnode)
-            if not id:
-                return False
-            if prev_id is None:
-                prev_id = id
-            elif prev_id != id:
-                return False
-
-        return True
-
+    #def _has_random_repeats(self, node):
+    #    if node.is_group_steps() or len(node.children) <= 1:
+    #        return False
+    #
+    #    prev_id = None
+    #    for subnode in node.children:
+    #        id = self._tree_get_id(subnode)
+    #        if not id:
+    #            return False
+    #        if prev_id is None:
+    #            prev_id = id
+    #        elif prev_id != id:
+    #            return False
+    #
+    #    return True
+    
     # parent's infinite loops can be removed in favor of children (since wwise loops innermost object)
     # to make txtp loop calcs a bit simpler, ex.
     # - S2 (l=0) > N1 (l=0) > ..

@@ -2,9 +2,12 @@ import logging, re
 from . import wfnv
 
 
+DEBUG_PRINT_TREE_TEXT = False
 DEBUG_PRINT_TREE_BASE = False
 DEBUG_PRINT_TREE_COMBOS = False
 DEBUG_PRINT_TREE_PARAMS = False
+DEBUG_PRINT_TREE_MAKING = False
+DEBUG_DEPTH_MULT = 2
 
 TYPE_SWITCH = 0
 TYPE_STATE = 1
@@ -82,6 +85,16 @@ class _GamesyncNode(object):
 
 #******************************************************************************
 
+def _get_info(txtpcache, id):
+    if not DEBUG_PRINT_TREE_TEXT or not txtpcache.wwnames:
+        return id
+    row = txtpcache.wwnames.get_namerow(id)
+    if row and row.hashname:
+        return "%s=%s" % (row.hashname, id)
+    else:
+        return id
+
+
 # saves possible switch paths in a txtp
 class GamesyncPaths(object):
 
@@ -112,15 +125,20 @@ class GamesyncPaths(object):
     def _print_combos(self, node):
         self._depth += 1
         for subnode in node.children:
-            logging.info("%s%s", ' ' * self._depth, subnode.elems)
+            elems = self._print_elems(subnode.elems)
+            logging.info("%s%s", ' ' * self._depth * DEBUG_DEPTH_MULT, elems)
+            if not subnode.children:
+                self._leaf_count += 1
             self._print_combos(subnode)
         self._depth -= 1
 
     def combos(self):
         if DEBUG_PRINT_TREE_BASE:
             self._depth = 0
+            self._leaf_count = 0
             logging.info("*** tree")
             self._print_combos(self._root)
+            logging.info(" >> (total %i)" % (self._leaf_count))
             logging.info("")
 
         self._paths = []
@@ -130,10 +148,27 @@ class GamesyncPaths(object):
         if DEBUG_PRINT_TREE_COMBOS:
             logging.info("*** combos")
             for path in self._paths:
-                logging.info(path.elems)
+                elems = self._print_elems(path.get_elems())
+                logging.info(elems)
+            logging.info(" >> (total %i)" % (len(self._paths)))
             logging.info("")
 
         return self._paths
+
+    def _print_elems(self, elems):
+        lines =['[']
+        for elem in elems:
+            if len(elem) == 2:
+                type, name = elem
+                lines.append('(%s,%s)' % (type, self._get_info(name)))
+            else:
+                type, name, value = elem
+                lines.append('(%s,%s,%s)' % (type, self._get_info(name), self._get_info(value)))
+        lines.append(']')
+        return ''.join(lines)
+
+    def _get_info(self, id):
+        return _get_info(self._txtpcache, id)
 
     def _find_path(self, node):
         if not node.children:
@@ -144,9 +179,11 @@ class GamesyncPaths(object):
             while path_node:
                 path.adds(path_node.elems)
                 path_node = path_node.parent
+                path._depth += 1
 
+            if DEBUG_PRINT_TREE_MAKING:
+                logging.debug("GS path added")
             self._paths.append(path)
-            #logging.info("path: %s" %(path.elems) ) #todo remove
 
         for child in node.children:
             self._find_path(child)
@@ -160,12 +197,21 @@ class GamesyncPaths(object):
 class GamesyncParams(object):
 
     def __init__(self, txtpcache):
-        self.empty = True
-        self.elems = {}
-        self.txtpcache = txtpcache
-        self.external = False
+        self.empty = True #public
+        self._elems = {}
+        self._txtpcache = txtpcache
+        self._manual = False
         self._fnv = wfnv.Fnv()
-        pass
+        self._depth = 0 #infp
+
+    def get_elems(self):
+        elems = []
+        for key in self._elems:
+            type, name = key
+            values = self._elems[key]
+            for value in values:
+                elems.append((type, name, value))
+        return elems
 
     def adds(self, gamesyncs):
         for gamesync in gamesyncs:
@@ -181,16 +227,17 @@ class GamesyncParams(object):
         value = int(value)
 
         key = (type, name)
-        if key not in self.elems:
-            self.elems[key] = []
+        if key not in self._elems:
+            self._elems[key] = []
 
         # vars are added to a list to (possibly) support paths that can only be reached
         # with dynamic changes (probably not needed? usually all values are available)
         # - switch music=bgm1 > (switch music=bgm1)
         #                     > (switch music=bgm2) **unreachable if music is always bgm1
 
-        #logging.info("GS added: %i, %i, %i" % (type, name, value))
-        self.elems[key].append(value)
+        if DEBUG_PRINT_TREE_MAKING:
+            logging.debug("GS added: %s%s, %s, %s" % (' ' * self._depth * DEBUG_DEPTH_MULT, type, self._get_info(name), self._get_info(value)))
+        self._elems[key].append(value)
 
         return
 
@@ -198,23 +245,24 @@ class GamesyncParams(object):
     def value(self, type, name):
         key = (type, name)
 
-        values = self.elems.get(key)
+        values = self._elems.get(key)
         if not values:
             #normally doesn't happen, but when multiple paths play at once, only one is active ATM
             # and other paths won't find their variables set
             # (ex. multiple play actions in event, or multiple switch-type tracks in a segment)
-            #logging.info("generator: expected gamesync (%s, %i) not set" % (self.TYPE_NAMES[type], name))
-            self.txtpcache.multitrack += 1
+            logging.debug("generator: expected gamesync (%s, %s) not set" % (TYPE_NAMES[type], self._get_info(name)))
+            self._txtpcache.multitrack += 1
             return None
 
-        if self.external and len(values) == 1:
-            #don't pop last value in external params (makes usage simpler)
+        if self._manual and len(values) == 1:
+            #don't pop last value in manual params (makes usage simpler)
             value = values[0]
         else:
             #pop values to simulate dynamic changes, though isn't normally necessary
             value = values.pop()
+            #todo pop kills parallel playactions since first action will remove other actions's vars
 
-        logging.debug("gamesync: get %i, %i, %i" % (type, name, value))
+        logging.debug("gamesync: get %s, %s, %s" % (type, self._get_info(name), self._get_info(value)))
         return value
 
     def add_param(self, type, key, val):
@@ -232,7 +280,7 @@ class GamesyncParams(object):
 
     def set_params(self, params):
         self.empty = False #even if passed list is empty (to simulate "nothing set")
-        self.external = True #external params behave a bit differently
+        self._manual = True #manual params behave a bit differently
 
         if not params:
             return
@@ -271,5 +319,8 @@ class GamesyncParams(object):
             logging.info("*** params")
             logging.info("in: %s", params)
 
-            logging.info("out: %s", self.elems)
+            logging.info("out: %s", self._elems)
             logging.info("")
+
+    def _get_info(self, id):
+        return _get_info(self._txtpcache, id)

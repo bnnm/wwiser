@@ -3538,6 +3538,7 @@ class Parser(object):
             if loaded_filename:
                 loaded_filenames.append(loaded_filename)
 
+        logging.info("parser: done")
         return loaded_filenames
 
     # Parses a whole bank into memory and adds to the list. Can be kinda big (ex. ~50MB in RAM)
@@ -3560,7 +3561,7 @@ class Parser(object):
                 logging.info("parser: %s", res)
                 return None
 
-            logging.info("parser: done")
+            logging.debug("parser: done %s", filename)
             return filename
 
         except wio.ReaderError as e:

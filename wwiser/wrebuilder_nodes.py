@@ -337,7 +337,7 @@ class _NodeHelper(object):
         # args has gamesync type+names, and tree "key" is value (where 0=any)
         depth = node.find1(name='uTreeDepth').value()
         nargs = node.finds(name='AkGameSync')
-        if depth != len(nargs):
+        if depth != len(nargs): #actually possible (buggy/beta games?)
             self._barf(text="tree depth and args don't match")
 
         self.args = []
@@ -401,9 +401,9 @@ class _NodeHelper(object):
         return
 
     def _tree_get_npath(self, txtp, npaths):
-        # find gamesyncs matches in path (matches exact values)
+        # find gamesyncs matches in path
 
-        #ignore switches with empty tree
+        # ignore switches with empty tree
         if not npaths:
             return None
 
@@ -424,11 +424,13 @@ class _NodeHelper(object):
     def _tree_path_ok(self, txtp, args, npath):
         for gtype, ngname, ngvalue in npath:
             #get combo-GS and compare to path-GS
-            gvalue = args.get((gtype, ngname.value()))
-            if gvalue is None:
-                #combo-GS value not set for path-GS
+            curr_gvalue = args.get((gtype, ngname.value()))
+
+            if curr_gvalue is None: #combo-GS value not set for path-GS
                 return False
-            if gvalue != ngvalue.value():
+            if ngvalue.value() == 0: #tree's 0-value matches any set value (but must be set)
+                continue
+            if curr_gvalue != ngvalue.value():
                 return False
         return True
 
@@ -558,8 +560,9 @@ class _CAkDialogueEvent(_NodeHelper):
         if not txtp.params:
             # find all possible gamesyncs paths (won't generate txtp)
             for path, ntid in self.paths:
-                txtp.ppaths.adds(path)
-                self._process_next(ntid, txtp)
+                unreachable = txtp.ppaths.adds(path)
+                if not unreachable:
+                    self._process_next(ntid, txtp)
                 txtp.ppaths.done()
             return
 
@@ -691,9 +694,10 @@ class _CAkSwitchCntr(_NodeHelper):
             # find all possible gamesyncs paths (won't generate txtp)
             for ntids, ngvalue in self.gvalue_ntids.values(): #order doesn't matter
                 gvalue = ngvalue.value()
-                txtp.ppaths.add(gtype, gname, ngvalue.value())
-                for ntid in ntids:
-                    self._process_next(ntid, txtp)
+                unreachable = txtp.ppaths.add(gtype, gname, ngvalue.value())
+                if not unreachable:
+                    for ntid in ntids:
+                        self._process_next(ntid, txtp)
                 txtp.ppaths.done()
             return
 
@@ -701,7 +705,7 @@ class _CAkSwitchCntr(_NodeHelper):
         gvalue = txtp.params.value(gtype, gname)
         if gvalue is None:
             return
-        if not gvalue in self.gvalue_ntids:
+        if not gvalue in self.gvalue_ntids: #exact match (no * like MusicSwitches)
             return
         ntids, ngvalue = self.gvalue_ntids[gvalue]
 
@@ -934,8 +938,9 @@ class _CAkMusicSwitchCntr(_NodeHelper):
                 txtp.ppaths.add_stingers(self.stingers)
 
                 for path, ntid in self.paths:
-                    txtp.ppaths.adds(path)
-                    self._process_next(ntid, txtp)
+                    unreachable = txtp.ppaths.adds(path)
+                    if not unreachable:
+                        self._process_next(ntid, txtp)
                     txtp.ppaths.done()
                 return
 
@@ -958,8 +963,9 @@ class _CAkMusicSwitchCntr(_NodeHelper):
                 # find all possible gamesyncs paths (won't generate txtp)
                 for ntid, ngvalue in self.gvalue_ntid.values(): #order doesn't matter
                     gvalue = ngvalue.value()
-                    txtp.ppaths.add(gtype, gname, ngvalue.value())
-                    self._process_next(ntid, txtp)
+                    unreachable = txtp.ppaths.add(gtype, gname, ngvalue.value())
+                    if not unreachable:
+                        self._process_next(ntid, txtp)
                     txtp.ppaths.done()
                 return
 

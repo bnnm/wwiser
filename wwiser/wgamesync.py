@@ -2,11 +2,11 @@ import logging, re
 from . import wfnv
 
 
-DEBUG_PRINT_TREE_TEXT = False
 DEBUG_PRINT_TREE_BASE = False
 DEBUG_PRINT_TREE_COMBOS = False
 DEBUG_PRINT_TREE_PARAMS = False
 DEBUG_PRINT_TREE_MAKING = False
+DEBUG_PRINT_TREE_TEXT = False
 DEBUG_DEPTH_MULT = 2
 
 TYPE_SWITCH = 0
@@ -17,61 +17,131 @@ TYPE_NAMES = {
 }
 
 # GAMESYNCS' STATE/SWITCH PATHS
-# Some objects depend on states/switches. When parsing a root node (ex. event), by default the
+# Some objects depend on states/switches. When parsing a root node, by default the
 # generator tries to find and save all possible paths, for example (for a complex case):
-#   (root) --> music=bgm1 --> act=st1   = path1
-#          |              \-> act=st2   = path2
-#          |
-#          \-> music=bgm2 + section=01 --> act=* (any)  = path3
-#          |
-#          \-> music=bgm2 + section=02 --> act=st3      = path4
+#  (event) --> (switch) --> music=bgm1 --> act=st1   = path1
+#                       |              \-> act=st2   = path2
+#                       |
+#                       \-> music=bgm2 + section=01 --> act=* (any)  = path3
+#                       |
+#                       \-> music=bgm2 + section=02 --> act=st3      = path4
 #
-# The list is saved as a tree with nodes simulating the above (no .txtp is written). Once done, it creates
-# combos of variables that make each path, and generates one .txtp per path now having those vars "active":
-#   [music=bgm1, act=st1] >> txtp1
-#   [music=bgm1, act=st2] >> txtp2
-#   [music=bgm2, section=01, act=*] >> txtp3
-#   [music=bgm2, section=02, act=st3] >> txtp4
+# Once the "tree" list is done (no .txtp written), it creates combos of variables that
+# make each path, and generates one .txtp per path with "active" vars:
+#   [music=bgm1, act=st1] >> txtp1
+#   [music=bgm1, act=st2] >> txtp2
+#   [music=bgm2, section=01, act=*] >> txtp3
+#   [music=bgm2, section=02, act=st3] >> txtp4
 #
 # It's done this way to mimic Wwise, and to allow user set variables externally for certain config.
-# Real gamesyncs are set global or per game object (so same event + vars changes by character),
-# but there is no need to simulate that, as the generator acts like a global+game object.
+# Real gamesyncs are global or per game object (so same event + vars changes by character),
+# but there is no need to simulate that, as the generator acts like a "global game object".
 #
-# Final order shouldn't matter as vars are set to a single value (I hope):
-#   music=bgm01 -> act=st1 + music=bgm02   (music can't be 2 things at the same time)
+# Final order shouldn't matter as vars are set to a single value:
+#   music=bgm01 -> act=st1 + music=bgm02   (music can't be 2 things at the same time)
 # This is possible though:
-#   music=bgm01 -> act=st1 + music=*       (last node just expects "music" to be defined/set)
-# The former wouldn't reach a valid node, but it's probably ok to have such paths in banks.
+#   music=bgm01 -> act=st1 + music=*       (last node just expects "music" to be defined/set)
+# The former wouldn't reach a valid node, but it's ok to have such paths in banks (unused remnants).
 #
 # You can have a "music" state and "music" switch that are named the same, as long as type
 # (switch/state) is different, so vars are represented by [type + name/key + value].
 #
-# Some paths are only reachable using real-time changes:
-#   (root) --> music=bgm1 --> music=bgm1 = path1
-#                         \-> music=bgm2 = path2
-# Since music starts at bgm1, path2 is only reachable if during audio music changes to bgm1.
-#
-# Rarely multiple paths can play at the same time:
-#   event > play-action1 > music_a=bgm1 > ...
-#         \ play-action2 > music_b=bgm1 > ...
-# At the moment only one path can be active.
 #
 # Instead of saving paths, we could try to generate a combo of all possible variables too
 # (like [music=bgm1 + act=st1 + section=02], even if unlikely). However some games use +30
-# variables in some paths, so the amount of combos is too high. The current way is more
-# complex to set up, though.
+# variables in some paths, so the amount of combos is too high. With "tree paths" it won't try to
+# create useless paths like [music=bgm2, act=st1/st2], but it's more complex to set up.
 #
 # Code populates tree like:
 #
-#   for ...
-#       paths.add(gamesync1)                #starts sub-path
-#       ... (calls to next audio object)
-#           for ...
-#               paths.add(gamesync2)        # starts sub-path
-#                   ... (calls)
-#               paths.done()                # ends sub-path
-#       paths.done()                        #ends sub-path
+#   for ...
+#       paths.add(gamesync1)                # starts sub-path1
+#       ... (calls to next audio object)
+#           for ...
+#               paths.add(gamesync2)        #   starts sub-path2
+#                   ... (calls)
+#               paths.done()                #   ends sub-path2
+#       paths.done()                        # ends sub-path1
 
+# PATH TYPES
+#
+# Switches can contain switches, so some paths get pretty complex. In Wwise (at least in the editor)
+# when a var changes all switch nodes are updated, meaning the whole tree must make sense or nothing plays
+# (doesn't just use current/last switch node). Basically upper nodes "gate" lower nodes.
+#
+# * simple switch
+#   - path1: scene=s1 (track1)
+#   - path2: scene=s2 (track2)
+#   - path3: scene=*  (track3, special "any" value is also treated as a state value)
+#   / path4: scene=s3 (no child node, so this path isn't added)
+#   / path4: scene=s4 (could be a valid value elsewhere, but not found in this tree so ignored)
+#  ev > action > switch: [scene]
+#                         =s1  >  segment/track1
+#                         =s2  >  segment/track2
+#                         =s3  >  none
+#                         =*   >  segment/track3
+#
+# * multi-value switch
+#   - path1: gameplay=main_menu, scene=s1 (track1)
+#   - path2: gameplay=main_menu, scene=s2 (track2)
+#   - path3: gameplay=gameplay, scene=*  (track3)
+#  ev > action > switch: (gameplay)   [scene]
+#                         =main_menu   =s1  >  segment/track1
+#                         =main_menu   =s1  >  segment/track2
+#                         =gameplay    =*   >  segment/track3
+#
+# * nested switches
+#   - path1: music=main_menu (track1)
+#   - path2: music=gameplay, scene=s1 (track2)
+#   - path3: music=gameplay, scene=s2 (track3)
+#  ev > action > switch: (music)
+#                         =main_menu  >  segment/track1
+#                         =gameplay   >  switch: [scene]
+#                                                 =s1  >  segment/track2
+#                                                 =s2  >  segment/track3
+#
+# * nested switches with dead paths (same vars)
+#   - path1: music=gameplay (track1)
+#   / path2: music=pause                 **invalid (can't get past of first switch)
+#   / path2: music=gameplay, music=pause **dead (changing from music=gameplay to music=pause closes first switch)
+#  ev > action > switch: (music)
+#                         =gameplay  >  switch: (music)
+#                                                =gameplay  >  segment/track1
+#                                                =pause     >  segment/track2 **dead
+#
+# * layered switches (same)
+#   - path1: music=gameplay (layered track1 + track2)
+#  ev > action > switch: (music)
+#     \                   =gameplay  > track1
+#     > action > switch: (music)
+#                         =gameplay  > track2
+#                       
+# * layered switches (different)
+#   - path1: music=gameplay + scene=invalid (track1)
+#   - path2: music=invalid  + scene=s1 (track2)
+#   / path3: music=gameplay + scene=s1 (layered track1 + track2)
+#  ev > action > switch: (music)
+#     \                   =gameplay  > segment/track1
+#     > action > switch: [scene]
+#                         =s1  > segment/track2
+#
+# At the moment layered combos aren't generated and only one path can be active.
+# (those paths could be non-existent in game, if devs manually avoid mixing certain cases).
+# Because there may be many sub-combos, all possible paths can be lots of combinations:
+# - action1 only
+# - ...
+# - actionN only
+# - action1 paths + action2 paths
+# - action1 paths + action3 paths
+# - action1 paths + action2 paths + action3 paths
+# - ...
+#
+# It's also possible (but very rare) to have layered switches
+#
+# ? check if layered switches are possible elsewhere
+# ? option to enable layered combos after non-layered (use combinations)
+# ? check itertools generator instead of lists
+#
 #******************************************************************************
 
 class _GamesyncNode(object):
@@ -86,11 +156,15 @@ class _GamesyncNode(object):
 #******************************************************************************
 
 def _get_info(txtpcache, id):
-    if not DEBUG_PRINT_TREE_TEXT or not txtpcache.wwnames:
+    try:
+        if not DEBUG_PRINT_TREE_TEXT or not txtpcache.wwnames:
+            return id
+    except AttributeError:
         return id
     row = txtpcache.wwnames.get_namerow(id)
     if row and row.hashname:
-        return "%s=%s" % (row.hashname, id)
+        #return "%s=%s" % (row.hashname, id)
+        return "%s" % (row.hashname)
     else:
         return id
 
@@ -172,7 +246,7 @@ class GamesyncPaths(object):
 
     def _find_path(self, node):
         if not node.children:
-            #leaf node found, add all gamesyncs to path (in reverse to simplify, doesn't matter)
+            # leaf node found, add all gamesyncs to path (in reverse to simplify)
             path = GamesyncParams(self._txtpcache)
 
             path_node = node
@@ -214,11 +288,15 @@ class GamesyncParams(object):
         return elems
 
     def adds(self, gamesyncs):
+        unreachables = False
         for gamesync in gamesyncs:
-            self.add(*gamesync)
+            unreachable = self.add(*gamesync)
+            if unreachable:
+                unreachables = True
+        return unreachables
 
 
-    #include new variable
+    # include new variable
     def add(self, type, name, value):
         self.empty = False
 
@@ -226,41 +304,63 @@ class GamesyncParams(object):
         name = int(name)
         value = int(value)
 
+        unreachable = False
+
         key = (type, name)
         if key not in self._elems:
             self._elems[key] = []
+        else:
+            # detect if another non * value exists (may always useful as other paths could exist)
+            #TODO: test if actually useful
+            if value not in self._elems[key] and value != 0 and 0 not in self._elems[key]:
+                logging.debug(" maybe unreachable: %s,%s,%s", type, name, value)
+                unreachable = True
 
-        # vars are added to a list to (possibly) support paths that can only be reached
-        # with dynamic changes (probably not needed? usually all values are available)
+        # vars are added to a list to (possibly) detect paths that could only be reached with dynamic changes
         # - switch music=bgm1 > (switch music=bgm1)
         #                     > (switch music=bgm2) **unreachable if music is always bgm1
+        # In theory this can't happen (Wwise editor can't reach bgm2) but a few games have such nodes.
+        #
+        # Those paths may be generated and considered unused, but it's hard to handle them.
+        # For now mark them as "unreachable" so the rebuilder doesn't try to call sub-nodes (would consider them as used)
+        # Probably could overwrite current 0 values and reject any non-0 value.
 
         if DEBUG_PRINT_TREE_MAKING:
             logging.debug("GS added: %s%s, %s, %s" % (' ' * self._depth * DEBUG_DEPTH_MULT, type, self._get_info(name), self._get_info(value)))
         self._elems[key].append(value)
 
-        return
+        return unreachable
 
-    #get currently set single value of gamesync
+    # get currently set single value of gamesync
     def value(self, type, name):
         key = (type, name)
 
         values = self._elems.get(key)
         if not values:
-            #normally doesn't happen, but when multiple paths play at once, only one is active ATM
-            # and other paths won't find their variables set
-            # (ex. multiple play actions in event, or multiple switch-type tracks in a segment)
+            # Normally doesn't happen, but when multiple paths play at once, only one is active ATM
+            # and other paths won't find their variables set (combos get too complex when mixing multi-paths)
+            # ex. multiple play actions in event, or multiple switch-type tracks in a segment
+            # May happen when generating certain paths too?
             logging.debug("generator: expected gamesync (%s, %s) not set" % (TYPE_NAMES[type], self._get_info(name)))
             self._txtpcache.multitrack += 1
             return None
 
         if self._manual and len(values) == 1:
-            #don't pop last value in manual params (makes usage simpler)
+            # get first and don't pop in manual params (assumes correct)
             value = values[0]
         else:
-            #pop values to simulate dynamic changes, though isn't normally necessary
-            value = values.pop()
-            #todo pop kills parallel playactions since first action will remove other actions's vars
+            # get "last" value, since paths are read from bottom to top means uppermost variable
+            # because it could be a "*" (0), favor last non-0 (gets some extra paths in complex cases)
+            # ex. bgm=* ... bgm=b001 ... bgm=b002 (favors b001 as it gets a few extra paths, ex. NierAT)
+            # ex. bgm=b002 ... bgm=* (favors b002)
+            value = 0
+            for tmp in values:
+                if tmp == 0:
+                    continue
+                value = tmp
+
+            #pop values to simulate dynamic changes, though shouldn't happen nor be needed
+            #value = values.pop()
 
         logging.debug("gamesync: get %s, %s, %s" % (type, self._get_info(name), self._get_info(value)))
         return value

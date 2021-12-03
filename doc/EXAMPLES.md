@@ -439,8 +439,7 @@ event > play > ...
                            > mtrack > (key1=3) subtrack3 > ...
 ```
 - tracks have random type but point to the same object
-- has tracks that changes (switch variables that are only accesible on change)
-  - usually all point to the same thing
+- has switch variables that aren't accesible
 - has vocal songs in multiple languages (set as localized banks)
 - uses variable 0x27 [FadeOutTime]
 - has a lot of strange usage of features to achieve effects in twisted ways (inexperienced?)
@@ -457,8 +456,7 @@ event > play > ...
                                                 > (key1=valB) mranseq > ...
                                                 ...
 ```
-- has dynamic changes (switch variables that are only accesible on change)
-  - usually all point to the same thing
+- has switch variables that aren't accesible
 
 ## Tetris Effect (PC)
 ```
@@ -551,15 +549,6 @@ mswitch > - item x5 !!!
   - not audio, see Wwise demo v128>= Motion.bnk
 - uses Wwise Silence with various durations
 
-## Nimbus (PC)
-```
-[2891093359]
-    event > play > ranseq       > sound
-                   * normal     > sound
-                   * loop
-```
-- has a simple ranseq that loops same track? doesn't seem to change between loops
-
 ## Battle Chasers: Nightwar (PC)
 ```
 [3675240519]
@@ -637,7 +626,23 @@ mswitch > - item x5 !!!
 ## Gunslinger Stratos Reloaded (PC)
 ```
 3991942870 music: BusVolume=-18.0
-``` 
+```
 - most BGM sets around +7dB volume, but override bus to use one with lower volume
   - also defines RTPC "MusicVol_Parameter" controlling bus volume
 - some BGM define both volume and makeupgain for a resulting 7-9dB
+
+## Pokemon BDSP
+```
+Delphis_Main.bnk [3126765036] PLAY_BGM
+    event > action > mswitch > (key1=valA) > mswitch > (key2=valA) > ...
+          > action > mswitch > (key1=valA) > mswitch > (key2=valB) > ...
+          > action > mswitch > (key1=valB) > ...
+          ...
+```
+- has multi-actions that point to different switches (with sub-switches) at the same time
+  - only one path plays due to how variables are set up
+- repeats several CAkFxShareSet and CAkAuxBus IDs (like Init.bnk's 2050183431=POKEDEXEQ_01)
+  - allowed by the editor, won't error
+
+## Assassin's Creed: Brotherhood
+- has multi-actions that point to different switches (with sub-switches) at the same time

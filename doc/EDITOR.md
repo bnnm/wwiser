@@ -23,11 +23,22 @@ Info gathered from the editor, to help understanding model and overall behavior.
 ## gamesyncs
 - "switches", "states", in key=value format
 - there is also "game parameters" (have RTPC config) and "triggers" (no config)
+- defined in actor mixer hierarchy or "game syncs"
+- sets a default value
+  - if objects uses a regular value and it's deleted, all objects remove associations or point to default
 - values are global for all banks and can't repeat names under same category
   - switch "music" and state "music" can be created, but 2 states "music" cannot
   - value names can be repeated
 - gamesyncs can be organized in 'subfolders', but this isn't reflected in .bnk
 - .bnk doesn't normally save a list of gamesyncs (but found in init.bnk in earlier versions)?
+- differences:
+  - states: global (same for all objects), may associate parameters to states (like, state sets volume to -10), may change over time
+  - switches: local (switch states per gameObject), no parameters, immediate changes
+- switches can be changed with:
+  - AK::SoundEngine::SetSwitch(group, value, gameObject)
+  - SetSwitch event
+  - RTPCs (map value to switch, like 0 = stealth, 1 = action)
+- if an event is triggered by a gameObject, it uses that object's current switches + global states
 
 
 ## events/actions/etc
@@ -201,6 +212,7 @@ Info gathered from the editor, to help understanding model and overall behavior.
   - music(switch)=on, music(switch)=on > ko
 - creates a "path", but seems just a combo of variables with some minor logic
   - becomes a "AkDecisionTree"
+  - can repeat objects in different paths, can't set 1 path with N objects
 - allows a "generic path" (*) as default too
   - Node's key=0
 - allows a special "none" value that doesn't need to be added to the group, but is treated as such
@@ -216,7 +228,7 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - changes can be aligned after another switch is triggered
 - needs at least one group for "*" path to work
   (just the group needs to exist, not needed to add as path)
-- can define path with no end object (audioNodeId=0=any)
+- can define path with no end object (audioNodeId=0=any, sometimes audionodeId=1=none)
 - ex.
   - group: music=* 
       Node key=0, children=...
@@ -239,8 +251,7 @@ Info gathered from the editor, to help understanding model and overall behavior.
        Node key=(exploring), children=...
          Node key=(none), audioNodeId=(sid)
 - also works with values in between: music=exploring, playerhealth=*, action=heavy
-  * Node
-* when changing groups that point to other objects:
+- when changing groups that point to other objects:
   - old sound stops at next defined sync point then new
     - if object is the same, it keeps playing, unless bIsContinuePlayback is unset (stops + restars)
   - may use a transition segment or fadeout

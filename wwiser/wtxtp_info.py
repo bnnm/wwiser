@@ -1,4 +1,4 @@
-import logging, os
+import os
 from . import wgamesync
 
 ###
@@ -11,15 +11,83 @@ class TxtpInfo(object):
         self._ninfo = []
         self._banks = None
         self._wemnames = ''
+
+        self._gsnames_init = False
+        self._gsnames_idx = []
         self._gsnames_long = ''
         self._gsnames_short = ''
+
         self._txtpcache = txtpcache
         pass
 
     def get_gsnames(self, long=False):
+        if not self._gsnames_init:
+            self._load_gsnames()
+
         if long:
             return self._gsnames_long
         return self._gsnames_short
+    
+
+    # Typically gamesyncs can be written one after another, but rarely some may not
+    # lead to anything playable, thus useless in final name so we want them out.
+    # Because the "tree" is just a simple array with depths, use some indexes to quickly
+    # find gamesyncs and closest sources, that should tell us if that should be dropped
+    # Faster than reading a proper tree but more much complex:
+    #   node 0
+    #     node1 : PLAYER=ALIVE
+    #       node2 : BGM=01
+    #         node3 : source
+    #     node4 : MODE=GAMEPLAY *dropped
+    #     node5 : 
+    #       node6 : MODE=MENU
+    #         node7 : source
+    #     node8 : MODE=GAMEPLAY *dropped
+    # 
+    # Final vars: "(PLAYER=ALIVE) (BGM=01) (MODE=MENU)"
+    # GS idxs: [1, 2, 4, 6, 8]
+    # - node1: has lower source 3
+    # - node2: has lower source 3
+    # - node4: no lower source = dropped (next is node7 but node5's depth is >= than node4)
+    # - node6: has lower source 7
+    # - node8: no lower source = dropped (no more nodes of lower depth)
+    #
+    # There is a lot of FORs needed to find sources, but a long event may have ~10 GSs and
+    # a short one ~2, so it shouldn't be that slow on average
+
+    def _print_tree(self):
+        print("node")
+        for i, ninfo in enumerate(self._ninfo):
+            text = ninfo.gstext_long
+            if not text:
+                text = bool(ninfo.source)
+            print(' '* ninfo.depth, "ninfo", i, ":", text)
+        print("gs",self._gsnames_idx)
+
+    def _load_gsnames(self):
+        self._gsnames_init = True
+        for gs_idx in self._gsnames_idx:
+            current = self._ninfo[gs_idx]
+            if not self._has_source(gs_idx):
+                continue
+
+            if current.gstext_long:
+                self._gsnames_long += " " + current.gstext_long
+            if current.gstext_short:
+                self._gsnames_short += " " + current.gstext_short
+
+    def _has_source(self, gs_idx):
+        current = self._ninfo[gs_idx]
+        for i in range(gs_idx + 1, len(self._ninfo)):
+            next = self._ninfo[i]
+
+            # lower nodes only
+            if next.depth <= current.depth:
+                break
+            if next.source:
+                return True
+
+        return False
 
     def get_wemnames(self):
         return self._wemnames
@@ -83,10 +151,8 @@ class TxtpInfo(object):
 
         current.add_gamesyncs_info(gamesyncs, self._txtpcache.name_vars)
 
-        if current.gstext_long:
-            self._gsnames_long += " " + current.gstext_long
-        if current.gstext_short:
-            self._gsnames_short += " " + current.gstext_short
+        if current.gstext_long or current.gstext_short:
+            self._gsnames_idx.append(len(self._ninfo) - 1)
 
 #class NameInfo(object):
 #    def __init__(self, ntid=None):

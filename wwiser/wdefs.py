@@ -357,7 +357,7 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00740403: "Platinum Simple3D", #PgSimple3D
   0x00750403: "Platinum ? Effect", # [Nier Automata] (PgKverb? PgFlex?)
   0x00760403: "Platinum ? Effect", # [same]
-  0x00770403: "Platinum ? Effect", # [same]
+  0x00770403: "Platinum ? Effect", # [same] #PG_Reflection?
   0x00780403: "Platinum ? Effect", # [same]
 
   0x00020403: "Codemasters ?", # [Dirt Rally (PS4)]

@@ -129,7 +129,7 @@ class Cli(object):
                 #parts = line.split(" ") #splits between quotes: "bla blah"
                 parts = shlex.split(line) #doesn't split between quotes
                 for part in parts:
-                    part = part.strip()
+                    #part = part.strip() #shlex strips if outside quotes, otherwise allows them
                     if part:
                         current.append(part)
                         empty = False
@@ -265,6 +265,7 @@ class Cli(object):
         # generate txtp
         if args.txtp:
             generator = wgenerator.Generator(banks)
+            #generator._txtpcache.wwnames = name #debug
             generator.set_generate_unused(args.txtp_unused)
             generator.set_filter(args.txtp_filter)
             generator.set_filter_rest(args.txtp_filter_rest)

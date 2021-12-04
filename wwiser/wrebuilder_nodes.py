@@ -30,12 +30,6 @@ class _NodeHelper(object):
     def _barf(self, text="not implemented"):
         raise ValueError("%s - %s %s" % (text, self.name, self.sid))
 
-    def _is_node(self, ntid):
-        bank_id = ntid.get_root().get_id()
-        tid = ntid.value()
-        node = self.builder._get_node_by_ref(bank_id, tid)
-        return node is not None
-
     def _process_next(self, ntid, txtp, nbankid=None):
         tid = ntid.value()
         if tid == 0:
@@ -672,7 +666,7 @@ class _CAkSwitchCntr(_NodeHelper):
 
         self.gtype = node.find(name='eGroupType').value()
         self.ngname = node.find(name='ulGroupID')
-        #ulDefaultSwitch: not used since we create all combos
+        #ulDefaultSwitch: not used since we create all combos (must point to a valid path, or 0=none)
         #bIsContinuousValidation: step/continuous mode?
         #ulNumSwitchParams: config for switches (ex. FadeOutTime/FadeInTime)
         #children: same as NodeList
@@ -860,8 +854,6 @@ class _CAkSound(_NodeHelper):
         source = self._parse_source(nitem)
         self.sound.source = source
         self.sound.nsrc = source.nfileid
-        #if self._is_node(ntid): #source is an object (like FX)
-        #    pass
 
         self.fields.prop(source.nstreamtype)
         if source.nsourceid != source.nfileid:

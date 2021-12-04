@@ -7,6 +7,7 @@ TXTP_SPACES = 1
 DEBUG_PRINT_TREE_PRE = False
 DEBUG_PRINT_TREE_POST = False
 DEBUG_PRINT_GROUP_HEADER = False
+DEBUG_PRINT_ENVELOPES = False
 
 GROUPS_TYPE = {
     wtxtp_tree.TYPE_GROUP_SINGLE: 'S',
@@ -399,8 +400,10 @@ class TxtpPrinter(object):
         else: #CAkSound
             mods += self._get_sfx(sound, node)
 
+        #TODO: some games add too many envelopes making huge lines that are ignored by parser
+        # (Tetris Beat on Apple Arcade: Play_Music [Music=Hydra] (MUSIC_PROGRESS=FULL_SONG), Jedi Fallen Order)
         # add envelopes
-        if node.envelopes:
+        if DEBUG_PRINT_ENVELOPES and node.envelopes:
             # ch(type)(position)(time-start)+(time-length)
             # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
             for envelope in node.envelopes:
@@ -409,7 +412,7 @@ class TxtpPrinter(object):
                 shape = envelope.shape
                 time_st = self._get_sec(envelope.time1)
                 time_ed = self._get_sec(envelope.time2)
-                # todo: seems to reapply on loops (time becomes 0 again)
+                #TODO: seems to reapply on loops (time becomes 0 again)
                 info += ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
 
         # add volume

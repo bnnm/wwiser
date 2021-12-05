@@ -321,17 +321,41 @@ class _NodeHelper(object):
     def _build_tree(self, node, ntree):
         self.args = []
         self.paths = []
-        self.npaths = []
+        self.tree = {}
 
-        # tree starts from AkDecisionTree and a base 'pNodes' (list) + 1 'Node' (object), then it has:
-        #   pNodes + Node xN (key + audioNodeId) = 1 gamesync
-        #   pNodes + None xN (key + N children) > (xN) > pNodes Node xN (key + audioNodeId) = N gamesyncs
-        # (so N branches per N gamesyncs)
+        # tree's args (gamesync key) are given in Arguments, and possible values in AkDecisionTree, that contains
+        # 'pNodes' with 'Node', that have keys (gamesync value) and children or audioNodeId:
+        #   Arguments
+        #       bgm
+        #           scene
+        #
+        #   AkDecisionTree
+        #       key=*
+        #           key=bgm001
+        #               key=scene001
+        #                   audioNodeId=123456789
+        #           key=*
+        #               key=*
+        #                   audioNodeId=234567890
+        #
+        # Thus: (-=*, bgm=bgm001, scene=scene001 > 123456789) or (-=*, bgm=*, scene=* > 234567890).
+        # Paths must be unique (can't point to different IDs).
+        #
+        # Wwise picks paths depending on mode:
+        # - "best match": (default) selects "paths with least amount of wildcards" (meaning favors matching values)
+        # - "weighted": random based on based on "weight" (0=never, 100=always)
+        # For example:
+        # (bgm=bgm001, scene=*, subscene=001) vs (bgm=*, scene=scene001, subscene=*) picks the later (less *)
+        #
+        # This behaves like "best match", but saves GS values as "*" (that shouldn't be possible)
+        #
+        # Trees always start with a implicit "*" key that matches anything, so it's possible
+        # to have trees with no arguments that point to an audioNodeId = non-switch tree
 
         # args has gamesync type+names, and tree "key" is value (where 0=any)
         depth = node.find1(name='uTreeDepth').value()
         nargs = node.finds(name='AkGameSync')
-        if depth != len(nargs): #actually possible (buggy/beta games?)
+        if depth != len(nargs): #not possible?
             self._barf(text="tree depth and args don't match")
 
         self.args = []
@@ -340,93 +364,102 @@ class _NodeHelper(object):
             ngname = narg.find(name='ulGroup')
             if ngtype:
                 gtype = ngtype.value()
-            else: #assumed default for DialogueEvent in older versions
+            else: #DialogueEvent in older versions, assumed default
                 gtype = wgamesync.TYPE_STATE
             self.args.append( (gtype, ngname) )
 
-        #simplify tree to a list of gamesyncs pointing to an id, basically how the editor shows them
-        # [(gtype1, ngname1, ngvalue1), (gtype2, ngname2, ngvalue2), ...] > ntid
+        # make a tree for access, plus a path list (similar to how the editor shows them) for GS combos
+        # - [val1] = {
+        #       [*] = { 12345 },
+        #       [val2] = {
+        #           [val3] = { ... }
+        #       }
+        #   }
+        # - [(gtype1, ngname1, ngvalue1), (gtype2, ngname2, ngvalue2), ...] > ntid (xN)
         gamesyncs = [None] * len(nargs) #temp list
 
         nnodes = ntree.find1(name='pNodes') #always
         nnode = nnodes.find1(name='Node') #always
-        nsubnodes = nnode.find1(name='pNodes') #may be empty
-        if nsubnodes:
-            self._build_tree_nodes(node, self.args, 0, nsubnodes, gamesyncs)
+        npnodes = nnode.find1(name='pNodes') #may be empty
+        if npnodes:
+            self._build_tree_nodes(self.tree, 0, npnodes, gamesyncs)
         elif nnode:
-            # in rare cases may only contain one node for key 0, no depth (NMH3)
+            # In rare cases may only contain one node for key 0, no depth (NMH3). This can be added
+            # as a "generic path" with no vars selected, meaning ignores vars and matches 1 object.
             self.ntid = nnode.find1(name='audioNodeId')
 
 
-    def _build_tree_nodes(self, node, args, depth, nnodes, gamesyncs):
-        if depth >= len(args):
-            return #shouldn't get here
-        gtype, ngname = args[depth]
+    def _build_tree_nodes(self, tree, depth, npnodes, gamesyncs):
+        if depth >= len(self.args):
+            self._barf(text="wrong depth") #shouldn't happen
 
-        # in case of short branch
-        if not nnodes:
+        if not npnodes: #short branch?
             return
-        nchildren = nnodes.get_children()
+        nchildren = npnodes.get_children() #parser shouldn't make empty pnodes
         if not nchildren:
             return
 
+        gtype, ngname = self.args[depth]
+
         for nnode in nchildren:
             ngvalue = nnode.find1(name='key')
-            nsubnodes = nnode.find1(name='pNodes')
+            npnodes = nnode.find1(name='pNodes')
+            gamesyncs[depth] = (gtype, ngname, ngvalue) #overwrite per node, will be copied
 
-            gamesyncs[depth] = (gtype, ngname, ngvalue)
-            if depth + 1 == len(args):
+            key = ngvalue.value()
+
+            if not npnodes: #depth + 1 == len(self.args): #not always correct
                 ntid = nnode.find1(name='audioNodeId')
-                self._build_tree_path(gamesyncs, ntid)
+                tree[key] = (ngvalue, ntid, None)
+                self._build_tree_leaf(ntid, ngvalue, gamesyncs)
+
             else:
-                self._build_tree_nodes(node, args, depth + 1, nsubnodes, gamesyncs)
+                subtree = {}
+                tree[key] = (ngvalue, None, subtree)
+                self._build_tree_nodes(subtree, depth + 1, npnodes, gamesyncs)
         return
 
-    def _build_tree_path(self, gamesyncs, ntid):
-        #clone list of gamesyncs and final ntid (both lists as an optimization for huge trees)
-        npath = []
+    def _build_tree_leaf(self, ntid, ngvalue, gamesyncs):
+        # clone list of gamesyncs and final ntid (both lists as an optimization for huge trees)
         path = []
-        for gtype, ngname, ngvalue in gamesyncs:
-            npath.append( (gtype, ngname, ngvalue) )
+        for gamesync in gamesyncs:
+            if gamesync is None: #smaller path, rare
+                break
+            gtype, ngname, ngvalue = gamesync
             path.append( (gtype, ngname.value(), ngvalue.value()) )
         self.paths.append( (path, ntid) )
-        self.npaths.append( (npath, ntid) )
 
         return
 
-    def _tree_get_npath(self, txtp, npaths):
+    def _tree_get_npath(self, txtp):
         # find gamesyncs matches in path
 
-        # ignore switches with empty tree
-        if not npaths:
-            return None
-
-        tmp_args = {}
+        # follow tree up to match, with implicit depth args
+        npath = []
+        curr_tree = self.tree
         for gtype, ngname in self.args:
+            # current arg must be defined to some value
             gvalue = txtp.params.value(gtype, ngname.value())
-            tmp_args[(gtype, ngname.value())] = gvalue
-            #logging.debug("generator: arg %s %s %s", gtype, ngname.value(), gvalue)
+            if gvalue is None: #not defined = can't match
+                return None
 
-        for npath, ntid in npaths:
-            if self._tree_path_ok(txtp, tmp_args, npath):
-                #logging.info("generator: found ntid %s", ntid.value())
+            # value must exist in tree
+            match = curr_tree.get(gvalue) # exact match (could match * too if gvalue is set to 0)
+            if not match:
+                match = curr_tree.get(0) # * match
+            if not match:
+                return None
+
+            ngvalue, ntid, subtree = match
+            npath.append( (gtype, ngname, ngvalue) )
+
+            if not ntid:
+                curr_tree = subtree # try next args = higher depth
+            else:
                 return (npath, ntid)
 
-        logging.debug("generator: path not found in %s", self.sid)
         return None
 
-    def _tree_path_ok(self, txtp, args, npath):
-        for gtype, ngname, ngvalue in npath:
-            #get combo-GS and compare to path-GS
-            curr_gvalue = args.get((gtype, ngname.value()))
-
-            if curr_gvalue is None: #combo-GS value not set for path-GS
-                return False
-            if ngvalue.value() == 0: #tree's 0-value matches any set value (but must be set)
-                continue
-            if curr_gvalue != ngvalue.value():
-                return False
-        return True
 
     #--------------------------------------------------------------------------
 
@@ -530,7 +563,7 @@ class _CAkDialogueEvent(_NodeHelper):
     def __init__(self):
         super(_CAkDialogueEvent, self).__init__()
         #self.paths = []
-        #self.npaths = []
+        #self.tree = []
         self.ntid = None
 
     def _build(self, node):
@@ -561,7 +594,7 @@ class _CAkDialogueEvent(_NodeHelper):
             return
 
         # find if current gamesync combo matches one of the paths
-        npath_combo = self._tree_get_npath(txtp, self.npaths) #then with default path
+        npath_combo = self._tree_get_npath(txtp)
         if npath_combo:
             npath, ntid = npath_combo
             txtp.info.gamesyncs(npath)
@@ -878,7 +911,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
         self.ntransitions = []
         #tree config
         #self.paths = []
-        #self.npaths = []
+        #self.tree = []
 
     def _build(self, node):
         self._build_audio_config(node)
@@ -937,7 +970,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
                 return
 
             # find if current gamesync combo matches one of the paths
-            npath_combo = self._tree_get_npath(txtp, self.npaths)
+            npath_combo = self._tree_get_npath(txtp)
             if npath_combo:
                 npath, ntid = npath_combo
                 txtp.info.gamesyncs(npath)

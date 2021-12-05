@@ -49,8 +49,9 @@ TYPE_NAMES = {
 #
 # Instead of saving paths, we could try to generate a combo of all possible variables too
 # (like [music=bgm1 + act=st1 + section=02], even if unlikely). However some games use +30
-# variables in some paths, so the amount of combos is too high. With "tree paths" it won't try to
-# create useless paths like [music=bgm2, act=st1/st2], but it's more complex to set up.
+# variables in some paths (Nier AT, Death Stranding ~23), so the amount of combos is too high.
+# With "tree paths" it won't try to create useless paths like [music=bgm2, act=st1/st2],
+# but it's more complex to set up.
 #
 # Code populates tree like:
 #

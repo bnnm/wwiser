@@ -37,7 +37,7 @@ class Gui(object):
         # base
 
         root = Tk()
-        root.geometry('900x800')
+        root.geometry('900x900')
         #root.resizable(width=False,height=False)
         #root.iconbitmap(wutil.Loader.get_resource('/resources/wwiser.ico'))
 
@@ -170,6 +170,7 @@ class Gui(object):
         box[2].grid(row=row, column=2, sticky="W")
         row += 1
 
+        self._fields['txtp_volume'].set('*')
 
         frame = ttk.Frame(root)
         frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
@@ -244,6 +245,15 @@ class Gui(object):
         frame = ttk.Frame(root)
         frame.pack(side=BOTTOM, fill=BOTH, expand=True, padx=5, pady=5)
 
+
+        #frame.bind("<ButtonPress-1>", self._start_resize)
+        #frame.bind("<ButtonRelease-1>", self._stop_resize)
+        #frame.bind("<Motion>", self._resize_frame) #B1-Motion
+        #self._resize = False
+        #self._cursor = ''
+        #frame.configure(relief=GROOVE)
+        #frame.configure(borderwidth="10")
+
         log = self._log(frame, "Log:")
         log[0].pack(side=TOP, fill=BOTH)
         log[1].pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
@@ -254,6 +264,35 @@ class Gui(object):
         self._btn(frame, "Exit", self._exit).pack(side=RIGHT)
 
         return
+
+    #def _start_resize(self, event):
+    #    frame = event.widget
+    #    self._resize = True
+    #    self._base_h = frame.winfo_height()
+    #    self._base_y = event.y
+    #    print("h", self._base_h, "y", self._base_y)
+
+    #def _stop_resize(self, event):
+    #    self._resize = False
+
+    #def _resize_frame(self, event):
+    #    frame = event.widget
+    #    if self._resize:
+    #        # y = 0 from frame top, <0 when moving up, >0 when moving down
+    #        #if event.y > self._base_y:
+    #        #    final_w = event.y - self._base_y # down
+    #        #else:
+    #        #    final_w = event.y + self._base_y # up
+    #        final_w = self._base_h + event.y + self._base_y
+    #        print("y", event.y,  "base", self._base_y, "w", final_w)
+    #        if final_w < 100:
+    #            final_w = 100
+    #        frame.config(height=final_w)
+    #    #else:
+    #    #    cursor = 'size' if self._check_resize_mode(event.x, event.y) else ''
+    #    #    if cursor != self._cursor:
+    #    #        frame.config(cursor=cursor)
+    #    #        self._cursor = cursor
 
     #--------------------------------------------------------------------------
 

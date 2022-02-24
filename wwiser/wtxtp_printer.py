@@ -242,8 +242,17 @@ class TxtpPrinter(object):
             line += '>-'
 
         # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
-        if node.volume and not self._simpler:
-            mods += '  #v %sdB' % (node.volume)
+        volume = node.volume or 0
+        if self._simpler:
+            volume = 0
+        if node.crossfaded:
+            config = self._get_volume_state(node)
+            if config and config.volume:
+                volume += config.volume
+        if self._txtpcache.silence or node.silenced:
+            mods += '  #v 0'
+        elif volume:
+            mods += '  #v %sdB' % (volume)
 
         # wwise seems to mix untouched then use volumes to tweak
         if node.is_group_layers():
@@ -271,8 +280,6 @@ class TxtpPrinter(object):
                 info += ' #loop-end'
 
         if node.crossfaded or node.silenced:
-            if self._txtpcache.silence or self._has_silent_state(node):
-                mods += '  #v 0'
             info += '  ##fade'
             self.has_others = True
 
@@ -421,8 +428,17 @@ class TxtpPrinter(object):
                 pass
 
         # add volume
-        if node.volume and not self._simpler:
-            mods += '  #v %sdB' % (node.volume)
+        volume = node.volume or 0
+        if self._simpler:
+            volume = 0
+        if node.crossfaded:
+            config = self._get_volume_state(node)
+            if config and config.volume:
+                volume += config.volume
+        if self._txtpcache.silence or node.silenced:
+            silence_line = True #set "?" below as it's a bit simpler to use
+        elif volume:
+            mods += '  #v %sdB' % (volume)
 
         # add anchors
         if node.loop_anchor:
@@ -438,9 +454,6 @@ class TxtpPrinter(object):
                 info += ' #loop-end'
 
         if node.crossfaded or node.silenced:
-            if self._txtpcache.silence or self._has_silent_state(node):
-                silence_line = True
-                #mods += '  #v 0' #set "?" below as it's a bit simpler to use
             info += '  ##fade'
 
         #if node.makeupgain:
@@ -550,14 +563,16 @@ class TxtpPrinter(object):
     def _get_padding(self):
         return ' ' * (self._depth - 1) * TXTP_SPACES
 
-    # Some nodes are silenced via states, test if those are currently set.
+    # Some nodes change volume via states, test if those are currently set.
     # This info isn't passed around so must find (possibly ignored) parent node that has it.
     #todo do in prepare()?
-    def _has_silent_state(self, node):
-        if node.config.silence_states:
-            return self._txtp.sparams and self._txtp.sparams.is_silent(node.config.silence_states)
+    def _get_volume_state(self, node):
+        if node.config.volume_states:
+            if not self._txtp.sparams:
+                return None
+            return self._txtp.sparams.get_volume_state(node.config.volume_states)
 
         if node.parent:
-            return self._has_silent_state(node.parent)
+            return self._get_volume_state(node.parent)
 
-        return False
+        return None

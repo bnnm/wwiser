@@ -43,10 +43,10 @@ class SilencePaths(object):
         pass
 
     def add_nstates(self, ngamesyncs):
-        for ngroup, nvalue in ngamesyncs:
-            self.add_state(ngroup, nvalue)
+        for ngroup, nvalue, config in ngamesyncs:
+            self._add_state(ngroup, nvalue, config)
 
-    def add_state(self, ngroup, nvalue):
+    def _add_state(self, ngroup, nvalue, config):
         self.empty = False
         group = ngroup.value()
         group_name = ngroup.get_attr('hashname')
@@ -54,7 +54,7 @@ class SilencePaths(object):
         value_name = nvalue.get_attr('hashname')
 
         key = (wgamesync.TYPE_STATE, group)
-        val = (group, value, group_name, value_name)
+        val = (group, value, group_name, value_name, config)
         if key not in self._elems:
             items = []
             # maybe should have a special value of "variable X set to other, non-silencing thing"?
@@ -95,26 +95,28 @@ class SilenceParams(object):
         self._elems = OrderedDict()
         pass
 
-    def adds(self, gamesyncs):
-        for gamesync in gamesyncs:
-            self.add(*gamesync)
+    def adds(self, vparams):
+        for vparam in vparams:
+            self.add(*vparam)
 
-    def add(self, group, value, group_name, value_name):
+    def add(self, group, value, group_name, value_name, config):
         if group is None or value is None:
             return
-        self._elems[(group, value)] = (group, value, group_name, value_name)
+        self._elems[(group, value)] = (group, value, group_name, value_name, config)
 
-    # test if state exists
-    def is_silent(self, nstates):
+    def get_volume_state(self, nstates):
         #key = (type, name)
-        for ngroup, nvalue in nstates:
+        for ngroup, nvalue, config in nstates:
             group = ngroup.value()
             value = nvalue.value()
             if (group, value) in self._elems:
-                return True
+                return config
             #if (group, 0) in self._elems:
             #    return True
-        return False
+        return None
 
     def items(self):
-        return self._elems.values()
+        items = []
+        for group, value, group_name, value_name, _ in self._elems.values():
+            items.append((group, value, group_name, value_name))
+        return items

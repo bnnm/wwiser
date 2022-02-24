@@ -201,7 +201,8 @@ class _NodeHelper(object):
         check_rtpc = check_state
         nbase = node.find1(name='NodeBaseParams')
         if nbase and check_state:
-            # state sets silence value (ex. MGR double tracks)
+            # state sets volume states to silence tracks (ex. MGR)
+            # in rare cases those states are also used to slightly increase volume (Monster Hunter World's 3221323256.bnk)
             nstatechunk = nbase.find1(name='StateChunk')
             if nstatechunk:
                 nstategroups = nstatechunk.finds(name='AkStateGroupChunk') #probably only one but...
@@ -219,19 +220,19 @@ class _NodeHelper(object):
 
                         # state should exist as a node and have a volume value (states for other stuff are common)
                         bstate = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)
-                        has_silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
-                        if not has_silences:
+                        has_volumes = bstate and bstate.config.volume
+                        if not has_volumes:
                             continue
 
                         self.config.crossfaded = True
 
-                        logging.debug("generator: state silence found %s %s %s" % (self.sid, tid, node.get_name()))
+                        logging.debug("generator: state volume found %s %s %s" % (self.sid, tid, node.get_name()))
                         nstategroupid = nstategroup.find1(name='ulStateGroupID') #parent group
 
                         nstateid = nstate.find1(name='ulStateID')
                         if nstategroupid and nstateid:
-                            self.config.add_silence_state(nstategroupid, nstateid)
-                            self.fields.keyval(nstategroupid, nstateid)
+                            self.config.add_volume_state(nstategroupid, nstateid, bstate.config)
+                            self.fields.keyval(nstategroupid, nstateid) #todo
 
         if nbase and check_rtpc:
             # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)
@@ -1380,8 +1381,8 @@ class _CAkMusicTrack(_NodeHelper):
             return
 
         # node defines states that muted sources
-        if self.config.silence_states:
-            txtp.spaths.add_nstates(self.config.silence_states)
+        if self.config.volume_states:
+            txtp.spaths.add_nstates(self.config.volume_states)
 
         # musictrack can play in various ways
         if   self.type == 0: #normal (plays one subtrack, N aren't allowed)

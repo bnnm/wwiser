@@ -22,11 +22,11 @@ class NodeConfig(object):
         self.exit = None
 
         # states that when active silence group
-        self.silence_states = []
+        self.volume_states = []
 
-    def add_silence_state(self, ngroup, nvalue):
-        item = (ngroup, nvalue)
-        self.silence_states.append(item)
+    def add_volume_state(self, ngroup, nvalue, config):
+        item = (ngroup, nvalue, config)
+        self.volume_states.append(item)
 
 
 #common audio object with config

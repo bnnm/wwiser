@@ -204,22 +204,31 @@ class _NodeHelper(object):
             # state sets silence value (ex. MGR double tracks)
             nstatechunk = nbase.find1(name='StateChunk')
             if nstatechunk:
-                nstategroups = nstatechunk.finds(name='AkStateGroupChunk')
+                nstategroups = nstatechunk.finds(name='AkStateGroupChunk') #probably only one but...
                 for nstategroup in nstategroups:
-                    nstateid = nstategroup.find1(name='ulStateInstanceID')
-                    if not nstateid: #possible to have groups without pStates (ex Xcom2's 820279197)
+                    nstates = nstategroup.finds(name='AkState')
+                    if not nstates: #possible to have groupchunks without pStates (ex Xcom2's 820279197)
                         continue
-                    bank_id = nstateid.get_root().get_id()
-                    tid = nstateid.value()
-                    bstate = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)
 
-                    silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
-                    if silences:
+                    bank_id = nstategroup.get_root().get_id()
+                    for nstate in nstates:
+                        nstateinstanceid = nstate.find1(name='ulStateInstanceID')
+                        if not nstateinstanceid: #???
+                            continue
+                        tid = nstateinstanceid.value()
+
+                        # state should exist as a node and have a volume value (states for other stuff are common)
+                        bstate = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)
+                        has_silences = bstate and bstate.config.volume and bstate.config.volume <= -96.0
+                        if not has_silences:
+                            continue
+
                         self.config.crossfaded = True
 
                         logging.debug("generator: state silence found %s %s %s" % (self.sid, tid, node.get_name()))
-                        nstategroupid = nstategroup.find1(name='ulStateGroupID')
-                        nstateid = nstategroup.find1(name='ulStateID')
+                        nstategroupid = nstategroup.find1(name='ulStateGroupID') #parent group
+
+                        nstateid = nstate.find1(name='ulStateID')
                         if nstategroupid and nstateid:
                             self.config.add_silence_state(nstategroupid, nstateid)
                             self.fields.keyval(nstategroupid, nstateid)

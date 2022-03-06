@@ -73,7 +73,7 @@ class Txtp(object):
             ntid = node.find1(type='sid')
         self._namer.update_config(node, nname, ntid, ntidsub)
 
-        self._basepath = node.get_root().get_path()
+        self._basepath = self.txtpcache.get_basepath(node)
 
         return
 
@@ -146,7 +146,7 @@ class Txtp(object):
 
             # generate a base .txtp with all songs in some cases
             # - multiple states used like a switch, base playing everything = bad (MGR, Bayo2)
-            # - singe state used for on/off a single layer, base playing everything = good (AChain)
+            # - single state used for on/off a single layer, base playing everything = good (AChain)
             if len(combos) == 1:
                 self._write_txtp(printer)
 

@@ -28,6 +28,8 @@ class Generator(object):
         self._txtpcache = wtxtp_cache.TxtpCache()
         self._mediaindex = wgenerator_mediaindex.MediaIndex(banks)
 
+        self._txtpcache.set_basepath(banks)
+
         # options
         self._generate_unused = False       # generate unused after regular txtp
         self._move = False                  # move sources to wem dir

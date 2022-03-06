@@ -37,7 +37,42 @@ class Mover(object):
 
         nroot = node.get_root()
         in_dir = nroot.get_path()
-        out_dir = in_dir
+        out_dir = self._txtpcache.get_basepath(node)
+
+        in_name, out_name = self._get_names(source, in_dir, out_dir, dir)
+
+        if os.path.exists(out_name):
+            if os.path.exists(in_name):
+                logging.info("generator: cannot move %s (exists on output folder)", in_name)
+            return
+
+        bank = nroot.get_filename()
+        if not os.path.exists(in_name):
+            wem_exists = False
+            if self._txtpcache.alt_exts:
+                # try as .logg
+                in_name = "%s.%s" % (source.tid, source.extension_alt)
+                in_name = os.path.join(in_dir, in_name)
+                in_name = os.path.normpath(in_name)
+                wem_exists = os.path.exists(in_name)
+
+            elif in_dir != out_dir:
+                # by default it tries in the bank's dir, but in case of lang banks may need to try in other banks' folder
+                in_dir = self._txtpcache.get_basepath(node)
+                in_name, out_name = self._get_names(source, in_dir, out_dir, dir)
+                wem_exists = os.path.exists(in_name)
+
+        if not wem_exists:
+            logging.info("generator: cannot move %s (file not found) / %s", in_name, bank)
+            return
+
+        #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)
+        os.rename(in_name, out_name)
+        logging.debug("generator: moved %s / %s", in_name, bank)
+
+        return
+
+    def _get_names(self, source, in_dir, out_dir, dir):
         if dir:
             out_dir = os.path.join(out_dir, dir)
             os.makedirs(out_dir, exist_ok=True)
@@ -54,27 +89,4 @@ class Mover(object):
         out_name = "%s.%s" % (source.tid, out_extension)
         out_name = os.path.join(out_dir, out_name)
         out_name = os.path.normpath(out_name)
-
-        if os.path.exists(out_name):
-            if os.path.exists(in_name):
-                logging.info("generator: cannot move %s (exists on output folder)", in_name)
-            return
-
-        bank = nroot.get_filename()
-        if not os.path.exists(in_name):
-            if self._txtpcache.alt_exts:
-                in_name = "%s.%s" % (source.tid, source.extension_alt)
-                in_name = os.path.join(in_dir, in_name)
-                in_name = os.path.normpath(in_name)
-                if not os.path.exists(in_name):
-                    logging.info("generator: cannot move %s (file not found) / %s", in_name, bank)
-                    return
-            else:
-                logging.info("generator: cannot move %s (file not found) / %s", in_name, bank)
-                return
-
-        #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)
-        os.rename(in_name, out_name)
-        logging.debug("generator: moved %s / %s", in_name, bank)
-
-        return
+        return (in_name, out_name)

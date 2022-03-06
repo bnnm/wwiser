@@ -71,6 +71,7 @@ class TxtpCache(object):
         self.transition_mark = False
         self.unused_mark = False
 
+        self._common_base_path = None
 
     def register_txtp(self, texthash, printer):
         if texthash in self._txtp_hashes:
@@ -126,6 +127,24 @@ class TxtpCache(object):
             dir += self.wemdir
         return dir
 
+    # when loading multiple bnk from different dirs we usually want all .txtp in the same base dir,
+    # taken from the first .bnk
+    # just in case allow separate dirs when using the lang flag
+    def get_basepath(self, node):
+
+        if self.lang:
+            return node.get_root().get_path()
+
+        if self._common_base_path is None:
+            self._common_base_path = node.get_root().get_path()
+        return self._common_base_path
+    
+    def set_basepath(self, banks):
+        if not banks:
+            return
+        node = banks[0]
+        self._common_base_path = node.get_root().get_path()
+
     def set_volume(self, volume):
         if not volume:
             return
@@ -145,7 +164,7 @@ class TxtpCache(object):
                     master_db = float(volume[:-1]) / 100.0
                 else:
                     master_db = float(volume)
-                if master_db < 0:
+                if master_db <= 0: #fails next formula, maybe should print something?
                     return
                 master_db = VOLUME_PERCENT_TO_DB.get(master_db, math.log10(master_db) * 20.0)
 

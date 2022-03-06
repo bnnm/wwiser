@@ -1,4 +1,5 @@
-import fnmatch, logging
+import fnmatch, logging, os
+from . import wfnv
 
 # filter applies to "outer" (base HIRC) objects
 _MODE_OUTER = 0
@@ -43,18 +44,30 @@ class GeneratorFilterItem(object):
 
         self.value = value
 
+        # special mark
         if '*' in value:
             self.is_pattern = True
 
+        # detect type of filter
         if value.isnumeric():
             # 123456789
             self.use_sid = True
+
         elif value.startswith('cak'):
             # CAk(type)
             self.use_class = True
+
         elif value.endswith('.bnk'):
             # (bankname).bnk
             self.use_bank = True
+
+            # compare (name).bnk as (hash).bnk when no wildcards are used, to improve detection
+            if not self.is_pattern:
+                value_bank, __ = os.path.splitext(value)
+                if not value_bank.isnumeric():
+                    bankhash = wfnv.Fnv().get_hash(value_bank)
+                    self.value = '%s.bnk' % (bankhash)
+
         elif '-' in value:
             # (bankname or bank hashname)-(index)-(description)
             self.use_index = True
@@ -64,6 +77,7 @@ class GeneratorFilterItem(object):
             index = parts[1].split('~')[0] #remove possible extra parts
             self.value = bankname + '.bnk'
             self.value_index = int(index)
+
         else:
             # event names
             pass
@@ -77,6 +91,14 @@ class GeneratorFilterItem(object):
             comps = [str(sid)]
         elif self.use_bank:
             comps = [bankname]
+
+            # compare (name).bnk as (hash).bnk when no wildcards are used, to improve detection
+            if not self.is_pattern:
+                bankbase, __ = os.path.splitext(bankname)
+                if not bankbase.isnumeric():
+                    bankhash = wfnv.Fnv().get_hash(bankbase)
+                    comps = ['%s.bnk' % (bankhash)]
+
         elif self.use_class:
             comps = [classname]
         elif self.use_index:

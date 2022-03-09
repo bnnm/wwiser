@@ -52,9 +52,15 @@ class SilencePaths(object):
         group_name = ngroup.get_attr('hashname')
         value = nvalue.value()
         value_name = nvalue.get_attr('hashname')
+        volume_state = 0
+        if config and config.volume: 
+            volume_state = config.volume
+        # save volume instead of config b/c repeated groups+values may use different config objects
+        # (but same volume), and "val" tuple would be seen as different due to config, in the "not in" checks
+        # these are only used for combos, while config should be extracted from node's volume states
 
         key = (wgamesync.TYPE_STATE, group)
-        val = (group, value, group_name, value_name, config)
+        val = (group, value, group_name, value_name, volume_state)
         if key not in self._elems:
             items = []
             # maybe should have a special value of "variable X set to other, non-silencing thing"?
@@ -99,10 +105,10 @@ class SilenceParams(object):
         for vparam in vparams:
             self.add(*vparam)
 
-    def add(self, group, value, group_name, value_name, config):
+    def add(self, group, value, group_name, value_name, volume):
         if group is None or value is None:
             return
-        self._elems[(group, value)] = (group, value, group_name, value_name, config)
+        self._elems[(group, value)] = (group, value, group_name, value_name, volume)
 
     def get_volume_state(self, nstates):
         #key = (type, name)

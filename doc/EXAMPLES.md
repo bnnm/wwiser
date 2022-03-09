@@ -179,6 +179,16 @@ event > ... > mranseq >  segment
 - has empty stingers that don't actually point to another segment, and trigger ID isn't defined
 - uses empty segments as padding
 - has unused transition? segments (in children but not used) 
+- uses volume states to add layers
+  - sometimes selects one from N
+  - others uses base layer + silenced/non-silenced layer
+  - ex. `bgm_m07_stage.bnk` path `bgm_mission=m07_st01` with volume states:
+    - `bgm_battle=off` sets combat layer to `-96.0db`
+    - `bgm_battle=on_stage` sets combat layer to `+2.0db`
+  - ex. `bgm_m04_boss.bnk` path `bgm_boss=em5200_bat_start/em5200_trueform`: 
+    - `bgm_boss=em5200_trueform` leaves default volumes (no volume state defined)
+    - `bgm_boss=em5200_bat_start` sets combat layer to `-96.0db`
+    - other `bgm_boss` volume states aren't really possible since they can't exists with current path
 
 ## Doom 2016 (PC)
 ```
@@ -646,3 +656,6 @@ Delphis_Main.bnk [3126765036] PLAY_BGM
 
 ## Assassin's Creed: Brotherhood
 - has multi-actions that point to different switches (with sub-switches) at the same time
+
+## Monster Hunter World (PC)
+- uses volume states to slightly change layers (3221323256.bnk's 23288607)

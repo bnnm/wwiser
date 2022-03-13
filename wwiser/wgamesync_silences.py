@@ -3,12 +3,13 @@ from collections import OrderedDict
 from . import wgamesync
 
 
-# Sometimes (ex. Platinum games), states control if musictracks must play or mute. It's silenced
-# if state is set to a certain value (inverted meaning). If there are multiple states defined,
-# then any of them may silence the object, and would play if state+value isn't set to target.
+# Sometimes (ex. Platinum games) set states control volumes, so musictracks must play or mute.
+# Usually if state is set volume becomes -96db (silenced) but it's also used to increase/decrease
+# certain layer's volume. If multiple states are defined, they work separate and any of them is
+# possible.
 #
-# To handle this, we save the silence states per object, plus all silence combos (separate from
-# usual paths), then when making .txtp we set combos of those to mute parts.
+# To handle this, we save the volume states per object, plus all combos (separate from usual
+# paths), then when making .txtp we set combos of those to change volume in some parts.
 #
 # ex. musictracks + silence states in MGR "bgm_ev2000_end [bgm_Battle_Normal=default]"
 # - stealth:        bgm_High_Low=High
@@ -17,7 +18,7 @@ from . import wgamesync
 # - vocal:          bgm_High_Low=Low    bgm_Vocal_BN=off
 #
 # No combo silences everything at once, or allows stealth + beat (most end up the same).
-# Considering inverted meaning:
+# Considering silenced meaning:
 # - bgm_High_Low=low    bgm_Vocal_BN=*      bgm_Zangeki=*       = stealth
 # - bgm_High_Low=High   bgm_Vocal_BN=off    bgm_Zangeki=off     = action
 # - bgm_High_Low=High   bgm_Vocal_BN=off    bgm_Zangeki=on      = blade_mode
@@ -34,20 +35,22 @@ from . import wgamesync
 # - ...
 # Typically only one variable is used though.
 
-# saves possible silence paths in a txtp
+# saves possible volume paths in a txtp
 class SilencePaths(object):
 
     def __init__(self):
-        self.empty = True
         self._elems = OrderedDict()
+        self._forced_path = False
         pass
+
+    def is_empty(self):
+        return len(self._elems) == 0
 
     def add_nstates(self, ngamesyncs):
         for ngroup, nvalue, config in ngamesyncs:
-            self._add_state(ngroup, nvalue, config)
+            self._add_nstate(ngroup, nvalue, config)
 
-    def _add_state(self, ngroup, nvalue, config):
-        self.empty = False
+    def _add_nstate(self, ngroup, nvalue, config):
         group = ngroup.value()
         group_name = ngroup.get_attr('hashname')
         value = nvalue.value()
@@ -58,6 +61,9 @@ class SilencePaths(object):
         # save volume instead of config b/c repeated groups+values may use different config objects
         # (but same volume), and "val" tuple would be seen as different due to config, in the "not in" checks
         # these are only used for combos, while config should be extracted from node's volume states
+        self._add_state(group, value, group_name, value_name, volume_state)
+
+    def _add_state(self, group, value, group_name, value_name, volume_state):
 
         key = (wgamesync.TYPE_STATE, group)
         val = (group, value, group_name, value_name, volume_state)
@@ -92,6 +98,77 @@ class SilencePaths(object):
             self._paths.append(sparam)
 
         return self._paths
+
+    def generate_default(self, combos):
+        # generate a base .txtp with all songs in some cases
+        # - multiple states used like a switch, base playing everything = bad (MGR, Bayo2)
+        #   music=m01 {s}=vocal=on,action=a + music=a {s}=vocal=off,action=a + ...
+        # - single state used for on/off a single layer, base playing everything = good (AChain)
+        #   music=m01 {s} + music=a {s}=vocal=on
+        # * should not make default state if there is a single state but it's fixed due to current path
+        #   music=a {s}=music=a
+        #return True
+
+        #if len(self._elems) != 1: #would need to check sub-groups
+        #    return False
+        if len(combos) != 1:
+            return False
+
+        # detect if the value is fixed due to current state
+        if self._forced_path:
+            return False
+
+        return True
+
+    def filter(self, pparams, fake_multiple=False):
+        if not pparams or pparams.empty:
+            return
+
+        # Sometimes you have a path like "bgm=a", and volume states with the game group like "bgm=b/c" -96db.
+        # It'd be impossible to reach those volumes since "bgm" is fixed to "a", so adjust state list.
+        # If path is different both can mix just fine (like "music=a" + vstates like "bgm=b/c").
+        # This fixes some games like DMC5 that use stuff like:
+        #  (bgm_boss=em5200_bat_start) {s}=(bgm_boss=em5200_bat_start) > silences battle layer
+        #  (bgm_boss=em5200_trueform) {s} > same path but doesn't silence battle layer
+
+        for key in self._elems.keys():
+            _, group = key
+            pvalue = pparams.current(*key)
+            if pvalue is None:
+                continue
+            # "any" set means all silence states should be generated (DMC5's bgm_07_stage.bnk)
+            if pvalue == 0:
+                #todo force output base? creates some odd base txtp with unlikely volume in play_m07_bgm
+                continue
+
+            # this allows forced/current value to coexist with others, resulting in fake combos, but may be interesting
+            # in some cases for unused varitions? But it also created dupes in wrong ways:
+            # * without fake_multiple makes:
+            #   play_m04_boss_bgm (bgm_boss=em5200_bat_start) {s}=(bgm_boss=em5200_bat_start)
+            # * with fake_multiple makes:
+            #   play_m04_boss_bgm (bgm_boss=em5200_bat_start) {s}=(bgm_boss=em5200_bat_end)
+            #   play_m04_boss_bgm (bgm_boss=em5200_bat_start) {s}=(bgm_boss=em5200_bat_start) [dupe of the above]
+            if fake_multiple:
+                self._add_state(group, pvalue, None, None, None) # todo: needs names#
+                return
+
+            # Remove all that aren't current bgm=a. This may remove bgm=b, bgm=c and leave original bgm=a (with some volume).
+            # If there wasn't a bgm=a, remove the key (so no {s} combos is actually generated).
+            # Could also include itself like "(bgm=a) {s}=(bgm=a)" for clarity (todo: needs names)
+
+            # mark that current path is forced, as it affects defaults in some cases
+            self._forced_path = True
+
+            items = self._elems[key]
+            for item in list(items): #clone for proper iteration+removal
+                _, vvalue, _, _, _ = item
+                if vvalue != pvalue:
+                    items.remove(item)
+
+            if not items:
+                self._elems.pop(key)
+                #self._add_state(group, pvalue, None, None, None) # optionally include itself?
+
 
 #******************************************************************************
 

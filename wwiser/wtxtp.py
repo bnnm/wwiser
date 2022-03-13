@@ -46,7 +46,7 @@ class Txtp(object):
     def __init__(self, txtpcache, mediaindex, params=None, transitions=None):
         self.params = params  #current gamesync "path" config (default/empty means must find paths)
         self.ppaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
-        self.spaths = wgamesync_silences.SilencePaths() #states used to mute tracks
+        self.vpaths = wgamesync_silences.SilencePaths() #states used to mute tracks
         self.txtpcache = txtpcache
         self.mediaindex = mediaindex
         self.transitions = transitions
@@ -54,7 +54,7 @@ class Txtp(object):
 
         # config during printing
         self.selected = None        # current random selection in sub-txtp
-        self.sparams = None         # current silence combo in sub-txtp
+        self.vparams = None         # current volume combo in sub-txtp
         self.external_path = None   # current external
         self.external_name = None   # current external
 
@@ -130,24 +130,26 @@ class Txtp(object):
             self._write_combos(printer)
 
     def _write_combos(self, printer):
-        # handle sub-txtp per silence combo
-        if self.spaths.empty:
+        # handle sub-txtp per volume combo
+
+        # volume states are affected by current states
+        self.vpaths.filter(self.params)
+
+        if self.vpaths.is_empty():
             # without variables
             self._write_txtp(printer)
 
         else:
             # per combo
-            combos = self.spaths.combos()
-            for combo in combos:
-                self.sparams = combo
+            vcombos = self.vpaths.combos()
+            for vcombo in vcombos:
+                self.vparams = vcombo
                 self._write_txtp(printer)
 
-            self.sparams = None
+            self.vparams = None
 
-            # generate a base .txtp with all songs in some cases
-            # - multiple states used like a switch, base playing everything = bad (MGR, Bayo2)
-            # - single state used for on/off a single layer, base playing everything = good (AChain)
-            if len(combos) == 1:
+            # needs a base .txtp in some cases
+            if self.vpaths.generate_default(vcombos):
                 self._write_txtp(printer)
 
     def _write_txtp(self, printer):

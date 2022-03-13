@@ -333,7 +333,7 @@ class GamesyncParams(object):
         return unreachable
 
     # get currently set single value of gamesync
-    def value(self, type, name):
+    def current(self, type, name):
         key = (type, name)
 
         values = self._elems.get(key)

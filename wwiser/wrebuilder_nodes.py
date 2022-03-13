@@ -449,7 +449,7 @@ class _NodeHelper(object):
         curr_tree = self.tree
         for gtype, ngname in self.args:
             # current arg must be defined to some value
-            gvalue = txtp.params.value(gtype, ngname.value())
+            gvalue = txtp.params.current(gtype, ngname.value())
             if gvalue is None: #not defined = can't match
                 return None
 
@@ -739,7 +739,7 @@ class _CAkSwitchCntr(_NodeHelper):
             return
 
         #get current gamesync
-        gvalue = txtp.params.value(gtype, gname)
+        gvalue = txtp.params.current(gtype, gname)
         if gvalue is None:
             return
         if not gvalue in self.gvalue_ntids: #exact match (no * like MusicSwitches)
@@ -1005,7 +1005,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
                 return
 
             # get current gamesync
-            gvalue = txtp.params.value(gtype, gname)
+            gvalue = txtp.params.current(gtype, gname)
             if gvalue is None:
                 return
             if not gvalue in self.gvalue_ntid:
@@ -1382,7 +1382,7 @@ class _CAkMusicTrack(_NodeHelper):
 
         # node defines states that muted sources
         if self.config.volume_states:
-            txtp.spaths.add_nstates(self.config.volume_states)
+            txtp.vpaths.add_nstates(self.config.volume_states)
 
         # musictrack can play in various ways
         if   self.type == 0: #normal (plays one subtrack, N aren't allowed)
@@ -1422,7 +1422,7 @@ class _CAkMusicTrack(_NodeHelper):
                 return
 
             #get current gamesync
-            gvalue = txtp.params.value(gtype, gname)
+            gvalue = txtp.params.current(gtype, gname)
             if gvalue is None:
                 return
             if not gvalue in self.gvalue_index:

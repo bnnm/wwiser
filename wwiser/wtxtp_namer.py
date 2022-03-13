@@ -206,7 +206,7 @@ class TxtpNamer(object):
                 name += " {s-}" #"silence all"
             else:
                 name += " {s}"
-        name += self._get_sparams()
+        name += self._get_vparams()
         name += self._get_gamevars(printer)
 
 
@@ -256,15 +256,15 @@ class TxtpNamer(object):
 
         return name
 
-    def _get_sparams(self):
+    def _get_vparams(self):
         txtp = self.txtp
 
         info = ''
-        if not txtp.sparams:
+        if not txtp.vparams:
             return info
 
         info += '='
-        for group, value, group_name, value_name in txtp.sparams.items():
+        for group, value, group_name, value_name in txtp.vparams.items():
             gn = group_name or group
             vn = value_name or value
             if value == 0:

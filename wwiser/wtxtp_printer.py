@@ -568,9 +568,9 @@ class TxtpPrinter(object):
     #todo do in prepare()?
     def _get_volume_state(self, node):
         if node.config.volume_states:
-            if not self._txtp.sparams:
+            if not self._txtp.vparams:
                 return None
-            return self._txtp.sparams.get_volume_state(node.config.volume_states)
+            return self._txtp.vparams.get_volume_state(node.config.volume_states)
 
         if node.parent:
             return self._get_volume_state(node.parent)

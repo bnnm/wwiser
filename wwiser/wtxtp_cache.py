@@ -37,6 +37,7 @@ class TxtpCache(object):
         self.random_force = False
         self.write_delays = False
         self.silence = False
+        self.wwnames = None
 
         # process helpers (passed around)
         self.tags = None

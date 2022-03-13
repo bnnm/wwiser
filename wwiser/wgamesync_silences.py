@@ -35,6 +35,69 @@ from . import wgamesync
 # - ...
 # Typically only one variable is used though.
 
+class VolumeItem(object):
+    def __init__(self):
+        self.type = wgamesync.TYPE_STATE
+        self.group = None
+        self.value = None
+        self.group_name = None
+        self.value_name = None
+        self.volume_state = 0
+        self.unreachable = False
+
+    def init_nstate(self, ngroup, nvalue, config):
+        self.group = ngroup.value()
+        self.group_name = ngroup.get_attr('hashname')
+        self.value = nvalue.value()
+        self.value_name = nvalue.get_attr('hashname')
+        # save volume instead of config b/c repeated groups+values may use different config objects
+        # (but same volume), and "val" tuple would be seen as different due to config, in the "not in" checks
+        # these are only used for combos, while config should be extracted from node's volume states
+        if config and config.volume: 
+            self.volume_state = config.volume
+
+    def init_base(self, group, value, wwnames):
+        self.group = group
+        self.value = value
+        # these params may come from external vars, try to get names from db
+        if wwnames:
+            row = wwnames.get_namerow(group)
+            if row and row.hashname:
+                self.group_name = row.hashname
+
+            row = wwnames.get_namerow(value)
+            if row and row.hashname:
+                self.value_name = row.hashname
+
+
+    def set_unreachable(self):
+        self.unreachable = True
+
+    def eq_base(self, other):
+        return (
+            self.type == other.type and 
+            self.group == other.group and 
+            self.value == other.value
+        )
+
+    def eq_vol(self, other):
+        return (
+            self.type == other.type and 
+            self.group == other.group and 
+            self.value == other.value
+        )
+
+    # used with "not in"
+    def __eq__(self, other):
+        return self.eq_vol(other)
+
+    def __repr__(self):
+        gn = self.group_name or str(self.group)
+        vn = self.value_name or str(self.value)
+        vs = str(self.volume_state)
+        return str((gn,vn,vs))
+        
+
 # saves possible volume paths in a txtp
 class SilencePaths(object):
 
@@ -48,25 +111,12 @@ class SilencePaths(object):
 
     def add_nstates(self, ngamesyncs):
         for ngroup, nvalue, config in ngamesyncs:
-            self._add_nstate(ngroup, nvalue, config)
+            vitem = VolumeItem()
+            vitem.init_nstate(ngroup, nvalue, config)
+            self._add_vstate(vitem)
 
-    def _add_nstate(self, ngroup, nvalue, config):
-        group = ngroup.value()
-        group_name = ngroup.get_attr('hashname')
-        value = nvalue.value()
-        value_name = nvalue.get_attr('hashname')
-        volume_state = 0
-        if config and config.volume: 
-            volume_state = config.volume
-        # save volume instead of config b/c repeated groups+values may use different config objects
-        # (but same volume), and "val" tuple would be seen as different due to config, in the "not in" checks
-        # these are only used for combos, while config should be extracted from node's volume states
-        self._add_state(group, value, group_name, value_name, volume_state)
-
-    def _add_state(self, group, value, group_name, value_name, volume_state):
-
-        key = (wgamesync.TYPE_STATE, group)
-        val = (group, value, group_name, value_name, volume_state)
+    def _add_vstate(self, vitem):
+        key = (vitem.type, vitem.group)
         if key not in self._elems:
             items = []
             # maybe should have a special value of "variable X set to other, non-silencing thing"?
@@ -74,32 +124,40 @@ class SilencePaths(object):
             #items.append(val_default)
             self._elems[key] = items
 
-        if val not in self._elems[key]:
-            self._elems[key].append(val)
+
+        #for evitem in self._elems[key]:
+        #    if vitem not in self._elems[key]:
+        #    self._elems[key].append(vitem)
+
+        if vitem not in self._elems[key]:
+            self._elems[key].append(vitem)
+
 
     def combos(self):
         self._paths = []
 
-        # short items by value_name if possible as it makes more consistently named .txtp
+        # short items by name if possible as it makes more consistently named .txtp
         # must order keys too since they same vars move around between tracks
-        # order is value_name first then value (to avoid comparing str vs int), using '~' to force Nones go last
+        # Uses tuples to avoid comparing str vs int), using '~' to force Nones go last
+        # If item is marked as unreachable, must go after all reachables
         elems = []
         for values in self._elems.values():
-            values.sort(key=lambda x: (x[3] or '~', x[1])) #value
+            values.sort(key=lambda x: (not x.unreachable, x.value_name or '~', x.value))
             elems.append(values)
-        elems.sort(key=lambda x: (x[0][2] or '~', x[0][1])) #group
+
+        elems.sort(key=lambda x: (not x[0].unreachable, x[0].group_name or '~', x[0].group))
 
         # combos of existing variables
         #items = itertools.product(*self._elems.values())
         items = itertools.product(*elems)
         for item in items:
-            sparam = SilenceParams()    
-            sparam.adds(item)
-            self._paths.append(sparam)
+            vparam = VolumeParams()    
+            vparam.adds(item)
+            self._paths.append(vparam)
 
         return self._paths
 
-    def generate_default(self, combos):
+    def generate_default(self, vcombos):
         # generate a base .txtp with all songs in some cases
         # - multiple states used like a switch, base playing everything = bad (MGR, Bayo2)
         #   music=m01 {s}=vocal=on,action=a + music=a {s}=vocal=off,action=a + ...
@@ -107,99 +165,94 @@ class SilencePaths(object):
         #   music=m01 {s} + music=a {s}=vocal=on
         # * should not make default state if there is a single state but it's fixed due to current path
         #   music=a {s}=music=a
-        #return True
-
-        #if len(self._elems) != 1: #would need to check sub-groups
-        #    return False
-        if len(combos) != 1:
-            return False
 
         # detect if the value is fixed due to current state
         if self._forced_path:
             return False
 
+        # multivars like in MGR probably don't need a base value
+        if len(vcombos) >= 1:
+            vcombo = vcombos[0]
+            if len(vcombo.items()) > 1: #g1=v1 + g2=v2
+                return False
+
         return True
 
-    def filter(self, pparams, fake_multiple=False):
-        if not pparams or pparams.empty:
+    def filter(self, pparams, wwnames=None):
+        if not pparams or pparams.is_empty():
             return
 
         # Sometimes you have a path like "bgm=a", and volume states with the game group like "bgm=b/c" -96db.
-        # It'd be impossible to reach those volumes since "bgm" is fixed to "a", so adjust state list.
-        # If path is different both can mix just fine (like "music=a" + vstates like "bgm=b/c").
-        # This fixes some games like DMC5 that use stuff like:
-        #  (bgm_boss=em5200_bat_start) {s}=(bgm_boss=em5200_bat_start) > silences battle layer
-        #  (bgm_boss=em5200_trueform) {s} > same path but doesn't silence battle layer
+        # It'd be impossible to reach those volumes since "bgm" is fixed to "a", so adjust state list to
+        # mark those unreachable and optionally add current value as reachable.
+        # If path states are different both can mix just fine (like "music=a" + vstates like "bgm=b/c").
+        # Usually they could be removed rather than marked, but in rare cases there is some interesting
+        # unused variation of volumes (DMC5's bgm_m00_boss.bnk).
 
         for key in self._elems.keys():
             _, group = key
             pvalue = pparams.current(*key)
             if pvalue is None:
                 continue
-            # "any" set means all silence states should be generated (DMC5's bgm_07_stage.bnk)
+
+            # mark that current path is forced, as it affects defaults in some cases
+            self._forced_path = True
+
+            # "any" set means all volume states should be generated (DMC5's bgm_07_stage.bnk)
             if pvalue == 0:
                 #todo force output base? creates some odd base txtp with unlikely volume in play_m07_bgm
                 continue
-
-            # this allows forced/current value to coexist with others, resulting in fake combos, but may be interesting
-            # in some cases for unused varitions? But it also created dupes in wrong ways:
-            # * without fake_multiple makes:
-            #   play_m04_boss_bgm (bgm_boss=em5200_bat_start) {s}=(bgm_boss=em5200_bat_start)
-            # * with fake_multiple makes:
-            #   play_m04_boss_bgm (bgm_boss=em5200_bat_start) {s}=(bgm_boss=em5200_bat_end)
-            #   play_m04_boss_bgm (bgm_boss=em5200_bat_start) {s}=(bgm_boss=em5200_bat_start) [dupe of the above]
-            if fake_multiple:
-                self._add_state(group, pvalue, None, None, None) # todo: needs names#
-                return
 
             # Remove all that aren't current bgm=a. This may remove bgm=b, bgm=c and leave original bgm=a (with some volume).
             # If there wasn't a bgm=a, remove the key (so no {s} combos is actually generated).
             # Could also include itself like "(bgm=a) {s}=(bgm=a)" for clarity (todo: needs names)
 
-            # mark that current path is forced, as it affects defaults in some cases
-            self._forced_path = True
+            vitems = self._elems[key]
 
-            items = self._elems[key]
-            for item in list(items): #clone for proper iteration+removal
-                _, vvalue, _, _, _ = item
-                if vvalue != pvalue:
-                    items.remove(item)
+            curr_vitem = VolumeItem()
+            curr_vitem.init_base(group, pvalue, wwnames) #todo improve name handling
 
-            if not items:
-                self._elems.pop(key)
-                #self._add_state(group, pvalue, None, None, None) # optionally include itself?
+            # check and add itself for better names (can't use not-in since we don't know volume)
+            curr_exists = False
+            for vitem in vitems:
+                if curr_vitem.eq_base(vitem):
+                    curr_exists = True
+            if not curr_exists:
+                vitems.append(curr_vitem)
 
+            for vitem in list(vitems): #clone for iteration+removal
+                if vitem.value != pvalue:
+                    vitem.set_unreachable()
+                    #vitems.remove(vitem)
+
+            #if not items:
+            #    self._elems.pop(key)
 
 #******************************************************************************
 
 # stores current selected silence path
-class SilenceParams(object):
+class VolumeParams(object):
     def __init__(self):
         self._elems = OrderedDict()
         pass
 
     def adds(self, vparams):
         for vparam in vparams:
-            self.add(*vparam)
+            self.add(vparam)
 
-    def add(self, group, value, group_name, value_name, volume):
-        if group is None or value is None:
+    def add(self, vitem):
+        if vitem.group is None or vitem.value is None:
             return
-        self._elems[(group, value)] = (group, value, group_name, value_name, volume)
+        key = (vitem.group, vitem.value)
+        self._elems[key] = vitem
 
     def get_volume_state(self, nstates):
-        #key = (type, name)
         for ngroup, nvalue, config in nstates:
             group = ngroup.value()
             value = nvalue.value()
             if (group, value) in self._elems:
                 return config
-            #if (group, 0) in self._elems:
-            #    return True
         return None
 
     def items(self):
-        items = []
-        for group, value, group_name, value_name, _ in self._elems.values():
-            items.append((group, value, group_name, value_name))
-        return items
+        return self._elems.values()

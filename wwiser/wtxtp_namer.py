@@ -264,11 +264,13 @@ class TxtpNamer(object):
             return info
 
         info += '='
-        for group, value, group_name, value_name in txtp.vparams.items():
-            gn = group_name or group
-            vn = value_name or value
-            if value == 0:
+        for vitem in txtp.vparams.items():
+            gn = vitem.group_name or vitem.group
+            vn = vitem.value_name or vitem.value
+            if vitem.value == 0:
                 vn = '-'
+            if vitem.unreachable:
+                info += '~'
             info += "(%s=%s)" % (gn, vn)
 
         return info

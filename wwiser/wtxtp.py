@@ -133,7 +133,7 @@ class Txtp(object):
         # handle sub-txtp per volume combo
 
         # volume states are affected by current states
-        self.vpaths.filter(self.params)
+        self.vpaths.filter(self.params, self.txtpcache.wwnames)
 
         if self.vpaths.is_empty():
             # without variables

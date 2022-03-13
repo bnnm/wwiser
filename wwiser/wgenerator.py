@@ -21,7 +21,7 @@ from . import wgenerator_filter, wgenerator_mediaindex, wgenerator_transitions, 
 #******************************************************************************
 
 class Generator(object):
-    def __init__(self, banks):
+    def __init__(self, banks, wwnames=None):
         self._banks = banks
 
         self._rebuilder = wrebuilder.Rebuilder()
@@ -29,6 +29,7 @@ class Generator(object):
         self._mediaindex = wgenerator_mediaindex.MediaIndex(banks)
 
         self._txtpcache.set_basepath(banks)
+        self._txtpcache.wwnames = wwnames
 
         # options
         self._generate_unused = False       # generate unused after regular txtp
@@ -412,7 +413,7 @@ class Generator(object):
             self._rebuilder.begin_txtp(txtp, node)
 
             ppaths = txtp.ppaths  # gamesync "paths" found during process
-            if ppaths.empty:
+            if ppaths.is_empty():
                 # single .txtp (no variables)
                 txtp.write()
             else:

@@ -264,8 +264,7 @@ class Cli(object):
 
         # generate txtp
         if args.txtp:
-            generator = wgenerator.Generator(banks)
-            #generator._txtpcache.wwnames = name #debug
+            generator = wgenerator.Generator(banks, names)
             generator.set_generate_unused(args.txtp_unused)
             generator.set_filter(args.txtp_filter)
             generator.set_filter_rest(args.txtp_filter_rest)

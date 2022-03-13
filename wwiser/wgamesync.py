@@ -174,17 +174,20 @@ def _get_info(txtpcache, id):
 class GamesyncPaths(object):
 
     def __init__(self, txtpcache):
-        self.empty = True
+        self._empty = True
         self._txtpcache = txtpcache
         self._root = _GamesyncNode(None, [])
         self._current = self._root
         self.stingers = []
 
+    def is_empty(self):
+        return self._empty
+
     def adds(self, gamesyncs):
         #for gamesync in gamesyncs: #todo
         #    logging.info("GP added: %i, %i, %i" % gamesync)
 
-        self.empty = False
+        self._empty = False
         node = _GamesyncNode(self._current, gamesyncs)
         self._current.append(node)
         self._current = node
@@ -272,12 +275,15 @@ class GamesyncPaths(object):
 class GamesyncParams(object):
 
     def __init__(self, txtpcache):
-        self.empty = True #public
+        self._empty = True #public
         self._elems = {}
         self._txtpcache = txtpcache
         self._manual = False
         self._fnv = wfnv.Fnv()
         self._depth = 0 #infp
+
+    def is_empty(self):
+        return self._empty
 
     def get_elems(self):
         elems = []
@@ -299,7 +305,7 @@ class GamesyncParams(object):
 
     # include new variable
     def add(self, type, name, value):
-        self.empty = False
+        self._empty = False
 
         type = int(type)
         name = int(name)
@@ -380,7 +386,7 @@ class GamesyncParams(object):
 
 
     def set_params(self, params):
-        self.empty = False #even if passed list is empty (to simulate "nothing set")
+        self._empty = False #even if passed list is empty (to simulate "nothing set")
         self._manual = True #manual params behave a bit differently
 
         if not params:

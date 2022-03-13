@@ -478,7 +478,7 @@ class Gui(object):
             return
 
         try:
-            generator = wgenerator.Generator(banks)
+            generator = wgenerator.Generator(banks, self.names)
             generator.set_filter( self._get_list('txtp_filter') )
             generator.set_filter_rest( self._get_item('txtp_filter_rest') )
             generator.set_filter_normal( self._get_item('txtp_filter_normal') )

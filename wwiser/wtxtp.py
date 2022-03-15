@@ -46,7 +46,7 @@ class Txtp(object):
     def __init__(self, txtpcache, mediaindex, params=None, transitions=None):
         self.params = params  #current gamesync "path" config (default/empty means must find paths)
         self.ppaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
-        self.vpaths = wgamesync_silences.SilencePaths() #states used to mute tracks
+        self.vpaths = wgamesync_silences.VolumePaths() #states used to change volume/mute tracks
         self.txtpcache = txtpcache
         self.mediaindex = mediaindex
         self.transitions = transitions

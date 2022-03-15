@@ -315,7 +315,7 @@ In some cases parts of the song silence/change volume based on a in-game value. 
 
 Inside the `.txtp` crossfade parts are marked with `##fade` near `.wem`, and RTPC info is down in the comment tree. You can also silence those by put `?` in front of `.wem`, or `#v 0` before `##fade`.
 
-In rare cases `{s}` means the sound is silenced via states, which should be handled automatically (makes one per state). Also rarely, audio may be silenced by default (volume is -96dB) but since games can control volumes manually, `txtp` is also marked with `{s}` yet play normally without silencing.
+In rare cases `{s}` means the volume is altered/silenced via states, which should be handled automatically by making one `.txtp` per state that changes volumes. Sometimes default `.txtp` marked with `{s}` and without state applied is also meant to be playable, for example game may define a base event that plays all then silence some layer with one state). Meaning  some `txtp` is marked with `{s}` don't need to be touched.
 
 
 ### Multi-loops mark {m}

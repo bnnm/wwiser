@@ -99,7 +99,7 @@ class VolumeItem(object):
         
 
 # saves possible volume paths in a txtp
-class SilencePaths(object):
+class VolumePaths(object):
 
     def __init__(self):
         self._elems = OrderedDict()

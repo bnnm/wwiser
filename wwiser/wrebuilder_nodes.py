@@ -232,7 +232,7 @@ class _NodeHelper(object):
                         nstateid = nstate.find1(name='ulStateID')
                         if nstategroupid and nstateid:
                             self.config.add_volume_state(nstategroupid, nstateid, bstate.config)
-                            self.fields.keyval(nstategroupid, nstateid) #todo
+                            self.fields.keyvalvol(nstategroupid, nstateid, bstate.config.volume)
 
         if nbase and check_rtpc:
             # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)

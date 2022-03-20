@@ -259,6 +259,9 @@ class TxtpNamer(object):
     def _get_vparams(self):
         txtp = self.txtp
 
+        if txtp.vparams_default:
+            return '=-'
+
         info = ''
         if not txtp.vparams:
             return info

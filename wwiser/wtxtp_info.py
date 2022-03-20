@@ -299,6 +299,7 @@ FIELD_TYPE_PROP = 0
 FIELD_TYPE_KEYVAL = 1
 FIELD_TYPE_KEYMINMAX = 2
 FIELD_TYPE_RTPC = 3
+FIELD_TYPE_KEYVALVOL = 4
 
 class TxtpFields(object):
     def __init__(self):
@@ -315,6 +316,10 @@ class TxtpFields(object):
     def keyval(self, nkey, nval):
         if nkey:
             self._fields.append((FIELD_TYPE_KEYVAL, nkey, nval))
+
+    def keyvalvol(self, nkey, nval, vol):
+        if nkey:
+            self._fields.append((FIELD_TYPE_KEYVALVOL, nkey, nval, vol))
 
     def keyminmax(self, nkey, nmin, nmax):
         if nkey:
@@ -361,6 +366,26 @@ class TxtpFields(object):
                 val = vattrs.get('valuefmt', vattrs.get('hashname'))
                 if not val:
                     val = vattrs.get('value')
+
+            elif type == FIELD_TYPE_KEYVALVOL:
+                _, nkey, nval, vol = field
+                kattrs = nkey.get_attrs()
+                vattrs = nval.get_attrs()
+
+                kname = kattrs.get('name')
+                kvalue = kattrs.get('valuefmt', kattrs.get('hashname'))
+                if not kvalue:
+                    kvalue = kattrs.get('value')
+
+                if not kvalue:
+                    key = "%s" % (kname)
+                else:
+                    key = "%s %s" % (kname, kvalue)
+
+                val = vattrs.get('valuefmt', vattrs.get('hashname'))
+                if not val:
+                    val = vattrs.get('value')
+                val = "%s {%s}" % (val, vol)
 
             elif type == FIELD_TYPE_KEYMINMAX:
                 _, nkey, nmin, nmax = field

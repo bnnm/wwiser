@@ -69,10 +69,6 @@ class VolumeItem(object):
             if row and row.hashname:
                 self.value_name = row.hashname
 
-
-    def set_unreachable(self):
-        self.unreachable = True
-
     def eq_base(self, other):
         return (
             self.type == other.type and 
@@ -104,10 +100,21 @@ class VolumePaths(object):
     def __init__(self):
         self._elems = OrderedDict()
         self._forced_path = False
+        self._unreachables = False
+        self._unreachables_only = False
         pass
 
     def is_empty(self):
         return len(self._elems) == 0
+
+    def has_unreachables(self):
+        return self._unreachables
+
+    def is_unreachables_only(self):
+        return self._unreachables_only
+
+    def set_unreachables_only(self):
+        self._unreachables_only = True
 
     def add_nstates(self, ngamesyncs):
         for ngroup, nvalue, config in ngamesyncs:
@@ -166,6 +173,9 @@ class VolumePaths(object):
         # * should not make default state if there is a single state but it's fixed due to current path
         #   music=a {s}=music=a
 
+        if self._unreachables_only:
+            return False
+
         # detect if the value is fixed due to current state
         if self._forced_path:
             return False
@@ -179,6 +189,8 @@ class VolumePaths(object):
         return True
 
     def filter(self, pparams, wwnames=None):
+        #if self._unreachables_only: #needs to be re-filtered
+        #    return
         if not pparams or pparams.is_empty():
             return
 
@@ -186,8 +198,16 @@ class VolumePaths(object):
         # It'd be impossible to reach those volumes since "bgm" is fixed to "a", so adjust state list to
         # mark those unreachable and optionally add current value as reachable.
         # If path states are different both can mix just fine (like "music=a" + vstates like "bgm=b/c").
-        # Usually they could be removed rather than marked, but in rare cases there is some interesting
-        # unused variation of volumes (DMC5's bgm_m00_boss.bnk).
+        #
+        # Usually "unreachables" could be removed, but in rare cases they lead to interesting unused
+        # variations of volumes (DMC5's bgm_m00_boss.bnk). Those are generated after all variable combos
+        # for reachables are created, as it gives better names and dupes
+        #
+        # ex. em5900_bat_start would go first otherwise, plus em5900_bat_start would be also a dupe
+        #    (path order is as defined)
+        #   play_m00_boss_bgm (bgm_boss=em5900_intro_m00) {s}=(bgm_boss=em5900_intro_m00)
+        #   play_m00_boss_bgm (bgm_boss=em5900_intro_m00) {s}=~(bgm_boss=em5900_bat_start) {d}
+        #   play_m00_boss_bgm (bgm_boss=em5900_bat_start) {s}=(bgm_boss=em5900_bat_start)
 
         for key in self._elems.keys():
             _, group = key
@@ -195,13 +215,14 @@ class VolumePaths(object):
             if pvalue is None:
                 continue
 
-            # mark that current path is forced, as it affects defaults in some cases
-            self._forced_path = True
-
             # "any" set means all volume states should be generated (DMC5's bgm_07_stage.bnk)
             if pvalue == 0:
-                #todo force output base? creates some odd base txtp with unlikely volume in play_m07_bgm
+                #todo force output base instead of generate_default? needs to be reordered so it goes last
                 continue
+
+            # mark that current path is forced, as it affects defaults in some cases, except when using "any"
+            # (this creates a useless base {s} in some cases but it's needed in others)
+            self._forced_path = True
 
             # Remove all that aren't current bgm=a. This may remove bgm=b, bgm=c and leave original bgm=a (with some volume).
             # If there wasn't a bgm=a, remove the key (so no {s} combos is actually generated).
@@ -222,8 +243,9 @@ class VolumePaths(object):
 
             for vitem in list(vitems): #clone for iteration+removal
                 if vitem.value != pvalue:
-                    vitem.set_unreachable()
-                    #vitems.remove(vitem)
+                    vitem.unreachable = True
+                    self._unreachables = True
+                    #vitems.remove(vitem) #skipped externally
 
             #if not items:
             #    self._elems.pop(key)
@@ -234,7 +256,11 @@ class VolumePaths(object):
 class VolumeParams(object):
     def __init__(self):
         self._elems = OrderedDict()
+        self._unreachables = False
         pass
+
+    def has_unreachables(self):
+        return self._unreachables
 
     def adds(self, vparams):
         for vparam in vparams:
@@ -243,6 +269,8 @@ class VolumeParams(object):
     def add(self, vitem):
         if vitem.group is None or vitem.value is None:
             return
+        if vitem.unreachable:
+            self._unreachables = True
         key = (vitem.group, vitem.value)
         self._elems[key] = vitem
 

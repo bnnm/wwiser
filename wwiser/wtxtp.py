@@ -55,6 +55,7 @@ class Txtp(object):
         # config during printing
         self.selected = None        # current random selection in sub-txtp
         self.vparams = None         # current volume combo in sub-txtp
+        self.vparams_default = False
         self.external_path = None   # current external
         self.external_name = None   # current external
 
@@ -137,12 +138,18 @@ class Txtp(object):
 
         if self.vpaths.is_empty():
             # without variables
-            self._write_txtp(printer)
+            if not self.vpaths.is_unreachables_only():
+                self._write_txtp(printer)
 
         else:
             # per combo
             vcombos = self.vpaths.combos()
             for vcombo in vcombos:
+                if vcombo.has_unreachables() and not self.vpaths.is_unreachables_only():
+                    continue
+                if not vcombo.has_unreachables() and self.vpaths.is_unreachables_only():
+                    continue
+
                 self.vparams = vcombo
                 self._write_txtp(printer)
 
@@ -150,7 +157,9 @@ class Txtp(object):
 
             # needs a base .txtp in some cases
             if self.vpaths.generate_default(vcombos):
+                self.vparams_default = True
                 self._write_txtp(printer)
+                self.vparams_default = False
 
     def _write_txtp(self, printer):
         # Some games have GS combos and events that end up being the same (ex. Nier Automata, Bayonetta 2).

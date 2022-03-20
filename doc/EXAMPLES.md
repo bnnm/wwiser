@@ -189,6 +189,9 @@ event > ... > mranseq >  segment
     - `bgm_boss=em5200_trueform` leaves default volumes (no volume state defined)
     - `bgm_boss=em5200_bat_start` sets combat layer to `-96.0db`
     - other `bgm_boss` volume states aren't really possible since they can't exists with current path
+      - sometimes leads to unreachable variations: 
+        - `play_m08_boss_bgm (bgm_boss=em5900_intro_m08) {s}=~(bgm_boss=em5900_bat_end)`
+      - unreachable variations may be possible if change times are long enough?
 
 ## Doom 2016 (PC)
 ```

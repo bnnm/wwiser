@@ -418,12 +418,24 @@ class Generator(object):
                 txtp.write()
             else:
                 # .txtp per variable combo
+                unreachables = False #check if any txtp has unreachables
                 combos = ppaths.combos()
                 for combo in combos:
                     #logging.info("generator: combo %s", combo.elems)
                     txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=combo, transitions=transitions)
                     self._rebuilder.begin_txtp(txtp, node)
                     txtp.write()
+                    if txtp.vpaths.has_unreachables():
+                        unreachables = True
+
+                if unreachables:
+                    for combo in combos:
+                        #logging.info("generator: combo %s", combo.elems)
+                        txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=combo, transitions=transitions)
+                        txtp.vpaths.set_unreachables_only()
+                        self._rebuilder.begin_txtp(txtp, node)
+                        txtp.write()
+
 
             # triggers are handled a bit differently
             if ppaths.stingers:

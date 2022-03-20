@@ -7,7 +7,9 @@ TXTP_SPACES = 1
 DEBUG_PRINT_TREE_PRE = False
 DEBUG_PRINT_TREE_POST = False
 DEBUG_PRINT_GROUP_HEADER = False
-DEBUG_PRINT_ENVELOPES = False
+# envelopes tend to make giant lines in some cases and vgmstream max line is ~1000, to be improved
+DEBUG_PRINT_ENVELOPES = True
+DEBUG_PRINT_ENVELOPES_LIMIT = 500
 
 GROUPS_TYPE = {
     wtxtp_tree.TYPE_GROUP_SINGLE: 'S',
@@ -412,6 +414,7 @@ class TxtpPrinter(object):
             # ch(type)(position)(time-start)+(time-length)
             # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
             if DEBUG_PRINT_ENVELOPES:
+                info_envs = ''
                 #TODO: some games add too many envelopes making huge lines that are ignored by vgmstream
                 # (Tetris Beat on Apple Arcade: Play_Music [Music=Hydra] (MUSIC_PROGRESS=FULL_SONG), Jedi Fallen Order)
                 for envelope in node.envelopes:
@@ -421,7 +424,12 @@ class TxtpPrinter(object):
                     time_st = self._get_sec(envelope.time1)
                     time_ed = self._get_sec(envelope.time2)
                     #TODO: seems to reapply on loops (time becomes 0 again)
-                    info += ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
+                    info_env = ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
+                    info_envs += info_env
+                    if len(info_envs) >= DEBUG_PRINT_ENVELOPES_LIMIT:
+                        info_envs += ' ##(...)'
+                        break
+                info += info_envs
             else:
                 # rarely there are .txtp clones with fading and non-fading paths, ignore for now [Pokemon BDSP, Death Stranding]
                 #info += ' ##envelopes'

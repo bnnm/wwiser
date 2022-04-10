@@ -322,7 +322,7 @@ In rare cases `{s}` means the volume is altered/silenced via states, which shoul
 In Wwise multiple parts may loop  independently (like some short croak sfx + longer river sfx), which isn't simulated at the moment. You can edit and extend `#B` times near `#@loop` manually to simulate them, though.
 
 
-#### Missing mark {!}
+### Missing mark {!}
 This indicates some kind of problem. Typically missing memory bank (try loading more banks first), or an unsupported Wwise feature. The later will play as silence (parts are marked as `?`) rather than failing, since sometimes it doesn't matter much.
 
 Unsupported features are usually programatically generated audio (such as a sine wave, a "whoosh" wind sfx, and so on), or Wwise midi (that is mostly silent and used for syncronization rather than sound).
@@ -362,7 +362,7 @@ Somewhat related, inside *SoundbanksInfo.xml* you may find the original `.wem` n
 ### Passing volumes
 Because volumes in Wwise are a complex mix of external and internal settings, default generated volume may be a bit low. You can change it by setting the "master volume" option. For example `6.0dB` to double volume, or `50%` to halve it.
 
-Set `*` instead to auto-normalize volume. This will increase or decrease overall volume per file, trying to keep it as close as base volume.
+Set `*` instead to auto-normalize volume (default). This will increase or decrease overall volume per file, trying to keep it as close as base volume. Or, set `0` to leave volumes as originally set in Wwise.
 
 
 ### Passing variables

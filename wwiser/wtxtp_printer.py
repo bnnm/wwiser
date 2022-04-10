@@ -248,9 +248,9 @@ class TxtpPrinter(object):
         if self._simpler:
             volume = 0
         if node.crossfaded:
-            config = self._get_volume_state(node)
-            if config and config.volume:
-                volume += config.volume
+            vstates = self._get_volume_states(node)
+            for vstate in vstates:
+                volume += vstate
         if self._txtpcache.silence or node.silenced:
             mods += '  #v 0'
         elif volume:
@@ -440,9 +440,9 @@ class TxtpPrinter(object):
         if self._simpler:
             volume = 0
         if node.crossfaded:
-            config = self._get_volume_state(node)
-            if config and config.volume:
-                volume += config.volume
+            vstates = self._get_volume_states(node)
+            for vstate in vstates:
+                volume += vstate
         if self._txtpcache.silence or node.silenced:
             silence_line = True #set "?" below as it's a bit simpler to use
         elif volume:
@@ -571,16 +571,23 @@ class TxtpPrinter(object):
     def _get_padding(self):
         return ' ' * (self._depth - 1) * TXTP_SPACES
 
-    # Some nodes change volume via states, test if those are currently set.
+    # Some nodes change volume via states, test if those are currently set (multiple at once are ok).
     # This info isn't passed around so must find (possibly ignored) parent node that has it.
     #todo do in prepare()?
-    def _get_volume_state(self, node):
+    def _get_volume_states(self, node):
+        vstates = []
+        self._get_volume_states_internal(node, vstates)
+        return vstates
+
+    def _get_volume_states_internal(self, node, vstates):
         if node.config.volume_states:
-            if not self._txtp.vparams:
-                return None
-            return self._txtp.vparams.get_volume_state(node.config.volume_states)
+            if self._txtp.vparams:
+                configs = self._txtp.vparams.get_volume_states(node.config.volume_states)
+                for config in configs:
+                    if config.volume:
+                        vstates.append(config.volume)
 
         if node.parent:
-            return self._get_volume_state(node.parent)
+            self._get_volume_states_internal(node.parent, vstates)
 
-        return None
+        return

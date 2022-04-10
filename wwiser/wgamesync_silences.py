@@ -176,15 +176,27 @@ class VolumePaths(object):
         if self._unreachables_only:
             return False
 
-        # detect if the value is fixed due to current state
+        # detect if the value is fixed due to current state (but only a single state for PK Arceus,
+        # that combines one fixed value that adds some volume and other states that don't)
         if self._forced_path:
-            return False
+            #TODO: should detect if all combo params are set in current pparams (pass external)
+            if len(vcombos) == 1:
+                return False
+            #if pparams and not pparams.is_empty():
+            #    all_set = True
+            #    for vcombo in vcombos:
+            #        pvalue = pparams.current(vcombo....)
+            #        if pvalue is None:
+            #            all_set = False
+            #    if not all_set:
+            #        return False
 
         # multivars like in MGR probably don't need a base value
-        if len(vcombos) >= 1:
-            vcombo = vcombos[0]
-            if len(vcombo.items()) > 1: #g1=v1 + g2=v2
-                return False
+        # but Pokemon Legends Arceus does :(
+        #if len(vcombos) >= 1:
+        #    vcombo = vcombos[0]
+        #    if len(vcombo.items()) > 1: #g1=v1 + g2=v2
+        #        return False
 
         return True
 
@@ -274,13 +286,14 @@ class VolumeParams(object):
         key = (vitem.group, vitem.value)
         self._elems[key] = vitem
 
-    def get_volume_state(self, nstates):
+    def get_volume_states(self, nstates):
+        configs = []
         for ngroup, nvalue, config in nstates:
             group = ngroup.value()
             value = nvalue.value()
             if (group, value) in self._elems:
-                return config
-        return None
+                configs.append(config)
+        return configs
 
     def items(self):
         return self._elems.values()

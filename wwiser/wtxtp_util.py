@@ -384,7 +384,9 @@ class NodeFx(object):
             self.duration = ndur.value()  * 1000.0 #to ms for consistency
 
 
-ENVELOPE_NEW_VERSION = 112 #>= #todo unsure
+# DmC (65): old
+# MGR (72): new (probably v70 too)
+ENVELOPE_NEW_VERSION = 70
 
 INTERPOLATIONS = {
     0:'L', #Log3

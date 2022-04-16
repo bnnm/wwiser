@@ -331,6 +331,13 @@ Info gathered from the editor, to help understanding model and overall behavior.
   - `eFadeCurve`: curve type (linear=/, logaritmic, etc)
   - sometimes segment has playpostexit + very short fade so make smoother entries
     - ex. MGR: 100ms fade, position 100ms
+- in editor is set with a "play post-exit/pre-entry" + "fade-out/fade-in" checkboxes
+- in the fade editor, you set "time", "offset" and "curve"
+- must set at least a non-zero value in either for the fade to work, otherwise it's ignored
+  - time=0, offset=0 > ignored
+  - time=0, offset=1s > abruptly stops the post-exit after 1s seconds
+  - time=1s, offset=0 > fades right after post-entry
+- linear curve is the default
 - curve duration starts *before* exit or *after* entry:
 ```
 - source's exit fade-out (modifies src):

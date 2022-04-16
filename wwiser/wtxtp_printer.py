@@ -9,7 +9,7 @@ DEBUG_PRINT_TREE_POST = False
 DEBUG_PRINT_GROUP_HEADER = False
 # envelopes tend to make giant lines in some cases and vgmstream max line is ~1000, to be improved
 DEBUG_PRINT_ENVELOPES = True
-DEBUG_PRINT_ENVELOPES_LIMIT = 500
+DEBUG_PRINT_ENVELOPES_LIMIT = 1800
 
 GROUPS_TYPE = {
     wtxtp_tree.TYPE_GROUP_SINGLE: 'S',

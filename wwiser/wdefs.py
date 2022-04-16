@@ -326,8 +326,10 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00AB0003: "Wwise Reflect", #AkReflect
 
   0x00AE0007: "System", #DefaultSink
+  0x00B30007: "Controller Speaker", #DefaultSink
   0x00B50007: "No Output", #DefaultSink
   0x00B70002: "SoundSeed Grain", #
+  0x00BA0003: "Mastering Suite", #MasteringSuite
   0x00C80002: "Wwise Audio Input", #AkAudioInput
   0x01950002: "Wwise Motion Generator", #AkMotion (used in CAkSound, v128>= / v130<=?)
   0x01950005: "Wwise Motion Generator", #AkMotion (used in CAkFeedbackNode, v125<=)

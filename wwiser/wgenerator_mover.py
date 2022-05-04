@@ -47,8 +47,8 @@ class Mover(object):
             return
 
         bank = nroot.get_filename()
-        if not os.path.exists(in_name):
-            wem_exists = False
+        wem_exists = os.path.exists(in_name)
+        if not wem_exists:
             if self._txtpcache.alt_exts:
                 # try as .logg
                 in_name = "%s.%s" % (source.tid, source.extension_alt)

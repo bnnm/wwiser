@@ -361,9 +361,9 @@ class ViewerHandler(http.server.BaseHTTPRequestHandler):
         params = parse.parse_qs(self.ppath.query)
         docname = docnames[params.get('doc')[0]]
 
-        doc = wloader.Loader.get_resource('../doc/'+docname) #src
+        doc = wloader.Loader.get_resource('../../doc/'+docname) #src
         if not doc:
-            doc = wloader.Loader.get_resource('../'+docname) #base
+            doc = wloader.Loader.get_resource('../../'+docname) #base
         if not doc:
             doc = wloader.Loader.get_resource('resources/doc/'+docname) #pyz
         if not doc:

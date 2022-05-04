@@ -1,5 +1,5 @@
 import logging, re
-from .. import wfnv
+from ... import wfnv
 
 
 DEBUG_PRINT_TREE_BASE = False

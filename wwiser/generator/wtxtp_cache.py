@@ -1,5 +1,6 @@
 import logging, math, os
-from . import wexternals, wgamesync_gamevars
+from . import wexternals
+from .gamesync import wgamevars
 from .txtp import wtxtp_namer
 
 DEFAULT_OUTDIR = 'txtp/'
@@ -41,7 +42,7 @@ class TxtpCache(object):
         # process helpers (passed around)
         self.tags = None
         self.renamer = wtxtp_namer.TxtpRenamer()
-        self.gamevars = wgamesync_gamevars.GamevarsParams()
+        self.gamevars = wgamevars.GamevarsParams()
         self.externals = wexternals.Externals()
 
         self.no_txtp = False

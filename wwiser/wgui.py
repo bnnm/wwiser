@@ -1,7 +1,11 @@
 import os, logging, threading, platform
 from tkinter import *
 from tkinter import ttk, font, filedialog, scrolledtext, messagebox
-from . import wnames, wparser, wprinter, wview, wutil, wgenerator, wversion, wtags
+
+from . import wnames, wutil, wversion, wtags
+from .parser import wparser
+from .viewer import wprinter, wview
+from .generator import wgenerator
 
 
 class Gui(object):
@@ -39,7 +43,7 @@ class Gui(object):
         root = Tk()
         root.geometry('900x900')
         #root.resizable(width=False,height=False)
-        #root.iconbitmap(wutil.Loader.get_resource('/resources/wwiser.ico'))
+        #root.iconbitmap(wutil.Loader.get_resource('resources/wwiser.ico'))
 
         title = "WWISER"
         if wversion.WWISER_VERSION:

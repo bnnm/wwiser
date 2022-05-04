@@ -1,5 +1,5 @@
 import logging, os
-from . import wtxtp_util
+from .txtp import wtxtp_util
 
 # Moves 123.wem to /txtp/wem/123.wem, or 123.ogg/logg to /txtp/wem/123.logg if alt_exts is set
 

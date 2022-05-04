@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
-from . import wdefs, wutil
+from .. import wutil
+from . import wdefs
 
 #maybe should be in some enum?
 TYPE_4CC = '4cc'

@@ -1,7 +1,7 @@
 import logging, os
-
-from wwiser import wgamesync_silences
-from . import wgamesync, wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer, wversion
+from ... import wversion
+from .. import wgamesync, wgamesync_silences
+from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 # Builds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
 #

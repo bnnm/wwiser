@@ -1,4 +1,4 @@
-import glob, os, zipfile, zlib
+import glob, os, zipfile
 from datetime import datetime
 
 def make_pyz():
@@ -10,10 +10,10 @@ def make_pyz():
     zf.write('wwiser.py', arcname='__main__.py', compress_type=zipfile.ZIP_DEFLATED)
 
     filenames =  ['README.md']
-    filenames += glob.glob('./**/*.py')
+    filenames += glob.glob('./**/*.py', recursive=True)
     filenames += glob.glob('./**/*.md')
-    filenames += glob.glob('./**/resources/*')
-    filenames += glob.glob('./**/resources/**/*')
+    filenames += glob.glob('./**/viewer/resources/*')
+    filenames += glob.glob('./**/viewer/resources/**/*')
     for filename in filenames:
         if 'wversion.py' in filename: #rewritten below (zipfile can't overwrite)
             continue
@@ -25,8 +25,8 @@ def make_pyz():
     zf.writestr('wwiser/wversion.py', version, compress_type=zipfile.ZIP_DEFLATED) # './...' fails here
 
     #for viewer
-    zf.write('./README.md', arcname='wwiser/resources/doc/README.md', compress_type=zipfile.ZIP_DEFLATED)
-    zf.write('./doc/WWISER.md', arcname='wwiser/resources/doc/WWISER.md', compress_type=zipfile.ZIP_DEFLATED)
+    zf.write('./README.md', arcname='wwiser/viewer/resources/doc/README.md', compress_type=zipfile.ZIP_DEFLATED)
+    zf.write('./doc/WWISER.md', arcname='wwiser/viewer/resources/doc/WWISER.md', compress_type=zipfile.ZIP_DEFLATED)
 
 
     zf.close()

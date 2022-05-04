@@ -1,5 +1,6 @@
 import logging
-from . import wmodel, wutil
+from .. import wutil
+from ..parser import wmodel
 
 
 TYPE_TXT = 'txt'

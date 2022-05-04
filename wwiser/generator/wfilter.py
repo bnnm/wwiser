@@ -1,5 +1,5 @@
 import fnmatch, logging, os
-from . import wfnv
+from .. import wfnv
 
 # filter applies to "outer" (base HIRC) objects
 _MODE_OUTER = 0

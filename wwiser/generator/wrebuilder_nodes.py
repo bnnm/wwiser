@@ -1,5 +1,6 @@
 import logging
-from . import wtxtp_util, wgamesync, wtxtp_info
+from . import wgamesync
+from .txtp import wtxtp_util, wtxtp_info
 
 
 # common for all 'rebuilt' nodes

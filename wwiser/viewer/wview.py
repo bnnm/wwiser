@@ -1,7 +1,9 @@
 import logging, random, threading
 import webbrowser, http, http.server, socketserver
 from urllib import parse
-from . import wutil, wtemplate
+
+from . import wtemplate
+from .. import wutil
 
 
 DEFAULT_PORT = 55123

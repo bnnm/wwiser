@@ -1,4 +1,4 @@
-import itertools, logging, re
+import itertools
 from collections import OrderedDict
 from . import wgamesync
 

@@ -1,5 +1,5 @@
-import logging
-from . import wtxtp_util, wgamesync
+from .generator.txtp import wtxtp_util
+
 
 class Tests(object):
     def __init__(self):

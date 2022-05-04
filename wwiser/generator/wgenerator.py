@@ -1,8 +1,6 @@
-import logging, os
-
-from wwiser import wgenerator_mover
-from . import wgamesync, wrebuilder, wtxtp, wtxtp_util, wtxtp_cache
-from . import wgenerator_filter, wgenerator_mediaindex, wgenerator_transitions, wgenerator_mover
+import logging
+from .txtp import wtxtp
+from . import wfilter, wmediaindex, wmover, wgamesync, wrebuilder, wtransitions, wtxtp_cache
 
 
 
@@ -26,7 +24,7 @@ class Generator(object):
 
         self._rebuilder = wrebuilder.Rebuilder()
         self._txtpcache = wtxtp_cache.TxtpCache()
-        self._mediaindex = wgenerator_mediaindex.MediaIndex(banks)
+        self._mediaindex = wmediaindex.MediaIndex(banks)
 
         self._txtpcache.set_basepath(banks)
         self._txtpcache.wwnames = wwnames
@@ -34,7 +32,7 @@ class Generator(object):
         # options
         self._generate_unused = False       # generate unused after regular txtp
         self._move = False                  # move sources to wem dir
-        self._filter = wgenerator_filter.GeneratorFilter()  # filter nodes
+        self._filter = wfilter.GeneratorFilter()  # filter nodes
         self._bank_order = False            # use bank order to generate txtp (instead of prioritizing named nodes)
 
         self._default_hircs = self._rebuilder.get_generated_hircs()
@@ -405,7 +403,7 @@ class Generator(object):
         # When default_params aren't set and objects need them, Txtp finds possible params, added
         # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then ""music=b02")
 
-        transitions = wgenerator_transitions.Transitions(node)
+        transitions = wtransitions.Transitions(node)
 
         try:
             # base .txtp
@@ -479,6 +477,6 @@ class Generator(object):
     def _move_wems(self, nodes):
         if not nodes:
             return
-        mover = wgenerator_mover.Mover(self._txtpcache)
+        mover = wmover.Mover(self._txtpcache)
         mover.move_wems(nodes)
         return

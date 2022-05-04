@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from . import wfnv
+from .. import wfnv
 
 
 

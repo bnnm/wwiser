@@ -2,7 +2,7 @@ import sys, argparse, glob, logging, os, platform, shlex
 
 from . import wversion, wnames, wutil, wtags, wtests
 from .parser import wparser
-from .viewer import wprinter, wview
+from .viewer import wdumper, wview
 from .generator import wgenerator
 
 
@@ -239,15 +239,15 @@ class Cli(object):
         if args.dump_type is None:
             if args.save_lst:
                  #forces all names without making a file
-                args.dump_type = wprinter.TYPE_EMPTY
+                args.dump_type = wdumper.TYPE_EMPTY
             elif args.txtp or args.viewer:
                 # not very useful for txtp/viewer
-                args.dump_type = wprinter.TYPE_NONE
+                args.dump_type = wdumper.TYPE_NONE
             else:
                 # default without other flags
-                args.dump_type = wprinter.TYPE_XSL_SMALLER
-        printer = wprinter.Printer(banks, args.dump_type, dump_name)
-        printer.dump()
+                args.dump_type = wdumper.TYPE_XSL_SMALLER
+        dumper = wdumper.DumpPrinter(banks, args.dump_type, dump_name)
+        dumper.dump()
 
         # start viewer
         if args.viewer:
@@ -308,7 +308,7 @@ class Cli(object):
         tags.make()
 
         # db manipulation
-        if args.dump_type == wprinter.TYPE_NONE and (args.save_lst or args.save_db):
+        if args.dump_type == wdumper.TYPE_NONE and (args.save_lst or args.save_db):
             logging.info("dump set to none, may not save all names")
         if args.save_lst:
             names.save_lst(name=dump_name, save_all=args.save_all, save_companion=args.save_companion, save_missing=args.save_missing)

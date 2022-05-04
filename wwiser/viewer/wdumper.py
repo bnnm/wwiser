@@ -11,7 +11,7 @@ TYPE_EMPTY = 'empty'
 TYPE_NONE = 'none'
 
 
-class Printer(object):
+class DumpPrinter(object):
     attr_format = { 
         'offset':"%08x", 'size':"0x%x"
     }

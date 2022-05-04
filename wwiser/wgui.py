@@ -4,7 +4,7 @@ from tkinter import ttk, font, filedialog, scrolledtext, messagebox
 
 from . import wnames, wutil, wversion, wtags
 from .parser import wparser
-from .viewer import wprinter, wview
+from .viewer import wdumper, wview
 from .generator import wgenerator
 
 
@@ -434,8 +434,8 @@ class Gui(object):
         if dump_type == 'xml':
             dump_type = 'xsl_s'
 
-        printer = wprinter.Printer(self.parser.get_banks(), dump_type, dump_name)
-        printer.dump()
+        dumper = wdumper.DumpPrinter(self.parser.get_banks(), dump_type, dump_name)
+        dumper.dump()
 
     #--------------------------------------------------------------------------
 

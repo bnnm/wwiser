@@ -2,7 +2,7 @@ import os, logging, threading, platform
 from tkinter import *
 from tkinter import ttk, font, filedialog, scrolledtext, messagebox
 
-from . import wnames, wutil, wversion, wtags
+from . import wnames, wversion, wtags, wlogs
 from .parser import wparser
 from .viewer import wdumper, wview
 from .generator import wgenerator
@@ -17,7 +17,7 @@ class Gui(object):
         self._setup_window()
 
         # bank state/internals
-        wutil.setup_gui_logging(self.txt_log)
+        wlogs.setup_gui_logging(self.txt_log)
 
         self.parser = wparser.Parser()
         self.viewer = wview.Viewer(self.parser)
@@ -43,7 +43,7 @@ class Gui(object):
         root = Tk()
         root.geometry('900x900')
         #root.resizable(width=False,height=False)
-        #root.iconbitmap(wutil.Loader.get_resource('resources/wwiser.ico'))
+        #root.iconbitmap(wloader.Loader.get_resource('resources/wwiser.ico'))
 
         title = "WWISER"
         if wversion.WWISER_VERSION:
@@ -535,9 +535,9 @@ class Gui(object):
 
     def _change_log(self):
         if  self._get_item('log'):
-            wutil.setup_file_logging()
+            wlogs.setup_file_logging()
         else:
-            wutil.setup_gui_logging(self.txt_log)
+            wlogs.setup_gui_logging(self.txt_log)
 
     def _exit(self):
         if self.names:

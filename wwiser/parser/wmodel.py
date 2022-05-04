@@ -1,7 +1,6 @@
 import os
 from collections import OrderedDict
-from .. import wutil
-from . import wdefs
+from . import wdefs, wfinder
 
 #maybe should be in some enum?
 TYPE_4CC = '4cc'
@@ -137,13 +136,13 @@ class NodeElement(object):
     # *** external helpers ***
 
     def find(self, **args):
-        return wutil.NodeFinder(**args).find(self)
+        return wfinder.NodeFinder(**args).find(self)
 
     def find1(self, **args):
-        return wutil.NodeFinder(**args).find1(self)
+        return wfinder.NodeFinder(**args).find1(self)
 
     def finds(self, **args):
-        return wutil.NodeFinder(**args).finds(self)
+        return wfinder.NodeFinder(**args).finds(self)
 
 
 # root node with special definitions (represents a bank)

@@ -1,5 +1,5 @@
 import logging
-from .. import wutil
+from . import wloader
 from ..parser import wmodel
 
 
@@ -106,7 +106,7 @@ class DumpPrinter(object):
     def _print_xml(self):
         #stylesheet handling could be improved, not sure
         if self._formatted:
-            text = wutil.Loader.get_resource_text('resources/stylesheet.1.xsl')
+            text = wloader.Loader.get_resource_text('resources/stylesheet.1.xsl')
             self._file.write(text)
 
         # may reimplement this as a stack-based printer rather than recursive calls
@@ -115,7 +115,7 @@ class DumpPrinter(object):
             self._print_xml_node(bank, 0)
 
         if self._formatted:
-            text = wutil.Loader.get_resource_text('resources/stylesheet.2.xsl')
+            text = wloader.Loader.get_resource_text('resources/stylesheet.2.xsl')
             self._file.write(text)
 
     def _print_xml_node(self, node, depth):

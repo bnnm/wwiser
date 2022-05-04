@@ -1,6 +1,6 @@
 import sys, argparse, glob, logging, os, platform, shlex
 
-from . import wversion, wnames, wutil, wtags, wtests
+from . import wversion, wnames, wlogs, wtags, wtests
 from .parser import wparser
 from .viewer import wdumper, wview
 from .generator import wgenerator
@@ -152,7 +152,7 @@ class Cli(object):
         return
 
     def start(self):
-        wutil.setup_cli_logging()
+        wlogs.setup_cli_logging()
         self._parse_init()
 
         args = self._parser.parse_args()
@@ -179,7 +179,7 @@ class Cli(object):
 
     def _run(self, args):
         if args.log:
-            wutil.setup_file_logging()
+            wlogs.setup_file_logging()
 
         title = 'wwiser'
         if wversion.WWISER_VERSION:

@@ -2,8 +2,7 @@ import logging, random, threading
 import webbrowser, http, http.server, socketserver
 from urllib import parse
 
-from . import wtemplate
-from .. import wutil
+from . import wtemplate, wloader
 
 
 DEFAULT_PORT = 55123
@@ -106,7 +105,7 @@ class NodePrinter(object):
             return None
 
         if name not in self.templates:
-            res = wutil.Loader.get_resource('resources/templates/%s.tpl' % (name))
+            res = wloader.Loader.get_resource('resources/templates/%s.tpl' % (name))
             if not res:
                 tpl = None
             else:
@@ -280,7 +279,7 @@ class ViewerHandler(http.server.BaseHTTPRequestHandler):
         if '../' in path:
             raise ValueError("Path error")
         try:
-            msg = wutil.Loader.get_resource('resources' + path)
+            msg = wloader.Loader.get_resource('resources' + path)
             self._start(type)
             self._output(msg)
         except:
@@ -314,7 +313,7 @@ class ViewerHandler(http.server.BaseHTTPRequestHandler):
             "- id={}".format(id(self)),
         ]
 
-        tpl = wutil.Loader.get_resource('resources/templates/test.tpl').decode()
+        tpl = wloader.Loader.get_resource('resources/templates/test.tpl').decode()
         t = wtemplate.Template(tpl)
         line = t.render(user='wwiser', testmap={'key':'val'})
         lines.append(line)
@@ -327,7 +326,7 @@ class ViewerHandler(http.server.BaseHTTPRequestHandler):
     # MAIN ACTIONS
 
     def do_main(self):
-        msg = wutil.Loader.get_resource('resources/viewer.html')
+        msg = wloader.Loader.get_resource('resources/viewer.html')
         self._start_html()
         self._output(msg)
 
@@ -362,11 +361,11 @@ class ViewerHandler(http.server.BaseHTTPRequestHandler):
         params = parse.parse_qs(self.ppath.query)
         docname = docnames[params.get('doc')[0]]
 
-        doc = wutil.Loader.get_resource('../doc/'+docname) #src
+        doc = wloader.Loader.get_resource('../doc/'+docname) #src
         if not doc:
-            doc = wutil.Loader.get_resource('../'+docname) #base
+            doc = wloader.Loader.get_resource('../'+docname) #base
         if not doc:
-            doc = wutil.Loader.get_resource('resources/doc/'+docname) #pyz
+            doc = wloader.Loader.get_resource('resources/doc/'+docname) #pyz
         if not doc:
             raise ValueError("Can't find doc")
 

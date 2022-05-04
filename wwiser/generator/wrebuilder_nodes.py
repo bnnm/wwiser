@@ -1,5 +1,5 @@
 import logging
-from . import wgamesync
+from .gamesync import wgamesync
 from .txtp import wtxtp_util, wtxtp_info
 
 

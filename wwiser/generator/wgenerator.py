@@ -1,6 +1,7 @@
 import logging
+from . import wfilter, wmediaindex, wmover, wrebuilder, wtransitions, wtxtp_cache
+from .gamesync import wgamesync
 from .txtp import wtxtp
-from . import wfilter, wmediaindex, wmover, wgamesync, wrebuilder, wtransitions, wtxtp_cache
 
 
 

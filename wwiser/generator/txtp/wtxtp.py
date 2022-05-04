@@ -1,6 +1,6 @@
 import logging, os
 from ... import wversion
-from .. import wgamesync, wgamesync_silences
+from ..gamesync import wgamesync, wvolumes
 from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 # Builds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
@@ -46,7 +46,7 @@ class Txtp(object):
     def __init__(self, txtpcache, mediaindex, params=None, transitions=None):
         self.params = params  #current gamesync "path" config (default/empty means must find paths)
         self.ppaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
-        self.vpaths = wgamesync_silences.VolumePaths() #states used to change volume/mute tracks
+        self.vpaths = wvolumes.VolumePaths() #states used to change volume/mute tracks
         self.txtpcache = txtpcache
         self.mediaindex = mediaindex
         self.transitions = transitions

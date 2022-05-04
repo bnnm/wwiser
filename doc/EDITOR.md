@@ -433,3 +433,95 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - added by default when 2 clips overlap (autoadjusted fade-out + fade-in) but can be changed
   - with multiple clips, automation is attached to one defining "uClipIndex" where index is AkTrackSrcInfo (not AkBankSourceData.
   - if there are sub-tracks, uClipIndex + AkTrackSrcInfo are absolute so no difference
+
+## Buses
+- Audio in Wwise is routed through "buses" that apply volume/effects/etc.
+- There is always a "Master Audio Bus", and you can define other buses
+  - main: same as Master Audio Bus, objects can route to other main buses instead (so only those bus parameters)
+    - has various volume/config/etc (see below)
+  - children bus (sub-bus): same, but routes audio through main bus
+    - sub-buses may change output config and parameters just like parent
+    - sub-bus volume=-10db, main bus volume=+10db means no change.
+  - auxiliary buses: special bus that "copies" audio, used for custom behaviors within game
+    - a sub-bus may define N aux-buses to route
+      - probably for different emitters, or custom stuff like beat analysis
+    - aux buses may change output config, but can only increase volume (other options seem ignored?)
+    - there are "user defined" and "game defined", unsure about diffs
+    - seems aux-buses ultimately go to output, so they affect whole mix
+- sub-buses may have sub-buses and aux-buses children, while aux-buses may have aux-buses
+- buses also define output device (system sound, etc) and parameters like output channel config
+  - probably does up/downmixing depending on this config
+- Bus properties:
+  - audio volume: main output
+  - voice volume: pre-applied to audio before any routing (some kind of quick global per-object setting?)
+    - despite the name this affects audio objects
+  - pitch/low pass/high pass: filters
+  - "output" bus volume / low pass / high-pass: only on sub-buses
+  - aux-buses doesn't have "base" voice/pitch/low pass, but does have "output"
+- Object may define output bus (main or sub, not aux)
+  - SFX objects may always change bus
+  - Music object may need to click "override parent" first
+  - internally seems to just set overrideID
+- They may also define (separate from output bus) aux-bus
+- Buses have config like other objects: states (to change volume/pitch), RTPCs, etc
+- Bus output config: a bus may decide to change channel output config
+  - same as parent: just passes to parent (only applies effects)
+  - same as main mix: applies default config (like 2.0)
+  - Audio Objects: uses 3D spatial config (for actors that exist in 3D space, defined elsewhere)
+  - 1.0/2.0/../N.n: up/downmixes to that
+  * For example, if sub-bus downmixes to 1.0 and main has 2.0 (upmixes), output is 2.0 but from 1.0 audio = double mono
+- The overall pipeline combines children buses to a final bus then output:
+
+## Volumes
+```
+sound > (volumes) > bus > bus > ... > bus > output
+                  |                 |
+                  \ aux > ... > bus /
+                  \ aux > ... > bus /
+
+```
+- Pipeline details of how audio is modified
+  - sound: default sound
+  - global (all channels) volumes:
+    - voice volume (buses's voice volume seems to be pre-applied at this level too)
+    - normalization, make up gain, HDR and other sub-types, API `SetScalingFactor`, etc
+  - per channel volumes: 2d positioning, panning, API, etc
+  - "dry path": bus "Output Volume" + RTPC, API `SetGameObjectOutputBusVolume`, etc
+    - also "Parent Bus without effects inserted: Volume" ??? (pre-aplies parent volume?)
+  - "wet path": distances, user defined aux seng volumes (+RTPC)
+    - only for aux buses
+  - non-mixing bus: bus volume, positioning
+    - also "Parent Bus without effects inserted: Volume" ??? (pre-aplies parent volume?)
+    - repeat per parent buses until main
+  - output mixing
+- final volume output is the addition of all volumes, except aux busses that 
+  - aux-buses go in parallel so 
+- "Voice Volume" = Slider + RTPC + State + Set Voice Volume action
+- "Bus Volume" = Slider + RTPC + State + Set Bus Volume action
+- editor can show volume info by going to profile view, pressing "capture data", playing the file and stopping/clicking in the line
+  - since volumes may change on realtime with RTPC/states you can record for a while, but for simple tests
+- volume types on audio objects:
+  - `[Volume]`: "voice volume" slider, main volume of the object
+  - `[MakeUpGain]`: "make-up gain" slider, special volume that doesn't count for some calcs but still is pre-applied before passing on
+  - `[OutputBusVolume]`: "bus volume", a volume associated to the bus itself
+    - separate from main volume b/c sometimes you need a bus with some extra volume but the aux-bus with another (I'd think they could just lower aux volume but...)
+  - `[UserAuxSendVolumeX]`: same but for the aux volume X
+  - `[ReflectionBusVolume]`: special volume for a separate "reflection" aux bus
+    - also separate b/c it's better for the reflection plugin etc
+- volume types on bus objects:
+  - `[BusVolume]`: main "bus volume" slider
+  - `[Volume]`: "voice volume" slider, applied before *receiving*
+  - `[OutputBusVolume]`: same as before, applied before *passing*
+  - `[UserAuxSendVolumeX]`: same as before
+  - `[ReflectionBusVolume]`:  same as before
+- final volume of a sfx > sub > master relationship is calculated like this:
+  - audio object:
+    - `Volume`=-3 > `MakeUpGain`=-2 > `OutputBusVolume`=-1  (0 + -6 = -6 before passing)
+  - sub-bus:
+    - `Volume`=1 > `BusVolume`=2 > `OutputBusVolume`=3  (-6 + +6 = 0 before passing)
+  - main bus:
+    - `Volume`=-5 > `BusVolume`=-4 (0 + -9 = -9 to output)
+  - order doesn't really matter since it's just adding totals
+  - if there was an aux-bus, it'd just apply its settings as another path
+- plugins like PeakLimiter or Gain also apply on each step
+  - associated in BusInitialFxParams > FXChunk, then pointing to CAkFxShareSet

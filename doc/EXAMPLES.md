@@ -662,3 +662,43 @@ Delphis_Main.bnk [3126765036] PLAY_BGM
 
 ## Monster Hunter World (PC)
 - uses volume states to slightly change layers (3221323256.bnk's 23288607)
+
+## Astral Chain
+```
+BGM.bnk
+... > msegment 26482457 > mtrack 129296929 
+                          * volume = +4.0
+                          **override bus 545371365 "low"
+                        > mtrack 863279031
+                          **override bus 1182670505 "mid"
+
+Init.bnk
+bus 545371365 "low"
+* BusVolume = -4.0 (counters mtrack volume)
+* has RTPC 484379902
+* has pStateChunks with "mid" 1182670505 = 82836269
+  * CAkState 82836269 sets BusVolume to -96.0
+** override bus 3337965634 "BGM_Stage"
+
+bus 1182670505 "mid"
+* has RTPC 484379902
+* has pStateChunks with "low" 545371365 = 544741954
+  * CAkState 544741954 sets BusVolume to -96.0
+
+bus 1182670505 "mid"
+** override bus 3337965634 "BGM_Stage"
+
+
+bus hierarchy:
+3803692087 Master Audio Bus [OutputBusVolume: -1.0]
+> 848053591 "Mixer_BGM"
+  > 2165690717
+    > 3552666629 "BGM_Ducking"
+      > 3337965634 "BGM_Stage"
+        > 1182670505 "mid"
+        > 545371365 "low"
+
+```
+- has volume states with custom buses to silence action/exploration layers
+  - when BGM_Layer=mid, bus "low" is silent
+  - when BGM_Layer=low, bus "mid" is silent

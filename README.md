@@ -1,5 +1,5 @@
 # WWISER
-A Wwise `.bnk` parser, to assist in ripping audio from games using the Wwise engine.
+A Wwise `.bnk` parser, to assist in handling audio from games using the Wwise engine.
 
 Simply open `wwiser` without arguments to start the GUI. From there you can load
 and view banks, dump contents or make TXTP (used to simulate audio). It reads

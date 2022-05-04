@@ -400,6 +400,60 @@ def iZTrashDelayFXParams__SetParamsBlock(obj, size):
 
     return
 
+#TODO: missing some fields in later versions? need to test more
+def CREVFxSrcModelPlayerParams__SetParamsBlock(obj, size):
+    #CREVFxSrcModelPlayerParams::SetParamsBlock
+    obj = obj.node('CREVFxSrcModelPlayerParams')
+
+    obj.f32('unknown')
+    obj.f32('unknown')
+    obj.f32('unknown')
+    obj.f32('unknown')
+    obj.f32('unknown')
+    obj.f32('unknown')
+
+    elem = obj.node('EngineSimulationControlData')
+    elem.s16('EndianStatus')
+    elem.u16('SizeOf')
+    elem.f32('UpShiftDuration')
+    elem.f32('UpShiftAttackDuration')
+    elem.f32('UpShiftAttackVolumeSpike')
+    elem.f32('UpShiftAttackRPM')
+    elem.f32('UpShiftAttackThrottleTime')
+    elem.f32('UpShiftWobbleEnabled')
+    elem.U32('UpShiftWobblePitchFreq')
+    elem.f32('UpShiftWobblePitchAmp')
+    elem.f32('UpShiftWobbleVolFreq')
+    elem.f32('UpShiftWobbleVolAmp')
+    elem.f32('UpShiftWobbleDuration')
+    elem.f32('DownShiftDuration')
+    elem.f32('PopDuration')
+    elem.f32('ClutchRPMSpike')
+    elem.f32('ClutchRPMSpikeDuration')
+    elem.f32('ClutchRPMMergeTime')
+
+    elem = obj.node('AccelDecelModelControlData')
+    elem.s16('DefaultSingleRamp')
+    elem.u16('SizeOf')
+    elem.f32('DecelVolume_Off')
+    elem.f32('DecelVolume_On')
+    elem.f32('PopsEnabled')
+    elem.f32('PopsVolumeMax')
+    elem.f32('PopsVolumeMin')
+    elem.f32('PopsFreqMin')
+    elem.f32('PopsFreqMax')
+    elem.f32('PopsEngineDuck')
+    elem.f32('PopRange')
+    elem.f32('PopDuration')
+    elem.f32('IdleVolume')
+    elem.f32('IdleTechnique')
+    elem.f32('IdleRampIn')
+    elem.f32('IDLE_TECHNIQUE_COVERUP')
+    elem.f32('IDLE_TECHNIQUE_RAMPIN')
+
+
+    return
+
 # #############################################################################
 
 plugin_dispatch = {
@@ -419,7 +473,8 @@ plugin_dispatch = {
     0x008B0003: CAkGainFXParams__SetParamsBlock,
     0x00940002: CAkSynthOneParams__SetParamsBlock,
     0x00C80002: CAkFxSrcAudioInputParams__SetParamsBlock,
-    0x00041033: iZTrashDelayFXParams__SetParamsBlock
+    0x00041033: iZTrashDelayFXParams__SetParamsBlock,
+    #0x01A01052: CREVFxSrcModelPlayerParams__SetParamsBlock
 
    #0x00AE0007: (no params)
    #0x00B50007: (no params)

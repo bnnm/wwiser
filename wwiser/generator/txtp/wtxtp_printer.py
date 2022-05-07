@@ -40,7 +40,6 @@ class TxtpPrinter(object):
         self._tree = tree
         self._txtp = txtp
         self._txtpcache = txtp.txtpcache
-        self._mediaindex = txtp.mediaindex
 
         # during write
         self._lines = None
@@ -373,7 +372,7 @@ class TxtpPrinter(object):
         elif sound.source.internal and not self._txtpcache.bnkskip:
             # internal/memory stream
             bankname = sound.nsrc.get_root().get_filename()
-            media = self._mediaindex.get_media_index(bankname, sound.source.tid)
+            media = self._txtpcache.mediaindex.get_media_index(bankname, sound.source.tid)
             extension = sound.source.extension
             if self._txtpcache.alt_exts:
                 extension = sound.source.extension_alt

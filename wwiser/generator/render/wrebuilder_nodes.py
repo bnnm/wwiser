@@ -1,13 +1,11 @@
-from . import wnode_misc, wrebuilder_base
+from . import wnode_misc
 from ..txtp import wtxtp_info
 
+from .wrebuilder_base import CAkHircNode
 
-class _NodeHelper(wrebuilder_base._NodeHelper):
-    def __init__(self):
-        pass
 
 #non-audio node, doesn't contribute to txtp
-class _CAkNone(_NodeHelper):
+class _CAkNone(CAkHircNode):
     def __init__(self):
         super(_CAkNone, self).__init__()
 
@@ -23,7 +21,7 @@ class _CAkNone(_NodeHelper):
     #    return
 
 # todo improve (stingers have no sid so it's set externally)
-class _CAkStinger(_NodeHelper):
+class _CAkStinger(CAkHircNode):
     def __init__(self):
         super(_CAkStinger, self).__init__()
         self.ntid = None #external
@@ -37,7 +35,7 @@ class _CAkStinger(_NodeHelper):
         return
 
 #non-audio node, but it's used as a reference
-class _CAkState(_NodeHelper):
+class _CAkState(CAkHircNode):
     def __init__(self):
         super(_CAkState, self).__init__()
 
@@ -51,7 +49,7 @@ class _CAkState(_NodeHelper):
         return
 
 #plugin parameters, sometimes needed
-class _CAkFxCustom(_NodeHelper):
+class _CAkFxCustom(CAkHircNode):
     def __init__(self):
         super(_CAkFxCustom, self).__init__()
         self.fx = None
@@ -70,7 +68,7 @@ class _CAkFxCustom(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkEvent(_NodeHelper):
+class _CAkEvent(CAkHircNode):
     def __init__(self):
         super(_CAkEvent, self).__init__()
         self.ntids = None
@@ -89,7 +87,7 @@ class _CAkEvent(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkDialogueEvent(_NodeHelper):
+class _CAkDialogueEvent(CAkHircNode):
     def __init__(self):
         super(_CAkDialogueEvent, self).__init__()
         #self.paths = []
@@ -136,7 +134,7 @@ class _CAkDialogueEvent(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkAction(_NodeHelper):
+class _CAkAction(CAkHircNode):
     def __init__(self):
         super(_CAkAction, self).__init__()
         self.ntid = None
@@ -215,7 +213,7 @@ class _CAkActionPlayEvent(_CAkActionPlay): #_CAkActionPlay
 
 #******************************************************************************
 
-class _CAkSwitchCntr(_NodeHelper):
+class _CAkSwitchCntr(CAkHircNode):
     def __init__(self):
         super(_CAkSwitchCntr, self).__init__()
         self.gtype = None
@@ -276,7 +274,7 @@ class _CAkSwitchCntr(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkRanSeqCntr(_NodeHelper):
+class _CAkRanSeqCntr(CAkHircNode):
     def __init__(self):
         super(_CAkRanSeqCntr, self).__init__()
         self.ntids = []
@@ -362,7 +360,7 @@ class _CAkRanSeqCntr(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkLayerCntr(_NodeHelper):
+class _CAkLayerCntr(CAkHircNode):
     def __init__(self):
         super(_CAkLayerCntr, self).__init__()
         self.ntids = []
@@ -399,7 +397,7 @@ class _CAkLayerCntr(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkSound(_NodeHelper):
+class _CAkSound(CAkHircNode):
     def __init__(self):
         super(_CAkSound, self).__init__()
         self.sound = wnode_misc.NodeSound()
@@ -430,7 +428,7 @@ class _CAkSound(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkMusicSwitchCntr(_NodeHelper):
+class _CAkMusicSwitchCntr(CAkHircNode):
     def __init__(self):
         super(_CAkMusicSwitchCntr, self).__init__()
         self.gtype = None
@@ -542,7 +540,7 @@ class _CAkMusicSwitchCntr(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkMusicRanSeqCntr(_NodeHelper):
+class _CAkMusicRanSeqCntr(CAkHircNode):
     def __init__(self):
         super(_CAkMusicRanSeqCntr, self).__init__()
         self.items = []
@@ -668,7 +666,7 @@ class _CAkMusicRanSeqCntr_Item():
 
 #******************************************************************************
 
-class _CAkMusicSegment(_NodeHelper):
+class _CAkMusicSegment(CAkHircNode):
     def __init__(self):
         super(_CAkMusicSegment, self).__init__()
         self.ntids = []
@@ -740,7 +738,7 @@ class _CAkMusicSegment(_NodeHelper):
 
 #******************************************************************************
 
-class _CAkMusicTrack(_NodeHelper):
+class _CAkMusicTrack(CAkHircNode):
     def __init__(self):
         super(_CAkMusicTrack, self).__init__()
         self.type = None
@@ -998,7 +996,7 @@ class _CAkMusicTrack(_NodeHelper):
         txtp.group_done(subtrack)
         return
 
-class _CAkMusicTrack_Clip(_NodeHelper):
+class _CAkMusicTrack_Clip(CAkHircNode):
     def __init__(self):
         self.nitem = None
         self.ntid = None
@@ -1007,13 +1005,13 @@ class _CAkMusicTrack_Clip(_NodeHelper):
         self.sound.clip = True
         self.fields = wtxtp_info.TxtpFields()
 
-class _CAkMusicTrack_ClipAutomation(_NodeHelper):
+class _CAkMusicTrack_ClipAutomation(CAkHircNode):
     def __init__(self):
         self.index = None
         self.type = None
         self.points = []
 
-class _GraphPoint(_NodeHelper):
+class _GraphPoint(CAkHircNode):
     def __init__(self):
         self.time = None
         self.value = None

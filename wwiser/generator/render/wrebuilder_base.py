@@ -5,7 +5,7 @@ from ..txtp import wtxtp_info
 
 
 # common for all 'rebuilt' nodes
-class _NodeHelper(object):
+class CAkHircNode(object):
     def __init__(self):
         pass #no params since changing constructors is a pain
 

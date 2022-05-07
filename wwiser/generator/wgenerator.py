@@ -1,5 +1,5 @@
 import logging
-from . import wfilter, wmediaindex, wmover, wtransitions, wtxtp_cache
+from . import wfilter, wmover, wtransitions, wtxtp_cache
 from .render import wrebuilder
 from .gamesync import wgamesync
 from .txtp import wtxtp
@@ -26,7 +26,6 @@ class Generator(object):
 
         self._rebuilder = wrebuilder.Rebuilder()
         self._txtpcache = wtxtp_cache.TxtpCache()
-        self._mediaindex = wmediaindex.MediaIndex(banks)
 
         self._txtpcache.set_basepath(banks)
         self._txtpcache.wwnames = wwnames
@@ -160,7 +159,6 @@ class Generator(object):
             logging.info("generator: start")
 
             self._setup()
-            self._read_externals()
             self._write_normal()
             self._write_unused()
             self._report()
@@ -174,7 +172,7 @@ class Generator(object):
     def _report(self):
         reb = self._rebuilder
         txc = self._txtpcache
-        mdi = self._mediaindex
+        mdi = self._txtpcache.mediaindex
 
         if reb.has_unused() and not self._generate_unused:
             logging.info("generator: NOTICE! possibly unused audio? (find+load more banks?)")
@@ -241,7 +239,8 @@ class Generator(object):
 
     def _setup(self):
         self._setup_nodes()
-        self._mediaindex.load()
+        self._txtpcache.mediaindex.load(self._banks)
+        self._txtpcache.externals.load(self._banks)
         return
 
     def _setup_nodes(self):
@@ -409,7 +408,7 @@ class Generator(object):
 
         try:
             # base .txtp
-            txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=self._default_params, transitions=transitions)
+            txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params, transitions=transitions)
             self._rebuilder.begin_txtp(txtp, node)
 
             ppaths = txtp.ppaths  # gamesync "paths" found during process
@@ -422,7 +421,7 @@ class Generator(object):
                 combos = ppaths.combos()
                 for combo in combos:
                     #logging.info("generator: combo %s", combo.elems)
-                    txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=combo, transitions=transitions)
+                    txtp = wtxtp.Txtp(self._txtpcache, params=combo, transitions=transitions)
                     self._rebuilder.begin_txtp(txtp, node)
                     txtp.write()
                     if txtp.vpaths.has_unreachables():
@@ -431,7 +430,7 @@ class Generator(object):
                 if unreachables:
                     for combo in combos:
                         #logging.info("generator: combo %s", combo.elems)
-                        txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=combo, transitions=transitions)
+                        txtp = wtxtp.Txtp(self._txtpcache, params=combo, transitions=transitions)
                         txtp.vpaths.set_unreachables_only()
                         self._rebuilder.begin_txtp(txtp, node)
                         txtp.write()
@@ -441,7 +440,7 @@ class Generator(object):
             if ppaths.stingers:
                 params = self._default_params #?
                 for stinger in ppaths.stingers:
-                    txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=params)
+                    txtp = wtxtp.Txtp(self._txtpcache, params=params)
                     self._rebuilder.begin_txtp_stinger(txtp, stinger)
                     txtp.write()
 
@@ -451,7 +450,7 @@ class Generator(object):
                 # handle transitions of current files (so filtered nodes don't appear)
                 self._txtpcache.transition_mark = True
                 for ncaller, transition in tr_nodes:
-                    txtp = wtxtp.Txtp(self._txtpcache, self._mediaindex, params=self._default_params)
+                    txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params)
                     self._rebuilder.begin_txtp(txtp, transition)
                     txtp.set_ncaller(ncaller)
                     txtp.write()
@@ -471,10 +470,6 @@ class Generator(object):
         return
 
     #--------------------------------------------------------------------------
-
-    def _read_externals(self):
-        self._txtpcache.externals.load(self._banks)
-        return
 
     def _move_wems(self, nodes):
         if not nodes:

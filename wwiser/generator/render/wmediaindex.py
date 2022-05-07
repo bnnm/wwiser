@@ -4,8 +4,7 @@ import logging
 # preloaded list of internal/memory .wem in bnk, as txtp will need to find them
 
 class MediaIndex(object):
-    def __init__(self, banks):
-        self._banks = banks
+    def __init__(self):
         self._media_banks = {}              # bank + sid > internal wem index
         self._media_sids = {}               # sid > bank + internal wem index
         self._missing_media = {}            # media (wem) objects missing in some bank
@@ -15,8 +14,8 @@ class MediaIndex(object):
 
     #--------------------------------------------------------------------------
 
-    def load(self):
-        for bank in self._banks:
+    def load(self, banks):
+        for bank in banks:
             bankname = bank.get_root().get_filename()
 
             # preload indexes for internal wems for bigger banks

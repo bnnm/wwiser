@@ -1,6 +1,6 @@
 import logging
 from . import wrebuilder_nodes as rn
-from .txtp import wtxtp_util
+from ..txtp import wtxtp_util
 
 
 

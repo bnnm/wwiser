@@ -1,5 +1,5 @@
 from . import wrebuilder_base
-from .txtp import wtxtp_util, wtxtp_info
+from ..txtp import wtxtp_util, wtxtp_info
 
 
 class _NodeHelper(wrebuilder_base._NodeHelper):

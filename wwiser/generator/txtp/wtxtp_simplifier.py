@@ -1,5 +1,7 @@
 import logging, math, copy
-from . import wtxtp_util, wtxtp_tree
+
+from ..render import wnode_envelope
+from . import wtxtp_tree
 
 
 # Takes the TXTP pre-built tree and readjusts it to create a final usable tree.
@@ -881,7 +883,7 @@ class TxtpSimplifier(object):
 
                 p1 = am.points[i]
                 p2 = am.points[i+1]
-                envelope = wtxtp_util.NodeEnvelope(am, p1, p2, version, base_time)
+                envelope = wnode_envelope.NodeEnvelope(am, p1, p2, version, base_time)
                 if not envelope.usable:
                     continue
 

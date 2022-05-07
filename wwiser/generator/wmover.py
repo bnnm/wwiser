@@ -1,5 +1,5 @@
 import logging, os
-from .txtp import wtxtp_util
+from .render import wnode_source
 
 # Moves 123.wem to /txtp/wem/123.wem, or 123.ogg/logg to /txtp/wem/123.logg if alt_exts is set
 
@@ -19,7 +19,7 @@ class Mover(object):
         if not node:
             return
 
-        source = wtxtp_util.NodeSource(node, None)
+        source = wnode_source.NodeSource(node, None)
         if not source or not source.tid: #?
             return
         if source.tid in self._moved_sources:

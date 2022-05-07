@@ -1,4 +1,4 @@
-from .generator.txtp import wtxtp_util
+from .generator.render import wnode_rtpc
 
 
 class Tests(object):
@@ -85,12 +85,12 @@ class GraphTests(object):
         return
 
     def _test(self, t):
-        graph = wtxtp_util.NodeGraph(None, 0)
+        graph = wnode_rtpc.NodeGraph(None, 0)
         graph.version = t.version
         graph.scaling = t.scaling
 
         for x, y, i in t.points:
-            p = wtxtp_util.NodeGraphPoint(None)
+            p = wnode_rtpc.NodeGraphPoint(None)
             p.x = x
             p.y = y
             p.i = i

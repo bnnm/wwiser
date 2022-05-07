@@ -1,6 +1,6 @@
 import logging
 from . import wrebuilder_nodes as rn
-from ..txtp import wtxtp_util
+from . import wnode_misc
 
 
 
@@ -317,7 +317,7 @@ class Rebuilder(object):
 
         self._root_node = node #info for transitions
 
-        root_config = wtxtp_util.NodeConfig()
+        root_config = wnode_misc.NodeConfig()
         txtp.begin(node, root_config)
         bnode._make_txtp(txtp)
 
@@ -336,7 +336,7 @@ class Rebuilder(object):
         bnode.ntid = stinger.ntid
 
         #self._process_next(ntid, txtp)
-        root_config = wtxtp_util.NodeConfig()
+        root_config = wnode_misc.NodeConfig()
         txtp.begin(stinger.node, root_config, nname=stinger.ntrigger, ntid=stinger.ntrigger, ntidsub=stinger.ntid)
         bnode._make_txtp(txtp)
         return

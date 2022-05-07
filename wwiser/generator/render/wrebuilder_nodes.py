@@ -1,5 +1,5 @@
-from . import wrebuilder_base
-from ..txtp import wtxtp_util, wtxtp_info
+from . import wnode_misc, wrebuilder_base
+from ..txtp import wtxtp_info
 
 
 class _NodeHelper(wrebuilder_base._NodeHelper):
@@ -402,7 +402,7 @@ class _CAkLayerCntr(_NodeHelper):
 class _CAkSound(_NodeHelper):
     def __init__(self):
         super(_CAkSound, self).__init__()
-        self.sound = wtxtp_util.NodeSound()
+        self.sound = wnode_misc.NodeSound()
 
     def _build(self, node):
         self._build_audio_config(node)
@@ -627,7 +627,7 @@ class _CAkMusicRanSeqCntr(_NodeHelper):
             txtp.info.next(item.nitem, item.fields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
             if type == -1 or item.ntid:
-                transition = wtxtp_util.NodeTransition()
+                transition = wnode_misc.NodeTransition()
                 transition.play_before = False
 
                 txtp.group_single(item.config, transition=transition)
@@ -661,7 +661,7 @@ class _CAkMusicRanSeqCntr_Item():
         self.nitem = None
         self.ntid = None
         self.type = None
-        self.config = wtxtp_util.NodeConfig()
+        self.config = wnode_misc.NodeConfig()
         self.fields = wtxtp_info.TxtpFields()
         self.items = []
 
@@ -718,7 +718,7 @@ class _CAkMusicSegment(_NodeHelper):
         # empty segments are allowed as silence
         if not self.ntids:
             self.sound = self._build_silence(self.node, True)
-            self.sconfig = wtxtp_util.NodeConfig()
+            self.sconfig = wnode_misc.NodeConfig()
         return
 
     def _process_txtp(self, txtp):
@@ -970,26 +970,26 @@ class _CAkMusicTrack(_NodeHelper):
             #logging.info("generator: found empty subtrack %s" % (self.sid))
             # rarely may happen with default = no track = silence (NMH3)
             sound = self._build_silence(self.node, True)
-            config = wtxtp_util.NodeConfig()
-            sconfig = wtxtp_util.NodeConfig()
+            config = wnode_misc.NodeConfig()
+            sconfig = wnode_misc.NodeConfig()
             elems = [sound]
             txtp.group_layer(elems, config)
             txtp.source_sound(sound, sconfig)
             txtp.group_done(elems)
             return
 
-        config = wtxtp_util.NodeConfig()
+        config = wnode_misc.NodeConfig()
         txtp.group_layer(subtrack, config)
         for clip in subtrack:
             if clip.neid and clip.neid.value():
-                econfig = wtxtp_util.NodeConfig()
+                econfig = wnode_misc.NodeConfig()
                 econfig.idelay = clip.sound.fpa #uses FPA to start segment, should work ok
 
                 txtp.group_single(econfig)
                 self._process_next(clip.neid, txtp)
                 txtp.group_done()
             else:
-                sconfig = wtxtp_util.NodeConfig()
+                sconfig = wnode_misc.NodeConfig()
                 sound = clip.sound
                 txtp.info.next(clip.nitem, clip.fields)
                 txtp.info.source(clip.sound.nsrc, clip.sound.source)
@@ -1003,7 +1003,7 @@ class _CAkMusicTrack_Clip(_NodeHelper):
         self.nitem = None
         self.ntid = None
         self.neid = None
-        self.sound = wtxtp_util.NodeSound()
+        self.sound = wnode_misc.NodeSound()
         self.sound.clip = True
         self.fields = wtxtp_info.TxtpFields()
 

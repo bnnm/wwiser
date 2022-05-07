@@ -1,6 +1,7 @@
 import logging
+from . import wnode_misc, wnode_source, wnode_rtpc
 from ..gamesync import wgamesync
-from ..txtp import wtxtp_util, wtxtp_info
+from ..txtp import wtxtp_info
 
 
 # common for all 'rebuilt' nodes
@@ -20,7 +21,7 @@ class _NodeHelper(object):
         if self.nsid:
             self.sid = self.nsid.value()
 
-        self.config = wtxtp_util.NodeConfig()
+        self.config = wnode_misc.NodeConfig()
         self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
         self.stingers = []
 
@@ -183,7 +184,7 @@ class _NodeHelper(object):
         if not nrtpcs:
             return
         for nrtpc in nrtpcs:
-            rtpc = wtxtp_util.NodeRtpc(nrtpc)
+            rtpc = wnode_rtpc.NodeRtpc(nrtpc)
             if not rtpc.is_volume:
                 continue
             self.config.rtpcs.append(rtpc)
@@ -289,7 +290,7 @@ class _NodeHelper(object):
             return
 
         for nstinger in nstingers:
-            stinger = wtxtp_util.NodeStinger()
+            stinger = wnode_misc.NodeStinger()
             stinger.node = nstinger
             stinger.ntrigger = nstinger.find1(name='TriggerID') #idExt called from trigger action
             stinger.ntid = nstinger.find1(name='SegmentID') #segment to play (may be 0)
@@ -298,14 +299,14 @@ class _NodeHelper(object):
         return
 
     def _build_silence(self, node, clip):
-        sound = wtxtp_util.NodeSound()
+        sound = wnode_misc.NodeSound()
         sound.nsrc = node
         sound.silent = True
         sound.clip = clip
         return sound
 
     def _parse_source(self, nbnksrc):
-        source = wtxtp_util.NodeSource(nbnksrc, self.sid)
+        source = wnode_source.NodeSource(nbnksrc, self.sid)
 
         if source.plugin_id == 0x00650002: #silence
             nsize = nbnksrc.find(name='uSize')
@@ -323,7 +324,7 @@ class _NodeHelper(object):
         return source
 
     def _parse_sfx(self, node, plugin_id):
-        fx = wtxtp_util.NodeFx(node, plugin_id)
+        fx = wnode_misc.NodeFx(node, plugin_id)
         return fx
 
     #--------------------------------------------------------------------------

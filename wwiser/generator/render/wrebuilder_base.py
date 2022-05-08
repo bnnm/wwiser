@@ -184,7 +184,7 @@ class CAkHircNode(object):
         if not nrtpcs:
             return
         for nrtpc in nrtpcs:
-            rtpc = wnode_rtpc.NodeRtpc(nrtpc)
+            rtpc = wnode_rtpc.AkRtpc(nrtpc)
             if not rtpc.is_volume:
                 continue
             self.config.rtpcs.append(rtpc)

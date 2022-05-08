@@ -1,4 +1,4 @@
-from . import wnode_misc
+from . import wnode_misc, wnode_automation
 from ..txtp import wtxtp_info
 
 from .wrebuilder_base import CAkHircNode
@@ -761,7 +761,7 @@ class _CAkMusicTrack(CAkHircNode):
         self.config.loop = None
 
         # prepare for clips
-        self.automations = self._build_clip_automations(node)
+        self.automations = wnode_automation.AkClipAutomationList(node)
 
         ntype = node.find(name='eTrackType')
         if not ntype:
@@ -858,41 +858,6 @@ class _CAkMusicTrack(CAkHircNode):
                 clip.fields.prop(source.nfileid)
 
         return clip
-
-    def _build_clip_automations(self, node):
-        cas = {}
-
-        # parse clip modifiers
-        nclipams = node.finds(name='AkClipAutomation')
-        for nclipam in nclipams:
-            # clip have associated 'automations', that define graph points (making envelopes) to alter sound
-            ca = _CAkMusicTrack_ClipAutomation()
-            ca.index = nclipam.find(name='uClipIndex').value() # which clip is affected
-            ca.type = nclipam.find(name='eAutoType').value() # type of alteration
-
-            # types:
-            # - fade-out: alters volume from A to B (in dB, so 0.0=100%, -96=0%)
-            # - fade-in: same but in reverse
-            # - LPF/HPF: low/high pass filter
-            # - volume: similar but allows more points
-
-            npoints = nclipam.finds(name='AkRTPCGraphPoint')
-            for npoint in npoints:
-                p = _GraphPoint() 
-                p.time = npoint.find(name='From').value() #time from (relative to music track)
-                p.value = npoint.find(name='To').value() #current altered value
-                p.interp = npoint.find(name='Interp').value() #easing function between points
-                ca.points.append(p)
-                # each point is discrete yet connected to next point via easing function
-                # ex. point1: from=0.0, to=0.0, interp=sine
-                #     point2: from=1.0, to=1.0, interp=constant
-                # with both you have a fade in from 0.0..1.0, changing volume from silence to full in a sine curve
-
-            if not ca.index in cas:
-                cas[ca.index] = []
-            cas[ca.index].append(ca)
-
-        return cas
 
     def _process_txtp(self, txtp):
         if not self.subtracks: #empty / no clips
@@ -1004,15 +969,3 @@ class _CAkMusicTrack_Clip(CAkHircNode):
         self.sound = wnode_misc.NodeSound()
         self.sound.clip = True
         self.fields = wtxtp_info.TxtpFields()
-
-class _CAkMusicTrack_ClipAutomation(CAkHircNode):
-    def __init__(self):
-        self.index = None
-        self.type = None
-        self.points = []
-
-class _GraphPoint(CAkHircNode):
-    def __init__(self):
-        self.time = None
-        self.value = None
-        self.interp = None

@@ -85,12 +85,12 @@ class GraphTests(object):
         return
 
     def _test(self, t):
-        graph = wnode_rtpc.NodeGraph(None, 0)
+        graph = wnode_rtpc._AkGraph(None, 0)
         graph.version = t.version
         graph.scaling = t.scaling
 
         for x, y, i in t.points:
-            p = wnode_rtpc.NodeGraphPoint(None)
+            p = wnode_rtpc._AkGraphPoint(None)
             p.x = x
             p.y = y
             p.i = i

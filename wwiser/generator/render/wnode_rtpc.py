@@ -1,8 +1,12 @@
 import math
 
 # RTPC helpers
+#
+# RTPCs are a graph/curve of params, where passing a value (usually a gamevar) returns another
+# (usually a defined property like volume), to calculate expected values in real time.
+#  For example, PARAM_HP at 100~30 could be volume 100, at 30~0 volume decreses progressively.
 
-GRAPH_NEW_SCALING = 72 #>=
+_GRAPH_NEW_SCALING = 72 #>=
 
 
 # Represents a graph point.
@@ -10,7 +14,7 @@ GRAPH_NEW_SCALING = 72 #>=
 # ex. point1: from=0.0, to=0.0, interp=sine
 #     point2: from=1.0, to=1.0, interp=constant
 # with both you have a fade in from 0.0..1.0, changing volume from silence to full in a sine curve
-class NodeGraphPoint(object):
+class _AkGraphPoint(object):
     def __init__(self, npoint):
         self.x = 0
         self.y = 0
@@ -25,7 +29,7 @@ class NodeGraphPoint(object):
 # Set of points, that can convert a passed value to another based on interpolations.
 # input/output is always a float.
 # Somewhat adapted from original functions
-class NodeGraph(object):
+class _AkGraph(object):
     def __init__(self, nbase, scaling):
         self.points = []
         self.scaling = scaling
@@ -37,7 +41,7 @@ class NodeGraph(object):
 
         npoints = nbase.finds(name='AkRTPCGraphPoint')
         for npoint in npoints:
-            p = NodeGraphPoint(npoint) 
+            p = _AkGraphPoint(npoint) 
             self.points.append(p)
 
     #CAkConversionTable::ConvertInternal
@@ -133,7 +137,7 @@ class NodeGraph(object):
     #CAkConversionTable::ApplyCurveScaling
     def _scale(self, v):
         sc = self.scaling
-        if self.version < GRAPH_NEW_SCALING:
+        if self.version < _GRAPH_NEW_SCALING:
             if sc == 0: #no scaling
                 pass
 
@@ -234,9 +238,9 @@ class NodeGraph(object):
         return math.pow(10.0, v * 0.050000001) #~FastPow10?
 
 
-RTPC_NEW_ACCUM = 120 #>=
+_RTPC_NEW_ACCUM = 120 #>=
 
-class NodeRtpc(object):
+class AkRtpc(object):
     def __init__(self, nrtpc):
         self.is_volume = False
         self.nrtpc = nrtpc
@@ -253,7 +257,7 @@ class NodeRtpc(object):
         self.id = self.nid.value()
 
         scaling = nrtpc.find1(name='eScaling').value()
-        self.graph = NodeGraph(nrtpc, scaling)
+        self.graph = _AkGraph(nrtpc, scaling)
 
         #rtpcType: game parameter/midi/modulator, probably not important (>=112)
 
@@ -276,7 +280,7 @@ class NodeRtpc(object):
         # current volume). Docs also mention property behavior is fixed per property
         return y + value
 
-        #if self.version < RTPC_NEW_ACCUM:
+        #if self.version < _RTPC_NEW_ACCUM:
         #    if self.accum == 0: #exclusive
         #        return y + value #??? (sounds better with volumes?)
         #    if self.accum == 1: #additive

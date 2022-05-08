@@ -867,29 +867,12 @@ class TxtpSimplifier(object):
         # automations are relative to clip start, after applying trims/padding, that should correspond to this
         # time in seconds, unlike clip values
         base_time =  node.pad_begin / 1000.0
+        version = sound.source.version
 
-        # transform wwise automations to txtp envelopes
-        # wwise defines points (A,B,C) and autocalcs combos like (A,B),(B,C).
-        # for txtp we need to make combos
-        # ch(type)(position)(time-start)+(time-length)
-        # ch^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
-        for am in sound.automations:
-            version = sound.source.version
+        #todo apply delays
+        envelopes = wnode_envelope.build_txtp_envelopes(sound.automations, version, base_time)
+        node.envelopes.extend(envelopes)
 
-            max = len(am.points)
-            for i in range(0, max):
-                if (i + 1 >= max):
-                    continue
-
-                p1 = am.points[i]
-                p2 = am.points[i+1]
-                envelope = wnode_envelope.NodeEnvelope(am, p1, p2, version, base_time)
-                if not envelope.usable:
-                    continue
-
-                #todo apply delays
-
-                node.envelopes.append(envelope)
 
     def _apply_group(self, node):
 

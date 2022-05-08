@@ -53,9 +53,9 @@ class TxtpNamer(object):
         txtp = self.txtp
 
         # same name but different txtp, rarely happens when banks repeat events ids that are actually different
-        if not txtp.txtpcache.register_name(name):
+        if not txtp.txtpcache.stats.register_name(name):
             logging.debug("txtp: renaming to '%s'", name)
-            name += '#%03i' % (txtp.txtpcache.names)
+            name += '#%03i' % (txtp.txtpcache.stats.current_name_count())
 
         # shouldn't happen but just in case
         for rpl in ['*','?',':','<','>','|']: #'\\','/'
@@ -74,7 +74,7 @@ class TxtpNamer(object):
             else:
                 if len(longname) > tags.limit:
                     cutname = longname[0:tags.limit] 
-                    shortname = "%s~%04i" % (cutname, txtp.txtpcache.created)
+                    shortname = "%s~%04i" % (cutname, txtp.txtpcache.stats.created)
                 else:
                     shortname = longname
             name = shortname
@@ -94,8 +94,8 @@ class TxtpNamer(object):
         if len(name) > MAX_FILENAME_LENGTH:
             #if not longname:
             #    longname = name
-            name = "%s~%04i%s" % (name[0:MAX_FILENAME_LENGTH], txtp.txtpcache.created, '.txtp')
-            txtp.txtpcache.trims += 1
+            name = "%s~%04i%s" % (name[0:MAX_FILENAME_LENGTH], txtp.txtpcache.stats.created, '.txtp')
+            txtp.txtpcache.stats.trims += 1
             logging.debug("txtp: trimmed name '%s'", name)
 
         outname = outdir + name
@@ -105,8 +105,8 @@ class TxtpNamer(object):
             fullpath = txtp.txtpcache.basedir + '/' + outname
             if len(fullpath) > WINDOWS_MAX_PATH:
                 maxlen = WINDOWS_MAX_PATH - len(txtp.txtpcache.basedir) - 10
-                outname = "%s~%04i%s" % (outname[0:maxlen], txtp.txtpcache.created, '.txtp')
-                txtp.txtpcache.trims += 1
+                outname = "%s~%04i%s" % (outname[0:maxlen], txtp.txtpcache.stats.created, '.txtp')
+                txtp.txtpcache.stats.trims += 1
                 logging.debug("txtp: trimmed path '%s'", outname)
 
         return outname
@@ -180,9 +180,9 @@ class TxtpNamer(object):
                     info = "%04u" % (int(index))
 
 
-            if txtp.txtpcache.unused_mark:
+            if txtp.txtpcache.stats.unused_mark:
                 info += '~unused'
-            if txtp.txtpcache.transition_mark:
+            if txtp.txtpcache.stats.transition_mark:
                 info += '~transition'
 
             classname = node.get_name()
@@ -301,7 +301,7 @@ class TxtpNamer(object):
         bankname = os.path.basename(nroot.get_filename()) #[:-4] #
         bankname = os.path.splitext(bankname)[0]
 
-        name = "%s-%05i" % (bankname, txtp.txtpcache.names)
+        name = "%s-%05i" % (bankname, txtp.txtpcache.stats.current_name_count())
 
         return name
 

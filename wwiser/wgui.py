@@ -494,7 +494,7 @@ class Gui(object):
             generator.set_renames( self._get_list('txtp_renames') )
 
             generator.set_wemdir( self._get_item('txtp_wemdir') )
-            generator.set_volume( self._get_item('txtp_volume') )
+            generator.set_master_volume( self._get_item('txtp_volume') )
             generator.set_lang( self._get_item('txtp_lang') )
             generator.set_move( self._get_item('txtp_move') )
             generator.set_bnkskip( self._get_item('txtp_bnkskip') )

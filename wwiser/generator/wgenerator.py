@@ -1,5 +1,5 @@
 import logging
-from . import wfilter, wmover, wtransitions, wtxtp_cache
+from . import wfilter, wmover, wtransitions, wtxtp_cache, wreport
 from .render import wrebuilder
 from .gamesync import wgamesync
 from .txtp import wtxtp
@@ -100,8 +100,8 @@ class Generator(object):
             return
         self._txtpcache.wemdir = self._txtpcache.normalize_path(path)
 
-    def set_volume(self, volume):
-        self._txtpcache.set_volume(volume)
+    def set_master_volume(self, volume):
+        self._txtpcache.set_master_volume(volume)
 
     def set_lang(self, flag):
         self._txtpcache.lang = flag
@@ -170,71 +170,7 @@ class Generator(object):
         return
 
     def _report(self):
-        reb = self._rebuilder
-        txc = self._txtpcache
-        mdi = self._txtpcache.mediaindex
-
-        if reb.has_unused() and not self._generate_unused:
-            logging.info("generator: NOTICE! possibly unused audio? (find+load more banks?)")
-            logging.info("*** set 'generate unused' option to include, may not create anything")
-
-        if mdi.get_missing_media():
-            missing = len(mdi.get_missing_media())
-            logging.info("generator: WARNING! missing %s memory audio (load more banks?)", missing)
-
-        if reb.get_missing_nodes_loaded():
-            missing = len(reb.get_missing_nodes_loaded())
-            logging.info("generator: WARNING! missing %s Wwise objects in loaded banks (ignore?)", missing)
-
-        if reb.get_missing_nodes_others():
-            missing = len(reb.get_missing_nodes_others())
-            logging.info("generator: WARNING! missing %s Wwise objects in other banks (load?)", missing)
-            for bankinfo in reb.get_missing_banks():
-                logging.info("- %s.bnk" % (bankinfo))
-
-        if reb.get_missing_nodes_unknown():
-            missing = len(reb.get_missing_nodes_unknown())
-            logging.info("generator: WARNING! missing %s Wwise objects in unknown banks (load/ignore?)", missing)
-
-        if reb.get_multiple_nodes():
-            missing = len(reb.get_multiple_nodes())
-            logging.info("generator: WARNING! repeated %s Wwise objects in multiple banks (load less?)", missing)
-
-        if not txc.created:
-            logging.info("generator: WARNING! no .txtp were created (find+load banks with events?)")
-
-        if reb.get_transition_objects():
-            logging.info("generator: REPORT! transition object in playlists")
-        if reb.get_unknown_props():
-            logging.info("generator: REPORT! unknown properties in some objects")
-            for prop in reb.get_unknown_props():
-                logging.info("- %s" % (prop))
-
-        if txc.trims:
-            logging.info("generator: NOTICE! trimmed %s long filenames (use shorter dirs?)", txc.trims)
-            logging.info("*** set 'tags.m3u' option for shorter names + tag file with full names")
-
-        if txc.multitrack and not self._default_params:
-            logging.info("generator: multitracks detected (ignore, may generate in future versions)")
-
-        dir = txc.get_txtp_dir()
-        if not dir:
-            dir = '.'
-
-        if txc.streams and not self._move:
-            logging.info("generator: some .txtp (%s) use streams, move to %s", txc.streams, dir)
-        if txc.internals and not txc.bnkskip:
-            logging.info("generator: some .txtp (%s) use .bnk, move to %s", txc.internals, dir)
-            for bankname in txc.get_banks():
-                logging.info("- %s", bankname)
-
-        #logging.info("generator: done")
-        line = "created %i" % txc.created
-        if txc.duplicates:
-            line += ", %i duplicates" % txc.duplicates
-        if self._generate_unused:
-            line += ", unused %i" % txc.unused
-        logging.info("generator: done (%s)", line)
+        wreport.Report(self).report()
 
 
     def _setup(self):
@@ -378,7 +314,7 @@ class Generator(object):
             logging.info("generator: NOTICE! when using 'normal' filters must add 'unused' filters")
 
         self._txtpcache.no_txtp = self._filter.skip_unused
-        self._txtpcache.unused_mark = True
+        self._txtpcache.stats.unused_mark = True
 
         for name in self._rebuilder.get_unused_names():
             nodes = self._rebuilder.get_unused_list(name)
@@ -396,7 +332,7 @@ class Generator(object):
 
                 self._make_txtp(node)
 
-        self._txtpcache.unused_mark = False
+        self._txtpcache.stats.unused_mark = False
         self._txtpcache.no_txtp = False
         return
 
@@ -448,13 +384,13 @@ class Generator(object):
             tr_nodes = transitions.get_nodes()
             if tr_nodes:
                 # handle transitions of current files (so filtered nodes don't appear)
-                self._txtpcache.transition_mark = True
+                self._txtpcache.stats.transition_mark = True
                 for ncaller, transition in tr_nodes:
                     txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params)
                     self._rebuilder.begin_txtp(txtp, transition)
                     txtp.set_ncaller(ncaller)
                     txtp.write()
-                self._txtpcache.transition_mark = False
+                self._txtpcache.stats.transition_mark = False
 
         except Exception: #as e
             sid = 0

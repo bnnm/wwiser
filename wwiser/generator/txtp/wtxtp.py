@@ -178,7 +178,7 @@ class Txtp(object):
             texthash = hash(text_simpler)
 
         # get name and check hash
-        is_new = self.txtpcache.register_txtp(texthash, printer)
+        is_new = self.txtpcache.stats.register_txtp(texthash, printer)
         name = self._namer.get_longname(printer, is_new)
         if not is_new and not self.txtpcache.dupes:
             logging.debug("txtp: ignore '%s' (repeat of %s)", name, texthash)

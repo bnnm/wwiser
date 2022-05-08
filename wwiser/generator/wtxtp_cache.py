@@ -1,5 +1,5 @@
 import logging, math, os
-from . import wexternals
+from . import wexternals, wstats
 from .gamesync import wgamevars
 from .render import wmediaindex
 from .txtp import wtxtp_namer
@@ -8,14 +8,6 @@ DEFAULT_OUTDIR = 'txtp/'
 DEFAULT_WEMDIR = 'wem/'
 WINDOWS_INTERNAL_NAME = 'nt'
 
-# a few common cases to avoid a bunch of decimals
-VOLUME_PERCENT_TO_DB = {
-    4.0: 12.0,
-    2.0: 6.0,
-    1.0: 0.0,
-    0.5: -6.0,
-    0.25: -12.0,
-}
 # config/cache/info for all txtp (updated during process)
 
 class TxtpCache(object):
@@ -40,75 +32,23 @@ class TxtpCache(object):
         self.silence = False
         self.wwnames = None
 
-        # process helpers (passed around)
-        self.tags = None
-        self.renamer = wtxtp_namer.TxtpRenamer()
-        self.gamevars = wgamevars.GamevarsParams()
-        self.externals = wexternals.Externals()
-        self.mediaindex = wmediaindex.MediaIndex()
-
         self.no_txtp = False
-
         self.x_noloops = False
         self.x_nameid = False
 
-        # process info
-        self.created = 0
-        self.duplicates = 0
-        self.unused = 0
-        self.multitrack = 0
-        self.trims = 0
-        self.streams = 0
-        self.internals = 0
-        self.names = 0
-
+        # process helpers (passed around)
+        self.tags = None
+        self.gamevars = wgamevars.GamevarsParams()
+        self.mediaindex = wmediaindex.MediaIndex()
+        self.externals = wexternals.Externals()
+        self.renamer = wtxtp_namer.TxtpRenamer()
+        self.stats = wstats.Stats()
 
         # other helpers
         self.is_windows = os.name == WINDOWS_INTERNAL_NAME
         self.basedir = os.getcwd()
 
-        self._txtp_hashes = {}
-        self._name_hashes = {}
-        self._banks = {}
-
-        self.transition_mark = False
-        self.unused_mark = False
-
         self._common_base_path = None
-
-    def register_txtp(self, texthash, printer):
-        if texthash in self._txtp_hashes:
-            self.duplicates += 1
-            return False
-
-        self._txtp_hashes[texthash] = True
-        self.created += 1
-        if self.unused_mark:
-            self.unused += 1
-
-        if printer.has_internals:
-            self.internals += 1
-        if printer.has_streams:
-            self.streams += 1
-        return True
-
-    def register_name(self, name):
-        hashname = hash(name)
-
-        self.names += 1
-        if hashname in self._name_hashes:
-            return False
-
-        self._name_hashes[hashname] = True
-        return True
-
-
-    def register_bank(self, bankname):
-        self._banks[bankname] = True
-        return
-
-    def get_banks(self):
-        return self._banks
 
 
     # paths for txtp
@@ -148,9 +88,19 @@ class TxtpCache(object):
         node = banks[0]
         self._common_base_path = node.get_root().get_path()
 
-    def set_volume(self, volume):
+
+    def set_master_volume(self, volume):
         if not volume:
             return
+
+        # a few common cases to avoid a bunch of decimals
+        VOLUME_PERCENT_TO_DB = {
+            4.0: 12.0,
+            2.0: 6.0,
+            1.0: 0.0,
+            0.5: -6.0,
+            0.25: -12.0,
+        }
 
         auto = False
         try:

@@ -291,7 +291,7 @@ class Cli(object):
 
             generator.set_alt_exts(args.txtp_alt_exts)
             generator.set_lang(args.txtp_lang)
-            generator.set_volume(args.txtp_volume)
+            generator.set_master_volume(args.txtp_volume)
             generator.set_random_all(args.txtp_random_all)
             generator.set_random_multi(args.txtp_random_multi)
             generator.set_random_force(args.txtp_random_force)

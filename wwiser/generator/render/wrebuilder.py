@@ -1,5 +1,5 @@
 import logging
-from . import wrebuilder_nodes as rn
+from . import wrebuilder_util as ru
 from . import wnode_misc
 
 
@@ -11,8 +11,6 @@ from . import wnode_misc
 
 class Rebuilder(object):
     def __init__(self):
-        self._DEFAULT_CLASS = rn._CAkNone
-
         # nodes (default parser nodes) and bnodes (rebuilt simplified nodes)
         self._ref_to_node = {}              # bank + sid > parser node
         self._id_to_refs = {}               # sid > bank + sid list
@@ -37,77 +35,6 @@ class Rebuilder(object):
         # may end up using other unused types
         self._used_node = {}                # marks which node_refs has been used
         self._hircname_to_nodes = {}        # registered types > list of nodes
-
-        self._generated_hircs =  [
-            'CAkEvent',
-            'CAkDialogueEvent',
-        ]
-
-        # only parsed hircs at the moment are those that contribute to .txtp
-        self._hircs = {
-            # base
-            'CAkEvent': rn._CAkEvent,
-            'CAkDialogueEvent': rn._CAkDialogueEvent,
-            'CAkActionPlay': rn._CAkActionPlay,
-            'CAkActionTrigger': rn._CAkActionTrigger,
-
-            # not found, may need to do something with them
-            'CAkActionPlayAndContinue': rn._CAkActionPlayAndContinue,
-            'CAkActionPlayEvent': rn._CAkActionPlayEvent,
-
-            # sound engine
-            'CAkLayerCntr': rn._CAkLayerCntr,
-            'CAkSwitchCntr': rn._CAkSwitchCntr,
-            'CAkRanSeqCntr': rn._CAkRanSeqCntr,
-            'CAkSound': rn._CAkSound,
-
-            # music engine
-            'CAkMusicSwitchCntr': rn._CAkMusicSwitchCntr,
-            'CAkMusicRanSeqCntr': rn._CAkMusicRanSeqCntr,
-            'CAkMusicSegment': rn._CAkMusicSegment,
-            'CAkMusicTrack': rn._CAkMusicTrack,
-
-            # others
-            'CAkStinger': rn._CAkStinger,
-            'CAkState': rn._CAkState,
-            'CAkFxCustom': rn._CAkFxCustom, #similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
-
-            #not useful
-            #CAkActorMixer
-            #CAkActionSetState
-            #CAkAction*
-            #CAkBus
-            #CAkAuxBus
-            #CAkFeedbackBus: accepts audio from regular sounds + creates rumble
-            #CAkFeedbackNode: played like audio (play action) and has source ID, but it's simply a rumble generator
-            #CAkAttenuation
-            #CAkAudioDevice
-            #CAkFxShareSet
-            #CAkLFOModulator
-            #CAkEnvelopeModulator
-            #CAkTimeModulator
-        }
-
-        # ordered by priority (needed to generate unused)
-        self._unused_hircs = [
-            #'CAkEvent',
-            #'CAkDialogueEvent',
-            'CAkActionPlay',
-            'CAkActionTrigger',
-
-            'CAkActionPlayAndContinue',
-            'CAkActionPlayEvent',
-
-            'CAkLayerCntr',
-            'CAkSwitchCntr',
-            'CAkRanSeqCntr',
-            'CAkSound',
-
-            'CAkMusicSwitchCntr',
-            'CAkMusicRanSeqCntr',
-            'CAkMusicSegment',
-            'CAkMusicTrack',
-        ]
 
         return
 
@@ -138,7 +65,7 @@ class Rebuilder(object):
         return self._unknown_props
 
     def get_generated_hircs(self):
-        return self._generated_hircs
+        return ru.GENERATED_BASE_HIRCS
 
     def report_transition_object(self):
         self._transition_objects += 1
@@ -210,7 +137,7 @@ class Rebuilder(object):
 
     def has_unused(self):
         # find if useful nodes where used
-        for hirc_name in self._unused_hircs:
+        for hirc_name in ru.UNUSED_HIRCS:
             nodes = self._hircname_to_nodes.get(hirc_name, [])
             for node in nodes:
                 if id(node) not in self._used_node:
@@ -224,7 +151,7 @@ class Rebuilder(object):
         return False
 
     def get_unused_names(self):
-        return self._unused_hircs
+        return ru.UNUSED_HIRCS
 
     def get_unused_list(self, hirc_name):
         results = []
@@ -297,7 +224,7 @@ class Rebuilder(object):
         # rebuild node with a helper class and save to cache
         # (some banks get huge and call the same things again and again, it gets quite slow to parse every time)
         hircname = node.get_name()
-        bclass = self._hircs.get(hircname, self._DEFAULT_CLASS)
+        bclass = ru.get_rebuilt_hirc(hircname)
 
         bnode = bclass()
         bnode.init_builder(self)

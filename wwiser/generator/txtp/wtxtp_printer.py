@@ -388,7 +388,7 @@ class TxtpPrinter(object):
                 info += "  ##other bnk?"
                 self.has_unsupported = True
             self.has_internals = True
-            self._txtpcache.register_bank(bankname)
+            self._txtpcache.stats.register_bank(bankname)
 
         else:
             # regular stream

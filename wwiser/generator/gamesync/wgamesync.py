@@ -349,7 +349,7 @@ class GamesyncParams(object):
             # ex. multiple play actions in event, or multiple switch-type tracks in a segment
             # May happen when generating certain paths too?
             logging.debug("generator: expected gamesync (%s, %s) not set" % (TYPE_NAMES[type], self._get_info(name)))
-            self._txtpcache.multitrack += 1
+            self._txtpcache.stats.multitrack += 1
             return None
 
         if self._manual and len(values) == 1:

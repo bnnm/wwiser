@@ -470,7 +470,18 @@ Info gathered from the editor, to help understanding model and overall behavior.
   - Audio Objects: uses 3D spatial config (for actors that exist in 3D space, defined elsewhere)
   - 1.0/2.0/../N.n: up/downmixes to that
   * For example, if sub-bus downmixes to 1.0 and main has 2.0 (upmixes), output is 2.0 but from 1.0 audio = double mono
-- The overall pipeline combines children buses to a final bus then output:
+- The overall pipeline combines children buses to a final bus then output
+- overriding and final bus:
+  - a "top-most" object must set a bus
+  - editor allows to change bus without checking "override parent" (since there is no parent)
+  - internally always sets `OverrideBusId=NNN` to the final bus, usually Master Audio Bus
+  - any children of this object (like musicswitch > musicsegment) inherits parent's bus (`OverrideBusId=0`)
+  - editor can check "override parent" and set another bus
+    - by default it autoselect "Master Audio Bus" when checked, regarless of parent
+  - if a top-most object has a 
+
+
+
 
 ## Volumes
 ```
@@ -525,3 +536,50 @@ sound > (volumes) > bus > bus > ... > bus > output
   - if there was an aux-bus, it'd just apply its settings as another path
 - plugins like PeakLimiter or Gain also apply on each step
   - associated in BusInitialFxParams > FXChunk, then pointing to CAkFxShareSet
+
+## actor mixer
+- a way to group N sound types and apply values config
+- contains any sound engine types (ranqseq, switch, layer,sound, more actor-mixers, etc) but not music engine types (musicsegment, musictrack, etc)
+- it's not referenced directly, but a way to apply values to several objects at once
+  - an aksound children of an actor mixer would apply their own volume/pitch/etc then the actor mixer's volume/pitch/etc
+- an actor-mixer isn't referenced directly, but it's config is applied
+  - an event would call the aksound, and then that aksound would apply its own and its parent's properties
+- since objects can only have one parent, it's parent must also be part of the actor mixer to apply its config
+  - actor mixer > aksound: ok
+  - actor mixer > akswitch > aksound: ok
+  - actor mixer > aksound1 + akswitch > aksound1: ko
+
+## Inheriting values
+- most objects can set values like: volume, pitch, lpf, hpf, etc
+- pipeline is similar to how bus volumes are applied, or rather, bus volumes would apply like this:
+  - start with a bottom-most playable object (aksound, musictrack)
+  - apply its own values
+  - seek parent (`DirectParentID=N`)
+  - apply parent's values
+  - repeat seek + apply parent until `DirectParentID=0`
+- each object has 1 associated bus, that also apply
+  - that bus in turn applies its parent's config, also applied to aksound
+  - can be top-most parent's (defaults to Master Audio Bus) or can be overriden with `OverrideBusId` at any moment of the chain
+  - each bus itself (CAkBus) follows its parents to get a final volume
+    - can't use an aux-bus
+- objects can also have N alt aux-buses, that are similar but don't apply main bus's config
+- on each step needs to take into account:
+  - basic params (volume, pitch, lpf, hpf)
+  - current RTPCs values (if set)
+  - param-states
+- built-in params (ex. volume) apply directly
+  - ex. with a akswitch > aksound
+  - when playing the aksound directly, it applies all parent's config
+    - *doesn't* only apply the aksound's config ignoring parents
+  - when playing the akswitch directly, it applies child's config
+    - in this case the switch ultimately 
+  - basically doesn't matter how file is played to apply config
+- playback params only apply when applying that object:
+  - `InitialDelay`: ex. akswitch 2s delay, aksound 1s delay:
+    - playing the aksound starts audio after 1s
+    - playing the akswitch starts audio after 2+1s
+  - it's possible to set RTPC to these values but not recommended
+  - for this reason, non-action objects like actor-mixer can't set initial delay
+- in effect
+  - built-in parameters are precalculated and applied to each sound directly
+  - playback-parameters are post-calculated depending on usage

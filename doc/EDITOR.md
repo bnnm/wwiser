@@ -9,6 +9,15 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - music switch can have multiple playlist playing at the same time?
 - pStateChunks for switching + syncs? (may be set as default?)
 
+## hierarchy
+- editor divides audio into these:
+  - audio devices: audio bus can be routed to these (standard output, no output, controller audio, etc)
+  - master-mixer hierarchy: buses go here
+  - action-mixer hierarchy: "sound engine" objects go here
+  - interactive music hierarchy: "music engine" objects go here
+- playable sound/music objects apply config from its own hierarchy
+- playable audio objects go through 1 main bus or N aux-bus, applying certain params and config
+
 
 ## files
 - you can import audio (.wav) into a project and use freely as is
@@ -447,7 +456,8 @@ Info gathered from the editor, to help understanding model and overall behavior.
       - probably for different emitters, or custom stuff like beat analysis
     - aux buses may change output config, but can only increase volume (other options seem ignored?)
     - there are "user defined" and "game defined", unsure about diffs
-    - seems aux-buses ultimately go to output, so they affect whole mix
+    - aux-buses seem intended to apply effects like reverb (base sound + proximity aligned bus)
+    - seems aux-buses may ultimately go to output
 - sub-buses may have sub-buses and aux-buses children, while aux-buses may have aux-buses
 - buses also define output device (system sound, etc) and parameters like output channel config
   - probably does up/downmixing depending on this config
@@ -536,6 +546,9 @@ sound > (volumes) > bus > bus > ... > bus > output
   - if there was an aux-bus, it'd just apply its settings as another path
 - plugins like PeakLimiter or Gain also apply on each step
   - associated in BusInitialFxParams > FXChunk, then pointing to CAkFxShareSet
+- if multiple voices sound at once (ex. aklayer) each voice calculates final volumes separately
+  - as each one may have any final result, depending on factors
+  - unsure if volumes are applied per object's samples (less efficient but more simple), or at mixing time trying to get common volumes (more efficient but more complex to set up)
 
 ## actor mixer
 - a way to group N sound types and apply values config
@@ -549,7 +562,8 @@ sound > (volumes) > bus > bus > ... > bus > output
   - actor mixer > akswitch > aksound: ok
   - actor mixer > aksound1 + akswitch > aksound1: ko
 
-## Inheriting values
+## inheriting properties
+* >> "About Properties in the Project Hierarchy"
 - most objects can set values like: volume, pitch, lpf, hpf, etc
 - pipeline is similar to how bus volumes are applied, or rather, bus volumes would apply like this:
   - start with a bottom-most playable object (aksound, musictrack)
@@ -557,6 +571,10 @@ sound > (volumes) > bus > bus > ... > bus > output
   - seek parent (`DirectParentID=N`)
   - apply parent's values
   - repeat seek + apply parent until `DirectParentID=0`
+- values are inherited even if parent object isn't part of the play queue
+  - musicswitch volume=-10 > musicsegment = -5
+  - play event calls directly musicsegment
+  - final volume is -15 (applies parent)
 - each object has 1 associated bus, that also apply
   - that bus in turn applies its parent's config, also applied to aksound
   - can be top-most parent's (defaults to Master Audio Bus) or can be overriden with `OverrideBusId` at any moment of the chain
@@ -583,3 +601,33 @@ sound > (volumes) > bus > bus > ... > bus > output
 - in effect
   - built-in parameters are precalculated and applied to each sound directly
   - playback-parameters are post-calculated depending on usage
+- "absolute properties": properties passed down from parent to child, but only apply once
+  - buses, effects, positioning, advanced settings (playback limits/priority)
+- "relative properties": properties that are cumulative from parent to child
+  - volume, pitch, lpf, hpf
+  - after adding, properties are capped: volume -200..+200, pitch -2400, etc
+
+## properties
+- volume, pitch, etc, set directly via editor and used as explained above
+- properties may set "enable randomizer" to select between values at play
+  - volume -5 and +5 will play some value in between on each play
+
+## states tab
+- object may tie an state to some property (volume, pitch, bus volume, initial delay, etc)
+- music objects may also set sync type (on next cue, next bar, etc)
+- seems it always inherits parent, even if parent isn't called?
+  - ex. akswitch > aksound
+  - akswitch sets state with lower volume
+  - play event calls aksound directly
+  - when state is set, parent akswitch volume lowers, but aksound is also affected
+
+## Positioning
+- objects may change their virtual position
+  - similar to panning L<>R but more complex
+- by default inherits parent unless set to override
+
+## Effects
+- objects may set custom, complex plugin FX
+  - like echo, pitch shift, etc
+- by default inherits parent unless set to override
+- there is a limit  (since they are more complex?)

@@ -1,5 +1,5 @@
 import logging
-from . import wnode_misc, wnode_source, wnode_rtpc, wnode_transitions, wnode_tree
+from . import wnode_misc, wnode_source, wnode_rtpc, wnode_transitions, wnode_tree, wnode_props
 from ..txtp import wtxtp_info
 
 
@@ -66,8 +66,8 @@ class CAkHircNode(object):
     #--------------------------------------------------------------------------
 
     # info when generating transitions
-    def _register_transitions(self, txtp):
-        for ntid in self.ntransitions:
+    def _register_transitions(self, txtp, ntransitions):
+        for ntid in ntransitions:
             node = self.builder._get_transition_node(ntid)
             txtp.transitions.add(node)
         return
@@ -78,17 +78,28 @@ class CAkHircNode(object):
         self._barf()
         return
 
+    def __parse_props(self, ninit):
+        props = wnode_props.CAkProps(ninit)
 
-    WARN_PROPS = [
-        #"[TrimInTime]", "[TrimOutTime]", #seen in CAkState (ex. DMC5)
-        #"[FadeInCurve]", "[FadeOutCurve]", #seen in CAkState, used in StateChunks (ex. NSR)
-        "[LoopStart]", "[LoopEnd]",
-        "[FadeInTime]", "[FadeOutTime]", "[LoopCrossfadeDuration]",
-        "[CrossfadeUpCurve]", "[CrossfadeDownCurve]",
-        #"[MakeUpGain]", #seems to be used when "auto normalize" is on (ex. Magatsu Wahrheit, MK Home Circuit)
-        #"[BusVolume]", #percent of max? (ex. DmC)
-        #"[OutputBusVolume]"
-    ]
+        if props.valid:
+            for unknown in props.unknowns:
+                self.builder._unknown_props[unknown] = True
+
+            self.config.volume = props.volume
+            self.config.makeupgain = props.makeupgain
+            self.config.pitch = props.pitch
+            self.config.delay = props.delay
+            self.config.idelay = props.idelay
+
+            for nkey, nval in props.fields_std:
+                self.fields.keyval(nkey, nval)
+
+            for nkey, nmin, nmax in props.fields_rng:
+                self.fields.keyminmax(nkey, nmin, nmax)
+
+        return props.valid
+
+
     OLD_AUDIO_PROPS = [
         'Volume', 'Volume.min', 'Volume.max', 'LFE', 'LFE.min', 'LFE.max',
         'Pitch', 'Pitch.min', 'Pitch.max', 'LPF', 'LPF.min', 'LPF.max',
@@ -96,61 +107,6 @@ class CAkHircNode(object):
     OLD_ACTION_PROPS = [
         'tDelay', 'tDelayMin', 'tDelayMax', 'TTime', 'TTimeMin', 'TTimeMax',
     ]
-
-    def __parse_props(self, ninit):
-        nvalues = ninit.find(name='AkPropBundle<AkPropValue,unsigned char>')
-        if not nvalues:
-            nvalues = ninit.find(name='AkPropBundle<float,unsigned short>')
-        if not nvalues:
-            nvalues = ninit.find(name='AkPropBundle<float>')
-        if nvalues: #newer
-            nprops = nvalues.finds(name='AkPropBundle')
-            for nprop in nprops:
-                nkey = nprop.find(name='pID')
-                nval = nprop.find(name='pValue')
-
-                valuefmt = nkey.get_attr('valuefmt')
-                value = nval.value()
-                if any(prop in valuefmt for prop in self.WARN_PROPS):
-                    #self._barf('found prop %s' % (valuefmt))
-                    self.builder._unknown_props[valuefmt] = True
-
-                elif "[Loop]" in valuefmt:
-                    self.config.loop = value
-
-                elif "[Volume]" in valuefmt:
-                    self.config.volume = value
-
-                elif "[MakeUpGain]" in valuefmt:
-                    self.config.makeupgain = value
-
-                elif "[Pitch]" in valuefmt:
-                    self.config.pitch = value
-
-                elif "[DelayTime]" in valuefmt:
-                    self.config.delay = value
-
-                elif "[InitialDelay]" in valuefmt:
-                    self.config.idelay = value * 1000.0 #float in seconds to ms
-
-                #missing useful effects:
-                #TransitionTime: used in play events to fade-in event
-
-                self.fields.keyval(nkey, nval)
-
-        #todo ranged values
-        nranges = ninit.find(name='AkPropBundle<RANGED_MODIFIERS<AkPropValue>>')
-        if nranges: #newer
-            nprops = nranges.finds(name='AkPropBundle')
-            for nprop in nprops:
-                nkey = nprop.find(name='pID')
-                nmin = nprop.find(name='min')
-                nmax = nprop.find(name='max')
-
-                self.fields.keyminmax(nkey, nmin, nmax)
-
-        return nvalues or nranges
-
 
     def _build_action_config(self, node):
         ninit = node.find1(name='ActionInitialValues') #used in action objects (CAkActionX)

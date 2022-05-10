@@ -473,7 +473,7 @@ class _CAkMusicSwitchCntr(CAkHircNode):
                 self.gvalue_ntid[gvalue] = (ntid, ngvalue)
 
     def _process_txtp(self, txtp):
-        self._register_transitions(txtp)
+        self._register_transitions(txtp, self.ntransitions)
 
         if self.ntid:
             # rarely tree plays a single object with any state
@@ -603,7 +603,7 @@ class _CAkMusicRanSeqCntr(CAkHircNode):
         return
 
     def _process_txtp(self, txtp):
-        self._register_transitions(txtp)
+        self._register_transitions(txtp, self.ntransitions)
 
         if not txtp.params:
             txtp.ppaths.add_stingers(self.stingers)

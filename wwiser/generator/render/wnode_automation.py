@@ -1,6 +1,6 @@
 
 
-class _GraphPoint(object):
+class _AkGraphPoint(object):
     def __init__(self, npoint):
         self.time = npoint.find(name='From').value() #time from (relative to music track)
         self.value = npoint.find(name='To').value() #current altered value
@@ -28,12 +28,13 @@ class AkClipAutomation(object):
 
         npoints = nclipam.finds(name='AkRTPCGraphPoint')
         for npoint in npoints:
-            p = _GraphPoint(npoint) 
+            p = _AkGraphPoint(npoint) 
             self.points.append(p)
             # each point is discrete yet connected to next point via easing function
             # ex. point1: from=0.0, to=0.0, interp=sine
             #     point2: from=1.0, to=1.0, interp=constant
             # with both you have a fade in from 0.0..1.0, changing volume from silence to full in a sine curve
+
 
 class AkClipAutomationList(object):
     def __init__(self, node):

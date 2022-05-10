@@ -1,7 +1,5 @@
 import logging
 from . import wrebuilder_util as ru
-from . import wnode_misc
-
 
 
 # Takes the parsed bank nodes and rebuilds them to simpler objects with quick access
@@ -9,7 +7,7 @@ from . import wnode_misc
 
 #******************************************************************************
 
-class Rebuilder(object):
+class Builder(object):
     def __init__(self):
         # nodes (default parser nodes) and bnodes (rebuilt simplified nodes)
         self._ref_to_node = {}              # bank + sid > parser node
@@ -234,36 +232,3 @@ class Rebuilder(object):
         if mark_used:
             self._used_node[id(node)] = True #register usage for unused detection
         return bnode
-
-    #--------------------------------------------------------------------------
-
-    def begin_txtp(self, txtp, node):
-        bnode = self._get_bnode(node)
-        if not bnode:
-            return
-
-        self._root_node = node #info for transitions
-
-        root_config = wnode_misc.NodeConfig()
-        txtp.begin(node, root_config)
-        bnode._make_txtp(txtp)
-
-        self._root_node = None #info for transitions
-        return
-
-    def begin_txtp_stinger(self, txtp, stinger):
-        bnode = self._get_bnode(stinger.node) #sid is stinger.ntrigger.value()
-        if not bnode:
-            return
-
-        # not correct since CAkStinger have no sid (same TriggerID can call different segments),
-        # this is to show info
-        bnode.sid = stinger.ntrigger.value()
-        bnode.nsid = stinger.ntrigger
-        bnode.ntid = stinger.ntid
-
-        #self._process_next(ntid, txtp)
-        root_config = wnode_misc.NodeConfig()
-        txtp.begin(stinger.node, root_config, nname=stinger.ntrigger, ntid=stinger.ntrigger, ntidsub=stinger.ntid)
-        bnode._make_txtp(txtp)
-        return

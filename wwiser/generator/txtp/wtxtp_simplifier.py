@@ -1,6 +1,6 @@
 import logging, math, copy
 
-from ..render import wnode_envelope
+from . import wnode_envelope
 from . import wtxtp_tree
 
 

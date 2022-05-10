@@ -1,6 +1,6 @@
 import logging
 from . import wfilter, wmover, wtransitions, wtxtp_cache, wreport
-from .render import wrebuilder
+from .render import wrebuilder, wrenderer
 from .gamesync import wgamesync
 from .txtp import wtxtp
 
@@ -24,8 +24,9 @@ class Generator(object):
     def __init__(self, banks, wwnames=None):
         self._banks = banks
 
-        self._rebuilder = wrebuilder.Rebuilder()
+        self._builder = wrebuilder.Builder()
         self._txtpcache = wtxtp_cache.TxtpCache()
+        self._renderer = wrenderer.Renderer(self._builder)
 
         self._txtpcache.set_basepath(banks)
         self._txtpcache.wwnames = wwnames
@@ -36,9 +37,9 @@ class Generator(object):
         self._filter = wfilter.GeneratorFilter()  # filter nodes
         self._bank_order = False            # use bank order to generate txtp (instead of prioritizing named nodes)
 
-        self._default_hircs = self._rebuilder.get_generated_hircs()
+        self._default_hircs = self._renderer.get_generated_hircs()
         self._filter.set_default_hircs(self._default_hircs)
-        self._rebuilder.set_filter(self._filter)
+        self._builder.set_filter(self._filter)
 
         self._default_params = None
 
@@ -186,7 +187,7 @@ class Generator(object):
             bank_id = root.get_id()
             bankname = bank.get_root().get_filename()
 
-            self._rebuilder.add_loaded_bank(bank_id, bankname)
+            self._builder.add_loaded_bank(bank_id, bankname)
 
             # register sids/nodes first since banks can point to each other
             items = bank.find(name='listLoadedItem')
@@ -201,7 +202,7 @@ class Generator(object):
                     continue
                 sid = nsid.value()
 
-                self._rebuilder.add_node_ref(bank_id, sid, node)
+                self._builder.add_node_ref(bank_id, sid, node)
 
                 # for nodes that can contain sources save them to move later
                 if self._move:
@@ -301,7 +302,7 @@ class Generator(object):
     def _write_unused(self):
         if not self._generate_unused:
             return
-        if not self._rebuilder.has_unused():
+        if not self._builder.has_unused():
             return
 
         # when filtering nodes without 'rest' (i.e. only generating a few nodes) can't generate unused,
@@ -316,8 +317,8 @@ class Generator(object):
         self._txtpcache.no_txtp = self._filter.skip_unused
         self._txtpcache.stats.unused_mark = True
 
-        for name in self._rebuilder.get_unused_names():
-            nodes = self._rebuilder.get_unused_list(name)
+        for name in self._builder.get_unused_names():
+            nodes = self._builder.get_unused_list(name)
 
             for node in nodes:
 
@@ -345,7 +346,7 @@ class Generator(object):
         try:
             # base .txtp
             txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params, transitions=transitions)
-            self._rebuilder.begin_txtp(txtp, node)
+            self._renderer.begin_txtp(txtp, node)
 
             ppaths = txtp.ppaths  # gamesync "paths" found during process
             if ppaths.is_empty():
@@ -358,7 +359,7 @@ class Generator(object):
                 for combo in combos:
                     #logging.info("generator: combo %s", combo.elems)
                     txtp = wtxtp.Txtp(self._txtpcache, params=combo, transitions=transitions)
-                    self._rebuilder.begin_txtp(txtp, node)
+                    self._renderer.begin_txtp(txtp, node)
                     txtp.write()
                     if txtp.vpaths.has_unreachables():
                         unreachables = True
@@ -368,7 +369,7 @@ class Generator(object):
                         #logging.info("generator: combo %s", combo.elems)
                         txtp = wtxtp.Txtp(self._txtpcache, params=combo, transitions=transitions)
                         txtp.vpaths.set_unreachables_only()
-                        self._rebuilder.begin_txtp(txtp, node)
+                        self._renderer.begin_txtp(txtp, node)
                         txtp.write()
 
 
@@ -377,7 +378,7 @@ class Generator(object):
                 params = self._default_params #?
                 for stinger in ppaths.stingers:
                     txtp = wtxtp.Txtp(self._txtpcache, params=params)
-                    self._rebuilder.begin_txtp_stinger(txtp, stinger)
+                    self._renderer.begin_txtp_stinger(txtp, stinger)
                     txtp.write()
 
             # transitions found during process
@@ -387,7 +388,7 @@ class Generator(object):
                 self._txtpcache.stats.transition_mark = True
                 for ncaller, transition in tr_nodes:
                     txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params)
-                    self._rebuilder.begin_txtp(txtp, transition)
+                    self._renderer.begin_txtp(txtp, transition)
                     txtp.set_ncaller(ncaller)
                     txtp.write()
                 self._txtpcache.stats.transition_mark = False

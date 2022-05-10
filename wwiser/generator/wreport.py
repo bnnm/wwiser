@@ -8,7 +8,7 @@ class Report(object):
 
     def report(self):
         gen = self._generator
-        reb = gen._rebuilder
+        reb = gen._builder
         txc = gen._txtpcache
         mdi = gen._txtpcache.mediaindex
         stats = gen._txtpcache.stats

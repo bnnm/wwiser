@@ -4,6 +4,10 @@ from ..gamesync import wgamesync
 from ..txtp import wtxtp_info
 
 
+class CAkNode(object):
+    def __init__(self):
+        pass #no params since changing constructors is a pain
+
 # common for all 'rebuilt' nodes
 class CAkHircNode(object):
     def __init__(self):

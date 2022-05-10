@@ -68,10 +68,11 @@ def AkPropBundle_float_unsigned_short___SetInitialParams(obj, cls):
     #AkPropBundle<float,unsigned short,(AkMemID)0>::SetInitialParams #135
     obj = obj.node('AkPropBundle<float,unsigned short>') #AkPropBundle
 
+    # despite the generic name this is used by CAkState only
     obj.u16('cProps')
     elems = obj.list('pProps', 'AkPropBundle', obj.lastval).preload()
     for elem in elems:
-        elem.U16('pID').fmt(wdefs.AkPropID)
+        elem.U16('pID').fmt(wdefs.AkRTPC_ParameterID) #not a AkPropID (states-params are like mini-RTPCs)
     for elem in elems:
         elem.f32('pValue')
 
@@ -87,10 +88,11 @@ def AkPropBundle_float___SetInitialParams(obj, cls):
     #AkPropBundle<float>::SetInitialParams
     obj = obj.node('AkPropBundle<float>') #AkPropBundle
 
+    # despite the generic name this is used by CAkState only
     obj.u8i('cProps')
     elems = obj.list('pProps', 'AkPropBundle', obj.lastval).preload()
     for elem in elems:
-        elem.U8x('pID').fmt(wdefs.AkPropID)
+        elem.U8x('pID').fmt(wdefs.AkRTPC_ParameterID) #not a AkPropID (states-params are like mini-RTPCs)
     for elem in elems:
         elem.f32('pValue')
 
@@ -465,7 +467,7 @@ def CAkStateAware__ReadStateChunk(obj, cls):
 
     obj.var('ulNumStateProps')
     for elem in obj.list('stateProps', 'AkStatePropertyInfo', obj.lastval):
-        elem.var('PropertyId')
+        elem.var('PropertyId').fmt(wdefs.AkRTPC_ParameterID) #not a AkPropID (states-params are like mini-RTPCs)
         elem.U8x('accumType').fmt(wdefs.AkRtpcAccum)
         if   cls.version <= 126:
             pass

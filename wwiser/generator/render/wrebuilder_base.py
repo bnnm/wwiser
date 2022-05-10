@@ -1,12 +1,12 @@
 import logging
-from . import wnode_misc, wnode_source, wnode_rtpc
-from ..gamesync import wgamesync
+from . import wnode_misc, wnode_source, wnode_rtpc, wnode_transitions, wnode_tree
 from ..txtp import wtxtp_info
 
 
-class CAkNode(object):
-    def __init__(self):
-        pass #no params since changing constructors is a pain
+#beware circular refs
+#class CAkNode(object):
+#    def __init__(self):
+#       pass #no params since changing constructors is a pain
 
 # common for all 'rebuilt' nodes
 class CAkHircNode(object):
@@ -97,7 +97,7 @@ class CAkHircNode(object):
         'tDelay', 'tDelayMin', 'tDelayMax', 'TTime', 'TTimeMin', 'TTimeMax',
     ]
 
-    def _parse_props(self, ninit):
+    def __parse_props(self, ninit):
         nvalues = ninit.find(name='AkPropBundle<AkPropValue,unsigned char>')
         if not nvalues:
             nvalues = ninit.find(name='AkPropBundle<float,unsigned short>')
@@ -153,11 +153,11 @@ class CAkHircNode(object):
 
 
     def _build_action_config(self, node):
-        ninit = node.find1(name='ActionInitialValues')
+        ninit = node.find1(name='ActionInitialValues') #used in action objects (CAkActionX)
         if not ninit:
             return
 
-        ok = self._parse_props(ninit)
+        ok = self.__parse_props(ninit)
         if ok:
             return
 
@@ -181,21 +181,6 @@ class CAkHircNode(object):
             if value != 0: #default to 0 if not set
                 self.fields.prop(nprop)
 
-    def _build_rtpc_config(self, node):
-        if not node:
-            return
-        nrtpcs = node.finds(name='RTPC')
-        if not nrtpcs:
-            return
-        for nrtpc in nrtpcs:
-            rtpc = wnode_rtpc.AkRtpc(nrtpc)
-            if not rtpc.is_volume:
-                continue
-            self.config.rtpcs.append(rtpc)
-            self.config.crossfaded = True
-            self.fields.rtpc(rtpc.nid, rtpc.minmax())
-
-        return
 
     def _build_audio_config(self, node):
         name = node.get_name()
@@ -245,13 +230,13 @@ class CAkHircNode(object):
             self._build_rtpc_config(nbase)
 
         # find other parameters
-        ninit = node.find1(name='NodeInitialParams')
+        ninit = node.find1(name='NodeInitialParams') #most objects that aren't actions nor states
         if not ninit:
-            ninit = node.find1(name='StateInitialValues')
+            ninit = node.find1(name='StateInitialValues') #used in CAkState
         if not ninit:
             return
 
-        ok = self._parse_props(ninit)
+        ok = self.__parse_props(ninit)
         if ok:
             return
 
@@ -267,26 +252,29 @@ class CAkHircNode(object):
             if value != 0: #default to 0 if not set
                 self.fields.prop(nprop)
 
-    def _build_transitions(self, node, is_switch):
-        #AkMeterInfo: into for transitions
-        #pRules > AkMusicTransitionRule: when gamesync changes from one node to other (with fades or transition nodes)
-        #- srcID/dstID: source/destination node, id=object, -1=any, 0=nothing
-        #- other values: how to sync (like change when reaching node's "ExitMarker" cue)
-        #  (may only be used if transitionTime > 0?)
-        # * AkMusicTransitionObject: print
-
-        nmtos = node.finds(name='AkMusicTransitionObject')
-        # older versions use bIsTransObjectEnabled to signal use, but segmentID is 0 if false anyway
-        for nmto in nmtos:
-            ntid = nmto.find1(name='segmentID')
-            if ntid and ntid.value() != 0:
-                if is_switch:
-                    self.ntransitions.append(ntid)
-                else:
-                    # rare in playlists (Polyball, Spiderman)
-                    self.builder.report_transition_object()
-
+    def _build_rtpc_config(self, node):
+        rtpcs = wnode_rtpc.AkRtpcList(node)
+        if rtpcs.has_volume_rtpcs:
+            self.config.rtpcs = rtpcs
+            self.config.crossfaded = True
+            for nid, minmax in rtpcs.fields:
+                self.fields.rtpc(nid, minmax)
         return
+
+    def _build_transition_rules(self, node, is_switch):
+        rules = wnode_transitions.AkTransitionRules(node)
+        for ntid in rules.ntrn:
+            if ntid.value() == 0:
+                continue
+            if is_switch:
+                self.ntransitions.append(ntid)
+            else:
+                # rare in playlists (Polyball, Spiderman)
+                self.builder.report_transition_object()
+        return
+
+    def _build_tree(self, node):
+        return wnode_tree.AkDecisionTree(node)
 
     def _build_stingers(self, node):
         nstingers = node.finds(name='CAkStinger')
@@ -294,11 +282,8 @@ class CAkHircNode(object):
             return
 
         for nstinger in nstingers:
-            stinger = wnode_misc.NodeStinger()
-            stinger.node = nstinger
-            stinger.ntrigger = nstinger.find1(name='TriggerID') #idExt called from trigger action
-            stinger.ntid = nstinger.find1(name='SegmentID') #segment to play (may be 0)
-            if stinger.ntid and stinger.ntid.value() != 0:
+            stinger = wnode_misc.CAkStinger(nstinger)
+            if stinger.tid:
                 self.stingers.append(stinger)
         return
 
@@ -310,9 +295,9 @@ class CAkHircNode(object):
         return sound
 
     def _parse_source(self, nbnksrc):
-        source = wnode_source.NodeSource(nbnksrc, self.sid)
+        source = wnode_source.AkBankSource(nbnksrc, self.sid)
 
-        if source.plugin_id == 0x00650002: #silence
+        if source.is_plugin_silence:
             nsize = nbnksrc.find(name='uSize')
             if nsize and nsize.value():
                 # older games have inline plugin info
@@ -330,152 +315,6 @@ class CAkHircNode(object):
     def _parse_sfx(self, node, plugin_id):
         fx = wnode_misc.NodeFx(node, plugin_id)
         return fx
-
-    #--------------------------------------------------------------------------
-
-    #tree with multi gamesync (order of gamesyncs is branch order in tree)
-    def _build_tree(self, node, ntree):
-        self.args = []
-        self.paths = []
-        self.tree = {}
-
-        # tree's args (gamesync key) are given in Arguments, and possible values in AkDecisionTree, that contains
-        # 'pNodes' with 'Node', that have keys (gamesync value) and children or audioNodeId:
-        #   Arguments
-        #       bgm
-        #           scene
-        #
-        #   AkDecisionTree
-        #       key=*
-        #           key=bgm001
-        #               key=scene001
-        #                   audioNodeId=123456789
-        #           key=*
-        #               key=*
-        #                   audioNodeId=234567890
-        #
-        # Thus: (-=*, bgm=bgm001, scene=scene001 > 123456789) or (-=*, bgm=*, scene=* > 234567890).
-        # Paths must be unique (can't point to different IDs).
-        #
-        # Wwise picks paths depending on mode:
-        # - "best match": (default) selects "paths with least amount of wildcards" (meaning favors matching values)
-        # - "weighted": random based on based on "weight" (0=never, 100=always)
-        # For example:
-        # (bgm=bgm001, scene=*, subscene=001) vs (bgm=*, scene=scene001, subscene=*) picks the later (less *)
-        #
-        # This behaves like "best match", but saves GS values as "*" (that shouldn't be possible)
-        #
-        # Trees always start with a implicit "*" key that matches anything, so it's possible
-        # to have trees with no arguments that point to an audioNodeId = non-switch tree
-
-        # args has gamesync type+names, and tree "key" is value (where 0=any)
-        depth = node.find1(name='uTreeDepth').value()
-        nargs = node.finds(name='AkGameSync')
-        if depth != len(nargs): #not possible?
-            self._barf(text="tree depth and args don't match")
-
-        self.args = []
-        for narg in nargs:
-            ngtype = narg.find(name='eGroupType')
-            ngname = narg.find(name='ulGroup')
-            if ngtype:
-                gtype = ngtype.value()
-            else: #DialogueEvent in older versions, assumed default
-                gtype = wgamesync.TYPE_STATE
-            self.args.append( (gtype, ngname) )
-
-        # make a tree for access, plus a path list (similar to how the editor shows them) for GS combos
-        # - [val1] = {
-        #       [*] = { 12345 },
-        #       [val2] = {
-        #           [val3] = { ... }
-        #       }
-        #   }
-        # - [(gtype1, ngname1, ngvalue1), (gtype2, ngname2, ngvalue2), ...] > ntid (xN)
-        gamesyncs = [None] * len(nargs) #temp list
-
-        nnodes = ntree.find1(name='pNodes') #always
-        nnode = nnodes.find1(name='Node') #always
-        npnodes = nnode.find1(name='pNodes') #may be empty
-        if npnodes:
-            self._build_tree_nodes(self.tree, 0, npnodes, gamesyncs)
-        elif nnode:
-            # In rare cases may only contain one node for key 0, no depth (NMH3). This can be added
-            # as a "generic path" with no vars selected, meaning ignores vars and matches 1 object.
-            self.ntid = nnode.find1(name='audioNodeId')
-
-
-    def _build_tree_nodes(self, tree, depth, npnodes, gamesyncs):
-        if depth >= len(self.args):
-            self._barf(text="wrong depth") #shouldn't happen
-
-        if not npnodes: #short branch?
-            return
-        nchildren = npnodes.get_children() #parser shouldn't make empty pnodes
-        if not nchildren:
-            return
-
-        gtype, ngname = self.args[depth]
-
-        for nnode in nchildren:
-            ngvalue = nnode.find1(name='key')
-            npnodes = nnode.find1(name='pNodes')
-            gamesyncs[depth] = (gtype, ngname, ngvalue) #overwrite per node, will be copied
-
-            key = ngvalue.value()
-
-            if not npnodes: #depth + 1 == len(self.args): #not always correct
-                ntid = nnode.find1(name='audioNodeId')
-                tree[key] = (ngvalue, ntid, None)
-                self._build_tree_leaf(ntid, ngvalue, gamesyncs)
-
-            else:
-                subtree = {}
-                tree[key] = (ngvalue, None, subtree)
-                self._build_tree_nodes(subtree, depth + 1, npnodes, gamesyncs)
-        return
-
-    def _build_tree_leaf(self, ntid, ngvalue, gamesyncs):
-        # clone list of gamesyncs and final ntid (both lists as an optimization for huge trees)
-        path = []
-        for gamesync in gamesyncs:
-            if gamesync is None: #smaller path, rare
-                break
-            gtype, ngname, ngvalue = gamesync
-            path.append( (gtype, ngname.value(), ngvalue.value()) )
-        self.paths.append( (path, ntid) )
-
-        return
-
-    def _tree_get_npath(self, txtp):
-        # find gamesyncs matches in path
-
-        # follow tree up to match, with implicit depth args
-        npath = []
-        curr_tree = self.tree
-        for gtype, ngname in self.args:
-            # current arg must be defined to some value
-            gvalue = txtp.params.current(gtype, ngname.value())
-            if gvalue is None: #not defined = can't match
-                return None
-
-            # value must exist in tree
-            match = curr_tree.get(gvalue) # exact match (could match * too if gvalue is set to 0)
-            if not match:
-                match = curr_tree.get(0) # * match
-            if not match:
-                return None
-
-            ngvalue, ntid, subtree = match
-            npath.append( (gtype, ngname, ngvalue) )
-
-            if not ntid:
-                curr_tree = subtree # try next args = higher depth
-            else:
-                return (npath, ntid)
-
-        return None
-
 
     #--------------------------------------------------------------------------
 

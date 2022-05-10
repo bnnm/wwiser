@@ -98,7 +98,7 @@ class TxtpNode(object):
         if not gv or not gv.active:
             return None
         rtpcs = self.config.rtpcs
-        if not rtpcs:
+        if not rtpcs or not rtpcs.has_volume_rtpcs:
             return None
 
         volume = self.volume or 0.0

@@ -13,7 +13,7 @@ class NodeConfig(object):
         self.delay = None
         self.idelay = None
         self.crossfaded = False #RPTC/state controlled silence
-        self.rtpcs = []
+        self.rtpcs = None
         #markers
         self.duration = None
         self.entry = None
@@ -56,8 +56,16 @@ class NodeTransition(object):
         self.fadein_pos = 0
         self.fadeout_pos = 0
 
-class NodeStinger(object):
-    def __init__(self):
-        self.node = None
+class CAkStinger(object):
+    def __init__(self, node):
+        self.node = node
         self.ntrigger = None
         self.ntid = None
+        self.tid = None
+        self._build(node)
+
+    def _build(self, node):
+        self.ntrigger = node.find1(name='TriggerID') #idExt called from trigger action
+        self.ntid = node.find1(name='SegmentID') #segment to play (may be 0)
+        if self.ntid:
+            self.tid = self.ntid.value()

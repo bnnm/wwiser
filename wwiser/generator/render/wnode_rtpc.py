@@ -1,6 +1,6 @@
 import math
 
-# RTPC helpers
+# RTPC (Real-time Parameter Controls) helpers
 #
 # RTPCs are a graph/curve of params, where passing a value (usually a gamevar) returns another
 # (usually a defined property like volume), to calculate expected values in real time.
@@ -316,3 +316,27 @@ class AkRtpc(object):
 
     def max(self):
         return self.minmax()[1]
+
+
+class AkRtpcList(object):
+    def __init__(self, node):
+        self._rtpcs = []
+        self.fields = []
+        self.has_volume_rtpcs = False
+        self._build(node)
+
+    def empty(self):
+        return self._rtpcs.empty()
+
+    def _build(self, node):
+        if not node:
+            return
+        nrtpcs = node.finds(name='RTPC')
+        if not nrtpcs:
+            return
+        for nrtpc in nrtpcs:
+            rtpc = AkRtpc(nrtpc)
+            if rtpc.is_volume:
+                self.has_volume_rtpcs = True
+            self._rtpcs.append(rtpc)
+            self.fields.append((rtpc.nid, rtpc.minmax()))

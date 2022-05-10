@@ -90,18 +90,17 @@ class _CAkEvent(CAkHircNode):
 class _CAkDialogueEvent(CAkHircNode):
     def __init__(self):
         super(_CAkDialogueEvent, self).__init__()
-        #self.paths = []
-        #self.tree = []
         self.ntid = None
+        self.tree = None
 
     def _build(self, node):
         self._build_audio_config(node)
         if self.config.loop is not None:
             self._barf("loop flag")
 
-        ntree = node.find(name='AkDecisionTree')
-        if ntree:
-            self._build_tree(node, ntree)
+        tree = self._build_tree(node)
+        if tree.init:
+            self.tree = tree
 
     def _process_txtp(self, txtp):
 
@@ -112,9 +111,12 @@ class _CAkDialogueEvent(CAkHircNode):
             txtp.group_done()
             return
 
+        if not self.tree:
+            return 
+
         if not txtp.params:
             # find all possible gamesyncs paths (won't generate txtp)
-            for path, ntid in self.paths:
+            for path, ntid in self.tree.paths:
                 unreachable = txtp.ppaths.adds(path)
                 if not unreachable:
                     self._process_next(ntid, txtp)
@@ -122,7 +124,7 @@ class _CAkDialogueEvent(CAkHircNode):
             return
 
         # find if current gamesync combo matches one of the paths
-        npath_combo = self._tree_get_npath(txtp)
+        npath_combo = self.tree.get_npath(txtp.params)
         if npath_combo:
             npath, ntid = npath_combo
             txtp.info.gamesyncs(npath)
@@ -437,25 +439,21 @@ class _CAkMusicSwitchCntr(CAkHircNode):
         self.has_tree = None
         self.ntid = False
         self.ntransitions = []
-        #tree config
-        #self.paths = []
-        #self.tree = []
+        self.tree = None
 
     def _build(self, node):
         self._build_audio_config(node)
-        self._build_transitions(node, True)
+        self._build_transition_rules(node, True)
         self._build_stingers(node)
 
         #Children: list, also in nodes
         #bIsContinuePlayback: ?
         #uMode: 0=BestMatch/1=Weighted
 
-        ntree = node.find(name='AkDecisionTree')
-        if ntree:
+        tree = self._build_tree(node)
+        if tree.init:
             #later versions use a tree
-            self.has_tree = True
-
-            self._build_tree(node, ntree)
+            self.tree = tree
 
         else:
             #earlier versions work like a normal switch
@@ -484,13 +482,13 @@ class _CAkMusicSwitchCntr(CAkHircNode):
             txtp.group_done()
             return
 
-        if self.has_tree:
+        if self.tree:
 
             if not txtp.params:
                 # find all possible gamesyncs paths (won't generate txtp)
                 txtp.ppaths.add_stingers(self.stingers)
 
-                for path, ntid in self.paths:
+                for path, ntid in self.tree.paths:
                     unreachable = txtp.ppaths.adds(path)
                     if not unreachable:
                         self._process_next(ntid, txtp)
@@ -498,7 +496,7 @@ class _CAkMusicSwitchCntr(CAkHircNode):
                 return
 
             # find if current gamesync combo matches one of the paths
-            npath_combo = self._tree_get_npath(txtp)
+            npath_combo = self.tree.get_npath(txtp.params)
             if npath_combo:
                 npath, ntid = npath_combo
                 txtp.info.gamesyncs(npath)
@@ -551,7 +549,7 @@ class _CAkMusicRanSeqCntr(CAkHircNode):
         if self.config.loop is not None:
             self._barf("loop flag")
 
-        self._build_transitions(node, False)
+        self._build_transition_rules(node, False)
         self._build_stingers(node)
 
         #playlists are "groups" that include 'leaf' objects or other groups

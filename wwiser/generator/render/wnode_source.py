@@ -61,7 +61,7 @@ _LANGUAGE_IDS = {
     0x26: "Vietnamese",
 }
 
-LANGUAGE_HASHNAMES = {
+_LANGUAGE_HASHNAMES = {
     393239870: "SFX",
     3254137205: "Arabic",
     4238406668: "Bulgarian",
@@ -104,7 +104,7 @@ LANGUAGE_HASHNAMES = {
     2847887552: "Vietnamese",
 }
 
-LANGUAGE_SHORTNAMES = {
+_LANGUAGE_SHORTNAMES = {
     "SFX": 'sfx',
     "Arabic": 'ar',
     "Bulgarian": 'bg',
@@ -147,7 +147,9 @@ LANGUAGE_SHORTNAMES = {
     "Vietnamese": 'vi',
 }
 
-PLUGIN_IGNORABLE = set([
+_PLUGIN_SILENCE = 0x00650002
+
+_PLUGIN_IGNORABLE = set([
     0x01950002,
     0x01990002,
 ])
@@ -158,7 +160,7 @@ PLUGIN_NAME = {
     0x00660002: 'tone',
 }
 
-class NodeSource(object):
+class AkBankSource(object):
     def __init__(self, nbnksrc, src_sid):
         self.src_sid = src_sid
         self.nsrc = nbnksrc
@@ -222,7 +224,11 @@ class NodeSource(object):
         self.plugin_wmid = (plugin == 0x00100001) #MIDI
 
         # plugins for internal use only and don't generate sound
-        self.plugin_ignorable = (plugin in PLUGIN_IGNORABLE)
+        self.plugin_ignorable = (plugin in _PLUGIN_IGNORABLE)
+
+        # info 
+        self.is_plugin_silence = (plugin == _PLUGIN_SILENCE)
+
 
         # config loaded later
         self.plugin_fx = None
@@ -286,14 +292,14 @@ class NodeSource(object):
             lang_name = _LANGUAGE_IDS.get(lang_value)
         else: #set of hashed names
             # typical values but languages can be anything (redefined in project options)
-            lang_name = LANGUAGE_HASHNAMES.get(lang_value)
+            lang_name = _LANGUAGE_HASHNAMES.get(lang_value)
             if not lang_name: #try loaded names (ex. Xenoblade DE uses "en" and "jp")
                 lang_name = nlangid.get_attr('hashname')
 
         if not lang_name:
             lang_name = "language-%s" % (lang_value)
 
-        lang_short = LANGUAGE_SHORTNAMES.get(lang_name, lang_name)
+        lang_short = _LANGUAGE_SHORTNAMES.get(lang_name, lang_name)
         if lang_short == 'sfx':
             lang_short = ''
         self._lang_name = lang_short
@@ -312,7 +318,7 @@ class NodeFx(object):
         if not node:
             return
 
-        if plugin_id == 0x00650002: #silence
+        if plugin_id == _PLUGIN_SILENCE: #silence
             nparams = node.find1(name='AkFXSrcSilenceParams')
             ndur = nparams.find(name='fDuration')
             self.duration = ndur.value()  * 1000.0 #to ms for consistency

@@ -295,7 +295,7 @@ class Generator(object):
 
         # make txtp for nodes
         for node in nodes:
-            self._make_txtp(node)
+            self._generate_txtp(node)
 
         return
 
@@ -331,13 +331,13 @@ class Generator(object):
                 if not allow:
                     continue
 
-                self._make_txtp(node)
+                self._generate_txtp(node)
 
         self._txtpcache.stats.unused_mark = False
         self._txtpcache.no_txtp = False
         return
 
-    def _make_txtp(self, node):
+    def _generate_txtp(self, node):
         # When default_params aren't set and objects need them, Txtp finds possible params, added
         # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then ""music=b02")
 

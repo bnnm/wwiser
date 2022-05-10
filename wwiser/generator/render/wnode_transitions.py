@@ -1,4 +1,4 @@
-from .wrebuilder_base import CAkNode
+#from .wrebuilder_base import object #circular dep
 
 # TRANSITION RULES
 #
@@ -7,7 +7,7 @@ from .wrebuilder_base import CAkNode
 # (play overlapped audio) and a optional transition object
 
 
-class AkFade(CAkNode):
+class AkFade(object):
     def __init__(self, node):
         self.time = 0
         self.curve = None
@@ -21,7 +21,7 @@ class AkFade(CAkNode):
         self.offset = node.find1(name='iFadeOffset').value()
 
 
-class AkMusicTransSrcRule(CAkNode):
+class AkMusicTransSrcRule(object):
     def __init__(self, node):
         self.fade = None
         self.type = None
@@ -40,7 +40,7 @@ class AkMusicTransSrcRule(CAkNode):
             self.cue = ncue.value()
 
 
-class AkMusicTransDstRule(CAkNode):
+class AkMusicTransDstRule(object):
     def __init__(self, node):
         self.fade = None
         self.type = None
@@ -51,36 +51,37 @@ class AkMusicTransDstRule(CAkNode):
 
     def _build(self, node):
         self.fade = AkFade(node)
-        self.type = node.find1(name='eSyncType').value()
-        self.post = node.find1(name='bPlayPostExit').value() != 0
+        self.type = node.find1(name='eEntryType').value()
+        self.post = node.find1(name='bPlayPreEntry').value() != 0
 
         # varies with version
         #uMarkerID
         #uCueFilterHash
         ncue = node.find(name='uCueFilterHash')
         if ncue:
-            self.cue = ncue.value()
+            self.link_cue = ncue.value()
         nmrk = node.find(name='uMarkerID')
         if nmrk:
-            self.cue = nmrk.value()
-        pass
-        #ty="tid" na="uJumpToID" va="0"/>
-        #ty="u16" na="eEntryType" va="0" vf="0x00 [EntryMarker]"/>
-        #ty="u8" na="bPlayPreEntry" va="255" vf="0xFF"/>
-        #ty="u8" na="bDestMatchSourceCueName" va="0" vf="0x00"/>
+            self.link_id = nmrk.value()
 
-class AkMusicTransitionObject(CAkNode):
-    def __init__(self, nrtrn):
-        self.sid = None
+        #uJumpToID
+        #eJumpToType
+        #bDestMatchSourceCueName
+
+class AkMusicTransitionObject(object):
+    def __init__(self, node):
+        self.ntid = None
+        self.tid = None
         self.fin = None
         self.fout = None
         self.pre = False
         self.post = False
 
-        self._build(nrtrn)
+        self._build(node)
 
     def _build(self, node):
-        self.sid = node.find1(name='segmentID').value()
+        self.ntid = node.find1(name='segmentID') 
+        self.tid = self.ntid.value()
 
         nfin = node.find1(name='fadeInParams')
         self.fin = AkFade(nfin)
@@ -92,7 +93,7 @@ class AkMusicTransitionObject(CAkNode):
 
 #TODO old versions check
 
-class AkTransitionRule(CAkNode):
+class AkTransitionRule(object):
     def __init__(self, node):
         self.src_id = None
         self.dst_id = None
@@ -103,9 +104,10 @@ class AkTransitionRule(CAkNode):
         self._build(node)
 
     def _build(self, node):
-        self.src = node.find1(name='srcID').value()
-        self.dst = node.find1(name='dstID').value()
-
+        # id=object, -1=any, 0=nothing
+        self.src_id = node.find1(name='srcID').value()
+        self.dst_id = node.find1(name='dstID').value()
+        
         nrsrcs = node.finds(name='AkMusicTransSrcRule')
         for nrsrc in nrsrcs:
             rsrc = AkMusicTransSrcRule(nrsrc)
@@ -116,14 +118,16 @@ class AkTransitionRule(CAkNode):
             rdst = AkMusicTransDstRule(nrdst)
             self.rdsts.append(rdst)
 
+        # older versions use bIsTransObjectEnabled to signal use, but segmentID is 0 if false anyway
         nrtrn = node.find(name='AkMusicTransitionObject')
         if nrtrn:
             self.rtrn = AkMusicTransitionObject(nrtrn)
 
 
-class AkTransitionRules(CAkNode):
+class AkTransitionRules(object):
     def __init__(self, node):
-        self.rules = []
+        self._rules = []
+        self.ntrn = []
 
         self._build(node)
 
@@ -131,7 +135,9 @@ class AkTransitionRules(CAkNode):
         nrules = node.finds(name='AkMusicTransitionRule')
         for nrule in nrules:
             rule = AkTransitionRule(nrule)
-            self.rules.append(rule)
+            self._rules.append(rule)
+            if rule.rtrn and rule.rtrn.ntid:
+                self.ntrn.append(rule.rtrn.ntid)
 
     def get_rule(self, src_id, dst_id):
         #TODO detect -1/0 too

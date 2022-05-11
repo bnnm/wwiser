@@ -2,15 +2,11 @@
 Low priority TODOs
 
 ## general
-- init?  __all__ = ["...", "..."]
-- make packages per module?
 - `from wwiser import ...` vs `from . import ...`?
 - fix todo-s 
-- os.path.join(dir, name) instead od dir + name
 
 ## parser
 - support Shadowrun, Too Human
-- some params names missing (ex. RTPCs)
 - clean bitflags in parser (some change between versions)
 - make as list: uNumSrc, srcID/etc, Children, etc
 - v36<= eTransitionMode/_bIsUsingWeight etc recheck
@@ -23,7 +19,6 @@ Low priority TODOs
 - show ico https://stackoverflow.com/questions/18537918/why-isnt-ico-file-defined-when-setting-windows-icon
 - show viewer open status (change text to "reopen?" "running")
 - viewer on another thread?
-- add more options to generator
 
 ## view
 - check if port is open (may open 2 instances and only 1 server works, but there is no port error)
@@ -37,9 +32,6 @@ Low priority TODOs
 
 ## names
 - add key per game in DB so wwnames can contain everything
-
-## rebuilder
-- improve internal init
 
 ## txtp
 - txtp should round up numbers? 1/48000 ~= 0.0000208333 * 48000 = 0.999999 > 1 or 0?
@@ -56,7 +48,6 @@ Low priority TODOs
 - DelayTime/InitialDelay may not work correctly with loops (ex. John Wick Hex 2932040671)
 - apply default bus volumes for better results? (ex. Astral Chain, Gunslinger Stratos)
 - mark loop inside inner group (double loop) as multiloop (ex. DmC last boss)
-- giant playlist + random + wem name options: only write selected wem (ex. Tony Hawk Shred Wii)
 - set multiple rtpc and generate combos: VALUE=0.0,1.0 to make 2 txtp (ex. Batman Arkham City)
   - multi-rtpc combine all: VALUE1=0.0,1.0 + VALUE2=2.0,3.0 = to make 4 txtp
 - rtpc of makeupgain?
@@ -65,5 +56,3 @@ Low priority TODOs
   - unneeded as neither are generated
   - may need to edit add_node_ref to find by class, but objects don't have a target ID
   - Wwise allows this, unsure how it finds objects
-
-  

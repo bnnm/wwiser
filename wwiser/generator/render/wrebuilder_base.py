@@ -147,7 +147,7 @@ class CAkHircNode(object):
         check_state = name in ['CAkMusicTrack', 'CAkMusicSegment']
         check_rtpc = check_state
         nbase = node.find1(name='NodeBaseParams')
-        if nbase and check_state:
+        if check_state and nbase:
             # state sets volume states to silence tracks (ex. MGR)
             # in rare cases those states are also used to slightly increase volume (Monster Hunter World's 3221323256.bnk)
             nstatechunk = nbase.find1(name='StateChunk')
@@ -181,7 +181,7 @@ class CAkHircNode(object):
                             self.config.add_volume_state(nstategroupid, nstateid, bstate.config)
                             self.fields.keyvalvol(nstategroupid, nstateid, bstate.config.volume)
 
-        if nbase and check_rtpc:
+        if check_rtpc and nbase:
             # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)
             self._build_rtpc_config(nbase)
 
@@ -269,7 +269,7 @@ class CAkHircNode(object):
         return source
 
     def _parse_sfx(self, node, plugin_id):
-        fx = wnode_misc.NodeFx(node, plugin_id)
+        fx = wnode_source.NodeFx(node, plugin_id)
         return fx
 
     #--------------------------------------------------------------------------

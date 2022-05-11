@@ -1,19 +1,13 @@
 from . import wrebuilder_nodes as rn
 
 
-# 
-GENERATED_BASE_HIRCS =  [
-    'CAkEvent',
-    'CAkDialogueEvent',
-]
-
 # default for non-useful HIRC classes
-DEFAULT_REBUILT_HIRC = rn._CAkNone
+_DEFAULT_BUILDER_NODE = rn._CAkNone
 
 # HIRC classes and their rebuilt equivalent.
 # Internal classes (like AkTrackSrcInfo) are handled separately per class since they
 # tend to need custom behavior
-REBUILT_HIRCS = {
+_HIRC_BUILDER_NODES = {
     # base
     'CAkEvent': rn._CAkEvent,
     'CAkDialogueEvent': rn._CAkDialogueEvent,
@@ -58,7 +52,7 @@ REBUILT_HIRCS = {
 }
 
 def get_rebuilt_hirc(hircname):
-    return REBUILT_HIRCS.get(hircname, DEFAULT_REBUILT_HIRC)
+    return _HIRC_BUILDER_NODES.get(hircname, _DEFAULT_BUILDER_NODE)
 
 
 # Classes that may generate unused audio, ordered by priority (musicsegment may contain unused musictrack)
@@ -81,4 +75,3 @@ UNUSED_HIRCS = [
     'CAkMusicSegment',
     'CAkMusicTrack',
 ]
-

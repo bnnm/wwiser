@@ -4,6 +4,8 @@ from . import wrebuilder_util as ru
 
 # Takes the parsed bank nodes and rebuilds them to simpler objects with quick access
 # for main useful (sound) attributes, and has helper functions to write TXTP
+# Used with registered HIRC objects, that are called by shortID (sub-objects like
+# AkTree are handled per HIRC object).
 
 #******************************************************************************
 
@@ -61,9 +63,6 @@ class Builder(object):
 
     def get_unknown_props(self):
         return self._unknown_props
-
-    def get_generated_hircs(self):
-        return ru.GENERATED_BASE_HIRCS
 
     def report_transition_object(self):
         self._transition_objects += 1

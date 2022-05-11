@@ -28,6 +28,7 @@ _OLD_ACTION_PROPS = [
 #Probability: used in play events to fade-in event
 #CenterPCT: not useful?
 
+#PROP_LOOP = "[Loop]"
 
 
 class CAkProps(object):

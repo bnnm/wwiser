@@ -13,11 +13,12 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - editor divides audio into these:
   - audio devices: audio bus can be routed to these (standard output, no output, controller audio, etc)
   - master-mixer hierarchy: buses go here
-  - action-mixer hierarchy: "sound engine" objects go here
+  - action-mixer hierarchy: "sound engine" objects go here (actor-mixers, akswitch, aksound, etc)
   - interactive music hierarchy: "music engine" objects go here
 - playable sound/music objects apply config from its own hierarchy
 - playable audio objects go through 1 main bus or N aux-bus, applying certain params and config
-
+- hierarchies are just a way to organize objects; playable objects don't depend on this
+  - event > aksound is possible, even if aksound if children of other object or is at the top of the hierarchy
 
 ## files
 - you can import audio (.wav) into a project and use freely as is
@@ -80,6 +81,7 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - a special type of sound, same but may define a wav/file per language
   - internally it's still a sound, with "bIsLanguageSpecific" flag set
 - when making .bnk it creates one per language (not possible to have one with multiple languages)
+- adding one voice automatically makes that bank a language bnk
 - if a voice is only defined for one language, other languages use it as-is
 - languages are added in the project "language" config
 - languages may be named freely (no need to follow standard), name is hashed
@@ -548,7 +550,26 @@ sound > (volumes) > bus > bus > ... > bus > output
   - associated in BusInitialFxParams > FXChunk, then pointing to CAkFxShareSet
 - if multiple voices sound at once (ex. aklayer) each voice calculates final volumes separately
   - as each one may have any final result, depending on factors
-  - unsure if volumes are applied per object's samples (less efficient but more simple), or at mixing time trying to get common volumes (more efficient but more complex to set up)
+- language bank also has a "makeup gain" setting, but it just applies that to each aksound
+
+## properties and performance
+- unsure at what point volumes are actually applied over buffer samples:
+  - on each object's samples: less efficient (1 by one) but more simple
+  - at mixing time if possible (hoisting common values): more efficient but more complex to set up, may end up doing more passes
+  - doc on actor-mixer: 
+    - effects: "effects is processed on real time per object and will take cpu"
+    - properties: "saves memory and cpu" (referring to states/rtpcs, since values can be precomputed?)
+- effects are applied once per bus, and per each object
+
+- on advanced profiler 
+  - buses have a "mix count" depending on number of simultaneous voices going there
+  - voices have: voice volume, bus volume and total volume (bus + voice)
+- bus mix count:
+  - single voice 1, 2 voices 2
+  - 2 voices with one aux send: 3 (since aux bus also end in the main bus)
+- presumably:
+  - first, voice volumes are applied over samples (total volume from object voice volumes + selected bus's voice volumes)
+  - then, if a voice goes to bus, its bus volume is applied
 
 ## actor mixer
 - a way to group N sound types and apply values config

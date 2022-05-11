@@ -237,13 +237,14 @@ class _AkGraph(object):
     def _dBToLin(self, v):
         return math.pow(10.0, v * 0.050000001) #~FastPow10?
 
-
-_RTPC_NEW_ACCUM = 120 #>=
+#_RTPC_NEW_ACCUM = 120 #>=
 
 class AkRtpc(object):
     def __init__(self, nrtpc):
         self.is_volume = False
         self.nrtpc = nrtpc
+
+        #TODO call build, allow non-volume types
 
         nparam = nrtpc.find1(name='ParamID')
         if nparam.value() != 0: #volume
@@ -336,7 +337,8 @@ class AkRtpcList(object):
             return
         for nrtpc in nrtpcs:
             rtpc = AkRtpc(nrtpc)
-            if rtpc.is_volume:
-                self.has_volume_rtpcs = True
+            if not rtpc.is_volume:
+                continue
+            self.has_volume_rtpcs = True
             self._rtpcs.append(rtpc)
             self.fields.append((rtpc.nid, rtpc.minmax()))

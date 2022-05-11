@@ -1,18 +1,16 @@
-import logging
-from . import wnode_misc, wnode_source, wnode_rtpc, wnode_transitions, wnode_tree, wnode_props
-from ..txtp import wtxtp_info
+from . import wnode_misc
 
 
 # common for all 'rebuilt' nodes
-class CAkHircNode(object):
+class RN_CAkHircNode(object):
     def __init__(self):
-        pass #no params since changing constructors is a pain
-
-    def init_builder(self, builder):
-        self.builder = builder
+        #no params since changing constructors is a pain, uses init_x below
+        pass
 
     def init_renderer(self, renderer):
         self._renderer = renderer
+        self._builder = renderer._builder
+        self._filter = renderer._filter
 
     #--------------------------------------------------------------------------
 
@@ -32,13 +30,15 @@ class CAkHircNode(object):
             # try same bank as node
             bank_id = ntid.get_root().get_id()
 
-        bnode = self.builder._get_bnode_by_ref(bank_id, tid, sid_info=None, nbankid_info=nbankid) #self.sid
+        builder = self._builder
+        bnode = builder._get_bnode_by_ref(bank_id, tid, sid_info=None, nbankid_info=nbankid) #self.sid
         if not bnode:
             return
 
         # filter HIRC nodes (for example drop unwanted calls to layered ActionPlay)
-        if self.builder._filter and self.builder._filter.active:
-            generate = self.builder._filter.allow_inner(bnode.node, bnode.nsid)
+        filter = self._filter
+        if filter and filter.active:
+            generate = filter.allow_inner(bnode.node, bnode.nsid)
             if not generate:
                 return
 
@@ -52,7 +52,7 @@ class CAkHircNode(object):
     # info when generating transitions
     def _register_transitions(self, txtp, ntransitions):
         for ntid in ntransitions:
-            node = self.builder._get_transition_node(ntid)
+            node = self._builder._get_transition_node(ntid)
             txtp.transitions.add(node)
         return
 

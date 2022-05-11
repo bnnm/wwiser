@@ -1,14 +1,10 @@
-from . import wnode_misc, wnode_automation
-from ..txtp import wtxtp_info
-
-from .wrenderer_hirc import CAkHircNode
+from . import wnode_misc
+from .wrenderer_hirc import RN_CAkHircNode
 
 
 #non-audio node, doesn't contribute to txtp
-class _CAkNone(CAkHircNode):
-    def __init__(self):
-        super(_CAkNone, self).__init__()
-
+class RN_CAkNone(RN_CAkHircNode):
+    
     def _make_txtp(self, bnode, txtp):
         #don't print node info in txtp
         return
@@ -18,9 +14,7 @@ class _CAkNone(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkEvent(CAkHircNode):
-    def __init__(self):
-        super(_CAkEvent, self).__init__()
+class RN_CAkEvent(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
         # N play actions are layered (may set a delay)
@@ -32,9 +26,7 @@ class _CAkEvent(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkDialogueEvent(CAkHircNode):
-    def __init__(self):
-        super(_CAkDialogueEvent, self).__init__()
+class RN_CAkDialogueEvent(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
 
@@ -70,22 +62,17 @@ class _CAkDialogueEvent(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkAction(CAkHircNode):
-    def __init__(self):
-        super(_CAkAction, self).__init__()
+class RN_CAkAction(RN_CAkHircNode):
+    pass
 
 #******************************************************************************
 
-class _CAkActionPlayAndContinue(_CAkAction):
-    def __init__(self):
-        super(_CAkActionPlayAndContinue, self).__init__()
-
+class RN_CAkActionPlayAndContinue(RN_CAkAction):
+    pass
 
 #******************************************************************************
 
-class _CAkActionTrigger(_CAkAction):
-    def __init__(self):
-        super(_CAkActionTrigger, self).__init__()
+class RN_CAkActionTrigger(RN_CAkAction):
 
     def _process_txtp(self, bnode, txtp):
         # Trigger calls current music object (mranseq/mswitch usually) defined CAkStinger,
@@ -99,9 +86,7 @@ class _CAkActionTrigger(_CAkAction):
 
 #******************************************************************************
 
-class _CAkActionPlay(_CAkAction):
-    def __init__(self):
-        super(_CAkActionPlay, self).__init__()
+class RN_CAkActionPlay(RN_CAkAction):
 
     def _process_txtp(self, bnode, txtp):
         txtp.group_single(bnode.config) # rare but may contain config
@@ -111,15 +96,12 @@ class _CAkActionPlay(_CAkAction):
 
 #******************************************************************************
 
-class _CAkActionPlayEvent(_CAkActionPlay): #_CAkActionPlay
-    def __init__(self):
-        super(_CAkActionPlayEvent, self).__init__()
+class RN_CAkActionPlayEvent(RN_CAkActionPlay): #RN_CAkActionPlay
+    pass
 
 #******************************************************************************
 
-class _CAkSwitchCntr(CAkHircNode):
-    def __init__(self):
-        super(_CAkSwitchCntr, self).__init__()
+class RN_CAkSwitchCntr(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
         gtype = bnode.gtype
@@ -154,9 +136,7 @@ class _CAkSwitchCntr(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkRanSeqCntr(CAkHircNode):
-    def __init__(self):
-        super(_CAkRanSeqCntr, self).__init__()
+class RN_CAkRanSeqCntr(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
 
@@ -183,9 +163,7 @@ class _CAkRanSeqCntr(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkLayerCntr(CAkHircNode):
-    def __init__(self):
-        super(_CAkLayerCntr, self).__init__()
+class RN_CAkLayerCntr(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
         txtp.group_layer(bnode.ntids, bnode.config)
@@ -196,9 +174,7 @@ class _CAkLayerCntr(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkSound(CAkHircNode):
-    def __init__(self):
-        super(_CAkSound, self).__init__()
+class RN_CAkSound(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
         txtp.info.source(bnode.sound.nsrc, bnode.sound.source)
@@ -207,9 +183,7 @@ class _CAkSound(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkMusicSwitchCntr(CAkHircNode):
-    def __init__(self):
-        super(_CAkMusicSwitchCntr, self).__init__()
+class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
         self._register_transitions(txtp, bnode.ntransitions)
@@ -277,9 +251,7 @@ class _CAkMusicSwitchCntr(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkMusicRanSeqCntr(CAkHircNode):
-    def __init__(self):
-        super(_CAkMusicRanSeqCntr, self).__init__()
+class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
         self._register_transitions(txtp, bnode.ntransitions)
@@ -333,9 +305,7 @@ class _CAkMusicRanSeqCntr(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkMusicSegment(CAkHircNode):
-    def __init__(self):
-        super(_CAkMusicSegment, self).__init__()
+class RN_CAkMusicSegment(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
         # empty segments are allowed as silence
@@ -356,9 +326,7 @@ class _CAkMusicSegment(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkMusicTrack(CAkHircNode):
-    def __init__(self):
-        super(_CAkMusicTrack, self).__init__()
+class RN_CAkMusicTrack(RN_CAkHircNode):
 
     def _process_txtp(self, bnode, txtp):
         if not bnode.subtracks: #empty / no clips

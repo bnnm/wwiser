@@ -26,7 +26,8 @@ class Generator(object):
 
         self._builder = wrebuilder.Builder()
         self._txtpcache = wtxtp_cache.TxtpCache()
-        self._renderer = wrenderer.Renderer(self._builder)
+        self._filter = wfilter.GeneratorFilter()  # filter nodes
+        self._renderer = wrenderer.Renderer(self._builder, self._filter)
 
         self._txtpcache.set_basepath(banks)
         self._txtpcache.wwnames = wwnames
@@ -34,7 +35,6 @@ class Generator(object):
         # options
         self._generate_unused = False       # generate unused after regular txtp
         self._move = False                  # move sources to wem dir
-        self._filter = wfilter.GeneratorFilter()  # filter nodes
         self._bank_order = False            # use bank order to generate txtp (instead of prioritizing named nodes)
 
         self._default_hircs = self._renderer.get_generated_hircs()

@@ -1,39 +1,39 @@
-from . import wrebuilder_nodes as rn
+from .wrebuilder_nodes import *
 
 
 # default for non-useful HIRC classes
-_DEFAULT_BUILDER_NODE = rn._CAkNone
+_DEFAULT_BUILDER_NODE = CAkNone
 
 # HIRC classes and their rebuilt equivalent.
 # Internal classes (like AkTrackSrcInfo) are handled separately per class since they
 # tend to need custom behavior
 _HIRC_BUILDER_NODES = {
     # base
-    'CAkEvent': rn._CAkEvent,
-    'CAkDialogueEvent': rn._CAkDialogueEvent,
-    'CAkActionPlay': rn._CAkActionPlay,
-    'CAkActionTrigger': rn._CAkActionTrigger,
+    'CAkEvent': CAkEvent,
+    'CAkDialogueEvent': CAkDialogueEvent,
+    'CAkActionPlay': CAkActionPlay,
+    'CAkActionTrigger': CAkActionTrigger,
 
     # not found, may need to do something with them
-    'CAkActionPlayAndContinue': rn._CAkActionPlayAndContinue,
-    'CAkActionPlayEvent': rn._CAkActionPlayEvent,
+    'CAkActionPlayAndContinue': CAkActionPlayAndContinue,
+    'CAkActionPlayEvent': CAkActionPlayEvent,
 
     # sound engine
-    'CAkLayerCntr': rn._CAkLayerCntr,
-    'CAkSwitchCntr': rn._CAkSwitchCntr,
-    'CAkRanSeqCntr': rn._CAkRanSeqCntr,
-    'CAkSound': rn._CAkSound,
+    'CAkLayerCntr': CAkLayerCntr,
+    'CAkSwitchCntr': CAkSwitchCntr,
+    'CAkRanSeqCntr': CAkRanSeqCntr,
+    'CAkSound': CAkSound,
 
     # music engine
-    'CAkMusicSwitchCntr': rn._CAkMusicSwitchCntr,
-    'CAkMusicRanSeqCntr': rn._CAkMusicRanSeqCntr,
-    'CAkMusicSegment': rn._CAkMusicSegment,
-    'CAkMusicTrack': rn._CAkMusicTrack,
+    'CAkMusicSwitchCntr': CAkMusicSwitchCntr,
+    'CAkMusicRanSeqCntr': CAkMusicRanSeqCntr,
+    'CAkMusicSegment': CAkMusicSegment,
+    'CAkMusicTrack': CAkMusicTrack,
 
     # others
-    'CAkStinger': rn._CAkStinger,
-    'CAkState': rn._CAkState,
-    'CAkFxCustom': rn._CAkFxCustom, #similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
+    'CAkStinger': CAkStinger,
+    'CAkState': CAkState,
+    'CAkFxCustom': CAkFxCustom, #similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
 
     #not useful
     #CAkActorMixer
@@ -51,7 +51,7 @@ _HIRC_BUILDER_NODES = {
     #CAkTimeModulator
 }
 
-def get_rebuilt_hirc(hircname):
+def get_builder_hirc(hircname):
     return _HIRC_BUILDER_NODES.get(hircname, _DEFAULT_BUILDER_NODE)
 
 

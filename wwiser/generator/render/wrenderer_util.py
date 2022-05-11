@@ -1,39 +1,39 @@
-from . import wrenderer_nodes as rn
+from .wrenderer_nodes import *
 
 
+# HIRC classes that should be used to generate .txtp
 GENERATED_BASE_HIRCS =  [
     'CAkEvent',
     'CAkDialogueEvent',
 ]
 
 # default for non-useful HIRC classes
-_DEFAULT_RENDERER_NODE = rn._CAkNone
+_DEFAULT_RENDERER_NODE = RN_CAkNone
 
-# HIRC classes and their rebuilt equivalent.
-# Internal classes (like AkTrackSrcInfo) are handled separately per class since they
-# tend to need custom behavior
+# HIRC classes capable of making a TXTP part.
+# Each should also have a bnode equivalent 
 _HIRC_RENDERER_NODES = {
     # base
-    'CAkEvent': rn._CAkEvent,
-    'CAkDialogueEvent': rn._CAkDialogueEvent,
-    'CAkActionPlay': rn._CAkActionPlay,
-    'CAkActionTrigger': rn._CAkActionTrigger,
+    'CAkEvent': RN_CAkEvent,
+    'CAkDialogueEvent': RN_CAkDialogueEvent,
+    'CAkActionPlay': RN_CAkActionPlay,
+    'CAkActionTrigger': RN_CAkActionTrigger,
 
     # not found, may need to do something with them
-    'CAkActionPlayAndContinue': rn._CAkActionPlayAndContinue,
-    'CAkActionPlayEvent': rn._CAkActionPlayEvent,
+    'CAkActionPlayAndContinue': RN_CAkActionPlayAndContinue,
+    'CAkActionPlayEvent': RN_CAkActionPlayEvent,
 
     # sound engine
-    'CAkLayerCntr': rn._CAkLayerCntr,
-    'CAkSwitchCntr': rn._CAkSwitchCntr,
-    'CAkRanSeqCntr': rn._CAkRanSeqCntr,
-    'CAkSound': rn._CAkSound,
+    'CAkLayerCntr': RN_CAkLayerCntr,
+    'CAkSwitchCntr': RN_CAkSwitchCntr,
+    'CAkRanSeqCntr': RN_CAkRanSeqCntr,
+    'CAkSound': RN_CAkSound,
 
     # music engine
-    'CAkMusicSwitchCntr': rn._CAkMusicSwitchCntr,
-    'CAkMusicRanSeqCntr': rn._CAkMusicRanSeqCntr,
-    'CAkMusicSegment': rn._CAkMusicSegment,
-    'CAkMusicTrack': rn._CAkMusicTrack,
+    'CAkMusicSwitchCntr': RN_CAkMusicSwitchCntr,
+    'CAkMusicRanSeqCntr': RN_CAkMusicRanSeqCntr,
+    'CAkMusicSegment': RN_CAkMusicSegment,
+    'CAkMusicTrack': RN_CAkMusicTrack,
 
     #not an action
     #CAkStinger
@@ -56,26 +56,3 @@ _HIRC_RENDERER_NODES = {
 
 def get_renderer_hirc(hircname):
     return _HIRC_RENDERER_NODES.get(hircname, _DEFAULT_RENDERER_NODE)
-
-
-# Classes that may generate unused audio, ordered by priority (musicsegment may contain unused musictrack)
-UNUSED_HIRCS = [
-    #'CAkEvent',
-    #'CAkDialogueEvent',
-    'CAkActionPlay',
-    'CAkActionTrigger',
-
-    'CAkActionPlayAndContinue',
-    'CAkActionPlayEvent',
-
-    'CAkLayerCntr',
-    'CAkSwitchCntr',
-    'CAkRanSeqCntr',
-    'CAkSound',
-
-    'CAkMusicSwitchCntr',
-    'CAkMusicRanSeqCntr',
-    'CAkMusicSegment',
-    'CAkMusicTrack',
-]
-

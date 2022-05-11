@@ -14,7 +14,7 @@ class CAkHircNode(object):
         pass #no params since changing constructors is a pain
 
     def init_builder(self, builder):
-        self.builder = builder
+        self._builder = builder
 
     def init_node(self, node):
         #self.version = node.get_root().get_version()
@@ -36,42 +36,6 @@ class CAkHircNode(object):
     def _barf(self, text="not implemented"):
         raise ValueError("%s - %s %s" % (text, self.name, self.sid))
 
-    def _process_next(self, ntid, txtp, nbankid=None):
-        tid = ntid.value()
-        if tid == 0:
-            #this is fairly common in switches, that may define all combos but some nodes don't point to anything
-            return
-
-        if nbankid:
-            # play actions reference bank by id (plus may save bankname in STID)
-            bank_id = nbankid.value()
-        else:
-            # try same bank as node
-            bank_id = ntid.get_root().get_id()
-
-        bnode = self.builder._get_bnode_by_ref(bank_id, tid, sid_info=self.sid, nbankid_info=nbankid)
-        if not bnode:
-            return
-
-        # filter HIRC nodes (for example drop unwanted calls to layered ActionPlay)
-        if self.builder._filter and self.builder._filter.active:
-            generate = self.builder._filter.allow_inner(bnode.node, bnode.nsid)
-            if not generate:
-                return
-
-        #logging.debug("next: %s %s > %s", self.node.get_name(), self.sid, tid)
-        bnode._make_txtp(txtp)
-        return
-
-    #--------------------------------------------------------------------------
-
-    # info when generating transitions
-    def _register_transitions(self, txtp, ntransitions):
-        for ntid in ntransitions:
-            node = self.builder._get_transition_node(ntid)
-            txtp.transitions.add(node)
-        return
-
     #--------------------------------------------------------------------------
 
     def _build(self, node):
@@ -82,8 +46,7 @@ class CAkHircNode(object):
         props = wnode_props.CAkProps(ninit)
 
         if props.valid:
-            for unknown in props.unknowns:
-                self.builder._unknown_props[unknown] = True
+            self._builder.report_unknown_props(props.unknowns)
 
             self.config.volume = props.volume
             self.config.makeupgain = props.makeupgain
@@ -166,7 +129,7 @@ class CAkHircNode(object):
                         tid = nstateinstanceid.value()
 
                         # state should exist as a node and have a volume value (states for other stuff are common)
-                        bstate = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)
+                        bstate = self._builder._get_bnode_by_ref(bank_id, tid, self.sid)
                         has_volumes = bstate and bstate.config.volume
                         if not has_volumes:
                             continue
@@ -226,7 +189,7 @@ class CAkHircNode(object):
                 self.ntransitions.append(ntid)
             else:
                 # rare in playlists (Polyball, Spiderman)
-                self.builder.report_transition_object()
+                self._builder.report_transition_object()
         return
 
     def _build_tree(self, node):
@@ -262,7 +225,7 @@ class CAkHircNode(object):
                 # newer games use another CAkFxCustom (though in theory could inline)
                 bank_id = source.nsrc.get_root().get_id()
                 tid = source.tid
-                bfxcustom = self.builder._get_bnode_by_ref(bank_id, tid, self.sid)
+                bfxcustom = self._builder._get_bnode_by_ref(bank_id, tid, self.sid)
                 if bfxcustom:
                     source.plugin_fx = bfxcustom.fx
 
@@ -271,16 +234,3 @@ class CAkHircNode(object):
     def _parse_sfx(self, node, plugin_id):
         fx = wnode_source.NodeFx(node, plugin_id)
         return fx
-
-    #--------------------------------------------------------------------------
-
-    def _make_txtp(self, txtp):
-        try:
-            txtp.info.next(self.node, self.fields, nsid=self.nsid)
-            self._process_txtp(txtp)
-            txtp.info.done()
-        except Exception: #as e #autochained
-            raise ValueError("Error processing TXTP for node %i" % (self.sid)) #from e
-
-    def _process_txtp(self, txtp):
-        self._barf("must implement")

@@ -15,7 +15,6 @@ class Builder(object):
         self._ref_to_node = {}              # bank + sid > parser node
         self._id_to_refs = {}               # sid > bank + sid list
         self._node_to_bnode = {}            # parser node > rebuilt node
-        #self._node_to_ref = {}             # parser node > bank + sid
 
         self._missing_nodes_loaded = {}     # missing nodes that should be in loaded banks (event garbage left by Wwise)
         self._missing_nodes_others = {}     # missing nodes in other banks (even pointing to other banks)
@@ -26,9 +25,6 @@ class Builder(object):
         self._missing_banks = {}            # banks missing in the "others" list
         self._unknown_props = {}            # object properties that need to be investigated
         self._transition_objects = 0        # info for future support
-
-        self._filter = None                 # used for inner node filtering
-        self._root_node = None              # for info
 
         # after regular generation we want a list of nodes that weren't used, and
         # generate TXTP for them, but ordered by types since generating some types
@@ -64,6 +60,10 @@ class Builder(object):
     def get_unknown_props(self):
         return self._unknown_props
 
+    def report_unknown_props(self, unknowns):
+        for unknown in unknowns:
+            self._unknown_props[unknown] = True
+
     def report_transition_object(self):
         self._transition_objects += 1
 
@@ -83,7 +83,6 @@ class Builder(object):
         # ids may be in other banks though, so must also allow finding by single id
 
         ref = (bank_id, sid)
-        #self._node_to_ref[id(node)] = ref
 
         if self._ref_to_node.get(ref) is not None:
             logging.debug("generator: ignored repeated bank %s + id %s", bank_id, sid)
@@ -221,7 +220,7 @@ class Builder(object):
         # rebuild node with a helper class and save to cache
         # (some banks get huge and call the same things again and again, it gets quite slow to parse every time)
         hircname = node.get_name()
-        bclass = ru.get_rebuilt_hirc(hircname)
+        bclass = ru.get_builder_hirc(hircname)
 
         bnode = bclass()
         bnode.init_builder(self)

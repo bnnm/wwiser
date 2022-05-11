@@ -5,53 +5,38 @@ from .wrebuilder_base import CAkHircNode
 
 
 #non-audio node, doesn't contribute to txtp
-class _CAkNone(CAkHircNode):
+class CAkNone(CAkHircNode):
     def __init__(self):
-        super(_CAkNone, self).__init__()
+        super(CAkNone, self).__init__()
 
     def _build(self, node):
         #ignore
         return
 
-    def _make_txtp(self, txtp):
-        #don't print node info in txtp
-        return
-
-    #def _process_txtp(self, txtp):
-    #    return
-
 # todo improve (stingers have no sid so it's set externally)
-class _CAkStinger(CAkHircNode):
+class CAkStinger(CAkHircNode):
     def __init__(self):
-        super(_CAkStinger, self).__init__()
+        super(CAkStinger, self).__init__()
         self.ntid = None #external
 
     def _build(self, node):
         #ignore
         return
 
-    def _process_txtp(self, txtp):
-        self._process_next(self.ntid, txtp)
-        return
-
 #non-audio node, but it's used as a reference
-class _CAkState(CAkHircNode):
+class CAkState(CAkHircNode):
     def __init__(self):
-        super(_CAkState, self).__init__()
+        super(CAkState, self).__init__()
 
     def _build(self, node):
         self._build_audio_config(node)
         #save config (used to check silences)
         return
 
-    def _make_txtp(self, txtp):
-        #don't print node info in txtp
-        return
-
 #plugin parameters, sometimes needed
-class _CAkFxCustom(CAkHircNode):
+class CAkFxCustom(CAkHircNode):
     def __init__(self):
-        super(_CAkFxCustom, self).__init__()
+        super(CAkFxCustom, self).__init__()
         self.fx = None
 
     def _build(self, node):
@@ -62,34 +47,22 @@ class _CAkFxCustom(CAkHircNode):
         self.fx = self._parse_sfx(node, plugin_id)
         return
 
-    def _make_txtp(self, txtp):
-        #don't print node info in txtp
-        return
-
 #******************************************************************************
 
-class _CAkEvent(CAkHircNode):
+class CAkEvent(CAkHircNode):
     def __init__(self):
-        super(_CAkEvent, self).__init__()
+        super(CAkEvent, self).__init__()
         self.ntids = None
 
     def _build(self, node):
         self.ntids = node.finds(name='ulActionID')
         return
 
-    def _process_txtp(self, txtp):
-        # N play actions are layered (may set a delay)
-        txtp.group_layer(self.ntids, self.config)
-        for ntid in self.ntids:
-            self._process_next(ntid, txtp)
-        txtp.group_done(self.ntids)
-        return
-
 #******************************************************************************
 
-class _CAkDialogueEvent(CAkHircNode):
+class CAkDialogueEvent(CAkHircNode):
     def __init__(self):
-        super(_CAkDialogueEvent, self).__init__()
+        super(CAkDialogueEvent, self).__init__()
         self.ntid = None
         self.tree = None
 
@@ -102,43 +75,11 @@ class _CAkDialogueEvent(CAkHircNode):
         if tree.init:
             self.tree = tree
 
-    def _process_txtp(self, txtp):
-
-        if self.ntid:
-            # tree plays a single object with any state
-            txtp.group_single(self.config)
-            self._process_next(self.ntid, txtp)
-            txtp.group_done()
-            return
-
-        if not self.tree:
-            return 
-
-        if not txtp.params:
-            # find all possible gamesyncs paths (won't generate txtp)
-            for path, ntid in self.tree.paths:
-                unreachable = txtp.ppaths.adds(path)
-                if not unreachable:
-                    self._process_next(ntid, txtp)
-                txtp.ppaths.done()
-            return
-
-        # find if current gamesync combo matches one of the paths
-        npath_combo = self.tree.get_npath(txtp.params)
-        if npath_combo:
-            npath, ntid = npath_combo
-            txtp.info.gamesyncs(npath)
-
-            txtp.group_single(self.config)
-            self._process_next(ntid, txtp)
-            txtp.group_done()
-        return
-
 #******************************************************************************
 
-class _CAkAction(CAkHircNode):
+class CAkAction(CAkHircNode):
     def __init__(self):
-        super(_CAkAction, self).__init__()
+        super(CAkAction, self).__init__()
         self.ntid = None
 
     def _build(self, node):
@@ -160,9 +101,9 @@ class _CAkAction(CAkHircNode):
 
 #******************************************************************************
 
-class _CAkActionPlayAndContinue(_CAkAction):
+class CAkActionPlayAndContinue(CAkAction):
     def __init__(self):
-        super(_CAkActionPlayAndContinue, self).__init__()
+        super(CAkActionPlayAndContinue, self).__init__()
 
     def _build(self, node):
         self._barf()
@@ -170,25 +111,15 @@ class _CAkActionPlayAndContinue(_CAkAction):
 
 #******************************************************************************
 
-class _CAkActionTrigger(_CAkAction):
+class CAkActionTrigger(CAkAction):
     def __init__(self):
-        super(_CAkActionTrigger, self).__init__()
-
-    def _process_txtp(self, txtp):
-        # Trigger calls current music object (mranseq/mswitch usually) defined CAkStinger,
-        # which in turn links to some segment and stops.
-        # Trigger events may come before CAkStingers, and one trigger may call
-        # stingers from any song (1 trigger > N stingers), so they are handled
-        # separatedly during mranseq/mswitch.
-
-        #logging.info("generator: trigger %i not implemented", self.sid)
-        return
+        super(CAkActionTrigger, self).__init__()
 
 #******************************************************************************
 
-class _CAkActionPlay(_CAkAction):
+class CAkActionPlay(CAkAction):
     def __init__(self):
-        super(_CAkActionPlay, self).__init__()
+        super(CAkActionPlay, self).__init__()
         self.nbankid = None
 
     def _build_subaction(self, node):
@@ -200,24 +131,17 @@ class _CAkActionPlay(_CAkAction):
             # v26<= don't set bankID, automatically uses current
             self.nbankid = nbankid
 
-    def _process_txtp(self, txtp):
+#******************************************************************************
 
-        txtp.group_single(self.config) # rare but may contain config
-        self._process_next(self.ntid, txtp, self.nbankid)
-        txtp.group_done()
-        return
+class CAkActionPlayEvent(CAkActionPlay): #_CAkActionPlay
+    def __init__(self):
+        super(CAkActionPlayEvent, self).__init__()
 
 #******************************************************************************
 
-class _CAkActionPlayEvent(_CAkActionPlay): #_CAkActionPlay
+class CAkSwitchCntr(CAkHircNode):
     def __init__(self):
-        super(_CAkActionPlayEvent, self).__init__()
-
-#******************************************************************************
-
-class _CAkSwitchCntr(CAkHircNode):
-    def __init__(self):
-        super(_CAkSwitchCntr, self).__init__()
+        super(CAkSwitchCntr, self).__init__()
         self.gtype = None
         self.ngname = None
         self.gvalue_ntids = {}
@@ -243,42 +167,11 @@ class _CAkSwitchCntr(CAkHircNode):
             self.gvalue_ntids[gvalue] = (ntids, ngvalue)
         return
 
-    def _process_txtp(self, txtp):
-        gtype = self.gtype
-        gname = self.ngname.value()
-
-        if not txtp.params:
-            # find all possible gamesyncs paths (won't generate txtp)
-            for ntids, ngvalue in self.gvalue_ntids.values(): #order doesn't matter
-                gvalue = ngvalue.value()
-                unreachable = txtp.ppaths.add(gtype, gname, ngvalue.value())
-                if not unreachable:
-                    for ntid in ntids:
-                        self._process_next(ntid, txtp)
-                txtp.ppaths.done()
-            return
-
-        #get current gamesync
-        gvalue = txtp.params.current(gtype, gname)
-        if gvalue is None:
-            return
-        if not gvalue in self.gvalue_ntids: #exact match (no * like MusicSwitches)
-            return
-        ntids, ngvalue = self.gvalue_ntids[gvalue]
-
-
-        txtp.info.gamesync(gtype, self.ngname, ngvalue)
-        txtp.group_layer(ntids, self.config)
-        for ntid in ntids: #multi IDs are possible but rare (KOF13)
-            self._process_next(ntid, txtp)
-        txtp.group_done()
-        return
-
 #******************************************************************************
 
-class _CAkRanSeqCntr(CAkHircNode):
+class CAkRanSeqCntr(CAkHircNode):
     def __init__(self):
-        super(_CAkRanSeqCntr, self).__init__()
+        super(CAkRanSeqCntr, self).__init__()
         self.ntids = []
 
     def _build(self, node):
@@ -337,34 +230,11 @@ class _CAkRanSeqCntr(CAkHircNode):
         self.fields.props([nmode, nrandom, nloop, ncontinuous, navoidrepeat])
         return
 
-    def _process_txtp(self, txtp):
-
-        if   self.mode == 0 and self.continuous: #random + continuous (plays all objects randomly, on loop/next call restarts)
-            txtp.group_random_continuous(self.ntids, self.config)
-
-        elif self.mode == 0: #random + step (plays one object at random, on next call plays another object / cannot loop)
-            txtp.group_random_step(self.ntids, self.config)
-
-        elif self.mode == 1 and self.continuous: #sequence + continuous (plays all objects in sequence, on loop/next call restarts)
-            txtp.group_sequence_continuous(self.ntids, self.config)
-
-        elif self.mode == 1: #sequence + step (plays one object from first, on next call plays next object / cannot loop)
-            txtp.group_sequence_step(self.ntids, self.config)
-
-        else:
-            self._barf('unknown ranseq mode')
-
-        for ntid in self.ntids:
-            self._process_next(ntid, txtp)
-        txtp.group_done(self.ntids)
-
-        return
-
 #******************************************************************************
 
-class _CAkLayerCntr(CAkHircNode):
+class CAkLayerCntr(CAkHircNode):
     def __init__(self):
-        super(_CAkLayerCntr, self).__init__()
+        super(CAkLayerCntr, self).__init__()
         self.ntids = []
 
     def _build(self, node):
@@ -390,18 +260,11 @@ class _CAkLayerCntr(CAkHircNode):
             self.fields.prop(nmode)
         return
 
-    def _process_txtp(self, txtp):
-        txtp.group_layer(self.ntids, self.config)
-        for ntid in self.ntids:
-            self._process_next(ntid, txtp)
-        txtp.group_done(self.ntids)
-        return
-
 #******************************************************************************
 
-class _CAkSound(CAkHircNode):
+class CAkSound(CAkHircNode):
     def __init__(self):
-        super(_CAkSound, self).__init__()
+        super(CAkSound, self).__init__()
         self.sound = wnode_misc.NodeSound()
 
     def _build(self, node):
@@ -423,16 +286,11 @@ class _CAkSound(CAkHircNode):
             self.fields.prop(source.nfileid)
         return
 
-    def _process_txtp(self, txtp):
-        txtp.info.source(self.sound.nsrc, self.sound.source)
-        txtp.source_sound(self.sound, self.config)
-        return
-
 #******************************************************************************
 
-class _CAkMusicSwitchCntr(CAkHircNode):
+class CAkMusicSwitchCntr(CAkHircNode):
     def __init__(self):
-        super(_CAkMusicSwitchCntr, self).__init__()
+        super(CAkMusicSwitchCntr, self).__init__()
         self.gtype = None
         self.ngname = None
         self.gvalue_ntid = {}
@@ -472,75 +330,11 @@ class _CAkMusicSwitchCntr(CAkHircNode):
                 gvalue = ngvalue.value()
                 self.gvalue_ntid[gvalue] = (ntid, ngvalue)
 
-    def _process_txtp(self, txtp):
-        self._register_transitions(txtp, self.ntransitions)
-
-        if self.ntid:
-            # rarely tree plays a single object with any state
-            txtp.group_single(self.config)
-            self._process_next(self.ntid, txtp)
-            txtp.group_done()
-            return
-
-        if self.tree:
-
-            if not txtp.params:
-                # find all possible gamesyncs paths (won't generate txtp)
-                txtp.ppaths.add_stingers(self.stingers)
-
-                for path, ntid in self.tree.paths:
-                    unreachable = txtp.ppaths.adds(path)
-                    if not unreachable:
-                        self._process_next(ntid, txtp)
-                    txtp.ppaths.done()
-                return
-
-            # find if current gamesync combo matches one of the paths
-            npath_combo = self.tree.get_npath(txtp.params)
-            if npath_combo:
-                npath, ntid = npath_combo
-                txtp.info.gamesyncs(npath)
-
-                txtp.group_single(self.config) #rarely may contain volumes
-                self._process_next(ntid, txtp)
-                txtp.group_done()
-            return
-
-        else:
-            gtype = self.gtype
-            gname = self.ngname.value()
-
-            if not txtp.params:
-                # find all possible gamesyncs paths (won't generate txtp)
-                for ntid, ngvalue in self.gvalue_ntid.values(): #order doesn't matter
-                    gvalue = ngvalue.value()
-                    unreachable = txtp.ppaths.add(gtype, gname, ngvalue.value())
-                    if not unreachable:
-                        self._process_next(ntid, txtp)
-                    txtp.ppaths.done()
-                return
-
-            # get current gamesync
-            gvalue = txtp.params.current(gtype, gname)
-            if gvalue is None:
-                return
-            if not gvalue in self.gvalue_ntid:
-                return
-            ntid, ngvalue = self.gvalue_ntid[gvalue]
-            txtp.info.gamesync(gtype, self.ngname, ngvalue)
-
-            txtp.group_single(self.config)
-            self._process_next(ntid, txtp)
-            txtp.group_done()
-            return
-
-        return
-
 #******************************************************************************
 
-class _CAkMusicRanSeqCntr(CAkHircNode):
+class CAkMusicRanSeqCntr(CAkHircNode):
     def __init__(self):
-        super(_CAkMusicRanSeqCntr, self).__init__()
+        super(CAkMusicRanSeqCntr, self).__init__()
         self.items = []
         self.ntransitions = []
 
@@ -590,7 +384,7 @@ class _CAkMusicRanSeqCntr(CAkHircNode):
             if type == -1 or not nsubplaylist or nsubplaylist and not nsubplaylist.get_children():
                 ntid = nitem.find(name='SegmentID') #0 on non-leaf nodes
 
-            item = _CAkMusicRanSeqCntr_Item()
+            item = CAkMusicRanSeqCntr_Item()
             item.nitem = nitem
             item.ntid = ntid
             item.type = type
@@ -602,57 +396,7 @@ class _CAkMusicRanSeqCntr(CAkHircNode):
             self._playlist(node, nsubplaylist, item.items)
         return
 
-    def _process_txtp(self, txtp):
-        self._register_transitions(txtp, self.ntransitions)
-
-        if not txtp.params:
-            txtp.ppaths.add_stingers(self.stingers)
-
-        txtp.group_single(self.config) #typically useless but may have volumes
-        self._process_playlist(txtp, self.items)
-        txtp.group_done()
-
-    def _process_playlist(self, txtp, items):
-        if not items:
-            return
-
-        for item in items:
-            type = item.type
-            subitems = item.items
-
-            txtp.info.next(item.nitem, item.fields)
-            #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
-            if type == -1 or item.ntid:
-                transition = wnode_misc.NodeTransition()
-                transition.play_before = False
-
-                txtp.group_single(item.config, transition=transition)
-                self._process_next(item.ntid, txtp)
-                txtp.group_done()
-            else:
-                if   type == 0: #0: ContinuousSequence (plays all objects in sequence, on loop/next call restarts)
-                    txtp.group_sequence_continuous(subitems, item.config)
-
-                elif type == 1: #1: StepSequence (plays one object from first, on loop/next call plays next object)
-                    txtp.group_sequence_step(subitems, item.config)
-
-                elif type == 2: #2: ContinuousRandom (plays all objects randomly, on loop/next call restarts)
-                    txtp.group_random_continuous(subitems, item.config)
-
-                elif type == 3: #3: StepRandom (plays one object at random, on loop/next call plays another object)
-                    txtp.group_random_step(subitems, item.config)
-
-                else:
-                    self._barf('unknown type')
-
-                self._process_playlist(txtp, item.items)
-                txtp.group_done(subitems)
-            txtp.info.done()
-
-        return
-
-
-class _CAkMusicRanSeqCntr_Item():
+class CAkMusicRanSeqCntr_Item():
     def __init__(self):
         self.nitem = None
         self.ntid = None
@@ -664,9 +408,9 @@ class _CAkMusicRanSeqCntr_Item():
 
 #******************************************************************************
 
-class _CAkMusicSegment(CAkHircNode):
+class CAkMusicSegment(CAkHircNode):
     def __init__(self):
-        super(_CAkMusicSegment, self).__init__()
+        super(CAkMusicSegment, self).__init__()
         self.ntids = []
         self.sound = None
         self.sconfig = None
@@ -717,28 +461,11 @@ class _CAkMusicSegment(CAkHircNode):
             self.sconfig = wnode_misc.NodeConfig()
         return
 
-    def _process_txtp(self, txtp):
-        # empty segments are allowed as silence
-        if not self.ntids:
-            #logging.info("generator: found empty segment %s" % (self.sid))
-            elems = [self.sound]
-            txtp.group_layer(elems, self.config)
-            txtp.source_sound(self.sound, self.sconfig)
-            txtp.group_done(elems)
-            return
-
-        txtp.group_layer(self.ntids, self.config)
-        for ntid in self.ntids:
-            self._process_next(ntid, txtp)
-        txtp.group_done(self.ntids)
-        return
-
-
 #******************************************************************************
 
-class _CAkMusicTrack(CAkHircNode):
+class CAkMusicTrack(CAkHircNode):
     def __init__(self):
-        super(_CAkMusicTrack, self).__init__()
+        super(CAkMusicTrack, self).__init__()
         self.type = None
         self.subtracks = []
         self.gtype = None
@@ -834,7 +561,7 @@ class _CAkMusicTrack(CAkHircNode):
         nsourceid = nsrc.find(name='sourceID')
         neventid = nsrc.find(name='eventID') #later versions
 
-        clip = _CAkMusicTrack_Clip()
+        clip = CAkMusicTrack_Clip()
         clip.nitem = nsrc
         clip.neid = neventid
         clip.fields.props([nsourceid, neventid, nfpa, nfbt, nfet, nfsd])
@@ -857,109 +584,7 @@ class _CAkMusicTrack(CAkHircNode):
 
         return clip
 
-    def _process_txtp(self, txtp):
-        if not self.subtracks: #empty / no clips
-            return
-
-        # node defines states that muted sources
-        if self.config.volume_states:
-            txtp.vpaths.add_nstates(self.config.volume_states)
-
-        # musictrack can play in various ways
-        if   self.type == 0: #normal (plays one subtrack, N aren't allowed)
-            if len(self.subtracks) > 1:
-                raise ValueError("more than 1 track")
-            txtp.group_single(self.config)
-            for subtrack in self.subtracks:
-                self._process_clips(subtrack, txtp)
-            txtp.group_done()
-
-        elif self.type == 1: #random (plays random subtrack, on next call plays another)
-            txtp.group_random_step(self.subtracks, self.config)
-            for subtrack in self.subtracks:
-                self._process_clips(subtrack, txtp)
-            txtp.group_done(self.subtracks)
-
-        elif self.type == 2: #sequence (plays first subtrack, on next call plays next)
-            txtp.group_sequence_step(self.subtracks, self.config)
-            for subtrack in self.subtracks:
-                self._process_clips(subtrack, txtp)
-            txtp.group_done(self.subtracks)
-
-        elif self.type == 3: #switch (plays one subtrack depending on variables)
-            gtype = self.gtype
-            gname = self.ngname.value()
-
-            if not txtp.params:
-                # find all possible gamesyncs paths (won't generate txtp)
-                for __, ngvalue in self.gvalue_index.values(): #order doesn't matter
-                    if not ngvalue:
-                        gvalue = 0
-                    else:
-                        gvalue = ngvalue.value()
-                    txtp.ppaths.add(gtype, gname, gvalue)
-                    #no subnodes
-                    txtp.ppaths.done()
-                return
-
-            #get current gamesync
-            gvalue = txtp.params.current(gtype, gname)
-            if gvalue is None:
-                return
-            if not gvalue in self.gvalue_index:
-                return
-            index, ngvalue = self.gvalue_index[gvalue]
-
-            #play subtrack based on index (assumed to follow order as defined)
-            txtp.info.gamesync(gtype, self.ngname, ngvalue)
-
-            if index is None:
-                return # no subtrack, after adding path to gamesync (NHM3)
-            subtrack = self.subtracks[index]
-
-            txtp.group_single(self.config)
-            self._process_clips(subtrack, txtp)
-            txtp.group_done()
-
-        else:
-            self._barf()
-
-        return
-
-    def _process_clips(self, subtrack, txtp):
-        if not subtrack:
-            #logging.info("generator: found empty subtrack %s" % (self.sid))
-            # rarely may happen with default = no track = silence (NMH3)
-            sound = self._build_silence(self.node, True)
-            config = wnode_misc.NodeConfig()
-            sconfig = wnode_misc.NodeConfig()
-            elems = [sound]
-            txtp.group_layer(elems, config)
-            txtp.source_sound(sound, sconfig)
-            txtp.group_done(elems)
-            return
-
-        config = wnode_misc.NodeConfig()
-        txtp.group_layer(subtrack, config)
-        for clip in subtrack:
-            if clip.neid and clip.neid.value():
-                econfig = wnode_misc.NodeConfig()
-                econfig.idelay = clip.sound.fpa #uses FPA to start segment, should work ok
-
-                txtp.group_single(econfig)
-                self._process_next(clip.neid, txtp)
-                txtp.group_done()
-            else:
-                sconfig = wnode_misc.NodeConfig()
-                sound = clip.sound
-                txtp.info.next(clip.nitem, clip.fields)
-                txtp.info.source(clip.sound.nsrc, clip.sound.source)
-                txtp.info.done()
-                txtp.source_sound(clip.sound, sconfig)
-        txtp.group_done(subtrack)
-        return
-
-class _CAkMusicTrack_Clip(CAkHircNode):
+class CAkMusicTrack_Clip(CAkHircNode):
     def __init__(self):
         self.nitem = None
         self.ntid = None

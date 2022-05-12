@@ -23,6 +23,9 @@ class DumpPrinter(object):
         'hashname':'hn', 'guidname':'gn', 'objpath':'op', 'path':'pa',
         'index':'ix', 'count':'co', 'size':'si', 'message':'me',
     }
+    attr_hide = { 
+        'offset'
+    }
 
     def __init__(self, banks, type, name):
         self._banks = banks
@@ -31,6 +34,7 @@ class DumpPrinter(object):
         self._file = None
         self._formatted = False
         self._smaller = False
+        self._hide = True
 
 
     def dump(self):
@@ -68,6 +72,7 @@ class DumpPrinter(object):
 
     def write_xsl_smaller(self):
         self._smaller = True
+        self._hide = True
         self.write_xsl()
 
     def _write(self, outname, callback):
@@ -129,6 +134,8 @@ class DumpPrinter(object):
 
         line = ""
         for key, val in attrs:
+            if self._hide and key in self.attr_hide:
+                continue
             if self._formatted and key in self.attr_format:
                 strval = self.attr_format[key] % val
             else:

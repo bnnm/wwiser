@@ -1,5 +1,5 @@
 import logging
-from . import wnode_misc, wnode_source, wnode_rtpc, wnode_transitions, wnode_tree, wnode_props
+from . import bnode_misc, bnode_props, bnode_rtpc, bnode_source, bnode_transitions, bnode_tree
 from ..txtp import wtxtp_info
 
 
@@ -25,7 +25,7 @@ class CAkHircNode(object):
         #self._build_states(node) #StateChunk
         #self._build_positioning(node)
 
-        self.config = wnode_misc.NodeConfig()
+        self.config = bnode_misc.NodeConfig()
         self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
         self.stingers = []
 
@@ -64,7 +64,7 @@ class CAkHircNode(object):
     #--------------------------------------------------------------------------
 
     def __parse_props(self, ninit):
-        props = wnode_props.CAkProps(ninit)
+        props = bnode_props.CAkProps(ninit)
 
         if props.valid:
             self._builder.report_unknown_props(props.unknowns)
@@ -193,7 +193,7 @@ class CAkHircNode(object):
                 self.fields.prop(nprop)
 
     def _build_rtpc_config(self, node):
-        rtpcs = wnode_rtpc.AkRtpcList(node)
+        rtpcs = bnode_rtpc.AkRtpcList(node)
         if rtpcs.has_volume_rtpcs:
             self.config.rtpcs = rtpcs
             self.config.crossfaded = True
@@ -202,7 +202,7 @@ class CAkHircNode(object):
         return
 
     def _build_transition_rules(self, node, is_switch):
-        rules = wnode_transitions.AkTransitionRules(node)
+        rules = bnode_transitions.AkTransitionRules(node)
         for ntid in rules.ntrn:
             if ntid.value() == 0:
                 continue
@@ -214,7 +214,7 @@ class CAkHircNode(object):
         return
 
     def _build_tree(self, node):
-        return wnode_tree.AkDecisionTree(node)
+        return bnode_tree.AkDecisionTree(node)
 
     def _build_stingers(self, node):
         nstingers = node.finds(name='CAkStinger')
@@ -222,20 +222,20 @@ class CAkHircNode(object):
             return
 
         for nstinger in nstingers:
-            stinger = wnode_misc.CAkStinger(nstinger)
+            stinger = bnode_misc.CAkStinger(nstinger)
             if stinger.tid:
                 self.stingers.append(stinger)
         return
 
     def _build_silence(self, node, clip):
-        sound = wnode_misc.NodeSound()
+        sound = bnode_misc.NodeSound()
         sound.nsrc = node
         sound.silent = True
         sound.clip = clip
         return sound
 
     def _parse_source(self, nbnksrc):
-        source = wnode_source.AkBankSource(nbnksrc, self.sid)
+        source = bnode_source.AkBankSource(nbnksrc, self.sid)
 
         if source.is_plugin_silence:
             nsize = nbnksrc.find(name='uSize')
@@ -253,5 +253,5 @@ class CAkHircNode(object):
         return source
 
     def _parse_sfx(self, node, plugin_id):
-        fx = wnode_source.NodeFx(node, plugin_id)
+        fx = bnode_source.NodeFx(node, plugin_id)
         return fx

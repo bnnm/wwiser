@@ -1,4 +1,4 @@
-from .wrebuilder_nodes import *
+from .bnode_hircs import *
 
 
 # default for non-useful HIRC classes
@@ -8,7 +8,7 @@ _DEFAULT_BUILDER_NODE = CAkNone
 # Internal classes (like AkTrackSrcInfo) are handled separately per class since they
 # tend to need custom behavior
 _HIRC_BUILDER_NODES = {
-    # base
+    # actions
     'CAkEvent': CAkEvent,
     'CAkDialogueEvent': CAkDialogueEvent,
     'CAkActionPlay': CAkActionPlay,
@@ -18,13 +18,14 @@ _HIRC_BUILDER_NODES = {
     'CAkActionPlayAndContinue': CAkActionPlayAndContinue,
     'CAkActionPlayEvent': CAkActionPlayEvent,
 
-    # sound engine
+    # sound hierarchy
+    'CAkActorMixer': CAkActorMixer,
     'CAkLayerCntr': CAkLayerCntr,
     'CAkSwitchCntr': CAkSwitchCntr,
     'CAkRanSeqCntr': CAkRanSeqCntr,
     'CAkSound': CAkSound,
 
-    # music engine
+    # music hierarchy
     'CAkMusicSwitchCntr': CAkMusicSwitchCntr,
     'CAkMusicRanSeqCntr': CAkMusicRanSeqCntr,
     'CAkMusicSegment': CAkMusicSegment,

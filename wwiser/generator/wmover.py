@@ -1,5 +1,5 @@
 import logging, os
-from .render import wnode_source
+from .render import bnode_source
 
 # Moves 123.wem to /txtp/wem/123.wem, or 123.ogg/logg to /txtp/wem/123.logg if alt_exts is set
 
@@ -19,7 +19,7 @@ class Mover(object):
         if not node:
             return
 
-        source = wnode_source.AkBankSource(node, None)
+        source = bnode_source.AkBankSource(node, None)
         if not source or not source.tid: #?
             return
         if source.tid in self._moved_sources:

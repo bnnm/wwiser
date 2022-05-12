@@ -1,4 +1,4 @@
-from . import wnode_misc
+from . import bnode_misc
 
 
 # common for all renderer nodes (rnode)
@@ -72,7 +72,7 @@ class RN_CAkHircNode(object):
 
     #todo
     def _build_silence(self, node, clip):
-        sound = wnode_misc.NodeSound()
+        sound = bnode_misc.NodeSound()
         sound.nsrc = node
         sound.silent = True
         sound.clip = clip

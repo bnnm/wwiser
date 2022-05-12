@@ -1,6 +1,6 @@
 import logging
 from . import wfilter, wmover, wtransitions, wtxtp_cache, wreport
-from .render import wrebuilder, wrenderer
+from .render import wbuilder, wrenderer
 from .gamesync import wgamesync
 from .txtp import wtxtp
 
@@ -24,7 +24,7 @@ class Generator(object):
     def __init__(self, banks, wwnames=None):
         self._banks = banks
 
-        self._builder = wrebuilder.Builder()
+        self._builder = wbuilder.Builder()
         self._txtpcache = wtxtp_cache.TxtpCache()
         self._filter = wfilter.GeneratorFilter()  # filter nodes
         self._renderer = wrenderer.Renderer(self._builder, self._filter)

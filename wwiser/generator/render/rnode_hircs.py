@@ -1,5 +1,5 @@
-from . import wnode_misc
-from .wrenderer_hirc import RN_CAkHircNode
+from . import bnode_misc
+from .rnode_base import RN_CAkHircNode
 
 
 #non-audio node, doesn't contribute to txtp
@@ -274,7 +274,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
             txtp.info.next(item.nitem, item.fields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
             if type == -1 or item.ntid:
-                transition = wnode_misc.NodeTransition()
+                transition = bnode_misc.NodeTransition()
                 transition.play_before = False
 
                 txtp.group_single(item.config, transition=transition)
@@ -402,26 +402,26 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             #logging.info("generator: found empty subtrack %s" % (self.sid))
             # rarely may happen with default = no track = silence (NMH3)
             sound = self._build_silence(self.node, True)
-            config = wnode_misc.NodeConfig()
-            sconfig = wnode_misc.NodeConfig()
+            config = bnode_misc.NodeConfig()
+            sconfig = bnode_misc.NodeConfig()
             elems = [sound]
             txtp.group_layer(elems, config)
             txtp.source_sound(sound, sconfig)
             txtp.group_done(elems)
             return
 
-        config = wnode_misc.NodeConfig()
+        config = bnode_misc.NodeConfig()
         txtp.group_layer(subtrack, config)
         for clip in subtrack:
             if clip.neid and clip.neid.value():
-                econfig = wnode_misc.NodeConfig()
+                econfig = bnode_misc.NodeConfig()
                 econfig.idelay = clip.sound.fpa #uses FPA to start segment, should work ok
 
                 txtp.group_single(econfig)
                 self._render_next(clip.neid, txtp)
                 txtp.group_done()
             else:
-                sconfig = wnode_misc.NodeConfig()
+                sconfig = bnode_misc.NodeConfig()
                 sound = clip.sound
                 txtp.info.next(clip.nitem, clip.fields)
                 txtp.info.source(clip.sound.nsrc, clip.sound.source)

@@ -1,4 +1,4 @@
-from .wrenderer_nodes import *
+from .rnode_hircs import *
 
 
 # HIRC classes that should be used to generate .txtp
@@ -13,7 +13,7 @@ _DEFAULT_RENDERER_NODE = RN_CAkNone
 # HIRC classes capable of making a TXTP part.
 # Each should also have a bnode equivalent 
 _HIRC_RENDERER_NODES = {
-    # action classes
+    # actions
     'CAkEvent': RN_CAkEvent,
     'CAkDialogueEvent': RN_CAkDialogueEvent,
     'CAkActionPlay': RN_CAkActionPlay,

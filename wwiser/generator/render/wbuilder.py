@@ -1,5 +1,5 @@
 import logging
-from . import wrebuilder_util as ru
+from . import wbuilder_util as ru
 
 # BUILDER
 # Takes the parsed bank nodes and rebuilds them to simpler "builder node" (bnode) objects
@@ -162,7 +162,7 @@ class Builder(object):
 
     #--------------------------------------------------------------------------
 
-    # Finds a rebuild node from a bank+id ref
+    # Finds a builder node from a bank+id ref
     def _get_bnode_by_ref(self, bank_id, tid, sid_info=None, nbankid_info=None):
         if bank_id <= 0  or tid <= 0:
             # bank -1 seen in KOF12 bgm's play action referencing nothing
@@ -209,7 +209,7 @@ class Builder(object):
         return bnode
 
     # Takes a parser "node" and makes a rebuilt "bnode" for txtp use.
-    # Normally would only need to rebuild per sid and ignore repeats (clones) in different banks, but
+    # Normally would only need to build per sid and ignore repeats (clones) in different banks, but
     # some games repeat sid for different objects in different banks (not clones), so just make one per node.
     def _get_bnode(self, node, mark_used=True):
         if not node:
@@ -220,7 +220,7 @@ class Builder(object):
         if bnode:
             return bnode
 
-        # rebuild node with a helper class and save to cache
+        # builder node with a helper class and save to cache
         # (some banks get huge and call the same things again and again, it gets quite slow to parse every time)
         hircname = node.get_name()
         bclass = ru.get_builder_hirc(hircname)

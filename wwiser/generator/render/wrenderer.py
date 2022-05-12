@@ -1,5 +1,4 @@
-from . import wnode_misc
-from . import wrenderer_util as ru
+from . import wrenderer_util, bnode_misc
 
 
 class Renderer(object):
@@ -8,7 +7,7 @@ class Renderer(object):
         self._filter = filter
 
     def get_generated_hircs(self):
-        return ru.GENERATED_BASE_HIRCS
+        return wrenderer_util.GENERATED_BASE_HIRCS
 
 
     def begin_txtp(self, txtp, node):
@@ -16,7 +15,7 @@ class Renderer(object):
         if not bnode:
             return
 
-        root_config = wnode_misc.NodeConfig()
+        root_config = bnode_misc.NodeConfig()
         txtp.begin(node, root_config)
 
         rnode = self._get_rnode(bnode)
@@ -35,7 +34,7 @@ class Renderer(object):
         bnode.nsid = stinger.ntrigger
         bnode.ntid = stinger.ntid
 
-        root_config = wnode_misc.NodeConfig()
+        root_config = bnode_misc.NodeConfig()
         txtp.begin(stinger.node, root_config, nname=stinger.ntrigger, ntid=stinger.ntrigger, ntidsub=stinger.ntid)
 
         #self._render_next(ntid, txtp)
@@ -54,10 +53,10 @@ class Renderer(object):
         #if rnode:
         #    return rnode
 
-        # rebuild node with a helper class and save to cache
+        # render node with a helper class and save to cache
         # (some banks get huge and call the same things again and again, it gets quite slow to parse every time)
         hircname = bnode.node.get_name()
-        rclass = ru.get_renderer_hirc(hircname)
+        rclass = wrenderer_util.get_renderer_hirc(hircname)
 
         rnode = rclass()
         rnode.init_renderer(self)

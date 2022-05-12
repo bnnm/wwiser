@@ -1,5 +1,3 @@
-#from .wrebuilder_base import object #circular dep
-
 # TRANSITION RULES
 #
 # When a musicswitch or musicranseq changes between objects, wwise can set config

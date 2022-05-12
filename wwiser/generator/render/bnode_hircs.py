@@ -1,7 +1,7 @@
-from . import wnode_misc, wnode_automation
+from . import bnode_automation, bnode_misc
 from ..txtp import wtxtp_info
 
-from .wrebuilder_base import CAkHircNode
+from .bnode_base import CAkHircNode
 
 
 #non-audio node, doesn't contribute to txtp
@@ -269,7 +269,7 @@ class CAkLayerCntr(CAkHircNode):
 class CAkSound(CAkHircNode):
     def __init__(self):
         super(CAkSound, self).__init__()
-        self.sound = wnode_misc.NodeSound()
+        self.sound = bnode_misc.NodeSound()
 
     def _build(self, node):
         self._build_audio_config(node)
@@ -405,7 +405,7 @@ class CAkMusicRanSeqCntr_Item():
         self.nitem = None
         self.ntid = None
         self.type = None
-        self.config = wnode_misc.NodeConfig()
+        self.config = bnode_misc.NodeConfig()
         self.fields = wtxtp_info.TxtpFields()
         self.items = []
 
@@ -460,7 +460,7 @@ class CAkMusicSegment(CAkHircNode):
         # empty segments are allowed as silence
         if not self.ntids:
             self.sound = self._build_silence(self.node, True)
-            self.sconfig = wnode_misc.NodeConfig()
+            self.sconfig = bnode_misc.NodeConfig()
         return
 
 
@@ -487,7 +487,7 @@ class CAkMusicTrack(CAkHircNode):
         self.config.loop = None
 
         # prepare for clips
-        self.automations = wnode_automation.AkClipAutomationList(node)
+        self.automations = bnode_automation.AkClipAutomationList(node)
 
         ntype = node.find(name='eTrackType')
         if not ntype:
@@ -590,6 +590,6 @@ class CAkMusicTrack_Clip(CAkHircNode):
         self.nitem = None
         self.ntid = None
         self.neid = None
-        self.sound = wnode_misc.NodeSound()
+        self.sound = bnode_misc.NodeSound()
         self.sound.clip = True
         self.fields = wtxtp_info.TxtpFields()

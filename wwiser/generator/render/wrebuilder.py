@@ -1,11 +1,14 @@
 import logging
 from . import wrebuilder_util as ru
 
-
-# Takes the parsed bank nodes and rebuilds them to simpler objects with quick access
-# for main useful (sound) attributes, and has helper functions to write TXTP
-# Used with registered HIRC objects, that are called by shortID (sub-objects like
-# AkTree are handled per HIRC object).
+# BUILDER
+# Takes the parsed bank nodes and rebuilds them to simpler "builder node" (bnode) objects
+# with quick access to useful attributes. These bnodes will be later used to generate txtp.
+#
+# Only used with registered HIRC objects, that have a shortID. Different Wwise parts reuse
+# the same HIRC objects, so bnodes are meant to be created once and read-only. 
+# Common sub-objects that each HIRC has (like AkRTPCs) are constructed per HIRC using regular
+# classes that act like bnodes.
 
 #******************************************************************************
 

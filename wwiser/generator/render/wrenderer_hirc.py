@@ -1,7 +1,7 @@
 from . import wnode_misc
 
 
-# common for all 'rebuilt' nodes
+# common for all renderer nodes (rnode)
 class RN_CAkHircNode(object):
     def __init__(self):
         #no params since changing constructors is a pain, uses init_x below
@@ -14,10 +14,30 @@ class RN_CAkHircNode(object):
 
     #--------------------------------------------------------------------------
 
+    # info when generating transitions
+    def _register_transitions(self, txtp, ntransitions):
+        for ntid in ntransitions:
+            node = self._builder._get_transition_node(ntid)
+            txtp.transitions.add(node)
+        return
+
     def _barf(self, text="not implemented"):
         raise ValueError("%s - %s %s" % (text, self.name, self.sid))
 
-    def _process_next(self, ntid, txtp, nbankid=None):
+    #--------------------------------------------------------------------------
+
+    def _render_base(self, bnode, txtp):
+        try:
+            txtp.info.next(bnode.node, bnode.fields, nsid=bnode.nsid)
+            self._render_txtp(bnode, txtp)
+            txtp.info.done()
+        except Exception: #as e #autochained
+            raise ValueError("Error processing TXTP for node %i" % (bnode.sid)) #from e
+
+    def _render_txtp(self, bnode, txtp):
+        self._barf("must implement")
+
+    def _render_next(self, ntid, txtp, nbankid=None):
         tid = ntid.value()
         if tid == 0:
             #this is fairly common in switches, that may define all combos but some nodes don't point to anything
@@ -44,29 +64,11 @@ class RN_CAkHircNode(object):
 
         #logging.debug("next: %s %s > %s", self.node.get_name(), self.sid, tid)
         rnode = self._renderer._get_rnode(bnode)
-        rnode._make_txtp(bnode, txtp)
+        rnode._render_base(bnode, txtp)
         return
 
     #--------------------------------------------------------------------------
 
-    # info when generating transitions
-    def _register_transitions(self, txtp, ntransitions):
-        for ntid in ntransitions:
-            node = self._builder._get_transition_node(ntid)
-            txtp.transitions.add(node)
-        return
-
-
-    def _make_txtp(self, bnode, txtp):
-        try:
-            txtp.info.next(bnode.node, bnode.fields, nsid=bnode.nsid)
-            self._process_txtp(bnode, txtp)
-            txtp.info.done()
-        except Exception: #as e #autochained
-            raise ValueError("Error processing TXTP for node %i" % (bnode.sid)) #from e
-
-    def _process_txtp(self, bnode, txtp):
-        self._barf("must implement")
 
     #todo
     def _build_silence(self, node, clip):

@@ -8,7 +8,7 @@ from ..txtp import wtxtp_info
 #    def __init__(self):
 #       pass #no params since changing constructors is a pain
 
-# common for all 'rebuilt' nodes
+# common for all builder nodes (bnodes)
 class CAkHircNode(object):
     def __init__(self):
         pass #no params since changing constructors is a pain
@@ -17,13 +17,13 @@ class CAkHircNode(object):
         self._builder = builder
 
     def init_node(self, node):
-        #self.version = node.get_root().get_version()
-        self.node = node
-        self.name = node.get_name()
-        self.nsid = node.find1(type='sid')
-        self.sid = None
-        if self.nsid:
-            self.sid = self.nsid.value()
+        self._build_defaults(node)
+        #todo limit to sound/action/etc, or manually call
+        #self._build_references(node)
+        #self._build_props(node) #xInitialParams
+        #self._build_rtpcs(node)
+        #self._build_states(node) #StateChunk
+        #self._build_positioning(node)
 
         self.config = wnode_misc.NodeConfig()
         self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
@@ -36,11 +36,32 @@ class CAkHircNode(object):
     def _barf(self, text="not implemented"):
         raise ValueError("%s - %s %s" % (text, self.name, self.sid))
 
-    #--------------------------------------------------------------------------
 
     def _build(self, node):
         self._barf()
-        return
+
+    def _build_defaults(self, node):
+        self.node = node
+        self.name = node.get_name()
+        self.nsid = node.find1(type='sid')
+        self.sid = None
+        if self.nsid:
+            self.sid = self.nsid.value()
+
+    def _build_references(self, node):
+        
+        # bus (BusInitialValues), sounds/musics (NodeBaseParams)
+        nbusid = node.find1(name='OverrideBusId')
+        if nbusid:
+            self.busid = nbusid.value()
+        
+        # sounds/musics (NodeBaseParams)
+        nparentid = node.find1(name='DirectParentID')
+        if nparentid:
+            self.parentid = nparentid.value()
+
+
+    #--------------------------------------------------------------------------
 
     def __parse_props(self, ninit):
         props = wnode_props.CAkProps(ninit)

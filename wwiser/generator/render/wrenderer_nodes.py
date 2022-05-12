@@ -5,22 +5,22 @@ from .wrenderer_hirc import RN_CAkHircNode
 #non-audio node, doesn't contribute to txtp
 class RN_CAkNone(RN_CAkHircNode):
     
-    def _make_txtp(self, bnode, txtp):
+    def _render_base(self, bnode, txtp):
         #don't print node info in txtp
         return
 
-    #def _process_txtp(self, txtp):
+    #def _render_txtp(self, txtp):
     #    return
 
 #******************************************************************************
 
 class RN_CAkEvent(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         # N play actions are layered (may set a delay)
         txtp.group_layer(bnode.ntids, bnode.config)
         for ntid in bnode.ntids:
-            self._process_next(ntid, txtp)
+            self._render_next(ntid, txtp)
         txtp.group_done(bnode.ntids)
         return
 
@@ -28,12 +28,12 @@ class RN_CAkEvent(RN_CAkHircNode):
 
 class RN_CAkDialogueEvent(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
 
         if bnode.ntid:
             # tree plays a single object with any state
             txtp.group_single(bnode.config)
-            self._process_next(bnode.ntid, txtp)
+            self._render_next(bnode.ntid, txtp)
             txtp.group_done()
             return
 
@@ -45,7 +45,7 @@ class RN_CAkDialogueEvent(RN_CAkHircNode):
             for path, ntid in bnode.tree.paths:
                 unreachable = txtp.ppaths.adds(path)
                 if not unreachable:
-                    self._process_next(ntid, txtp)
+                    self._render_next(ntid, txtp)
                 txtp.ppaths.done()
             return
 
@@ -56,7 +56,7 @@ class RN_CAkDialogueEvent(RN_CAkHircNode):
             txtp.info.gamesyncs(npath)
 
             txtp.group_single(bnode.config)
-            self._process_next(ntid, txtp)
+            self._render_next(ntid, txtp)
             txtp.group_done()
         return
 
@@ -74,7 +74,7 @@ class RN_CAkActionPlayAndContinue(RN_CAkAction):
 
 class RN_CAkActionTrigger(RN_CAkAction):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         # Trigger calls current music object (mranseq/mswitch usually) defined CAkStinger,
         # which in turn links to some segment and stops.
         # Trigger events may come before CAkStingers, and one trigger may call
@@ -88,9 +88,9 @@ class RN_CAkActionTrigger(RN_CAkAction):
 
 class RN_CAkActionPlay(RN_CAkAction):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         txtp.group_single(bnode.config) # rare but may contain config
-        self._process_next(bnode.ntid, txtp, bnode.nbankid)
+        self._render_next(bnode.ntid, txtp, bnode.nbankid)
         txtp.group_done()
         return
 
@@ -103,7 +103,7 @@ class RN_CAkActionPlayEvent(RN_CAkActionPlay): #RN_CAkActionPlay
 
 class RN_CAkSwitchCntr(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         gtype = bnode.gtype
         gname = bnode.ngname.value()
 
@@ -114,7 +114,7 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
                 unreachable = txtp.ppaths.add(gtype, gname, ngvalue.value())
                 if not unreachable:
                     for ntid in ntids:
-                        self._process_next(ntid, txtp)
+                        self._render_next(ntid, txtp)
                 txtp.ppaths.done()
             return
 
@@ -130,7 +130,7 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
         txtp.info.gamesync(gtype, bnode.ngname, ngvalue)
         txtp.group_layer(ntids, bnode.config)
         for ntid in ntids: #multi IDs are possible but rare (KOF13)
-            self._process_next(ntid, txtp)
+            self._render_next(ntid, txtp)
         txtp.group_done()
         return
 
@@ -138,7 +138,7 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
 
 class RN_CAkRanSeqCntr(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
 
         if   bnode.mode == 0 and bnode.continuous: #random + continuous (plays all objects randomly, on loop/next call restarts)
             txtp.group_random_continuous(bnode.ntids, bnode.config)
@@ -156,7 +156,7 @@ class RN_CAkRanSeqCntr(RN_CAkHircNode):
             self._barf('unknown ranseq mode')
 
         for ntid in bnode.ntids:
-            self._process_next(ntid, txtp)
+            self._render_next(ntid, txtp)
         txtp.group_done(bnode.ntids)
 
         return
@@ -165,10 +165,10 @@ class RN_CAkRanSeqCntr(RN_CAkHircNode):
 
 class RN_CAkLayerCntr(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         txtp.group_layer(bnode.ntids, bnode.config)
         for ntid in bnode.ntids:
-            self._process_next(ntid, txtp)
+            self._render_next(ntid, txtp)
         txtp.group_done(bnode.ntids)
         return
 
@@ -176,7 +176,7 @@ class RN_CAkLayerCntr(RN_CAkHircNode):
 
 class RN_CAkSound(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         txtp.info.source(bnode.sound.nsrc, bnode.sound.source)
         txtp.source_sound(bnode.sound, bnode.config)
         return
@@ -185,13 +185,13 @@ class RN_CAkSound(RN_CAkHircNode):
 
 class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         self._register_transitions(txtp, bnode.ntransitions)
 
         if bnode.ntid:
             # rarely tree plays a single object with any state
             txtp.group_single(bnode.config)
-            self._process_next(bnode.ntid, txtp)
+            self._render_next(bnode.ntid, txtp)
             txtp.group_done()
             return
 
@@ -204,7 +204,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
                 for path, ntid in bnode.tree.paths:
                     unreachable = txtp.ppaths.adds(path)
                     if not unreachable:
-                        self._process_next(ntid, txtp)
+                        self._render_next(ntid, txtp)
                     txtp.ppaths.done()
                 return
 
@@ -215,7 +215,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
                 txtp.info.gamesyncs(npath)
 
                 txtp.group_single(bnode.config) #rarely may contain volumes
-                self._process_next(ntid, txtp)
+                self._render_next(ntid, txtp)
                 txtp.group_done()
             return
 
@@ -229,7 +229,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
                     gvalue = ngvalue.value()
                     unreachable = txtp.ppaths.add(gtype, gname, ngvalue.value())
                     if not unreachable:
-                        self._process_next(ntid, txtp)
+                        self._render_next(ntid, txtp)
                     txtp.ppaths.done()
                 return
 
@@ -243,7 +243,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
             txtp.info.gamesync(gtype, bnode.ngname, ngvalue)
 
             txtp.group_single(bnode.config)
-            self._process_next(ntid, txtp)
+            self._render_next(ntid, txtp)
             txtp.group_done()
             return
 
@@ -253,7 +253,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
 class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         self._register_transitions(txtp, bnode.ntransitions)
 
         if not txtp.params:
@@ -278,7 +278,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
                 transition.play_before = False
 
                 txtp.group_single(item.config, transition=transition)
-                self._process_next(item.ntid, txtp)
+                self._render_next(item.ntid, txtp)
                 txtp.group_done()
             else:
                 if   type == 0: #0: ContinuousSequence (plays all objects in sequence, on loop/next call restarts)
@@ -307,7 +307,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 
 class RN_CAkMusicSegment(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         # empty segments are allowed as silence
         if not bnode.ntids:
             #logging.info("generator: found empty segment %s" % (self.sid))
@@ -319,7 +319,7 @@ class RN_CAkMusicSegment(RN_CAkHircNode):
 
         txtp.group_layer(bnode.ntids, bnode.config)
         for ntid in bnode.ntids:
-            self._process_next(ntid, txtp)
+            self._render_next(ntid, txtp)
         txtp.group_done(bnode.ntids)
         return
 
@@ -328,7 +328,7 @@ class RN_CAkMusicSegment(RN_CAkHircNode):
 
 class RN_CAkMusicTrack(RN_CAkHircNode):
 
-    def _process_txtp(self, bnode, txtp):
+    def _render_txtp(self, bnode, txtp):
         if not bnode.subtracks: #empty / no clips
             return
 
@@ -418,7 +418,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
                 econfig.idelay = clip.sound.fpa #uses FPA to start segment, should work ok
 
                 txtp.group_single(econfig)
-                self._process_next(clip.neid, txtp)
+                self._render_next(clip.neid, txtp)
                 txtp.group_done()
             else:
                 sconfig = wnode_misc.NodeConfig()

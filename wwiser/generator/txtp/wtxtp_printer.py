@@ -109,52 +109,52 @@ class TxtpPrinter(object):
         return
 
 
-    def _print_tree(self, node, post):
+    def _print_tree(self, tnode, post):
         line1 = ''
         line2 = ''
         config1 = ''
         config2 = ''
 
         if post:
-            if node.loop is not None:       config1 += " lpn=%s" % (node.loop)
-            if node.volume is not None:     config1 += " vol=%s" % (node.volume)
-            if node.ignorable():            config1 += " [i]"
+            if tnode.loop is not None:       config1 += " lpn=%s" % (tnode.loop)
+            if tnode.volume is not None:     config1 += " vol=%s" % (tnode.volume)
+            if tnode.ignorable():            config1 += " [i]"
 
-            if node.body_time:              config2 += ' bt={0:.5f}'.format(node.body_time)
-            if node.pad_begin:              config2 += ' pb={0:.5f}'.format(node.pad_begin)
-            if node.trim_begin:             config2 += ' tb={0:.5f}'.format(node.trim_begin)
-            if node.trim_end:               config2 += ' te={0:.5f}'.format(node.trim_end)
-            if node.pad_end:                config2 += ' pb={0:.5f}'.format(node.pad_end)
+            if tnode.body_time:              config2 += ' bt={0:.5f}'.format(tnode.body_time)
+            if tnode.pad_begin:              config2 += ' pb={0:.5f}'.format(tnode.pad_begin)
+            if tnode.trim_begin:             config2 += ' tb={0:.5f}'.format(tnode.trim_begin)
+            if tnode.trim_end:               config2 += ' te={0:.5f}'.format(tnode.trim_end)
+            if tnode.pad_end:                config2 += ' pb={0:.5f}'.format(tnode.pad_end)
 
         else:
-            if node.config.loop is not None: config1 += " lpn=%s" % (node.config.loop)
-            if node.config.delay:           config1 += " dly=%s" % (node.config.delay)
-            if node.config.idelay:          config1 += " idl=%s" % (node.config.idelay)
-            if node.config.volume:          config1 += " vol=%s" % (node.config.volume)
-            if node.transition:             config1 += " (trn)"
+            if tnode.config.loop is not None: config1 += " lpn=%s" % (tnode.config.loop)
+            if tnode.config.delay:           config1 += " dly=%s" % (tnode.config.delay)
+            if tnode.config.idelay:          config1 += " idl=%s" % (tnode.config.idelay)
+            if tnode.config.volume:          config1 += " vol=%s" % (tnode.config.volume)
+            if tnode.transition:             config1 += " (trn)"
 
-            if node.config.entry or node.config.exit:
-                dur = '{0:.5f}'.format(node.config.duration)
-                ent = '{0:.5f}'.format(node.config.entry)
-                exi = '{0:.5f}'.format(node.config.exit)
+            if tnode.config.entry or tnode.config.exit:
+                dur = '{0:.5f}'.format(tnode.config.duration)
+                ent = '{0:.5f}'.format(tnode.config.entry)
+                exi = '{0:.5f}'.format(tnode.config.exit)
                 config2 += " (dur=%s, ent=%s, exi=%s)" % (dur, ent, exi)
 
-            if node.sound and node.sound.clip:
-                fsd = '{0:.5f}'.format(node.sound.fsd)
-                fpa = '{0:.5f}'.format(node.sound.fpa)
-                fbt = '{0:.5f}'.format(node.sound.fbt)
-                fet = '{0:.5f}'.format(node.sound.fet)
+            if tnode.sound and tnode.sound.clip:
+                fsd = '{0:.5f}'.format(tnode.sound.fsd)
+                fpa = '{0:.5f}'.format(tnode.sound.fpa)
+                fbt = '{0:.5f}'.format(tnode.sound.fbt)
+                fet = '{0:.5f}'.format(tnode.sound.fet)
                 config2 += " (fsd=%s, fpa=%s, fbt=%s, fet=%s)" % (fsd, fpa, fbt, fet)
 
-        if node.is_sound():
+        if tnode.is_sound():
             tid = None
-            if node.sound.source:
-                tid = node.sound.source.tid
-            line1 += "%s %s" % (node.type, tid)
+            if tnode.sound.source:
+                tid = tnode.sound.source.tid
+            line1 += "%s %s" % (tnode.type, tid)
             line1 += config1
             line2 += config2
         else:
-            line1 += "%s%i" % (node.type, len(node.children))
+            line1 += "%s%i" % (tnode.type, len(tnode.children))
             line1 += config1
             line2 += config2
 
@@ -164,8 +164,8 @@ class TxtpPrinter(object):
 
 
         self._mdepth += 1
-        for subnode in node.children:
-            self._print_tree(subnode, post)
+        for subtnode in tnode.children:
+            self._print_tree(subtnode, post)
         self._mdepth -= 1
 
     #--------------------------------------------------------------------------
@@ -188,43 +188,43 @@ class TxtpPrinter(object):
             self._lines.append('%s\n' % (line))
         return
 
-    def _write_node(self, node):
-        if not node.ignorable(simpler=self._simpler):
+    def _write_node(self, tnode):
+        if not tnode.ignorable(simpler=self._simpler):
             self._depth += 1
 
-        if   node.is_sound():
-            self._write_sound(node)
-        elif node.is_group():
-            self._write_group_header(node)
+        if   tnode.is_sound():
+            self._write_sound(tnode)
+        elif tnode.is_group():
+            self._write_group_header(tnode)
 
-        for subnode in node.children:
+        for subnode in tnode.children:
             self._write_node(subnode)
 
         # TXTP groups need to go to the end
-        if node.is_group():
-            self._write_group(node)
+        if tnode.is_group():
+            self._write_group(tnode)
 
-        if not node.ignorable(simpler=self._simpler):
+        if not tnode.ignorable(simpler=self._simpler):
             self._depth -= 1
 
         # set flag with final tree since randoms of a single file can be simplified
-        if node.is_group_random_continuous() and len(node.children) > 1:
+        if tnode.is_group_random_continuous() and len(tnode.children) > 1:
             self.has_random_continuous = True
-        if node.is_group_steps() and len(node.children) > 1:
+        if tnode.is_group_steps() and len(tnode.children) > 1:
             self.has_random_steps = True
-        if node.silenced or node.crossfaded:
+        if tnode.silenced or tnode.crossfaded:
             self.has_silences = True
 
 
     # make a TXTP group
-    def _write_group(self, node):
+    def _write_group(self, tnode):
         #ignore dumb nodes that don't contribute (children are output though)
-        if node.ignorable(simpler=self._simpler):
+        if tnode.ignorable(simpler=self._simpler):
             return
 
         # ex. -L2: at position N (auto), layers previous 2 files
-        type_text = GROUPS_TYPE[node.type]
-        count = len(node.children)
+        type_text = GROUPS_TYPE[tnode.type]
+        count = len(tnode.children)
         ignored = False #self._ignore_next #or count <= 1 #allow 1 for looping full segments
 
         line = ''
@@ -235,52 +235,52 @@ class TxtpPrinter(object):
 
         # add base group
         line += 'group = -%s%s' % (type_text, count)
-        if    node.is_group_steps() or node.force_selectable:
+        if    tnode.is_group_steps() or tnode.force_selectable:
             selection = self._txtp.selected or 1
             line += '>%s' % (selection)
             #info += "  ##select >N of %i" % (count)
-        elif node.is_group_random_continuous(): #not for sequence since it looks a bit strange
+        elif tnode.is_group_random_continuous(): #not for sequence since it looks a bit strange
             line += '>-'
 
         # volume before layers, b/c vgmstream only does PCM ATM so audio could peak if added after
-        volume = node.volume or 0
+        volume = tnode.volume or 0
         if self._simpler:
             volume = 0
-        if node.crossfaded:
-            vstates = self._get_volume_states(node)
+        if tnode.crossfaded:
+            vstates = self._get_volume_states(tnode)
             for vstate in vstates:
                 volume += vstate
-        if self._txtpcache.silence or node.silenced:
+        if self._txtpcache.silence or tnode.silenced:
             mods += '  #v 0'
         elif volume:
             mods += '  #v %sdB' % (volume)
 
         # wwise seems to mix untouched then use volumes to tweak
-        if node.is_group_layers():
+        if tnode.is_group_layers():
             mods += ' #@layer-v'
 
         # add delay config
         if not self._simpler:
-            mods += self._get_ms(' #p', node.pad_begin)
+            mods += self._get_ms(' #p', tnode.pad_begin)
 
 
         # add loops/anchors
-        if node.loop is not None: #and node.loop_anchor: #groups always use anchors
-            if   node.loop == 0:
+        if tnode.loop is not None: #and node.loop_anchor: #groups always use anchors
+            if   tnode.loop == 0:
                 mods += ' #@loop'
-                if node.loop_end:
+                if tnode.loop_end:
                     mods += ' #@loop-end'
-            elif node.loop > 1:
-                mods += ' #E #l %i.0' % (node.loop)
+            elif tnode.loop > 1:
+                mods += ' #E #l %i.0' % (tnode.loop)
 
 
         # extra info
-        if node.loop_killed:
+        if tnode.loop_killed:
             info += '  ##loop'
-            if node.loop_end:
+            if tnode.loop_end:
                 info += ' #loop-end'
 
-        if node.crossfaded or node.silenced:
+        if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'
             self.has_others = True
 
@@ -288,8 +288,8 @@ class TxtpPrinter(object):
         #    info += '  ##gain'
         #    self.has_others = True
 
-        if node.pitch:
-            info += '  ##pitch %s' % (node.pitch)
+        if tnode.pitch:
+            info += '  ##pitch %s' % (tnode.pitch)
             self.has_others = True
 
 
@@ -299,28 +299,28 @@ class TxtpPrinter(object):
 
 
     # make a TXTP group header
-    def _write_group_header(self, node):
+    def _write_group_header(self, tnode):
         if not DEBUG_PRINT_GROUP_HEADER:
             return #not too useful
-        if node.ignorable(simpler=self._simpler):
+        if tnode.ignorable(simpler=self._simpler):
             return
 
         line = ''
 
-        line += '#%s of %s' % (GROUPS_INFO[node.type], len(node.children))
-        if node.loop is not None:
-            if   node.loop == 0:
+        line += '#%s of %s' % (GROUPS_INFO[tnode.type], len(tnode.children))
+        if tnode.loop is not None:
+            if   tnode.loop == 0:
                 line += ' (N loops)'
-            elif node.loop > 1:
-                line += ' (%i loops)' % (node.loop)
+            elif tnode.loop > 1:
+                line += ' (%i loops)' % (tnode.loop)
 
         pad = self._get_padding()
         self._lines.append('%s%s\n' % (pad, line))
 
 
     # write a TXTP sound wem
-    def _write_sound(self, node):
-        sound = node.sound
+    def _write_sound(self, tnode):
+        sound = tnode.sound
         ignored = False #self._ignore_next
 
         line = ''
@@ -404,19 +404,19 @@ class TxtpPrinter(object):
 
         # add config
         if sound.clip: #CAkMusicTrack's clip
-            mods += self._get_clip(sound, node)
+            mods += self._get_clip(sound, tnode)
         else: #CAkSound
-            mods += self._get_sfx(sound, node)
+            mods += self._get_sfx(sound, tnode)
 
         # add envelopes
-        if node.envelopes:
+        if tnode.envelopes:
             # ch(type)(position)(time-start)+(time-length)
             # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
             if DEBUG_PRINT_ENVELOPES:
                 info_envs = ''
                 #TODO: some games add too many envelopes making huge lines that are ignored by vgmstream
                 # (Tetris Beat on Apple Arcade: Play_Music [Music=Hydra] (MUSIC_PROGRESS=FULL_SONG), Jedi Fallen Order)
-                for envelope in node.envelopes:
+                for envelope in tnode.envelopes:
                     vol_st = self._get_sec(envelope.vol1)
                     vol_ed = self._get_sec(envelope.vol2)
                     shape = envelope.shape
@@ -435,40 +435,40 @@ class TxtpPrinter(object):
                 pass
 
         # add volume
-        volume = node.volume or 0
+        volume = tnode.volume or 0
         if self._simpler:
             volume = 0
-        if node.crossfaded:
-            vstates = self._get_volume_states(node)
+        if tnode.crossfaded:
+            vstates = self._get_volume_states(tnode)
             for vstate in vstates:
                 volume += vstate
-        if self._txtpcache.silence or node.silenced:
+        if self._txtpcache.silence or tnode.silenced:
             silence_line = True #set "?" below as it's a bit simpler to use
         elif volume:
             mods += '  #v %sdB' % (volume)
 
         # add anchors
-        if node.loop_anchor:
+        if tnode.loop_anchor:
             mods += ' #@loop'
-            if node.loop_end:
+            if tnode.loop_end:
                 mods += ' #@loop-end'
 
 
         # extra info
-        if node.loop_killed:
+        if tnode.loop_killed:
             info += '  ##loop'
-            if node.loop_end:
+            if tnode.loop_end:
                 info += ' #loop-end'
 
-        if node.crossfaded or node.silenced:
+        if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'
 
         #if node.makeupgain:
         #    info += '  ##gain'
         #    self.has_others = True
 
-        if node.pitch:
-            info += '  ##pitch %s' % (node.pitch)
+        if tnode.pitch:
+            info += '  ##pitch %s' % (tnode.pitch)
             self.has_others = True
 
         if silence_line:
@@ -502,13 +502,13 @@ class TxtpPrinter(object):
         return mods
 
 
-    def _get_clip(self, sound, node):
+    def _get_clip(self, sound, tnode):
         mods = ''
 
         # final body time goes over 1 loop (not using loop flag since it seems to depend on final trim, see examples)
         # some files slightly over duration (ex. 5000 samples) and are meant to be looped as segments, it's normal
 
-        loops = not sound.silent and node.body_time - node.trim_end > sound.fsd  # trim_begin not included
+        loops = not sound.silent and tnode.body_time - tnode.trim_end > sound.fsd  # trim_begin not included
 
         if sound.silent:
             pass
@@ -519,14 +519,14 @@ class TxtpPrinter(object):
 
         #clips don't have delay and don't need it removed when _simpler is set
 
-        mods += self._get_ms(' #p', node.pad_begin)
+        mods += self._get_ms(' #p', tnode.pad_begin)
         if loops: #forces disabling fades, that get in the way when playing separate music tracks
-            mods += self._get_ms(' #B', node.body_time)
+            mods += self._get_ms(' #B', tnode.body_time)
         else:
-            mods += self._get_ms(' #b', node.body_time)
-        mods += self._get_ms(' #r', node.trim_begin)
-        mods += self._get_ms(' #R', node.trim_end)
-        mods += self._get_ms(' #P', node.pad_end)
+            mods += self._get_ms(' #b', tnode.body_time)
+        mods += self._get_ms(' #r', tnode.trim_begin)
+        mods += self._get_ms(' #R', tnode.trim_end)
+        mods += self._get_ms(' #P', tnode.pad_end)
 
         return mods
 
@@ -573,9 +573,9 @@ class TxtpPrinter(object):
     # Some nodes change volume via states, test if those are currently set (multiple at once are ok).
     # This info isn't passed around so must find (possibly ignored) parent node that has it.
     #todo do in prepare()?
-    def _get_volume_states(self, node):
+    def _get_volume_states(self, tnode):
         vstates = []
-        self._get_volume_states_internal(node, vstates)
+        self._get_volume_states_internal(tnode, vstates)
         return vstates
 
     def _get_volume_states_internal(self, node, vstates):

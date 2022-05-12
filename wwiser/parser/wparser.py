@@ -655,15 +655,18 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
 
 
     if   cls.version <= 52: #similar to ReadStateChunk but inline'd
+        sub = obj.node('StateChunk') #not in original code but a bit hard to understand otherwise
+
         if cls.version <= 36: #36=UFC, 34=SM
             #todo upper bits maybe others? (0/1/0x1E/0x21/0x28/0x31/0x32/0x37/etc)
-            obj.U32('eStateSyncType?').fmt(wdefs.AkSyncType)
-            obj.u32('ulNumStates')
+            sub.U32('eStateSyncType?').fmt(wdefs.AkSyncType)
+            sub.u32('ulNumStates')
         else: #44=AC2
             #todo upper bits maybe others? (0x25 found in Wwise demos 046, 0x18 in Enslaved)
-            obj.U8x('eStateSyncType').fmt(wdefs.AkSyncType)
-            obj.u16('ulNumStates')
-        for elem in obj.list('pStates', 'AKBKStateItem', obj.lastval):
+            sub.U8x('eStateSyncType').fmt(wdefs.AkSyncType)
+            sub.u16('ulNumStates')
+
+        for elem in sub.list('pStates', 'AKBKStateItem', sub.lastval):
             elem.tid('ulStateID').fnv(wdefs.fnv_val)
             elem.U8x('bIsCustom')
             elem.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
@@ -1819,8 +1822,10 @@ def CAkBus__SetInitialValues(obj, cls):
     SetInitialRTPC_CAkBus_(obj, cls)
 
     if   cls.version <= 52: #similar to ReadStateChunk but inline'd
-        obj.u32('ulNumStates')
-        for elem in obj.list('pStates', 'AKBKStateItem', obj.lastval):
+        sub = obj.node('StateChunk') #not in original code but a bit hard to understand otherwise
+
+        sub.u32('ulNumStates')
+        for elem in sub.list('pStates', 'AKBKStateItem', sub.lastval):
             elem.tid('ulStateID').fnv(wdefs.fnv_val)
             elem.U8x('bIsCustom')
             elem.tid('ulStateInstanceID').fnv(wdefs.fnv_no)

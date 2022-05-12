@@ -65,8 +65,8 @@ class Txtp(object):
     # start of txtp generation
     def begin(self, node, root_config, nname=None, ntid=None, ntidsub=None):
         # tree
-        self._root = wtxtp_tree.TxtpNode(None, root_config)
-        self._current = self._root
+        self._troot = wtxtp_tree.TxtpNode(None, root_config)
+        self._current = self._troot
 
         # for names
         if not ntid:
@@ -83,7 +83,7 @@ class Txtp(object):
         self._namer.ncaller = ncaller
 
     def write(self):
-        printer = wtxtp_printer.TxtpPrinter(self, self._root)
+        printer = wtxtp_printer.TxtpPrinter(self, self._troot)
         printer.prepare() #simplify tree
 
         # may have files but all silent
@@ -248,15 +248,15 @@ class Txtp(object):
         return self._source_add(sound, config)
 
     def _group_add(self, config):
-        node = wtxtp_tree.TxtpNode(self._current, config=config)
+        tnode = wtxtp_tree.TxtpNode(self._current, config=config)
 
-        self._current.append(node)
-        self._current = node
-        return node
+        self._current.append(tnode)
+        self._current = tnode
+        return tnode
 
     def _source_add(self, sound, config):
-        node = wtxtp_tree.TxtpNode(self._current, sound=sound, config=config)
-        self._current.append(node)
+        tnode = wtxtp_tree.TxtpNode(self._current, sound=sound, config=config)
+        self._current.append(tnode)
         return self._current
 
     #--------------------------------------------------------------------------

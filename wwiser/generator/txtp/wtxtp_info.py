@@ -120,8 +120,8 @@ class TxtpInfo(object):
         if source:
             fields.prop(source.nplugin)
 
-        next = TxtpInfoNode(self._depth + 1, None, fields, None, source=ntid)
-        self._ninfo.append(next)
+        inext = TxtpInfoNode(self._depth + 1, None, fields, None, source=ntid)
+        self._ninfo.append(inext)
 
         if self._txtpcache.name_wems:
             attrs = ntid.get_attrs()
@@ -137,8 +137,8 @@ class TxtpInfo(object):
     def next(self, node, fields, nsid=None):
         self._depth += 1
 
-        next = TxtpInfoNode(self._depth, node, fields, nsid=nsid)
-        self._ninfo.append(next)
+        inext = TxtpInfoNode(self._depth, node, fields, nsid=nsid)
+        self._ninfo.append(inext)
 
     def done(self):
         self._depth -= 1

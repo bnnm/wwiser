@@ -20,7 +20,7 @@ class Renderer(object):
         txtp.begin(node, root_config)
 
         rnode = self._get_rnode(bnode)
-        rnode._make_txtp(bnode, txtp)
+        rnode._render_base(bnode, txtp)
 
         return
 
@@ -40,7 +40,7 @@ class Renderer(object):
 
         #self._render_next(ntid, txtp)
         rnode = self._get_rnode(bnode)
-        rnode._make_txtp(bnode, txtp)
+        rnode._render_base(bnode, txtp)
         return
 
     #-------------------------------------

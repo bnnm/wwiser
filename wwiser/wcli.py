@@ -1,10 +1,10 @@
 import sys, argparse, glob, logging, os, platform, shlex
 
-from . import wversion, wlogs, wtags, wtests
+from . import wversion, wlogs, wtests
 from .names import wnames
 from .parser import wparser
 from .viewer import wdumper, wview
-from .generator import wgenerator
+from .generator import wgenerator, wtags
 
 
 class Cli(object):

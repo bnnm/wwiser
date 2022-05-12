@@ -13,12 +13,11 @@ _DEFAULT_RENDERER_NODE = RN_CAkNone
 # HIRC classes capable of making a TXTP part.
 # Each should also have a bnode equivalent 
 _HIRC_RENDERER_NODES = {
-    # base
+    # action classes
     'CAkEvent': RN_CAkEvent,
     'CAkDialogueEvent': RN_CAkDialogueEvent,
     'CAkActionPlay': RN_CAkActionPlay,
     'CAkActionTrigger': RN_CAkActionTrigger,
-
     # not found, may need to do something with them
     'CAkActionPlayAndContinue': RN_CAkActionPlayAndContinue,
     'CAkActionPlayEvent': RN_CAkActionPlayEvent,
@@ -35,7 +34,7 @@ _HIRC_RENDERER_NODES = {
     'CAkMusicSegment': RN_CAkMusicSegment,
     'CAkMusicTrack': RN_CAkMusicTrack,
 
-    #not an action
+    # info only, not renderable
     #CAkStinger
     #CAkState
     #CAkFxCustom

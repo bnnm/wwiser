@@ -48,6 +48,7 @@ class CAkFxCustom(CAkHircNode):
         return
 
 #******************************************************************************
+# EVENTS AND ACTIONS
 
 class CAkEvent(CAkHircNode):
     def __init__(self):
@@ -58,7 +59,6 @@ class CAkEvent(CAkHircNode):
         self.ntids = node.finds(name='ulActionID')
         return
 
-#******************************************************************************
 
 class CAkDialogueEvent(CAkHircNode):
     def __init__(self):
@@ -75,7 +75,6 @@ class CAkDialogueEvent(CAkHircNode):
         if tree.init:
             self.tree = tree
 
-#******************************************************************************
 
 class CAkAction(CAkHircNode):
     def __init__(self):
@@ -99,7 +98,6 @@ class CAkAction(CAkHircNode):
     def _build_subaction(self, node):
         return
 
-#******************************************************************************
 
 class CAkActionPlayAndContinue(CAkAction):
     def __init__(self):
@@ -109,13 +107,10 @@ class CAkActionPlayAndContinue(CAkAction):
         self._barf()
 
 
-#******************************************************************************
-
 class CAkActionTrigger(CAkAction):
     def __init__(self):
         super(CAkActionTrigger, self).__init__()
 
-#******************************************************************************
 
 class CAkActionPlay(CAkAction):
     def __init__(self):
@@ -131,13 +126,25 @@ class CAkActionPlay(CAkAction):
             # v26<= don't set bankID, automatically uses current
             self.nbankid = nbankid
 
-#******************************************************************************
 
 class CAkActionPlayEvent(CAkActionPlay): #_CAkActionPlay
     def __init__(self):
         super(CAkActionPlayEvent, self).__init__()
 
+
 #******************************************************************************
+# ACTOR-MIXER HIERARCHY
+
+
+class CAkActorMixer(CAkHircNode):
+    def __init__(self):
+        super(CAkHircNode, self).__init__()
+
+    def _build(self, node):
+        # Actor-mixers are just a container of common values, and sound nodes can set this as parent to inherit them.
+        # There is a child list but it's not used directly (no action calls this).
+        pass
+
 
 class CAkSwitchCntr(CAkHircNode):
     def __init__(self):
@@ -167,7 +174,6 @@ class CAkSwitchCntr(CAkHircNode):
             self.gvalue_ntids[gvalue] = (ntids, ngvalue)
         return
 
-#******************************************************************************
 
 class CAkRanSeqCntr(CAkHircNode):
     def __init__(self):
@@ -230,7 +236,6 @@ class CAkRanSeqCntr(CAkHircNode):
         self.fields.props([nmode, nrandom, nloop, ncontinuous, navoidrepeat])
         return
 
-#******************************************************************************
 
 class CAkLayerCntr(CAkHircNode):
     def __init__(self):
@@ -260,7 +265,6 @@ class CAkLayerCntr(CAkHircNode):
             self.fields.prop(nmode)
         return
 
-#******************************************************************************
 
 class CAkSound(CAkHircNode):
     def __init__(self):
@@ -287,6 +291,7 @@ class CAkSound(CAkHircNode):
         return
 
 #******************************************************************************
+# INTERACTIVE MUSIC HIERARCHY
 
 class CAkMusicSwitchCntr(CAkHircNode):
     def __init__(self):
@@ -330,7 +335,6 @@ class CAkMusicSwitchCntr(CAkHircNode):
                 gvalue = ngvalue.value()
                 self.gvalue_ntid[gvalue] = (ntid, ngvalue)
 
-#******************************************************************************
 
 class CAkMusicRanSeqCntr(CAkHircNode):
     def __init__(self):
@@ -406,8 +410,6 @@ class CAkMusicRanSeqCntr_Item():
         self.items = []
 
 
-#******************************************************************************
-
 class CAkMusicSegment(CAkHircNode):
     def __init__(self):
         super(CAkMusicSegment, self).__init__()
@@ -461,7 +463,6 @@ class CAkMusicSegment(CAkHircNode):
             self.sconfig = wnode_misc.NodeConfig()
         return
 
-#******************************************************************************
 
 class CAkMusicTrack(CAkHircNode):
     def __init__(self):

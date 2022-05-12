@@ -2,11 +2,11 @@ import os, logging, threading, platform
 from tkinter import *
 from tkinter import ttk, font, filedialog, scrolledtext, messagebox
 
-from . import wversion, wtags, wlogs
+from . import wversion, wlogs
 from .names import wnames
 from .parser import wparser
 from .viewer import wdumper, wview
-from .generator import wgenerator
+from .generator import wgenerator, wtags
 
 
 class Gui(object):

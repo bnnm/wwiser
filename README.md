@@ -48,8 +48,8 @@ companion `xml` and `txt` files together to get names) with *wwiser*, maybe expl
 a bit, and  automatically generate *TXTP* for *events*, to use with *vgmstream* to
 play music (https://github.com/vgmstream/vgmstream).
 
-Wwise has two "modes", a sound engine that plays single sfx or tracks capable of
-simple looping (some games loop like this), and a music engine that dynamically
+Wwise has two "modes", a sound module that plays single sfx or tracks capable of
+simple looping (some games loop like this), and a music module that dynamically
 plays multiple audio stems mixed in realtime (other games loop by using multiple
 separate files). You want *TXTP* to handle the later, but they also give consistency
 and (sometimes) original names to the former. In short, for games using Wwise audio

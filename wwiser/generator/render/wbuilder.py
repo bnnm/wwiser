@@ -78,8 +78,8 @@ class Builder(object):
 
     #--------------------------------------------------------------------------
 
-    # register a new node
-    def add_node_ref(self, bank_id, sid, node):
+    # register a new node (should be from HIRC)
+    def register_node_ref(self, bank_id, sid, node):
         # Objects can be repeated when saved to different banks, and should be clones (ex. Magatsu Wahrheit, Ori ATWOTW).
         # Except sometimes they aren't, so we need to treat bank+id as separate things (ex. Detroit, Punch Out).
         # Doesn't seem allowed in Wwise but it's possible if devs manually load banks without conflicting ids.
@@ -102,6 +102,7 @@ class Builder(object):
         self._hircname_to_nodes[hircname].append(node)
         return
 
+    # gets a registered node (from HIRC chunk)
     def _get_node_by_ref(self, bank_id, sid):
         ref = (bank_id, sid)
         # find node in current bank

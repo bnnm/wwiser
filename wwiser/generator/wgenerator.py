@@ -202,7 +202,7 @@ class Generator(object):
                     continue
                 sid = nsid.value()
 
-                self._builder.add_node_ref(bank_id, sid, node)
+                self._builder.register_node_ref(bank_id, sid, node)
 
                 # for nodes that can contain sources save them to move later
                 if self._move:

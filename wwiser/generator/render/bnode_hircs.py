@@ -2,6 +2,7 @@ from . import bnode_automation, bnode_misc
 from ..txtp import wtxtp_info
 
 from .bnode_base import CAkHircNode
+from .bnode_markers import AkMarkers
 
 
 #non-audio node, doesn't contribute to txtp
@@ -56,7 +57,9 @@ class CAkEvent(CAkHircNode):
         self.ntids = None
 
     def _build(self, node):
+        #EventInitialValues
         self.ntids = node.finds(name='ulActionID')
+        # events that don't call anything seem trimmed so this should exist
         return
 
 
@@ -82,15 +85,11 @@ class CAkAction(CAkHircNode):
         self.ntid = None
 
     def _build(self, node):
-        self._build_action_config(node)
+        self._build_action(node)
 
         ntid = node.find(name='idExt')
         if not ntid: #older
             ntid = node.find(name='ulTargetID')
-            #tDelay
-            #tDelayMin
-            #tDelayMax
-
         self.ntid = ntid
 
         self._build_subaction(node)
@@ -259,7 +258,7 @@ class CAkLayerCntr(CAkHircNode):
         nlayers = node.find1(name='pLayers')
         if nlayers:
             # RTPC linked to volume (ex. AC2 bgm+crowds)
-            self._build_rtpc_config(nlayers)
+            self._build_rtpc(nlayers)
 
         if nmode:
             self.fields.prop(nmode)
@@ -422,43 +421,28 @@ class CAkMusicSegment(CAkHircNode):
         if self.config.loop is not None:
             self._barf("loop flag")
 
-        #AkMeterInfo: for switches
+
+        # main duration
         nfdur = node.find(name='fDuration')
+        # AkMeterInfo: for switches
+
         self.config.duration = nfdur.value()
         self.fields.prop(nfdur)
 
-        nmarkers = node.find(name='pArrayMarkers')
-        if nmarkers:
-            #we want "entry" and "exit" markers (fixed IDs), but are ordered in time (may go in any position)
-            nmid1 = nmarkers.find1(value=43573010)
-            nmid2 = nmarkers.find1(value=1539036744)
-            if not nmid1 or not nmid2:
-                # older versions (v62<=) use IDs 0/1 for entry/exit (other cues do use tids)
-                nmid1 = nmarkers.find1(value=0)
-                nmid2 = nmarkers.find1(value=1)
+        # markers for transitions
+        markers = AkMarkers(node)
+        marker1 = markers.get_entry()
+        marker2 = markers.get_exit()
 
-            if not nmid1 or not nmid2:
-                self._barf("entry/exit markers not found")
+        self.config.entry = marker1.pos
+        self.config.exit = marker2.pos
+        self.fields.keyval(marker1.node, marker1.npos)
+        self.fields.keyval(marker2.node, marker2.npos)
 
-            nmarker1 = nmid1.get_parent()
-            nmarker2 = nmid2.get_parent()
-
-            nmpos1 = nmarker1.find(name='fPosition')
-            nmpos2 = nmarker2.find(name='fPosition')
-
-            self.config.entry = nmpos1.value()
-            self.config.exit = nmpos2.value()
-
-            self.fields.keyval(nmarker1, nmpos1)
-            self.fields.keyval(nmarker2, nmpos2)
-            #self.fields.prop(nm2.get_parent())
-        else:
-            self._barf('markers not found')
-
-
+        # music track list
         self.ntids = node.find(name='Children').finds(type='tid')
-        # empty segments are allowed as silence
         if not self.ntids:
+            # empty segments are allowed as silence
             self.sound = self._build_silence(self.node, True)
             self.sconfig = bnode_misc.NodeConfig()
         return
@@ -494,7 +478,7 @@ class CAkMusicTrack(CAkHircNode):
             ntype = node.find(name='eRSType')
         self.type = ntype.value()
 
-        #save info about sources for later
+        # save info about sources for later
         streaminfos = {}
         nitems = node.find1(name='pSource').finds(name='AkBankSourceData')
         for nitem in nitems:
@@ -527,7 +511,7 @@ class CAkMusicTrack(CAkHircNode):
             self.subtracks[track].append(clip)
             index += 1
 
-        #pre-parse switch variables
+        # pre-parse switch variables
         if self.type == 3:
             #TransParams: define switch transition
             nswitches = node.find(name='SwitchParams')

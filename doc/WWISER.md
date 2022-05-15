@@ -329,11 +329,11 @@ Unsupported features are usually programatically generated audio (such as a sine
 
 
 ### External mark {e}
-Normally Wwise plays ID *123456789* by loading `123456789.wem`. There is an special *external ID* feature that allows programmer to manually map ID *123456789* to file `tape01.wem`. This is (rarely) used to have a single *event* play different `wem` configured by the programmers in code (rather than using events/states).
+Normally Wwise plays ID *123456789* by loading `123456789.wem`. There is an special *external ID* (called "cookie") feature that allows programmer to manually map cookie ID *123456789* to file `tape01.wem`. This is (rarely) used to have a single *event* play different `wem` configured by the programmers in code (rather than using events/states).
 
 You can simulate this and create files per external by making an `externals.txt` list (put it with the banks). Normally *wwise* creates `play_char01 {e}` and such events with externals. Open the file and find the external ID printed inside as `##external (number) ...`.
 
-Take those IDs and in `externals.txt` , write an *ID* followed by N lines pointing to files, per ID:
+Take those IDs and in `externals.txt` , write a *cookie ID* followed by N lines pointing to files, per ID:
 
 ```
 123456789

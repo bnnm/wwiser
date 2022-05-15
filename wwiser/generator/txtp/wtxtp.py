@@ -3,7 +3,8 @@ from ... import wversion
 from ..gamesync import wgamesync, wvolumes
 from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
-# Builds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
+# Helds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
+# 'Renderer' code follows the path, while this has the redone playlist, that is then further simplified.
 #
 # For example a path like this:
 #   event > play > musicranseq > musicsegment > musictrack > 1.wem
@@ -58,6 +59,10 @@ class Txtp(object):
         self.external_path = None   # current external
         self.external_name = None   # current external
 
+        # tree
+        self._troot = None
+        self._current = None
+
         # for info
         self._namer = wtxtp_namer.TxtpNamer(self)
         return
@@ -82,6 +87,9 @@ class Txtp(object):
     def set_ncaller(self, ncaller):
         self._namer.ncaller = ncaller
 
+    # write main .txtp
+    # Sometimes there are multiple small variations with the same .txtp tree, in those cases 
+    # we don't need to re-render and just create multiple sub-txtp.
     def write(self):
         printer = wtxtp_printer.TxtpPrinter(self, self._troot)
         printer.prepare() #simplify tree
@@ -94,10 +102,10 @@ class Txtp(object):
         self._write_externals(printer)
         return
 
+    # in case of externals, we can preload a .txt file that maps event tid > N paths
+    # then a .txtp per external will be created
     def _write_externals(self, printer):
 
-        # in case of externals, we can preload a .txt file that maps event tid > N paths
-        # then a .txtp per external will be created
         if printer.has_externals and self.txtpcache.externals.active:
             # get external IDs #todo for now only one
             if len(printer.externals) > 1:
@@ -115,9 +123,9 @@ class Txtp(object):
 
         self._write_selectable(printer)
 
+    # make one txtp per random/selectable group
+    # selectable is only set if appropriate flags are defined
     def _write_selectable(self, printer):
-        # make one txtp per random/selectable group
-        # selectable is only set if appropriate flags are defined
         if printer.selectable_count:
             count = printer.selectable_count
             # make one .txtp per random

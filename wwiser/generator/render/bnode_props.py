@@ -27,7 +27,7 @@ _OLD_ACTION_PROPS = [
 #TransitionTime
 #Probability: used in play events to fade-in event
 #CenterPCT: not useful?
-
+#PlaybackSpeed: similar to pitch but for music hierarchy (pitch should be ignored by music), "multiplied by ancestors"
 #PROP_LOOP = "[Loop]"
 
 

@@ -32,7 +32,7 @@ class Externals(object):
                 if not line or line.startswith('#'):
                     continue
 
-                # new ID
+                # new "cookie" ID
                 if line.isnumeric():
                     current_tid = int(line)
                     if current_tid not in self._items:

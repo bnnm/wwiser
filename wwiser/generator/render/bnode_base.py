@@ -11,7 +11,7 @@ from ..txtp import wtxtp_info
 # common for all builder nodes (bnodes)
 class CAkHircNode(object):
     def __init__(self):
-        pass #no params since changing constructors is a pain
+        pass #no params since inheriting and changing python constructors is a pain
 
     def init_builder(self, builder):
         self._builder = builder
@@ -21,7 +21,7 @@ class CAkHircNode(object):
         #todo limit to sound/action/etc, or manually call
         #self._build_references(node)
         #self._build_props(node) #xInitialParams
-        #self._build_rtpcs(node)
+        #self._build_rtpcs(node) #InitialRTPC
         #self._build_states(node) #StateChunk
         #self._build_positioning(node)
 
@@ -92,7 +92,7 @@ class CAkHircNode(object):
         'tDelay', 'tDelayMin', 'tDelayMax', 'TTime', 'TTimeMin', 'TTimeMax',
     ]
 
-    def _build_action_config(self, node):
+    def _build_action(self, node):
         ninit = node.find1(name='ActionInitialValues') #used in action objects (CAkActionX)
         if not ninit:
             return
@@ -132,42 +132,10 @@ class CAkHircNode(object):
         check_rtpc = check_state
         nbase = node.find1(name='NodeBaseParams')
         if check_state and nbase:
-            # state sets volume states to silence tracks (ex. MGR)
-            # in rare cases those states are also used to slightly increase volume (Monster Hunter World's 3221323256.bnk)
-            nstatechunk = nbase.find1(name='StateChunk')
-            if nstatechunk:
-                nstategroups = nstatechunk.finds(name='AkStateGroupChunk') #probably only one but...
-                for nstategroup in nstategroups:
-                    nstates = nstategroup.finds(name='AkState')
-                    if not nstates: #possible to have groupchunks without pStates (ex Xcom2's 820279197)
-                        continue
-
-                    bank_id = nstategroup.get_root().get_id()
-                    for nstate in nstates:
-                        nstateinstanceid = nstate.find1(name='ulStateInstanceID')
-                        if not nstateinstanceid: #???
-                            continue
-                        tid = nstateinstanceid.value()
-
-                        # state should exist as a node and have a volume value (states for other stuff are common)
-                        bstate = self._builder._get_bnode_by_ref(bank_id, tid, self.sid)
-                        has_volumes = bstate and bstate.config.volume
-                        if not has_volumes:
-                            continue
-
-                        self.config.crossfaded = True
-
-                        logging.debug("generator: state volume found %s %s %s" % (self.sid, tid, node.get_name()))
-                        nstategroupid = nstategroup.find1(name='ulStateGroupID') #parent group
-
-                        nstateid = nstate.find1(name='ulStateID')
-                        if nstategroupid and nstateid:
-                            self.config.add_volume_state(nstategroupid, nstateid, bstate.config)
-                            self.fields.keyvalvol(nstategroupid, nstateid, bstate.config.volume)
+            self._build_statechunk(node, nbase)
 
         if check_rtpc and nbase:
-            # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)
-            self._build_rtpc_config(nbase)
+            self._build_rtpc(nbase)
 
         # find other parameters
         ninit = node.find1(name='NodeInitialParams') #most objects that aren't actions nor states
@@ -192,7 +160,47 @@ class CAkHircNode(object):
             if value != 0: #default to 0 if not set
                 self.fields.prop(nprop)
 
-    def _build_rtpc_config(self, node):
+    def _build_statechunk(self, node, nbase):
+        # state sets volume states to silence tracks (ex. MGR)
+        # in rare cases those states are also used to slightly increase volume (Monster Hunter World's 3221323256.bnk)
+        nstatechunk = nbase.find1(name='StateChunk')
+        if not nstatechunk:
+            return
+        
+        #TODO clean config/props before changing this
+
+        nstategroups = nstatechunk.finds(name='AkStateGroupChunk') #probably only one but...
+        for nstategroup in nstategroups:
+            nstates = nstategroup.finds(name='AkState')
+            if not nstates: #possible to have groupchunks without pStates (ex Xcom2's 820279197)
+                continue
+
+            bank_id = nstategroup.get_root().get_id()
+            for nstate in nstates:
+                nstateinstanceid = nstate.find1(name='ulStateInstanceID')
+                if not nstateinstanceid: #???
+                    continue
+                tid = nstateinstanceid.value()
+
+                # state should exist as a node and have a volume value (states for other stuff are common)
+                bstate = self._builder._get_bnode_by_ref(bank_id, tid, self.sid)
+                has_volumes = bstate and bstate.config.volume
+                if not has_volumes:
+                    continue
+
+                self.config.crossfaded = True
+
+                logging.debug("generator: state volume found %s %s %s" % (self.sid, tid, node.get_name()))
+                nstategroupid = nstategroup.find1(name='ulStateGroupID') #parent group
+
+                nstateid = nstate.find1(name='ulStateID')
+                if nstategroupid and nstateid:
+                    self.config.add_volume_state(nstategroupid, nstateid, bstate.config)
+                    self.fields.keyvalvol(nstategroupid, nstateid, bstate.config.volume)
+        pass
+
+    def _build_rtpc(self, node):
+        # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)
         rtpcs = bnode_rtpc.AkRtpcList(node)
         if rtpcs.has_volume_rtpcs:
             self.config.rtpcs = rtpcs
@@ -227,6 +235,7 @@ class CAkHircNode(object):
                 self.stingers.append(stinger)
         return
 
+    #todo
     def _build_silence(self, node, clip):
         sound = bnode_misc.NodeSound()
         sound.nsrc = node

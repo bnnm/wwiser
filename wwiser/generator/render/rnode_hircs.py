@@ -311,7 +311,7 @@ class RN_CAkMusicSegment(RN_CAkHircNode):
         # empty segments are allowed as silence
         if not bnode.ntids:
             #logging.info("generator: found empty segment %s" % (self.sid))
-            elems = [bnode.sound]
+            elems = [bnode.sound] #force some list to fool group_layer
             txtp.group_layer(elems, bnode.config)
             txtp.source_sound(bnode.sound, bnode.sconfig)
             txtp.group_done(elems)
@@ -342,19 +342,19 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
                 raise ValueError("more than 1 track")
             txtp.group_single(bnode.config)
             for subtrack in bnode.subtracks:
-                self._process_clips(subtrack, txtp)
+                self._render_clips(subtrack, txtp)
             txtp.group_done()
 
         elif bnode.type == 1: #random (plays random subtrack, on next call plays another)
             txtp.group_random_step(bnode.subtracks, bnode.config)
             for subtrack in bnode.subtracks:
-                self._process_clips(subtrack, txtp)
+                self._render_clips(subtrack, txtp)
             txtp.group_done(bnode.subtracks)
 
         elif bnode.type == 2: #sequence (plays first subtrack, on next call plays next)
             txtp.group_sequence_step(bnode.subtracks, bnode.config)
             for subtrack in bnode.subtracks:
-                self._process_clips(subtrack, txtp)
+                self._render_clips(subtrack, txtp)
             txtp.group_done(bnode.subtracks)
 
         elif bnode.type == 3: #switch (plays one subtrack depending on variables)
@@ -373,7 +373,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
                     txtp.ppaths.done()
                 return
 
-            #get current gamesync
+            # get current gamesync
             gvalue = txtp.params.current(gtype, gname)
             if gvalue is None:
                 return
@@ -389,7 +389,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             subtrack = bnode.subtracks[index]
 
             txtp.group_single(bnode.config)
-            self._process_clips(subtrack, txtp)
+            self._render_clips(subtrack, txtp)
             txtp.group_done()
 
         else:
@@ -397,7 +397,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
 
         return
 
-    def _process_clips(self, subtrack, txtp):
+    def _render_clips(self, subtrack, txtp):
         if not subtrack:
             #logging.info("generator: found empty subtrack %s" % (self.sid))
             # rarely may happen with default = no track = silence (NMH3)

@@ -1,4 +1,5 @@
 from . import bnode_misc
+from . import wbuilder_util
 
 
 # common for all renderer nodes (rnode)
@@ -14,7 +15,7 @@ class RN_CAkHircNode(object):
 
     #--------------------------------------------------------------------------
 
-    # info when generating transitions
+    # info when generating transitions's musicsegments
     def _register_transitions(self, txtp, ntransitions):
         for ntid in ntransitions:
             node = self._builder._get_transition_node(ntid)
@@ -37,7 +38,10 @@ class RN_CAkHircNode(object):
     def _render_txtp(self, bnode, txtp):
         self._barf("must implement")
 
-    def _render_next(self, ntid, txtp, nbankid=None):
+    def _render_next_event(self, ntid, txtp, nbankid=None):
+        self._render_next(ntid, txtp, nbankid=nbankid, idtype=wbuilder_util.IDTYPE_EVENT)
+
+    def _render_next(self, ntid, txtp, nbankid=None, idtype=None):
         tid = ntid.value()
         if tid == 0:
             #this is fairly common in switches, that may define all combos but some nodes don't point to anything
@@ -51,7 +55,7 @@ class RN_CAkHircNode(object):
             bank_id = ntid.get_root().get_id()
 
         builder = self._builder
-        bnode = builder._get_bnode_by_ref(bank_id, tid, sid_info=None, nbankid_info=nbankid) #self.sid
+        bnode = builder._get_bnode(bank_id, tid, idtype, sid_info=None, nbankid_info=nbankid) #self.sid
         if not bnode:
             return
 

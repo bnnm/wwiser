@@ -1,5 +1,5 @@
 import logging
-from . import wbuilder_util as ru
+from . import wbuilder_util
 
 # BUILDER
 # Takes the parsed bank nodes and rebuilds them to simpler "builder node" (bnode) objects
@@ -15,8 +15,8 @@ from . import wbuilder_util as ru
 class Builder(object):
     def __init__(self):
         # nodes (default parser nodes) and bnodes (rebuilt simplified nodes)
-        self._ref_to_node = {}              # bank + sid > parser node
-        self._id_to_refs = {}               # sid > bank + sid list
+        self._ref_to_node = {}              # bank + sid + type > parser node
+        self._id_to_refs = {}               # sid + type > bank + sid + type list
         self._node_to_bnode = {}            # parser node > rebuilt node
 
         self._missing_nodes_loaded = {}     # missing nodes that should be in loaded banks (event garbage left by Wwise)
@@ -79,49 +79,62 @@ class Builder(object):
     #--------------------------------------------------------------------------
 
     # register a new node (should be from HIRC)
-    def register_node_ref(self, bank_id, sid, node):
+    def register_node(self, bank_id, sid, node):
         # Objects can be repeated when saved to different banks, and should be clones (ex. Magatsu Wahrheit, Ori ATWOTW).
         # Except sometimes they aren't, so we need to treat bank+id as separate things (ex. Detroit, Punch Out).
         # Doesn't seem allowed in Wwise but it's possible if devs manually load banks without conflicting ids.
         # ids may be in other banks though, so must also allow finding by single id
 
-        ref = (bank_id, sid)
+        hircname = node.get_name()
+        idtype = wbuilder_util.get_builder_hirc_idtype(hircname)
 
-        if self._ref_to_node.get(ref) is not None:
-            logging.debug("generator: ignored repeated bank %s + id %s", bank_id, sid)
+        ref = (bank_id, sid, idtype)
+
+        # add to regular list
+        if self._ref_to_node.get(ref) is not None: # common
+            logging.debug("generator: ignored repeated bank %s + id %s + idtype %s", bank_id, sid, idtype)
             return
         self._ref_to_node[ref] = node
 
+        # in case we don't know the bank on get_node
+        subref = (sid, idtype)
         if sid not in self._id_to_refs:
-            self._id_to_refs[sid] = []
-        self._id_to_refs[sid].append(ref)
+            self._id_to_refs[subref] = []
+        self._id_to_refs[subref].append(ref)
 
-        hircname = node.get_name()
         if hircname not in self._hircname_to_nodes:
             self._hircname_to_nodes[hircname] = []
         self._hircname_to_nodes[hircname].append(node)
         return
 
     # gets a registered node (from HIRC chunk)
-    def _get_node_by_ref(self, bank_id, sid):
-        ref = (bank_id, sid)
+    def __get_node(self, bank_id, sid, idtype):
+        if not idtype:
+            idtype = wbuilder_util.IDTYPE_AUDIO
+
+        ref = (bank_id, sid, idtype)
+
         # find node in current bank
         node = self._ref_to_node.get(ref)
-        # try node in another bank
         if not node:
-            refs = self._id_to_refs.get(sid)
+            # often objects refer to other objects just by ID, so we don't know the exact bank
+            # try to find this id/type in any of the loaded banks
+            subref = (sid, idtype)
+            refs = self._id_to_refs.get(subref)
             if not refs:
+                logging.debug("generator: id %s + idtype %s not found in any bank", sid, idtype)
                 return None
+
             if len(refs) > 1:
-                # could try to figure out if nodes are equivalent before reporting?
-                logging.debug("generator: id %s found in multiple banks, not found in bank %s", sid, bank_id)
+                # could try to figure out if nodes are equivalent before reporting? (may happen when loading lots of similar banks)
+                logging.debug("generator: id %s + idtype %s found in multiple banks, not found in bank %s", sid, idtype, bank_id)
                 self._multiple_nodes[sid] = True
             ref = refs[0]
             node = self._ref_to_node.get(ref)
         return node
 
+    # transition nodes in mswitches/mranseq (that point to segments) don't get used, register to generate at the end
     def _get_transition_node(self, ntid):
-        # transition nodes in switches don't get used, register to generate at the end
         if not ntid:
             return None
 
@@ -130,14 +143,14 @@ class Builder(object):
         if not tid:
             return None
 
-        node = self._get_node_by_ref(bank_id, tid)
-        __ = self._get_bnode(node) #force parse/register (so doesn't appear as unused), but don't use yet
+        node = self.__get_node(bank_id, tid, wbuilder_util.IDTYPE_AUDIO) #musicsegment
+        __ = self._init_bnode(node) #force parse/register (so doesn't appear as unused), but don't use yet
         return node
 
 
     def has_unused(self):
         # find if useful nodes where used
-        for hirc_name in ru.UNUSED_HIRCS:
+        for hirc_name in wbuilder_util.UNUSED_HIRCS:
             nodes = self._hircname_to_nodes.get(hirc_name, [])
             for node in nodes:
                 if id(node) not in self._used_node:
@@ -145,13 +158,13 @@ class Builder(object):
                     #remove some false positives
                     if name == 'CAkMusicSegment':
                         #unused segments may not have child nodes (silent segments are ignored)
-                        bnode = self._get_bnode(node, mark_used=False)
+                        bnode = self._init_bnode(node, mark_used=False)
                         if bnode and bnode.ntids:
                             return True
         return False
 
     def get_unused_names(self):
-        return ru.UNUSED_HIRCS
+        return wbuilder_util.UNUSED_HIRCS
 
     def get_unused_list(self, hirc_name):
         results = []
@@ -164,14 +177,14 @@ class Builder(object):
     #--------------------------------------------------------------------------
 
     # Finds a builder node from a bank+id ref
-    def _get_bnode_by_ref(self, bank_id, tid, sid_info=None, nbankid_info=None):
+    def _get_bnode(self, bank_id, tid, idtype=None, sid_info=None, nbankid_info=None):
         if bank_id <= 0  or tid <= 0:
             # bank -1 seen in KOF12 bgm's play action referencing nothing
             return
 
-        node = self._get_node_by_ref(bank_id, tid)
+        node = self.__get_node(bank_id, tid, idtype)
         if node:
-            bnode = self._get_bnode(node)
+            bnode = self._init_bnode(node)
         else:
             bnode = None
 
@@ -212,7 +225,7 @@ class Builder(object):
     # Takes a parser "node" and makes a rebuilt "bnode" for txtp use.
     # Normally would only need to build per sid and ignore repeats (clones) in different banks, but
     # some games repeat sid for different objects in different banks (not clones), so just make one per node.
-    def _get_bnode(self, node, mark_used=True):
+    def _init_bnode(self, node, mark_used=True):
         if not node:
             return None
 
@@ -224,7 +237,7 @@ class Builder(object):
         # builder node with a helper class and save to cache
         # (some banks get huge and call the same things again and again, it gets quite slow to parse every time)
         hircname = node.get_name()
-        bclass = ru.get_builder_hirc(hircname)
+        bclass = wbuilder_util.get_builder_hirc_class(hircname)
 
         bnode = bclass()
         bnode.init_builder(self)

@@ -182,8 +182,8 @@ class CAkHircNode(object):
                     continue
                 tid = nstateinstanceid.value()
 
-                # state should exist as a node and have a volume value (states for other stuff are common)
-                bstate = self._builder._get_bnode_by_ref(bank_id, tid, self.sid)
+                # state should exist as a node and have a property value
+                bstate = self._builder._get_bnode(bank_id, tid, sid_info=self.sid)
                 has_volumes = bstate and bstate.config.volume
                 if not has_volumes:
                     continue
@@ -255,7 +255,7 @@ class CAkHircNode(object):
                 # newer games use another CAkFxCustom (though in theory could inline)
                 bank_id = source.nsrc.get_root().get_id()
                 tid = source.tid
-                bfxcustom = self._builder._get_bnode_by_ref(bank_id, tid, self.sid)
+                bfxcustom = self._builder._get_bnode(bank_id, tid, sid_info=self.sid)
                 if bfxcustom:
                     source.plugin_fx = bfxcustom.fx
 

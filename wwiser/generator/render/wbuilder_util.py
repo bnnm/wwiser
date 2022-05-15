@@ -51,7 +51,7 @@ _HIRC_BUILDER_NODES = {
     #CAkTimeModulator
 }
 
-def get_builder_hirc(hircname):
+def get_builder_hirc_class(hircname):
     return _HIRC_BUILDER_NODES.get(hircname, _DEFAULT_BUILDER_NODE)
 
 
@@ -97,11 +97,12 @@ UNUSED_HIRCS = [
 # implicits
 IDTYPE_EVENT = 0
 IDTYPE_DIALOGUEEVENT = 1
+# not used directly in hircs (kind of implicit)
 IDTYPE_STATE_GROUP = 2
 IDTYPE_STATE_VALUE = 3
 IDTYPE_SWITCH_GROUP = 4
 IDTYPE_SWITCH_VALUE = 5
-IDTYPE_GAMEPARAMETER = 6  #used for rtpcs
+IDTYPE_GAMEPARAMETER = 6
 IDTYPE_TRIGGER = 7
 IDTYPE_ARGUMENTS = 8 #old dialogueevent args, uses switches or states in later versions
 
@@ -129,10 +130,6 @@ _IDTYPE_HIRCS = {
 
     'CAkAudioDevice': IDTYPE_AUDIODEVICE,
 
-    #CAkFxCustom: #similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
-
-    # default: all others
-
     # audio (default since most objects are this)
     #CAkAction*
 
@@ -147,17 +144,18 @@ _IDTYPE_HIRCS = {
     #CAkMusicSegment
     #CAkMusicTrack
 
-    #CAkState #internal objects, despite the name
-    #CAkFeedbackNode #assumed, played like audio
+    #CAkState  #audio objects, despite the name
+    #CAkFeedbackNode  #assumed, played like audio
 
-    #CAkLFOModulator #can be named in editor, but internally uses guidnames
-    #CAkEnvelopeModulator #same
-    #CAkTimeModulator #same
-    #CAkAttenuation #assumed to be the same
+    #CAkLFOModulator  #can be named in editor, but internally uses guidnames
+    #CAkEnvelopeModulator  #same
+    #CAkTimeModulator  #same
+    #CAkAttenuation  #assumed to be the same
+    #CAkFxCustom:  #assumed, not using hashnames
 
     #CAkStinger #TODO hack, remove
 }
 
 
-def get_builder_hirc_type(hircname):
+def get_builder_hirc_idtype(hircname):
     return _IDTYPE_HIRCS.get(hircname, IDTYPE_AUDIO)

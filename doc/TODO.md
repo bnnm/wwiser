@@ -2,7 +2,6 @@
 Low priority TODOs
 
 ## general
-- `from wwiser import ...` vs `from . import ...`?
 - fix todo-s 
 
 ## parser
@@ -24,14 +23,12 @@ Low priority TODOs
 - check if port is open (may open 2 instances and only 1 server works, but there is no port error)
 - improve threading/pool? (not too useful as doesn't have that many resources)
 - maybe move preloads to globals, auto init, recreate node printer every time
-- divide readme and print multiple docs? (selectable links on top)
-- print rebuilder nodes in simple mode (test with CAkSound), use templates to print to .html
 - button to hide generic/useless stuff? (PositioningParams, AdvSettingsParams, etc)
 - add combo with all common HIRC types
 - links: if not found/loaded call bank and load sid id
 
 ## names
-- add key per game in DB so wwnames can contain everything
+- add key per game in DB so wwnames can contain everything, register "default" common names
 
 ## txtp
 - txtp should round up numbers? 1/48000 ~= 0.0000208333 * 48000 = 0.999999 > 1 or 0?
@@ -46,13 +43,10 @@ Low priority TODOs
 - recheck TTime in earlier games (ex. Trine 2)
 - fix multiloops
 - DelayTime/InitialDelay may not work correctly with loops (ex. John Wick Hex 2932040671)
+  - difference between them? 
 - apply default bus volumes for better results? (ex. Astral Chain, Gunslinger Stratos)
 - mark loop inside inner group (double loop) as multiloop (ex. DmC last boss)
 - set multiple rtpc and generate combos: VALUE=0.0,1.0 to make 2 txtp (ex. Batman Arkham City)
   - multi-rtpc combine all: VALUE1=0.0,1.0 + VALUE2=2.0,3.0 = to make 4 txtp
 - rtpc of makeupgain?
 - apply rtcp default? option to use it? print in tree?
-- CAkFxShareSet an CAkBus can reuse hashname IDs (must use class name to separate)
-  - unneeded as neither are generated
-  - may need to edit add_node_ref to find by class, but objects don't have a target ID
-  - Wwise allows this, unsure how it finds objects

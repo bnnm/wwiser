@@ -86,18 +86,24 @@ class RN_CAkActionTrigger(RN_CAkAction):
 
 #******************************************************************************
 
+#TODO check action config, shouldn't have?
+
 class RN_CAkActionPlay(RN_CAkAction):
 
     def _render_txtp(self, bnode, txtp):
         txtp.group_single(bnode.config) # rare but may contain config
-        self._render_next(bnode.ntid, txtp, bnode.nbankid)
+        self._render_next(bnode.ntid, txtp, nbankid=bnode.nbankid)
         txtp.group_done()
         return
 
 #******************************************************************************
 
-class RN_CAkActionPlayEvent(RN_CAkActionPlay): #RN_CAkActionPlay
-    pass
+class RN_CAkActionPlayEvent(RN_CAkAction):
+    def _render_txtp(self, bnode, txtp):
+        txtp.group_single(bnode.config) # rare but may contain config
+        self._render_next_event(bnode.ntid, txtp, nbankid=bnode.nbankid)
+        txtp.group_done()
+        return
 
 #******************************************************************************
 

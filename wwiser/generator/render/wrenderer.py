@@ -11,7 +11,7 @@ class Renderer(object):
 
 
     def begin_txtp(self, txtp, node):
-        bnode = self._builder._get_bnode(node)
+        bnode = self._builder._init_bnode(node)
         if not bnode:
             return
 
@@ -24,7 +24,7 @@ class Renderer(object):
         return
 
     def begin_txtp_stinger(self, txtp, stinger):
-        bnode = self._builder._get_bnode(stinger.node) #sid is stinger.ntrigger.value()
+        bnode = self._builder._init_bnode(stinger.node) #sid is stinger.ntrigger.value()
         if not bnode:
             return
 
@@ -63,12 +63,3 @@ class Renderer(object):
 
         #self._node_to_bnode[id(node)] = rnode
         return rnode
-
-    #-------------------------------------
-
-    # info when generating transitions
-    def _register_transitions(self, txtp, ntransitions):
-        for ntid in ntransitions:
-            node = self._builder._get_transition_node(ntid)
-            txtp.transitions.add(node)
-        return

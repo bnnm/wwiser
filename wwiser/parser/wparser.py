@@ -2716,7 +2716,7 @@ def CAkBankMgr__ReadSourceParent_CAkFeedbackNode_(obj):
     cls = wcls.CAkFeedbackNode__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID') #?
+    obj.sid('ulID').fnv(wdefs.fnv_no) #assumed, behaves like an audio object
 
     CAkFeedbackNode__SetInitialValues(obj, cls)
     return
@@ -2793,7 +2793,7 @@ def CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_(obj):
     cls = wcls.CAkFxCustom__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID') #fnv_sfx?
+    obj.sid('ulID').fnv(wdefs.fnv_sfx)
 
     CAkFxBase__SetInitialValues(obj, cls)
     return
@@ -2838,7 +2838,7 @@ def CAkBankMgr__StdBankRead_CAkLFOModulator_CAkModulator_(obj):
     cls = wcls.CAkLFOModulator__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID') #fnv?
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     #callback, can only logically be this
     CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
@@ -2854,7 +2854,7 @@ def CAkBankMgr__StdBankRead_CAkEnvelopeModulator_CAkModulator_(obj):
     cls = wcls.CAkEnvelopeModulator__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID') #fnv?
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     #callback, can only logically be this
     CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
@@ -2879,7 +2879,7 @@ def CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_(obj):
     cls = wcls.CAkAudioDevice__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID') #fnv?
+    obj.sid('ulID').fnv(wdefs.fnv_sfx)
 
     if    cls.version <= 136:
         CAkFxBase__SetInitialValues(obj, cls)
@@ -2897,7 +2897,7 @@ def CAkBankMgr__StdBankRead_CAkTimeModulator_CAkModulator_(obj):
     cls = wcls.CAkTimeModulator__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID') #fnv?
+    obj.sid('ulID').fnv(wdefs.fnv_no)
 
     #callback, can only logically be this
     CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?

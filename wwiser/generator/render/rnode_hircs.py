@@ -194,7 +194,8 @@ class RN_CAkSound(RN_CAkHircNode):
 class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        self._register_transitions(txtp, bnode.ntransitions)
+        self._register_transitions(txtp, bnode.rules)
+        self._register_stingers(txtp, bnode.stingerlist)
 
         if bnode.ntid:
             # rarely tree plays a single object with any state
@@ -207,8 +208,6 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
             if not txtp.params:
                 # find all possible gamesyncs paths (won't generate txtp)
-                txtp.ppaths.add_stingers(bnode.stingerlist)
-
                 for path, ntid in bnode.tree.paths:
                     unreachable = txtp.ppaths.adds(path)
                     if not unreachable:
@@ -262,10 +261,8 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        self._register_transitions(txtp, bnode.ntransitions)
-
-        if not txtp.params:
-            txtp.ppaths.add_stingers(bnode.stingerlist)
+        self._register_transitions(txtp, bnode.rules)
+        self._register_stingers(txtp, bnode.stingerlist)
 
         txtp.group_single(bnode.config) #typically useless but may have volumes
         self._process_playlist(txtp, bnode.items)
@@ -316,7 +313,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 class RN_CAkMusicSegment(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        txtp.ppaths.add_stingers(bnode.stingerlist)
+        self._register_stingers(txtp, bnode.stingerlist)
 
         # empty segments are allowed as silence
         if not bnode.ntids:

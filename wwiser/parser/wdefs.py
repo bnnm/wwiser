@@ -436,6 +436,8 @@ AkTransitionRampingType = wfmt.FormatterLUT({
   0x2: "FilteringOverTime",
 })
 
+# Wwise allows customs props/rtpcs (meaning not defined in bnk), that start right after last valid ID.
+
 #062<=
 AkPropID_062 = wfmt.FormatterLUT({
   0x0: "Volume",
@@ -658,7 +660,7 @@ AkPropID_126 = wfmt.FormatterLUT({
   0x3A: "Loop",
   0x3B: "InitialDelay",
 
-  0xFF: "Unknown", #seen in DMC5, value 1.0
+  0xFF: "Custom", #seen in DMC5, value 1.0
 })
 # 128>=
 AkPropID_128 = wfmt.FormatterLUT({
@@ -735,7 +737,7 @@ AkPropID_128 = wfmt.FormatterLUT({
   0x48: "ReflectionBusVolume", #135>=
   0x49: "PAN_UD", #140>=
   #AkPropID_NUM = max
-})
+}) #default='Custom' ##should auto-set custom props?
 AkPropID = None
 
 #046>= 088<=
@@ -1255,9 +1257,9 @@ AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
   0x1E: "FeedbackLowpass",
   0x1F: "FeedbackPitch",
 
-  0x3C: "Unknown?", #Quantum Conundrum (found near -96, some volume?)
-  0x3D: "Unknown?", #DmC (found near -96, some volume?)
-  0x3E: "Unknown?", #same
+  0x3C: "Custom", #Quantum Conundrum (found near -96, some volume?)
+  0x3D: "Custom", #DmC (found near -96, some volume?)
+  0x3E: "Custom", #same
 })
 #072==
 AkRTPC_ParameterID_072 = wfmt.FormatterLUT({

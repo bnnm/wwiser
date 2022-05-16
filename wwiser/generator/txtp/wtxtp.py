@@ -1,6 +1,7 @@
 import logging, os
 from ... import wversion
 from ..gamesync import wgamesync, wvolumes
+from .. import wtransitions, wstingers
 from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 # Helds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
@@ -44,12 +45,14 @@ from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 class Txtp(object):
 
-    def __init__(self, txtpcache, params=None, transitions=None):
+    def __init__(self, txtpcache, params=None):
         self.params = params  #current gamesync "path" config (default/empty means must find paths)
         self.ppaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
         self.vpaths = wvolumes.VolumePaths() #states used to change volume/mute tracks
         self.txtpcache = txtpcache
-        self.transitions = transitions
+        self.transitions = wtransitions.Transitions()
+        self.stingers = wstingers.Stingers()
+
         self.info = wtxtp_info.TxtpInfo(txtpcache)  # node info to add in output as comment
 
         # config during printing
@@ -68,14 +71,15 @@ class Txtp(object):
         return
 
     # start of txtp generation
-    def begin(self, node, root_config, nname=None):
+    def begin(self, node, root_config):
         # tree
         self._troot = wtxtp_tree.TxtpNode(None, root_config)
         self._current = self._troot
 
         # for names
         ntid = node.find1(type='sid')
-        self._namer.update_config(node, nname, ntid)
+        self._namer.node = node
+        self._namer.ntid = ntid
 
         self._basepath = self.txtpcache.get_basepath(node)
 
@@ -88,6 +92,10 @@ class Txtp(object):
 
     def set_bstinger(self, bstinger):
         self._namer.bstinger = bstinger
+
+    def set_btransition(self, btransition):
+        self._namer.btransition = btransition
+
 
     # write main .txtp
     # Sometimes there are multiple small variations with the same .txtp tree, in those cases 

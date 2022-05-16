@@ -178,7 +178,6 @@ class GamesyncPaths(object):
         self._txtpcache = txtpcache
         self._root = _GamesyncNode(None, [])
         self._current = self._root
-        self.stingers = []
 
     def is_empty(self):
         return self._empty
@@ -265,11 +264,6 @@ class GamesyncPaths(object):
 
         for child in node.children:
             self._find_path(child)
-
-    def add_stingers(self, stingerlist):
-        if not stingerlist:
-            return
-        self.stingers.extend(stingerlist.stingers)
 
 #******************************************************************************
 

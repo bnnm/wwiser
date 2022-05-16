@@ -341,60 +341,40 @@ class Generator(object):
         # When default_params aren't set and objects need them, Txtp finds possible params, added
         # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then "music=b02")
 
-        transitions = wtransitions.Transitions(node)
         ncaller = node.find1(type='sid')
 
         try:
             # base .txtp
-            txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params, transitions=transitions)
+            txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params)
             self._renderer.begin_txtp(txtp, node)
 
             ppaths = txtp.ppaths  # gamesync "paths" found during process
             if ppaths.is_empty():
-                # single .txtp (no variables)
-                txtp.write()
+                self._generate_main(ncaller, txtp)
+
             else:
                 # .txtp per variable combo
                 unreachables = False #check if any txtp has unreachables
                 combos = ppaths.combos()
                 for combo in combos:
                     #logging.info("generator: combo %s", combo.elems)
-                    txtp = wtxtp.Txtp(self._txtpcache, params=combo, transitions=transitions)
+                    txtp = wtxtp.Txtp(self._txtpcache, params=combo)
                     self._renderer.begin_txtp(txtp, node)
-                    txtp.write()
+
+                    self._generate_main(ncaller, txtp)
                     if txtp.vpaths.has_unreachables():
                         unreachables = True
 
                 if unreachables:
                     for combo in combos:
                         #logging.info("generator: combo %s", combo.elems)
-                        txtp = wtxtp.Txtp(self._txtpcache, params=combo, transitions=transitions)
+                        txtp = wtxtp.Txtp(self._txtpcache, params=combo)
                         txtp.vpaths.set_unreachables_only()
                         self._renderer.begin_txtp(txtp, node)
-                        txtp.write()
 
+                        self._generate_main(ncaller, txtp)
 
-            # stingers found during process
-            if ppaths.stingers:
-                params = self._default_params #?
-                for bstinger in ppaths.stingers:
-                    txtp = wtxtp.Txtp(self._txtpcache, params=params)
-                    self._renderer.begin_txtp_ntid(txtp, bstinger.ntid)
-                    txtp.set_ncaller(ncaller)
-                    txtp.set_bstinger(bstinger)
-                    txtp.write()
-
-            # transitions found during process
-            tr_nodes = transitions.get_nodes()
-            if tr_nodes:
-                params = self._default_params #?
-                self._txtpcache.stats.transition_mark = True
-                for ncaller, transition in tr_nodes:
-                    txtp = wtxtp.Txtp(self._txtpcache, params=params)
-                    self._renderer.begin_txtp(txtp, transition)
-                    txtp.set_ncaller(ncaller)
-                    txtp.write()
-                self._txtpcache.stats.transition_mark = False
+            #TODO improve combos (unreachables doesn't make transitions?)
 
         except Exception: #as e
             sid = 0
@@ -408,6 +388,32 @@ class Generator(object):
             raise
 
         return
+
+    def _generate_main(self, ncaller, txtp):
+        # main .txtp
+        txtp.write()
+
+        # stingers found during process
+        bstingers = txtp.stingers.get_items()
+        if bstingers:
+            params = self._default_params #?
+            for bstinger in bstingers:
+                txtp = wtxtp.Txtp(self._txtpcache, params=params)
+                self._renderer.begin_txtp_ntid(txtp, bstinger.ntid)
+                txtp.set_ncaller(ncaller)
+                txtp.set_bstinger(bstinger)
+                txtp.write()
+
+        # transitions found during process
+        btransitions = txtp.transitions.get_items()
+        if btransitions:
+            params = self._default_params #?
+            for btransition in btransitions:
+                txtp = wtxtp.Txtp(self._txtpcache, params=params)
+                self._renderer.begin_txtp_ntid(txtp, btransition.ntid)
+                txtp.set_ncaller(ncaller)
+                txtp.set_btransition(btransition)
+                txtp.write()
 
     #--------------------------------------------------------------------------
 

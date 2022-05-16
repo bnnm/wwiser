@@ -210,15 +210,10 @@ class CAkHircNode(object):
         return
 
     def _build_transition_rules(self, node, is_switch):
-        rules = bnode_transitions.AkTransitionRules(node)
-        for ntid in rules.ntrn:
-            if ntid.value() == 0:
-                continue
-            if is_switch:
-                self.ntransitions.append(ntid)
-            else:
-                # rare in playlists (Polyball, Spiderman)
-                self._builder.report_transition_object()
+        self.rules = bnode_transitions.AkTransitionRules(node)
+        if not is_switch and self.rules.ntrns:
+            # rare in playlists (Polyball, Spiderman)
+            self._builder.report_transition_object()
         return
 
     def _build_tree(self, node):

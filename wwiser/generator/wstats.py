@@ -16,7 +16,6 @@ class Stats(object):
         self._banks = {}
 
         # process flag #TODO: improve
-        self.transition_mark = False
         self.unused_mark = False
 
 

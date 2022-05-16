@@ -290,7 +290,7 @@ class CAkMusicSwitchCntr(CAkHircNode):
         self.gvalue_ntid = {}
         self.has_tree = None
         self.ntid = False
-        self.ntransitions = []
+        self.rules = None
         self.tree = None
 
     def _build(self, node):
@@ -329,7 +329,7 @@ class CAkMusicRanSeqCntr(CAkHircNode):
     def __init__(self):
         super(CAkMusicRanSeqCntr, self).__init__()
         self.items = []
-        self.ntransitions = []
+        self.rules = None
 
     def _build(self, node):
         self._build_audio_config(node)

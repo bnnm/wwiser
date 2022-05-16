@@ -33,17 +33,11 @@ class TxtpNamer(object):
 
     def __init__(self, txtp):
         self.txtp = txtp
-
         self.node = None
-        self.nname = None
         self.ntid = None
         self.ncaller = None
         self.bstinger = None
-
-    def update_config(self, node, nname, ntid):
-        self.node = node
-        self.nname = nname
-        self.ntid = ntid
+        self.btransition = None
 
 
     def clean_name(self, name):
@@ -113,13 +107,10 @@ class TxtpNamer(object):
         txtp = self.txtp
         node = self.node #named based on default node, usually an event
 
-        nname = self.nname
         ntid = self.ntid
         
 
-        if nname:
-            attrs = nname.get_attrs()
-        elif ntid:
+        if ntid:
             attrs = ntid.get_attrs()
         else:
             attrs = {}
@@ -138,8 +129,8 @@ class TxtpNamer(object):
 
 
         is_stinger = self.bstinger is not None
+        is_transition = self.btransition is not None
         is_unused = txtp.txtpcache.stats.unused_mark
-        is_transition = txtp.txtpcache.stats.transition_mark
 
         # name examples:
         # - play_music
@@ -197,8 +188,10 @@ class TxtpNamer(object):
         # usually only regular objects can be like this
         if is_unused:
             name += '~unused'
-        if is_transition: #TODO may need to include id
-            name += '~transition'
+
+        if is_transition:
+            tid = self.btransition.tid
+            name += '~{transition-%s}' % (tid)
 
         # a trigger (hashname) can call different segments, so we need both
         if is_stinger:
@@ -209,7 +202,7 @@ class TxtpNamer(object):
             if not trigname:
                 trigname = ntrigger.value()
 
-            name += "~{stinger=%s-%s}" % (trigname, tid)
+            name += "~{stinger-%s=%s}" % (tid, trigname)
 
         # params
         name += txtp.info.get_gsnames()

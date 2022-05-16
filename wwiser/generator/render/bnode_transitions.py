@@ -125,7 +125,7 @@ class AkTransitionRule(object):
 class AkTransitionRules(object):
     def __init__(self, node):
         self._rules = []
-        self.ntrn = []
+        self.ntrns = []
 
         self._build(node)
 
@@ -134,8 +134,8 @@ class AkTransitionRules(object):
         for nrule in nrules:
             rule = AkTransitionRule(nrule)
             self._rules.append(rule)
-            if rule.rtrn and rule.rtrn.ntid:
-                self.ntrn.append(rule.rtrn.ntid)
+            if rule.rtrn and rule.rtrn.tid: #segment 0 = useless
+                self.ntrns.append(rule.rtrn)
 
     def get_rule(self, src_id, dst_id):
         #TODO detect -1/0 too

@@ -16,10 +16,18 @@ class RN_CAkHircNode(object):
     #--------------------------------------------------------------------------
 
     # info when generating transitions's musicsegments
-    def _register_transitions(self, txtp, ntransitions):
-        for ntid in ntransitions:
-            node = self._builder._get_node_link(ntid)
-            txtp.transitions.add(node)
+    def _register_transitions(self, txtp, rules):
+        #if not txtp.params:
+        #    return
+
+        txtp.transitions.add(rules)
+        return
+
+    def _register_stingers(self, txtp, bstingerlist):
+        #if not txtp.params:
+        #    return
+
+        txtp.stingers.add(bstingerlist)
         return
 
     def _barf(self, text="not implemented"):

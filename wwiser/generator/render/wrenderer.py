@@ -15,7 +15,7 @@ class Renderer(object):
         if not bnode:
             return
 
-        root_config = bnode_misc.NodeConfig()
+        root_config = bnode_misc.NodeConfig() #TODO use bnode's?
         txtp.begin(node, root_config)
 
         rnode = self._get_rnode(bnode)

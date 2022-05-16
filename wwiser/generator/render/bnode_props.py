@@ -51,21 +51,29 @@ class CAkProps(object):
         self.idelay = None
         
         self.unknowns = []
+        self.fields_fld = []
         self.fields_std = []
         self.fields_rng = []
 
         self._build(node)
 
     def _build(self, node):
+        # props are a list of values or ranged values.
+        # newer wwise use 2 lists (both should exist even if empty), while
+        # older wwise use regular fields as properties, that vary a bit
+        # props are valid once at least one is found.
+        self._build_new(node)
+        self._build_old(node)
 
-        #newer to older types
+
+    def _build_new(self, node):
+
+        # standard values (newer to older)
         nbundles = node.find(name='AkPropBundle<AkPropValue,unsigned char>')
         if not nbundles:
             nbundles = node.find(name='AkPropBundle<float,unsigned short>')
         if not nbundles:
             nbundles = node.find(name='AkPropBundle<float>')
-
-        # standard values if set
         if nbundles:
             self.valid = True
             nprops = nbundles.finds(name='AkPropBundle')
@@ -99,7 +107,7 @@ class CAkProps(object):
 
                 self.fields_std.append( (nkey, nval) )
 
-        #TODO
+
         # ranged values, wwise picks one value at random on each play
         nranges = node.find(name='AkPropBundle<RANGED_MODIFIERS<AkPropValue>>')
         if nranges:
@@ -112,14 +120,71 @@ class CAkProps(object):
 
                 self.fields_rng.append( (nkey, nmin, nmax) )
 
+    def _build_old(self, node):
+        if self.valid:
+            return
+
+        # only one should exist
+        naudio = None
+        naction = None
+
+        if node.get_name() == 'NodeInitialParams':
+            naudio = node
+        elif node.get_name() == 'ActionInitialValues':
+            naction = node
+        else:
+            naudio = node.find1(name='NodeInitialParams')
+            if not naudio:
+                naction = node.find1(name='ActionInitialValues')
+
+        if naudio:
+            self._build_old_audionode(naudio)
+        if naction:
+            self._build_old_actionnode(naction)
+
+    def _build_old_actionnode(self, nbase):
+        if not nbase:
+            return
+        self.valid = True
+
+        #may use PlayActionParams + eFadeCurve when TransitionTime is used to make a fade-in (goes after delay)
+
+        for prop in _OLD_ACTION_PROPS:
+            nprop = nbase.find(name=prop)
+            if not nprop:
+                continue
+            value = nprop.value()
+            if value == 0:
+                continue
+
+            #if prop == 'TTime' or prop == 'TTimeMin': #fade-in curve
+            #    self._barf("found " + prop)
+
+            if prop == 'tDelay' or prop == 'tDelayMin':
+                self.idelay = value
+
+            self.fields_fld.append(nprop)
+
+
+    def _build_old_audionode(self, nbase):
+        if not nbase:
+            return
+        self.valid = True
+
+        for prop in _OLD_AUDIO_PROPS:
+            nprop = nbase.find(name=prop)
+            if not nprop:
+                continue
+            value = nprop.value()
+            if value == 0:
+                continue
+
+            if prop == 'Volume':
+                self.volume = value
+            #TODO min/max
+
+            self.fields_fld.append(nprop)
+
+
     def has_volumes(self):
         return self.volume or self.makeupgain
-
-class CAkActionProps(object):
-    pass
-
-class CAkStateProps(object):
-    pass
-
-class CAkNodeProps(object):
-    pass

@@ -24,7 +24,6 @@ class CAkState(CAkHircNode):
         nbase = node.find1(name='StateInitialValues')
 
         self.props = self._make_props(nbase)
-        self._build_audio_props_old(nbase)
         return
 
 #plugin parameters, sometimes needed
@@ -73,7 +72,6 @@ class CAkDialogueEvent(CAkHircNode):
         nbase = node.find1(name='DialogueEventInitialValues')
 
         self.props = self._make_props(nbase) # not sure how useful these are
-        self._build_audio_props_old(nbase) 
         if self.config.loop is not None:
             self._barf("loop flag")
 
@@ -96,7 +94,6 @@ class CAkAction(CAkHircNode):
         self.ntid = ntid
 
         self.props = self._make_props(nbase)
-        self._build_action_props_old(nbase)
 
         # common parent
         self._build_subaction(nbase)
@@ -168,7 +165,6 @@ class CAkParameterNode(CAkHircNode):
 
         #NodeInitialParams, sometimes
         self.props = self._make_props(nbase)
-        self._build_audio_props_old(nbase)
 
         #PositioningParams: object position stuff
         #AuxParams: aux-bus config

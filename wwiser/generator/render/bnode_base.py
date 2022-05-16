@@ -66,6 +66,10 @@ class CAkHircNode(object):
         self.config.delay = props.delay
         self.config.idelay = props.idelay
 
+
+        for nfld in props.fields_fld:
+            self.fields.prop(nfld)
+
         for nkey, nval in props.fields_std:
             self.fields.keyval(nkey, nval)
 
@@ -73,56 +77,6 @@ class CAkHircNode(object):
             self.fields.keyminmax(nkey, nmin, nmax)
 
         return props
-
-    OLD_ACTION_PROPS = [
-        'tDelay', 'tDelayMin', 'tDelayMax', 'TTime', 'TTimeMin', 'TTimeMax',
-    ]
-
-    def _build_action_props_old(self, nbase):
-        if self.props:
-            return
-
-        #TODO
-        #may use PlayActionParams + eFadeCurve when TransitionTime is used to make a fade-in (goes after delay)
-
-        #older
-        for prop in self.OLD_ACTION_PROPS:
-            nprop = nbase.find(name=prop)
-            if not nprop:
-                continue
-            value = nprop.value()
-
-            #fade-in curve
-            #if value != 0 and (prop == 'TTime' or prop == 'TTimeMin'):
-            #    self._barf("found " + prop)
-
-            if value != 0 and (prop == 'tDelay' or prop == 'tDelayMin'):
-                self.config.idelay = value
-
-            if value != 0: #default to 0 if not set
-                self.fields.prop(nprop)
-
-
-    OLD_AUDIO_PROPS = [
-        'Volume', 'Volume.min', 'Volume.max', 'LFE', 'LFE.min', 'LFE.max',
-        'Pitch', 'Pitch.min', 'Pitch.max', 'LPF', 'LPF.min', 'LPF.max',
-    ]
-
-    def _build_audio_props_old(self, nbase):
-        if self.props:
-            return
-
-        #older
-        for prop in self.OLD_AUDIO_PROPS:
-            nprop = nbase.find(name=prop)
-            if not nprop:
-                continue
-            value = nprop.value()
-            if value != 0 and prop == 'Volume':
-                self.config.volume = value #also min/max
-
-            if value != 0: #default to 0 if not set
-                self.fields.prop(nprop)
 
 
     def _make_statechunk(self, nbase):

@@ -3,19 +3,32 @@ from .render import bnode_source
 
 # Moves 123.wem to /txtp/wem/123.wem, or 123.ogg/logg to /txtp/wem/123.logg if alt_exts is set
 
+_OBJECT_SOURCES = {
+    'CAkSound': 'AkBankSourceData',
+    'CAkMusicTrack': 'AkBankSourceData',
+}
+
+
 class Mover(object):
     def __init__(self, txtpcache):
         self._txtpcache = txtpcache
+        self._nodes = []
         self._moved_sources = {}
 
+    def add_node(self, node):
+        hircname = node.get_name()
+        node_name = _OBJECT_SOURCES.get(hircname)
+        if node_name:
+            nsources = node.finds(name=node_name)
+            self._nodes.extend(nsources)
 
-    def move_wems(self, nodes):
-        if not nodes:
+    def move_wems(self):
+        if not self._nodes:
             return
-        for node in nodes:
-            self.move_wem(node)
+        for node in self._nodes:
+            self._move_wem(node)
 
-    def move_wem(self, node):
+    def _move_wem(self, node):
         if not node:
             return
 

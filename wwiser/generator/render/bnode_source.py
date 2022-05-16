@@ -162,19 +162,21 @@ PLUGIN_NAME = {
 
 class AkBankSourceData(object):
     def __init__(self, nbnksrc, src_sid):
+        self._build_base(nbnksrc, src_sid)
+        self._build_media(nbnksrc)
+        self._build_plugin()
+        self._build_extension()
+        # not done by default to minimize some node finding since this option is uncommon
+        #self._load_lang()
+        self._lang_name = ''
+        self._subdir = ''
+
+
+    def _build_base(self, nbnksrc, src_sid):
         self.src_sid = src_sid
         self.nsrc = nbnksrc
-        self.nplugin = nbnksrc.find(name='ulPluginID')
-        self.nstreamtype = nbnksrc.find(name='StreamType')
-        self.nsourceid = nbnksrc.find(name='sourceID')
-        self.nfileid = nbnksrc.find(name='uFileID')
-        self.nlang = nbnksrc.find(name='bIsLanguageSpecific')
-        self._lang_loaded = False
-        self.plugin_size = None
-
-        nsize = nbnksrc.find(name='uSize')
-        if nsize:
-            self.plugin_size = nsize.value()
+        self.nplugin = nbnksrc.find(name='ulPluginID') #source type
+        self.nstreamtype = nbnksrc.find(name='StreamType') #bank/stream
 
         self.version = None
         if self.nsrc:
@@ -182,6 +184,20 @@ class AkBankSourceData(object):
 
         #0=bnk (always), 1/2=prefetch<>stream (varies with version)
         self.internal = (self.nstreamtype.value() == 0)
+
+        # plugin info
+        nsize = self.nsrc.find(name='uSize')
+        self.plugin_size = None
+        if nsize:
+            self.plugin_size = nsize.value()
+
+
+    def _build_media(self, nbnksrc):
+        #AkMediaInformation
+        self.nsourceid = nbnksrc.find(name='sourceID')
+        self.nfileid = nbnksrc.find(name='uFileID') #optional
+        self.nlang = nbnksrc.find(name='bIsLanguageSpecific') #flags
+        self._lang_loaded = False
 
         if self.nfileid:
             # in older games (<=112) fileID exists and can be different from sourceID
@@ -196,15 +212,9 @@ class AkBankSourceData(object):
             self.nfileid = self.nsourceid
         self.tid = self.nfileid.value()
 
-        self._plugin()
-        self._extension()
-        # not done by default to minimize some node finding since this option is uncommon
-        #self._load_lang()
-        self._lang_name = ''
-        self._subdir = ''
 
-    # plugin info
-    def _plugin(self):
+    def _build_plugin(self):
+        # plugin info
         plugin = self.nplugin.value()
 
         #company  = (plugin >> 4) & 0x03FF
@@ -234,13 +244,12 @@ class AkBankSourceData(object):
         # info 
         self.is_plugin_silence = (plugin == _PLUGIN_SILENCE)
 
-
         # config loaded later
         self.plugin_fx = None
 
 
     # each source may use its own extension
-    def _extension(self):
+    def _build_extension(self):
         if self.plugin_id:
             self.extension = None
             self.extension_alt = None
@@ -316,15 +325,21 @@ class AkBankSourceData(object):
         self._subdir = subdir
         
 
-class NodeFx(object):
+class CAkFx(object):
     def __init__(self, node, plugin_id):
-        self.duration = 1.0 * 1000.0
+        self.duration = 1.0 * 1000.0 #TODO default?
+        self.plugin_id = plugin_id
+        self._build(node)
 
+    def _build(self, node):
         if not node:
             return
 
-        if plugin_id == _PLUGIN_SILENCE: #silence
+        #FxBaseInitialValues
+        # fxID (may exist in AkFXCustom, or external in older versions)
+        # uSize
+        # Ak*FXParams
+        if self.plugin_id == _PLUGIN_SILENCE: #silence
             nparams = node.find1(name='AkFXSrcSilenceParams')
             ndur = nparams.find(name='fDuration')
             self.duration = ndur.value()  * 1000.0 #to ms for consistency
-

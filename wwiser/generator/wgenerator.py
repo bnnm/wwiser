@@ -28,6 +28,7 @@ class Generator(object):
         self._txtpcache = wtxtp_cache.TxtpCache()
         self._filter = wfilter.GeneratorFilter()  # filter nodes
         self._renderer = wrenderer.Renderer(self._builder, self._filter)
+        self._mover = wmover.Mover(self._txtpcache)
 
         self._txtpcache.set_basepath(banks)
         self._txtpcache.wwnames = wwnames
@@ -42,13 +43,6 @@ class Generator(object):
         self._builder.set_filter(self._filter)
 
         self._default_params = None
-
-        self._moved_sources = {}            # ref
-
-        self._object_sources = {
-            'CAkSound': 'AkBankSourceData',
-            'CAkMusicTrack': 'AkBankSourceData',
-        }
 
     #--------------------------------------------------------------------------
 
@@ -181,7 +175,6 @@ class Generator(object):
         return
 
     def _setup_nodes(self):
-        mover_nodes = []
         for bank in self._banks:
             root = bank.get_root()
             bank_id = root.get_id()
@@ -195,10 +188,10 @@ class Generator(object):
                 continue
 
             for node in items.get_children():
-                name = node.get_name()
                 nsid = node.find1(type='sid')
                 if not nsid:
-                    logging.info("generator: not found for %s in %s", name, bankname) #???
+                    hircname = node.get_name()
+                    logging.info("generator: not found for %s in %s", hircname, bankname) #???
                     continue
                 sid = nsid.value()
 
@@ -206,12 +199,9 @@ class Generator(object):
 
                 # for nodes that can contain sources save them to move later
                 if self._move:
-                    node_name = self._object_sources.get(name)
-                    if node_name:
-                        nsources = node.finds(name=node_name)
-                        mover_nodes.extend(nsources)
-        
-        self._move_wems(mover_nodes)
+                    self._mover.add_node(node)
+
+        self._move_wems()
         return
 
     def _write_normal(self):
@@ -417,9 +407,6 @@ class Generator(object):
 
     #--------------------------------------------------------------------------
 
-    def _move_wems(self, nodes):
-        if not nodes:
-            return
-        mover = wmover.Mover(self._txtpcache)
-        mover.move_wems(nodes)
+    def _move_wems(self):
+        self._mover.move_wems()
         return

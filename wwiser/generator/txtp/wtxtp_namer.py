@@ -165,6 +165,7 @@ class TxtpNamer(object):
             if not name:
                 name = bankname
 
+
         # add extra info to the name
         if extra_name:
             #include base node's tid
@@ -175,6 +176,10 @@ class TxtpNamer(object):
             else:
                 info = "%04u" % (int(index))
 
+            # usually only regular objects can be like this (here so it shows like -xxxx~unused-musicsegment)
+            if is_unused:
+                info += '~unused'
+
             classname = node.get_name()
             shortname = _CLASSNAME_SHORTNAMES.get(classname)
             if shortname:
@@ -184,10 +189,6 @@ class TxtpNamer(object):
 
             if txtp.txtpcache.x_nameid and ntid and ntid.value():
                 name += "-%s" % (ntid.value())
-
-        # usually only regular objects can be like this
-        if is_unused:
-            name += '~unused'
 
         if is_transition:
             tid = self.btransition.tid

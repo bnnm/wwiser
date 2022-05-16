@@ -23,24 +23,9 @@ class Renderer(object):
 
         return
 
-    def begin_txtp_stinger(self, txtp, stinger):
-        bnode = self._builder._init_bnode(stinger.node) #sid is stinger.ntrigger.value()
-        if not bnode:
-            return
-
-        # not correct since CAkStinger have no sid (same TriggerID can call different segments),
-        # this is to show info
-        bnode.sid = stinger.ntrigger.value()
-        bnode.nsid = stinger.ntrigger
-        bnode.ntid = stinger.ntid
-
-        root_config = bnode_misc.NodeConfig()
-        txtp.begin(stinger.node, root_config, nname=stinger.ntrigger, ntid=stinger.ntrigger, ntidsub=stinger.ntid)
-
-        #self._render_next(ntid, txtp)
-        rnode = self._get_rnode(bnode)
-        rnode._render_base(bnode, txtp)
-        return
+    def begin_txtp_ntid(self, txtp, ntid):
+        node = self._builder._get_node_link(ntid)
+        self.begin_txtp(txtp, node)
 
     #-------------------------------------
 

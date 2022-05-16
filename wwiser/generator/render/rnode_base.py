@@ -18,7 +18,7 @@ class RN_CAkHircNode(object):
     # info when generating transitions's musicsegments
     def _register_transitions(self, txtp, ntransitions):
         for ntid in ntransitions:
-            node = self._builder._get_transition_node(ntid)
+            node = self._builder._get_node_link(ntid)
             txtp.transitions.add(node)
         return
 

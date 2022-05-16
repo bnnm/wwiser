@@ -1,5 +1,5 @@
 import logging
-from . import bnode_misc, bnode_props, bnode_rtpc, bnode_source, bnode_transitions, bnode_tree
+from . import bnode_misc, bnode_props, bnode_rtpc, bnode_source, bnode_transitions, bnode_tree, bnode_stinger
 from ..txtp import wtxtp_info
 
 
@@ -27,7 +27,7 @@ class CAkHircNode(object):
 
         self.config = bnode_misc.NodeConfig()
         self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
-        self.stingers = []
+        self.stingerlist = None #in rare cases
 
         self._build(node)
 
@@ -225,14 +225,7 @@ class CAkHircNode(object):
         return bnode_tree.AkDecisionTree(node)
 
     def _build_stingers(self, node):
-        nstingers = node.finds(name='CAkStinger')
-        if not nstingers:
-            return
-
-        for nstinger in nstingers:
-            stinger = bnode_misc.CAkStinger(nstinger)
-            if stinger.tid:
-                self.stingers.append(stinger)
+        self.stingerlist = bnode_stinger.CAkStingerList(node)
         return
 
     #todo

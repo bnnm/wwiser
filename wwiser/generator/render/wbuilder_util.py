@@ -32,7 +32,6 @@ _HIRC_BUILDER_NODES = {
     'CAkMusicTrack': CAkMusicTrack,
 
     # others
-    'CAkStinger': CAkStinger,
     'CAkState': CAkState,
     'CAkFxCustom': CAkFxCustom, #similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
 
@@ -152,8 +151,6 @@ _IDTYPE_HIRCS = {
     #CAkTimeModulator  #same
     #CAkAttenuation  #assumed to be the same
     #CAkFxCustom:  #assumed, not using hashnames
-
-    #CAkStinger #TODO hack, remove
 }
 
 

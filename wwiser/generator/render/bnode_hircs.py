@@ -14,16 +14,6 @@ class CAkNone(CAkHircNode):
         #ignore
         return
 
-# todo improve (stingers have no sid so it's set externally)
-class CAkStinger(CAkHircNode):
-    def __init__(self):
-        super(CAkStinger, self).__init__()
-        self.ntid = None #external
-
-    def _build(self, node):
-        #ignore
-        return
-
 #non-audio node, but it's used as a reference
 class CAkState(CAkHircNode):
     def __init__(self):
@@ -420,7 +410,7 @@ class CAkMusicSegment(CAkHircNode):
         self._build_audio_config(node)
         if self.config.loop is not None:
             self._barf("loop flag")
-
+        self._build_stingers(node)
 
         # main duration
         nfdur = node.find(name='fDuration')

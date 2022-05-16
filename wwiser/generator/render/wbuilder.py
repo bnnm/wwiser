@@ -133,8 +133,9 @@ class Builder(object):
             node = self._ref_to_node.get(ref)
         return node
 
-    # transition nodes in mswitches/mranseq (that point to segments) don't get used, register to generate at the end
-    def _get_transition_node(self, ntid):
+    # (transitions pointing or stingers pointing to msegments)
+    # for objects that point to other nodes in mswitches/mranseq (that point to segments) don't get used, register to generate at the end
+    def _get_node_link(self, ntid):
         if not ntid:
             return None
 
@@ -143,7 +144,8 @@ class Builder(object):
         if not tid:
             return None
 
-        node = self.__get_node(bank_id, tid, wbuilder_util.IDTYPE_AUDIO) #musicsegment
+        node = self.__get_node(bank_id, tid, wbuilder_util.IDTYPE_AUDIO)
+        #TODO remove?
         __ = self._init_bnode(node) #force parse/register (so doesn't appear as unused), but don't use yet
         return node
 

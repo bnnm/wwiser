@@ -55,17 +55,3 @@ class NodeTransition(object):
         self.fadeout_time = 0
         self.fadein_pos = 0
         self.fadeout_pos = 0
-
-class CAkStinger(object):
-    def __init__(self, node):
-        self.node = node
-        self.ntrigger = None
-        self.ntid = None
-        self.tid = None
-        self._build(node)
-
-    def _build(self, node):
-        self.ntrigger = node.find1(name='TriggerID') #idExt called from trigger action
-        self.ntid = node.find1(name='SegmentID') #segment to play (may be 0)
-        if self.ntid:
-            self.tid = self.ntid.value()

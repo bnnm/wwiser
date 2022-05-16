@@ -35,7 +35,6 @@ _HIRC_RENDERER_NODES = {
     'CAkMusicTrack': RN_CAkMusicTrack,
 
     # info only, not renderable
-    #CAkStinger
     #CAkState
     #CAkFxCustom
     #CAkActorMixer

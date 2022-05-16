@@ -339,9 +339,10 @@ class Generator(object):
 
     def _generate_txtp(self, node):
         # When default_params aren't set and objects need them, Txtp finds possible params, added
-        # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then ""music=b02")
+        # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then "music=b02")
 
         transitions = wtransitions.Transitions(node)
+        ncaller = node.find1(type='sid')
 
         try:
             # base .txtp
@@ -373,21 +374,23 @@ class Generator(object):
                         txtp.write()
 
 
-            # triggers are handled a bit differently
+            # stingers found during process
             if ppaths.stingers:
                 params = self._default_params #?
-                for stinger in ppaths.stingers:
+                for bstinger in ppaths.stingers:
                     txtp = wtxtp.Txtp(self._txtpcache, params=params)
-                    self._renderer.begin_txtp_stinger(txtp, stinger)
+                    self._renderer.begin_txtp_ntid(txtp, bstinger.ntid)
+                    txtp.set_ncaller(ncaller)
+                    txtp.set_bstinger(bstinger)
                     txtp.write()
 
             # transitions found during process
             tr_nodes = transitions.get_nodes()
             if tr_nodes:
-                # handle transitions of current files (so filtered nodes don't appear)
+                params = self._default_params #?
                 self._txtpcache.stats.transition_mark = True
                 for ncaller, transition in tr_nodes:
-                    txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params)
+                    txtp = wtxtp.Txtp(self._txtpcache, params=params)
                     self._renderer.begin_txtp(txtp, transition)
                     txtp.set_ncaller(ncaller)
                     txtp.write()

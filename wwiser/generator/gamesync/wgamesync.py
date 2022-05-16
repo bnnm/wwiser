@@ -266,8 +266,10 @@ class GamesyncPaths(object):
         for child in node.children:
             self._find_path(child)
 
-    def add_stingers(self, stingers):
-        self.stingers.extend(stingers)
+    def add_stingers(self, stingerlist):
+        if not stingerlist:
+            return
+        self.stingers.extend(stingerlist.stingers)
 
 #******************************************************************************
 

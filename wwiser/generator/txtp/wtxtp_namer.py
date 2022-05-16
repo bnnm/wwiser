@@ -9,28 +9,26 @@ WINDOWS_MAX_PATH = 240
 # (max filename length on Linux is 255, even if dirs + name can be more than that
 MAX_FILENAME_LENGTH = 240
 
+_CLASSNAME_SHORTNAMES = {
+        'CAkEvent': 'event',
+        'CAkDialogueEvent': 'dialogueevent',
+        'CAkActionPlay': 'action',
+        'CAkActionPlayEvent': 'action',
+        'CAkActionTrigger': 'action',
+
+        'CAkLayerCntr': 'layer',
+        'CAkSwitchCntr': 'switch',
+        'CAkRanSeqCntr': 'ranseq',
+        'CAkSound': 'sound',
+
+        'CAkMusicSwitchCntr': 'musicswitch',
+        'CAkMusicRanSeqCntr': 'musicranseq',
+        'CAkMusicSegment': 'musicsegment',
+        'CAkMusicTrack': 'musictrack',
+}
 
 class TxtpNamer(object):
     # info
-    CLASSNAME_SHORTNAMES = {
-            'CAkEvent': 'event',
-            'CAkDialogueEvent': 'dialogueevent',
-            'CAkActionPlay': 'action',
-            'CAkActionPlayEvent': 'action',
-            'CAkActionTrigger': 'action',
-
-            'CAkLayerCntr': 'layer',
-            'CAkSwitchCntr': 'switch',
-            'CAkRanSeqCntr': 'ranseq',
-            'CAkSound': 'sound',
-
-            'CAkMusicSwitchCntr': 'musicswitch',
-            'CAkMusicRanSeqCntr': 'musicranseq',
-            'CAkMusicSegment': 'musicsegment',
-            'CAkMusicTrack': 'musictrack',
-
-            #'CAkStinger': 'stinger',
-    }
 
 
     def __init__(self, txtp):
@@ -39,14 +37,13 @@ class TxtpNamer(object):
         self.node = None
         self.nname = None
         self.ntid = None
-        self.ntidsub = None
         self.ncaller = None
+        self.bstinger = None
 
-    def update_config(self, node, nname, ntid, ntidsub):
+    def update_config(self, node, nname, ntid):
         self.node = node
         self.nname = nname
         self.ntid = ntid
-        self.ntidsub = ntidsub
 
 
     def clean_name(self, name):
@@ -118,7 +115,6 @@ class TxtpNamer(object):
 
         nname = self.nname
         ntid = self.ntid
-        ntidsub = self.ntidsub
         
 
         if nname:
@@ -132,21 +128,34 @@ class TxtpNamer(object):
         hashname = attrs.get('hashname')
         guidname = attrs.get('guidname')
 
+        # adds extra info in some cases
         extra_name = False
-
         if not hashname and self.ncaller:
             hashname = self.ncaller.get_attrs().get('hashname')
+
+        if not hashname and not guidname:
             extra_name = True
 
-        is_stinger = ntidsub is not None
 
-        #todo cache info
+        is_stinger = self.bstinger is not None
+        is_unused = txtp.txtpcache.stats.unused_mark
+        is_transition = txtp.txtpcache.stats.transition_mark
+
+        # name examples:
+        # - play_music
+        # - play_music
+        # - play_music~{stinger=trigger001~123456789} (bgm=b001)
+        # - play_music~transition
+        # - bgm--event-{stinger=trigger001~123456789}
+        # - bgm--event~unused-{stinger=trigger001~123456789}
+
+
+        # get base name
         if   hashname:
             name = hashname
         elif guidname:
             name = guidname
         else:
-            #get usable name
             name = None
 
             nroot = node.get_root()
@@ -164,29 +173,19 @@ class TxtpNamer(object):
             # otherwise use bank's name
             if not name:
                 name = bankname
-            extra_name = True
 
         # add extra info to the name
         if extra_name:
-            if is_stinger:
-                info = "{stinger-%s=~%s}" % (ntid.value(), ntidsub.value())
-                is_stinger = False
+            #include base node's tid
+            attrs_node = node.get_attrs()
+            index = attrs_node.get('index')
+            if index is None: #shouldn't happen...
+                info = ntid.value() #?
             else:
-                attrs_node = node.get_attrs()
-                index = attrs_node.get('index')
-                if index is None: #shouldn't happen
-                    info = ntid.value() #?
-                else:
-                    info = "%04u" % (int(index))
-
-
-            if txtp.txtpcache.stats.unused_mark:
-                info += '~unused'
-            if txtp.txtpcache.stats.transition_mark:
-                info += '~transition'
+                info = "%04u" % (int(index))
 
             classname = node.get_name()
-            shortname = self.CLASSNAME_SHORTNAMES.get(classname)
+            shortname = _CLASSNAME_SHORTNAMES.get(classname)
             if shortname:
                 name = "%s-%s-%s" % (name, info, shortname)
             else:
@@ -195,12 +194,27 @@ class TxtpNamer(object):
             if txtp.txtpcache.x_nameid and ntid and ntid.value():
                 name += "-%s" % (ntid.value())
 
-        # for stingers, where the same id/name can trigger different segments
-        if is_stinger:
-            name += "-{stinger=~%s}" % (ntidsub.value())
+        # usually only regular objects can be like this
+        if is_unused:
+            name += '~unused'
+        if is_transition: #TODO may need to include id
+            name += '~transition'
 
+        # a trigger (hashname) can call different segments, so we need both
+        if is_stinger:
+            ntrigger = self.bstinger.ntrigger
+            tid = self.bstinger.tid
+
+            trigname = ntrigger.get_attrs().get('hashname')
+            if not trigname:
+                trigname = ntrigger.value()
+
+            name += "~{stinger=%s-%s}" % (trigname, tid)
+
+        # params
         name += txtp.info.get_gsnames()
 
+        # extra flags
         if printer.has_silences:
             if txtp.txtpcache.silence:
                 name += " {s-}" #"silence all"
@@ -208,7 +222,6 @@ class TxtpNamer(object):
                 name += " {s}"
         name += self._get_vparams()
         name += self._get_gamevars(printer)
-
 
         name += txtp.info.get_wemnames()
 

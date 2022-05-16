@@ -63,6 +63,7 @@ class RN_CAkDialogueEvent(RN_CAkHircNode):
 #******************************************************************************
 
 class RN_CAkAction(RN_CAkHircNode):
+    #not used, just a parent
     pass
 
 #******************************************************************************
@@ -75,13 +76,14 @@ class RN_CAkActionPlayAndContinue(RN_CAkAction):
 class RN_CAkActionTrigger(RN_CAkAction):
 
     def _render_txtp(self, bnode, txtp):
-        # Trigger calls current music object (mranseq/mswitch usually) defined CAkStinger,
-        # which in turn links to some segment and stops.
-        # Trigger events may come before CAkStingers, and one trigger may call
-        # stingers from any song (1 trigger > N stingers), so they are handled
-        # separatedly during mranseq/mswitch.
-
-        #logging.info("generator: trigger %i not implemented", self.sid)
+        # Event w/ ActionTrigger posts a "trigger". If music object currently playing
+        # has a defined CAkStinger (that points to musicsegment) of that "trigger",
+        # the musicsegment will play on top.
+        # 
+        # One trigger may call stingers from any song (1 trigger > N stingers),
+        # and games may post triggers via API instead of play_trigger events,
+        # so trigger/stinger generation must be handled like paths during music's
+        # render_txtp, and this shouldn't try to make anything.
         return
 
 #******************************************************************************
@@ -205,7 +207,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
             if not txtp.params:
                 # find all possible gamesyncs paths (won't generate txtp)
-                txtp.ppaths.add_stingers(bnode.stingers)
+                txtp.ppaths.add_stingers(bnode.stingerlist)
 
                 for path, ntid in bnode.tree.paths:
                     unreachable = txtp.ppaths.adds(path)
@@ -263,7 +265,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
         self._register_transitions(txtp, bnode.ntransitions)
 
         if not txtp.params:
-            txtp.ppaths.add_stingers(bnode.stingers)
+            txtp.ppaths.add_stingers(bnode.stingerlist)
 
         txtp.group_single(bnode.config) #typically useless but may have volumes
         self._process_playlist(txtp, bnode.items)
@@ -314,6 +316,8 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 class RN_CAkMusicSegment(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        txtp.ppaths.add_stingers(bnode.stingerlist)
+
         # empty segments are allowed as silence
         if not bnode.ntids:
             #logging.info("generator: found empty segment %s" % (self.sid))

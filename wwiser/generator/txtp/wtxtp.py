@@ -68,15 +68,14 @@ class Txtp(object):
         return
 
     # start of txtp generation
-    def begin(self, node, root_config, nname=None, ntid=None, ntidsub=None):
+    def begin(self, node, root_config, nname=None):
         # tree
         self._troot = wtxtp_tree.TxtpNode(None, root_config)
         self._current = self._troot
 
         # for names
-        if not ntid:
-            ntid = node.find1(type='sid')
-        self._namer.update_config(node, nname, ntid, ntidsub)
+        ntid = node.find1(type='sid')
+        self._namer.update_config(node, nname, ntid)
 
         self._basepath = self.txtpcache.get_basepath(node)
 
@@ -86,6 +85,9 @@ class Txtp(object):
 
     def set_ncaller(self, ncaller):
         self._namer.ncaller = ncaller
+
+    def set_bstinger(self, bstinger):
+        self._namer.bstinger = bstinger
 
     # write main .txtp
     # Sometimes there are multiple small variations with the same .txtp tree, in those cases 

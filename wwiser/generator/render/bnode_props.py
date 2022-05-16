@@ -30,6 +30,14 @@ _OLD_ACTION_PROPS = [
 #PlaybackSpeed: similar to pitch but for music hierarchy (pitch should be ignored by music), "multiplied by ancestors"
 #PROP_LOOP = "[Loop]"
 
+#delays: not inherited
+#- InitialDelay: how long to wait until playing some song
+#  - if changed with an schunk while song is playing it has no effect
+#- DelayTime: "delay" in editor, time to trigger an action
+
+# on actions:
+# TransitionTime: fade-in time (also has a PlayActionParams > eFadeCurve)
+#
 
 class CAkProps(object):
     def __init__(self, node):
@@ -79,13 +87,14 @@ class CAkProps(object):
                 elif "[MakeUpGain]" in valuefmt:
                     self.makeupgain = value
 
-                elif "[Pitch]" in valuefmt:
+                elif "[Pitch]" in valuefmt: #for sound hierarchy
                     self.pitch = value
+                #PlaybackSpeed for music hierarhcy
 
-                elif "[DelayTime]" in valuefmt:
+                elif "[DelayTime]" in valuefmt: #for actions
                     self.delay = value
 
-                elif "[InitialDelay]" in valuefmt:
+                elif "[InitialDelay]" in valuefmt: #for audio
                     self.idelay = value * 1000.0 #float in seconds to ms
 
                 self.fields_std.append( (nkey, nval) )

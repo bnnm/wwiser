@@ -40,17 +40,17 @@ class RN_CAkDialogueEvent(RN_CAkHircNode):
         if not bnode.tree:
             return 
 
-        if not txtp.params:
+        if not txtp.gsparams:
             # find all possible gamesyncs paths (won't generate txtp)
             for path, ntid in bnode.tree.paths:
-                unreachable = txtp.ppaths.adds(path)
+                unreachable = txtp.gspaths.adds(path)
                 if not unreachable:
                     self._render_next(ntid, txtp)
-                txtp.ppaths.done()
+                txtp.gspaths.done()
             return
 
         # find if current gamesync combo matches one of the paths
-        npath_combo = bnode.tree.get_npath(txtp.params)
+        npath_combo = bnode.tree.get_npath(txtp.gsparams)
         if npath_combo:
             npath, ntid = npath_combo
             txtp.info.gamesyncs(npath)
@@ -115,19 +115,19 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
         gtype = bnode.gtype
         gname = bnode.ngname.value()
 
-        if not txtp.params:
+        if not txtp.gsparams:
             # find all possible gamesyncs paths (won't generate txtp)
             for ntids, ngvalue in bnode.gvalue_ntids.values(): #order doesn't matter
                 gvalue = ngvalue.value()
-                unreachable = txtp.ppaths.add(gtype, gname, ngvalue.value())
+                unreachable = txtp.gspaths.add(gtype, gname, ngvalue.value())
                 if not unreachable:
                     for ntid in ntids:
                         self._render_next(ntid, txtp)
-                txtp.ppaths.done()
+                txtp.gspaths.done()
             return
 
         #get current gamesync
-        gvalue = txtp.params.current(gtype, gname)
+        gvalue = txtp.gsparams.current(gtype, gname)
         if gvalue is None:
             return
         if not gvalue in bnode.gvalue_ntids: #exact match (no * like MusicSwitches)
@@ -206,17 +206,17 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
         if bnode.tree:
 
-            if not txtp.params:
+            if not txtp.gsparams:
                 # find all possible gamesyncs paths (won't generate txtp)
                 for path, ntid in bnode.tree.paths:
-                    unreachable = txtp.ppaths.adds(path)
+                    unreachable = txtp.gspaths.adds(path)
                     if not unreachable:
                         self._render_next(ntid, txtp)
-                    txtp.ppaths.done()
+                    txtp.gspaths.done()
                 return
 
             # find if current gamesync combo matches one of the paths
-            npath_combo = bnode.tree.get_npath(txtp.params)
+            npath_combo = bnode.tree.get_npath(txtp.gsparams)
             if npath_combo:
                 npath, ntid = npath_combo
                 txtp.info.gamesyncs(npath)
@@ -230,18 +230,18 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
             gtype = bnode.gtype
             gname = bnode.ngname.value()
 
-            if not txtp.params:
+            if not txtp.gsparams:
                 # find all possible gamesyncs paths (won't generate txtp)
                 for ntid, ngvalue in bnode.gvalue_ntid.values(): #order doesn't matter
                     gvalue = ngvalue.value()
-                    unreachable = txtp.ppaths.add(gtype, gname, ngvalue.value())
+                    unreachable = txtp.gspaths.add(gtype, gname, ngvalue.value())
                     if not unreachable:
                         self._render_next(ntid, txtp)
-                    txtp.ppaths.done()
+                    txtp.gspaths.done()
                 return
 
             # get current gamesync
-            gvalue = txtp.params.current(gtype, gname)
+            gvalue = txtp.gsparams.current(gtype, gname)
             if gvalue is None:
                 return
             if not gvalue in bnode.gvalue_ntid:
@@ -341,7 +341,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
 
         # node defines states that muted sources
         if bnode.config.volume_states:
-            txtp.vpaths.add_nstates(bnode.config.volume_states)
+            txtp.scpaths.add_nstates(bnode.config.volume_states)
 
         # musictrack can play in various ways
         if   bnode.type == 0: #normal (plays one subtrack, N aren't allowed)
@@ -368,20 +368,20 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             gtype = bnode.gtype
             gname = bnode.ngname.value()
 
-            if not txtp.params:
+            if not txtp.gsparams:
                 # find all possible gamesyncs paths (won't generate txtp)
                 for __, ngvalue in bnode.gvalue_index.values(): #order doesn't matter
                     if not ngvalue:
                         gvalue = 0
                     else:
                         gvalue = ngvalue.value()
-                    txtp.ppaths.add(gtype, gname, gvalue)
+                    txtp.gspaths.add(gtype, gname, gvalue)
                     #no subnodes
-                    txtp.ppaths.done()
+                    txtp.gspaths.done()
                 return
 
             # get current gamesync
-            gvalue = txtp.params.current(gtype, gname)
+            gvalue = txtp.gsparams.current(gtype, gname)
             if gvalue is None:
                 return
             if not gvalue in bnode.gvalue_index:

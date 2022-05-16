@@ -17,14 +17,14 @@ class RN_CAkHircNode(object):
 
     # info when generating transitions's musicsegments
     def _register_transitions(self, txtp, rules):
-        #if not txtp.params:
+        #if not txtp.gsparams:
         #    return
 
         txtp.transitions.add(rules)
         return
 
     def _register_stingers(self, txtp, bstingerlist):
-        #if not txtp.params:
+        #if not txtp.gsparams:
         #    return
 
         txtp.stingers.add(bstingerlist)

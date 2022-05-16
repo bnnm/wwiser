@@ -44,10 +44,10 @@ from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 class Txtp(object):
 
-    def __init__(self, txtpcache, params=None):
-        self.params = params  #current gamesync "path" config (default/empty means must find paths)
-        self.ppaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
-        self.vpaths = wvolumes.VolumePaths() #states used to change volume/mute tracks
+    def __init__(self, txtpcache, gsparams=None):
+        self.gsparams = gsparams  #current gamesync "path" config (default/empty means must find paths)
+        self.gspaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
+        self.scpaths = wvolumes.StateChunkPaths() #states used to change volume/mute tracks
         self.txtpcache = txtpcache
         self.transitions = wtransitions.Transitions()
         self.stingers = wstingers.Stingers()
@@ -56,8 +56,8 @@ class Txtp(object):
 
         # config during printing
         self.selected = None        # current random selection in sub-txtp
-        self.vparams = None         # current volume combo in sub-txtp
-        self.vparams_default = False
+        self.scparams = None         # current volume combo in sub-txtp
+        self.scparams_make_default = False
         self.external_path = None   # current external
         self.external_name = None   # current external
 
@@ -150,32 +150,32 @@ class Txtp(object):
         # handle sub-txtp per volume combo
 
         # volume states are affected by current states
-        self.vpaths.filter(self.params, self.txtpcache.wwnames)
+        self.scpaths.filter(self.gsparams, self.txtpcache.wwnames)
 
-        if self.vpaths.is_empty():
+        if self.scpaths.is_empty():
             # without variables
-            if not self.vpaths.is_unreachables_only():
+            if not self.scpaths.is_unreachables_only():
                 self._write_txtp(printer)
 
         else:
             # per combo
-            vcombos = self.vpaths.combos()
-            for vcombo in vcombos:
-                if vcombo.has_unreachables() and not self.vpaths.is_unreachables_only():
+            sccombos = self.scpaths.combos()
+            for sccombo in sccombos:
+                if sccombo.has_unreachables() and not self.scpaths.is_unreachables_only():
                     continue
-                if not vcombo.has_unreachables() and self.vpaths.is_unreachables_only():
+                if not sccombo.has_unreachables() and self.scpaths.is_unreachables_only():
                     continue
 
-                self.vparams = vcombo
+                self.scparams = sccombo
                 self._write_txtp(printer)
 
-            self.vparams = None
+            self.scparams = None
 
             # needs a base .txtp in some cases
-            if self.vpaths.generate_default(vcombos):
-                self.vparams_default = True
+            if self.scpaths.generate_default(sccombos):
+                self.scparams_make_default = True
                 self._write_txtp(printer)
-                self.vparams_default = False
+                self.scparams_make_default = False
 
     def _write_txtp(self, printer):
         # Some games have GS combos and events that end up being the same (ex. Nier Automata, Bayonetta 2).

@@ -42,7 +42,7 @@ class Generator(object):
         self._filter.set_default_hircs(self._default_hircs)
         self._builder.set_filter(self._filter)
 
-        self._default_params = None
+        self._default_gsparams = None
 
     #--------------------------------------------------------------------------
 
@@ -71,11 +71,11 @@ class Generator(object):
             return
         self._move = move
 
-    def set_params(self, params):
-        if params is None: #allow []
+    def set_gsparams(self, gsparams):
+        if gsparams is None: #allow []
             return
-        self._default_params = wgamesync.GamesyncParams(self._txtpcache)
-        self._default_params.set_params(params)
+        self._default_gsparams = wgamesync.GamesyncParams(self._txtpcache)
+        self._default_gsparams.set_gsparams(gsparams)
 
     def set_gamevars(self, items):
         self._txtpcache.gamevars.add(items)
@@ -328,18 +328,18 @@ class Generator(object):
         return
 
     def _generate_txtp(self, node):
-        # When default_params aren't set and objects need them, Txtp finds possible params, added
-        # to "ppaths". Then, it makes one .txtp per combination (like first "music=b01" then "music=b02")
+        # When default_gsparams aren't set and objects need them, Txtp finds possible gsparams, added
+        # to "gpaths". Then, it makes one .txtp per combination (like first "music=b01" then "music=b02")
 
         ncaller = node.find1(type='sid')
 
         try:
             # base .txtp
-            txtp = wtxtp.Txtp(self._txtpcache, params=self._default_params)
+            txtp = wtxtp.Txtp(self._txtpcache, gsparams=self._default_gsparams)
             self._renderer.begin_txtp(txtp, node)
 
-            ppaths = txtp.ppaths  # gamesync "paths" found during process
-            if ppaths.is_empty():
+            gspaths = txtp.gspaths  # gamesync "paths" found during process
+            if gspaths.is_empty():
                 txtp.write()
                 txtp_sub = txtp
 
@@ -348,20 +348,20 @@ class Generator(object):
 
                 # .txtp per variable combo
                 unreachables = False #check if any txtp has unreachables
-                combos = ppaths.combos()
+                combos = gspaths.combos()
                 for combo in combos:
                     #logging.info("generator: combo %s", combo.elems)
-                    txtp = wtxtp.Txtp(self._txtpcache, params=combo)
+                    txtp = wtxtp.Txtp(self._txtpcache, gsparams=combo)
                     self._renderer.begin_txtp(txtp, node)
                     txtp.write()
-                    if txtp.vpaths.has_unreachables():
+                    if txtp.scpaths.has_unreachables():
                         unreachables = True
 
                 if unreachables:
                     for combo in combos:
                         #logging.info("generator: combo %s", combo.elems)
-                        txtp = wtxtp.Txtp(self._txtpcache, params=combo)
-                        txtp.vpaths.set_unreachables_only()
+                        txtp = wtxtp.Txtp(self._txtpcache, gsparams=combo)
+                        txtp.scpaths.set_unreachables_only()
                         self._renderer.begin_txtp(txtp, node)
                         txtp.write()
 
@@ -386,9 +386,9 @@ class Generator(object):
         # stingers found during process
         bstingers = txtp.stingers.get_items()
         if bstingers:
-            params = self._default_params #?
+            gsparams = self._default_gsparams #?
             for bstinger in bstingers:
-                txtp = wtxtp.Txtp(self._txtpcache, params=params)
+                txtp = wtxtp.Txtp(self._txtpcache, gsparams=gsparams)
                 self._renderer.begin_txtp_ntid(txtp, bstinger.ntid)
                 txtp.set_ncaller(ncaller)
                 txtp.set_bstinger(bstinger)
@@ -397,9 +397,9 @@ class Generator(object):
         # transitions found during process
         btransitions = txtp.transitions.get_items()
         if btransitions:
-            params = self._default_params #?
+            gsparams = self._default_gsparams #?
             for btransition in btransitions:
-                txtp = wtxtp.Txtp(self._txtpcache, params=params)
+                txtp = wtxtp.Txtp(self._txtpcache, gsparams=gsparams)
                 self._renderer.begin_txtp_ntid(txtp, btransition.ntid)
                 txtp.set_ncaller(ncaller)
                 txtp.set_btransition(btransition)

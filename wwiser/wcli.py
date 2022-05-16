@@ -274,7 +274,7 @@ class Cli(object):
             generator.set_filter_rest(args.txtp_filter_rest)
             generator.set_filter_normal(args.txtp_filter_normal)
             generator.set_filter_unused(args.txtp_filter_unused)
-            generator.set_params(args.txtp_params)
+            generator.set_gsparams(args.txtp_params)
             generator.set_gamevars(args.txtp_gamevars)
             generator.set_dupes(args.txtp_dupes)
             generator.set_dupes_exact(args.txtp_dupes_exact)

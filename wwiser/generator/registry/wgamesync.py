@@ -368,7 +368,7 @@ class GamesyncParams(object):
         logging.debug("gamesync: get %s, %s, %s" % (type, self._get_info(name), self._get_info(value)))
         return value
 
-    def add_param(self, type, key, val):
+    def add_gsparam(self, type, key, val):
         logging.debug("gamesync: add t=%s, k=%s, v=%s", type, key, val)
         if key is None or val is None:
             return
@@ -381,46 +381,46 @@ class GamesyncParams(object):
         self.add(type, key, val)
 
 
-    def set_params(self, params):
+    def set_gsparams(self, gsparams):
         self._empty = False #even if passed list is empty (to simulate "nothing set")
         self._manual = True #manual params behave a bit differently
 
-        if not params:
+        if not gsparams:
             return
 
         # split '(key=var)(key=var)', as output by wwiser
-        final_params = []
-        for param in params:
+        final_gsparams = []
+        for gsparam in gsparams:
             replaces = {')(':'):(', '][': ']:[', ')[': '):[', '](': ']:('}
             is_split = False
             for repl_key, repl_val in replaces.items():
-                if repl_key in param:
-                    param = param.replace(repl_key, repl_val)
+                if repl_key in gsparam:
+                    gsparam = gsparam.replace(repl_key, repl_val)
                     is_split = True
 
             if is_split:
-                splits = param.split(':')
-                final_params += splits
+                splits = gsparam.split(':')
+                final_gsparams += splits
             else:
-                final_params.append(param)
-        params = final_params
+                final_gsparams.append(gsparam)
+        gsparams = final_gsparams
 
         pattern_st = re.compile(r"\((.+)=(.+)\)")
         pattern_sw = re.compile(r"\[(.+)=(.+)\]")
-        for param in params:
-            match = pattern_st.match(param)
+        for gsparam in gsparams:
+            match = pattern_st.match(gsparam)
             if match:
                 key, val = match.groups()
-                self.add_param(TYPE_STATE, key, val)
+                self.add_gsparam(TYPE_STATE, key, val)
 
-            match = pattern_sw.match(param)
+            match = pattern_sw.match(gsparam)
             if match:
                 key, val = match.groups()
-                self.add_param(TYPE_SWITCH, key, val)
+                self.add_gsparam(TYPE_SWITCH, key, val)
 
         if DEBUG_PRINT_TREE_PARAMS:
             logging.info("*** params")
-            logging.info("in: %s", params)
+            logging.info("in: %s", gsparams)
 
             logging.info("out: %s", self._elems)
             logging.info("")

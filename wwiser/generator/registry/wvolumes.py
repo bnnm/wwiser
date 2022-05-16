@@ -34,8 +34,12 @@ from . import wgamesync
 # - bgm_High_Low=low, bgm_Vocal_BN=on, bgm_Zangeki=off
 # - ...
 # Typically only one variable is used though.
+#
+# Technically this list should exist as parts gamesync (in Wwise states are globals), but it's separate as
+# sometimes it generates insteresting variations that aren't possible in regular cases. It also makes easier
+# to handle state combos.
 
-class VolumeItem(object):
+class StateChunkItem(object):
     def __init__(self):
         self.type = wgamesync.TYPE_STATE
         self.group = None
@@ -95,7 +99,7 @@ class VolumeItem(object):
         
 
 # saves possible volume paths in a txtp
-class VolumePaths(object):
+class StateChunkPaths(object):
 
     def __init__(self):
         self._elems = OrderedDict()
@@ -118,12 +122,12 @@ class VolumePaths(object):
 
     def add_nstates(self, ngamesyncs):
         for ngroup, nvalue, config in ngamesyncs:
-            vitem = VolumeItem()
-            vitem.init_nstate(ngroup, nvalue, config)
-            self._add_vstate(vitem)
+            scitem = StateChunkItem()
+            scitem.init_nstate(ngroup, nvalue, config)
+            self._add_scstate(scitem)
 
-    def _add_vstate(self, vitem):
-        key = (vitem.type, vitem.group)
+    def _add_scstate(self, scitem):
+        key = (scitem.type, scitem.group)
         if key not in self._elems:
             items = []
             # maybe should have a special value of "variable X set to other, non-silencing thing"?
@@ -132,12 +136,12 @@ class VolumePaths(object):
             self._elems[key] = items
 
 
-        #for evitem in self._elems[key]:
-        #    if vitem not in self._elems[key]:
-        #    self._elems[key].append(vitem)
+        #for scitem in self._elems[key]:
+        #    if scitem not in self._elems[key]:
+        #    self._elems[key].append(scitem)
 
-        if vitem not in self._elems[key]:
-            self._elems[key].append(vitem)
+        if scitem not in self._elems[key]:
+            self._elems[key].append(scitem)
 
 
     def combos(self):
@@ -158,13 +162,13 @@ class VolumePaths(object):
         #items = itertools.product(*self._elems.values())
         items = itertools.product(*elems)
         for item in items:
-            vparam = VolumeParams()    
-            vparam.adds(item)
-            self._paths.append(vparam)
+            scparam = StateChunkParams()    
+            scparam.adds(item)
+            self._paths.append(scparam)
 
         return self._paths
 
-    def generate_default(self, vcombos):
+    def generate_default(self, sccombos):
         # generate a base .txtp with all songs in some cases
         # - multiple states used like a switch, base playing everything = bad (MGR, Bayo2)
         #   music=m01 {s}=vocal=on,action=a + music=a {s}=vocal=off,action=a + ...
@@ -179,13 +183,13 @@ class VolumePaths(object):
         # detect if the value is fixed due to current state (but only a single state for PK Arceus,
         # that combines one fixed value that adds some volume and other states that don't)
         if self._forced_path:
-            #TODO: should detect if all combo params are set in current pparams (pass external)
-            if len(vcombos) == 1:
+            #TODO: should detect if all combo params are set in current gsparams (pass external)
+            if len(sccombos) == 1:
                 return False
-            #if pparams and not pparams.is_empty():
+            #if gsparams and not gsparams.is_empty():
             #    all_set = True
-            #    for vcombo in vcombos:
-            #        pvalue = pparams.current(vcombo....)
+            #    for sccombo in sccombos:
+            #        pvalue = gsparams.current(vcombo....)
             #        if pvalue is None:
             #            all_set = False
             #    if not all_set:
@@ -193,17 +197,17 @@ class VolumePaths(object):
 
         # multivars like in MGR probably don't need a base value
         # but Pokemon Legends Arceus does :(
-        #if len(vcombos) >= 1:
-        #    vcombo = vcombos[0]
+        #if len(sccombos) >= 1:
+        #    vcombo = sccombos[0]
         #    if len(vcombo.items()) > 1: #g1=v1 + g2=v2
         #        return False
 
         return True
 
-    def filter(self, pparams, wwnames=None):
+    def filter(self, gsparams, wwnames=None):
         #if self._unreachables_only: #needs to be re-filtered
         #    return
-        if not pparams or pparams.is_empty():
+        if not gsparams or gsparams.is_empty():
             return
 
         # Sometimes you have a path like "bgm=a", and volume states with the game group like "bgm=b/c" -96db.
@@ -223,7 +227,7 @@ class VolumePaths(object):
 
         for key in self._elems.keys():
             _, group = key
-            pvalue = pparams.current(*key)
+            pvalue = gsparams.current(*key)
             if pvalue is None:
                 continue
 
@@ -240,32 +244,32 @@ class VolumePaths(object):
             # If there wasn't a bgm=a, remove the key (so no {s} combos is actually generated).
             # Could also include itself like "(bgm=a) {s}=(bgm=a)" for clarity (todo: needs names)
 
-            vitems = self._elems[key]
+            scitems = self._elems[key]
 
-            curr_vitem = VolumeItem()
-            curr_vitem.init_base(group, pvalue, wwnames) #todo improve name handling
+            curr_scitem = StateChunkItem()
+            curr_scitem.init_base(group, pvalue, wwnames) #todo improve name handling
 
             # check and add itself for better names (can't use not-in since we don't know volume)
             curr_exists = False
-            for vitem in vitems:
-                if curr_vitem.eq_base(vitem):
+            for scitem in scitems:
+                if curr_scitem.eq_base(scitem):
                     curr_exists = True
             if not curr_exists:
-                vitems.append(curr_vitem)
+                scitems.append(curr_scitem)
 
-            for vitem in list(vitems): #clone for iteration+removal
-                if vitem.value != pvalue:
-                    vitem.unreachable = True
+            for scitem in list(scitems): #clone for iteration+removal
+                if scitem.value != pvalue:
+                    scitem.unreachable = True
                     self._unreachables = True
-                    #vitems.remove(vitem) #skipped externally
+                    #scitems.remove(scitem) #skipped externally
 
             #if not items:
             #    self._elems.pop(key)
 
 #******************************************************************************
 
-# stores current selected silence path
-class VolumeParams(object):
+# stores current selected statechunk path
+class StateChunkParams(object):
     def __init__(self):
         self._elems = OrderedDict()
         self._unreachables = False
@@ -274,17 +278,17 @@ class VolumeParams(object):
     def has_unreachables(self):
         return self._unreachables
 
-    def adds(self, vparams):
-        for vparam in vparams:
-            self.add(vparam)
+    def adds(self, scparams):
+        for scparam in scparams:
+            self.add(scparam)
 
-    def add(self, vitem):
-        if vitem.group is None or vitem.value is None:
+    def add(self, scitem):
+        if scitem.group is None or scitem.value is None:
             return
-        if vitem.unreachable:
+        if scitem.unreachable:
             self._unreachables = True
-        key = (vitem.group, vitem.value)
-        self._elems[key] = vitem
+        key = (scitem.group, scitem.value)
+        self._elems[key] = scitem
 
     def get_volume_states(self, nstates):
         configs = []

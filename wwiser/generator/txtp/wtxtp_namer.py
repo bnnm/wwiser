@@ -266,15 +266,15 @@ class TxtpNamer(object):
     def _get_vparams(self):
         txtp = self.txtp
 
-        if txtp.vparams_default:
+        if txtp.scparams_make_default:
             return '=-'
 
         info = ''
-        if not txtp.vparams:
+        if not txtp.scparams:
             return info
 
         info += '='
-        for vitem in txtp.vparams.items():
+        for vitem in txtp.scparams.items():
             gn = vitem.group_name or vitem.group
             vn = vitem.value_name or vitem.value
             if vitem.value == 0:

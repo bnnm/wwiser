@@ -488,9 +488,9 @@ class Gui(object):
             generator.set_filter_rest( self._get_item('txtp_filter_rest') )
             generator.set_filter_normal( self._get_item('txtp_filter_normal') )
             generator.set_filter_unused( self._get_item('txtp_filter_unused') )
-            generator.set_params( self._get_list('txtp_params') )
-            generator.set_bank_order( self._get_item('txtp_bank_order') )
+            generator.set_gsparams( self._get_list('txtp_params') )
             generator.set_gamevars( self._get_list('txtp_gamevars') )
+            generator.set_bank_order( self._get_item('txtp_bank_order') )
             generator.set_renames( self._get_list('txtp_renames') )
 
             generator.set_wemdir( self._get_item('txtp_wemdir') )

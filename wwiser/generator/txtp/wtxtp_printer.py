@@ -580,8 +580,8 @@ class TxtpPrinter(object):
 
     def _get_volume_states_internal(self, node, vstates):
         if node.config.volume_states:
-            if self._txtp.vparams:
-                configs = self._txtp.vparams.get_volume_states(node.config.volume_states)
+            if self._txtp.scparams:
+                configs = self._txtp.scparams.get_volume_states(node.config.volume_states)
                 for config in configs:
                     if config.volume:
                         vstates.append(config.volume)

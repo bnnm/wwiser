@@ -67,12 +67,14 @@ of how Wwise deals with audio.
 ## TXTP GENERATION
 You can generate `.txtp` files from `.bnk` that allow *vgmstream* to (mostly) play audio
 simulating Wwise. Make sure `.wem` go to the `/txtp/wem` folder and open `.txtp` with a
-player like *foobar2000* or *Winamp* with the *vgmstream* plugin installed (or use *CLI*).
+player like *foobar2000* or *Winamp* with the *vgmstream* plugin installed (or use 
+vgmstream's *CLI* tools).
 
 This function tries its best to make good, usable `.txtp` to improve the listening
-experience of Wwise audio rips (like giving usable names when possible, or handling
+experience of Wwise audio rips (like giving names when possible, or handling
 complex loops). However Wwise is a very complex, dynamic audio engine, so you may
-need to tweak various options to improve output.
+need to tweak various options to improve output. *vgmstream* also has some limitations
+and audio simulation is not always perfect.
 
 See *WWISER* doc for detailed explanations.
 
@@ -84,7 +86,8 @@ other programs.
 
 Almost all `.bnk` versions should work, except the first two, used in *Shadowrun (X360)*
 and *Too Human (X360)*. Report if you get errors or incorrect behavior. All fields
-should be correctly identified and named, save a few bit flags in some versions and some lesser objects like plugins.
+should be correctly identified and named, save a few bit flags in some versions and
+some lesser objects like plugins.
 
 
 ## LEGAL STUFF

@@ -9,16 +9,31 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - music switch can have multiple playlist playing at the same time?
 - pStateChunks for switching + syncs? (may be set as default?)
 
-## hierarchy
-- editor divides audio into these:
+## sections and hierarchies
+- editor divides information into:
   - audio devices: audio bus can be routed to these (standard output, no output, controller audio, etc)
   - master-mixer hierarchy: buses go here
-  - action-mixer hierarchy: "sound engine" objects go here (actor-mixers, akswitch, aksound, etc)
-  - interactive music hierarchy: "music engine" objects go here
+  - action-mixer hierarchy: "sound module" objects go here (actor-mixers, akswitch, aksound, etc)
+  - interactive music hierarchy: "music module" objects go here (musicswith, musicsegment, etc)
+  - events/dynamic dialogue: actions go here (play x, seek x)
+  - game syncs: definitions of states/switches/game parameters/triggers go here
+  - share sets: other odd objects go here (effects, attenuations, modulations, etc)
+  - soundbanks: definitions of which objects go which banks go here (by default all)
 - playable sound/music objects apply config from its own hierarchy
-- playable audio objects go through 1 main bus or N aux-bus, applying certain params and config
+- playable audio objects go through 1 main bus or N aux-bus, applying certain params and config from that hierarchy
 - hierarchies are just a way to organize objects; playable objects don't depend on this
   - event > aksound is possible, even if aksound if children of other object or is at the top of the hierarchy
+- within each hierarchy objects can be children of certain objects, or reside on top:
+  - sound: actor-mixer, switch, layer, ranseq, sfx/voice
+    - all can be on top
+    - actor-mixer can contain any (including actor-mixers)
+    - switch/layer/ranseq can contain each other, or sfx/voice
+    - sfx/voice has no children
+  - music: musicswitch, musicranseq, musicsegment, musictrack
+    - musicswitch, musicranseq, musicsegment can be on top
+    - musicswitch can contain musicswitch, musicranseq, musicsegment
+    - musicranseq can contain musicsegment
+    - musictrack must be children of musicsegment
 
 ## files
 - you can import audio (.wav) into a project and use freely as is
@@ -291,6 +306,15 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - older version of music switch also only do 1 group, and are basically the same as this
 - may define initial delay (before starting to play)
 
+## stingers
+- a special type of musicsegment that plays a short audio on top of current track
+- set on musicranseq, musicswitch or musicsegments in `pStingers`
+- stingers have an associated `trigger` (that starts them) and a musicsegment (what they play)
+- same trigger may be reused (like `fight_end` could trigger an special segment in different battle BGM)
+- when multiple objects have the same trigger seems only plays latest one?
+  - ex. musicranseq with trigger001 immediate > musicsegment with trigger001 next bar
+    - only second trigger001 seems to play, deleting it plays first one
+
 ## transitions
 - both are defined and used in music switch and music ranseq to set how to jump between 2 music segments
 - a transition defines a "source" segment ID (segment that exits) and "destination" segment (segment to be entered)
@@ -419,6 +443,12 @@ Info gathered from the editor, to help understanding model and overall behavior.
   - for example `enemy_awareness` could link to exploration/action music via switches
   - also may use "slew rates" so that changes between states aren't inmediate 
     - so even if values keep quickly changing, transition takes some time for more natural results
+- objects limit RTPC properties from the full list
+  - aksound/switch/ranseq/actormixer: most
+  - aksound with external/blend: less
+  - mswitch/mranseq: most
+  - msegment/mtrack: less
+- event/actions don't have standard properties nor RTPCs (internally are properties but behave differently)
 
 ## Clip automations
 - attached directly to MusicTrack's clips, a special type of RTPC
@@ -632,6 +662,10 @@ sound > (volumes) > bus > bus > ... > bus > output
 - volume, pitch, etc, set directly via editor and used as explained above
 - properties may set "enable randomizer" to select between values at play
   - volume -5 and +5 will play some value in between on each play
+- enable "all properties" tab to (seemingly) include properties that are useless
+- possible to set custom properties (defined via bank/project)
+  - not referenced anywhere, auto-set
+  - if last valid PropID in v128+ is 0x49, custom IDs start at 0x4A
 
 ## states tab
 - object may tie an state to some property (volume, pitch, bus volume, initial delay, etc)

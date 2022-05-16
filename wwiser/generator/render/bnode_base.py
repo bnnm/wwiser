@@ -1,5 +1,5 @@
 import logging
-from . import bnode_misc, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger
+from . import bnode_misc, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk
 from ..txtp import wtxtp_info
 
 
@@ -18,16 +18,17 @@ class CAkHircNode(object):
 
     def init_node(self, node):
         self._build_defaults(node)
-        #todo limit to sound/action/etc, or manually call
-        #self._build_references(node)
-        #self._build_props(node) #xInitialParams
-        #self._build_rtpcs(node) #InitialRTPC
-        #self._build_states(node) #StateChunk
-        #self._build_positioning(node)
 
         self.config = bnode_misc.NodeConfig()
         self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
-        self.stingerlist = None #in rare cases
+
+        # loaded during process, if object has them (different classes have more or less)
+        self.nbusid = None
+        self.nparentid = None
+        self.props = None
+        self.statechunk = None
+        self.rtpclist = None
+        self.stingerlist = None
 
         self._build(node)
 
@@ -37,10 +38,8 @@ class CAkHircNode(object):
         raise ValueError("%s - %s %s" % (text, self.name, self.sid))
 
 
-    def _build(self, node):
-        self._barf()
-
     def _build_defaults(self, node):
+        # common to all HIRC nodes
         self.node = node
         self.name = node.get_name()
         self.nsid = node.find1(type='sid')
@@ -48,65 +47,47 @@ class CAkHircNode(object):
         if self.nsid:
             self.sid = self.nsid.value()
 
-    def _build_references(self, node):
-        
-        # bus (BusInitialValues), sounds/musics (NodeBaseParams)
-        nbusid = node.find1(name='OverrideBusId')
-        if nbusid:
-            self.busid = nbusid.value()
-        
-        # sounds/musics (NodeBaseParams)
-        nparentid = node.find1(name='DirectParentID')
-        if nparentid:
-            self.parentid = nparentid.value()
-
+    def _build(self, node):
+        self._barf()
 
     #--------------------------------------------------------------------------
 
-    def __parse_props(self, ninit):
-        props = bnode_props.CAkProps(ninit)
+    def _make_props(self, nbase):
+        if not nbase:
+            return None
+        props = bnode_props.CAkProps(nbase)
+        if not props.valid:
+            return None
+        self._builder.report_unknown_props(props.unknowns)
 
-        if props.valid:
-            self._builder.report_unknown_props(props.unknowns)
+        self.config.volume = props.volume
+        self.config.makeupgain = props.makeupgain
+        self.config.pitch = props.pitch
+        self.config.delay = props.delay
+        self.config.idelay = props.idelay
 
-            self.config.volume = props.volume
-            self.config.makeupgain = props.makeupgain
-            self.config.pitch = props.pitch
-            self.config.delay = props.delay
-            self.config.idelay = props.idelay
+        for nkey, nval in props.fields_std:
+            self.fields.keyval(nkey, nval)
 
-            for nkey, nval in props.fields_std:
-                self.fields.keyval(nkey, nval)
+        for nkey, nmin, nmax in props.fields_rng:
+            self.fields.keyminmax(nkey, nmin, nmax)
 
-            for nkey, nmin, nmax in props.fields_rng:
-                self.fields.keyminmax(nkey, nmin, nmax)
+        return props
 
-        return props.valid
-
-
-    OLD_AUDIO_PROPS = [
-        'Volume', 'Volume.min', 'Volume.max', 'LFE', 'LFE.min', 'LFE.max',
-        'Pitch', 'Pitch.min', 'Pitch.max', 'LPF', 'LPF.min', 'LPF.max',
-    ]
     OLD_ACTION_PROPS = [
         'tDelay', 'tDelayMin', 'tDelayMax', 'TTime', 'TTimeMin', 'TTimeMax',
     ]
 
-    def _build_action(self, node):
-        ninit = node.find1(name='ActionInitialValues') #used in action objects (CAkActionX)
-        if not ninit:
+    def _build_action_props_old(self, nbase):
+        if self.props:
             return
 
-        ok = self.__parse_props(ninit)
-        if ok:
-            return
-
-        #todo
+        #TODO
         #may use PlayActionParams + eFadeCurve when TransitionTime is used to make a fade-in (goes after delay)
 
         #older
         for prop in self.OLD_ACTION_PROPS:
-            nprop = ninit.find(name=prop)
+            nprop = nbase.find(name=prop)
             if not nprop:
                 continue
             value = nprop.value()
@@ -122,35 +103,18 @@ class CAkHircNode(object):
                 self.fields.prop(nprop)
 
 
-    def _build_audio_config(self, node):
-        name = node.get_name()
+    OLD_AUDIO_PROPS = [
+        'Volume', 'Volume.min', 'Volume.max', 'LFE', 'LFE.min', 'LFE.max',
+        'Pitch', 'Pitch.min', 'Pitch.max', 'LPF', 'LPF.min', 'LPF.max',
+    ]
 
-        # find songs that silence files to crossfade
-        # mainly useful on Segment/Track level b/c usually games that set silence on
-        # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
-        check_state = name in ['CAkMusicTrack', 'CAkMusicSegment']
-        check_rtpc = check_state
-        nbase = node.find1(name='NodeBaseParams')
-        if check_state and nbase:
-            self._build_statechunk(node, nbase)
-
-        if check_rtpc and nbase:
-            self._build_rtpc(nbase)
-
-        # find other parameters
-        ninit = node.find1(name='NodeInitialParams') #most objects that aren't actions nor states
-        if not ninit:
-            ninit = node.find1(name='StateInitialValues') #used in CAkState
-        if not ninit:
-            return
-
-        ok = self.__parse_props(ninit)
-        if ok:
+    def _build_audio_props_old(self, nbase):
+        if self.props:
             return
 
         #older
         for prop in self.OLD_AUDIO_PROPS:
-            nprop = ninit.find(name=prop)
+            nprop = nbase.find(name=prop)
             if not nprop:
                 continue
             value = nprop.value()
@@ -160,54 +124,52 @@ class CAkHircNode(object):
             if value != 0: #default to 0 if not set
                 self.fields.prop(nprop)
 
-    def _build_statechunk(self, node, nbase):
-        # state sets volume states to silence tracks (ex. MGR)
-        # in rare cases those states are also used to slightly increase volume (Monster Hunter World's 3221323256.bnk)
-        nstatechunk = nbase.find1(name='StateChunk')
-        if not nstatechunk:
-            return
-        
-        #TODO clean config/props before changing this
 
-        nstategroups = nstatechunk.finds(name='AkStateGroupChunk') #probably only one but...
-        for nstategroup in nstategroups:
-            nstates = nstategroup.finds(name='AkState')
-            if not nstates: #possible to have groupchunks without pStates (ex Xcom2's 820279197)
-                continue
+    def _make_statechunk(self, nbase):
+        if not nbase:
+            return None
 
-            bank_id = nstategroup.get_root().get_id()
-            for nstate in nstates:
-                nstateinstanceid = nstate.find1(name='ulStateInstanceID')
-                if not nstateinstanceid: #???
-                    continue
-                tid = nstateinstanceid.value()
+        statechunk = bnode_statechunk.AkStateChunk(nbase, self._builder)
+        if not statechunk.valid:
+            return None
 
-                # state should exist as a node and have a property value
-                bstate = self._builder._get_bnode(bank_id, tid, sid_info=self.sid)
-                has_volumes = bstate and bstate.config.volume
-                if not has_volumes:
-                    continue
+        # find songs that silence files with states
+        # mainly useful on MSegment/MTrack level b/c usually games that set silence on those,
+        # while on MSwitch/MRanSeq are often just to silence the whole song.
+        hircname = self.node.get_name()
+        check_state = hircname in ['CAkMusicTrack', 'CAkMusicSegment']
+        if check_state:
+            bstates = statechunk.get_volume_states()
+            self.config.crossfaded = len(bstates) != 0
+            for bsi in bstates:
+                self.config.add_volume_state(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.config)
+                self.fields.keyvalvol(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.config.volume)
 
-                self.config.crossfaded = True
+        return statechunk
 
-                logging.debug("generator: state volume found %s %s %s" % (self.sid, tid, node.get_name()))
-                nstategroupid = nstategroup.find1(name='ulStateGroupID') #parent group
+    def _make_rtpclist(self, nbase):
+        if not nbase:
+            return None
 
-                nstateid = nstate.find1(name='ulStateID')
-                if nstategroupid and nstateid:
-                    self.config.add_volume_state(nstategroupid, nstateid, bstate.config)
-                    self.fields.keyvalvol(nstategroupid, nstateid, bstate.config.volume)
-        pass
-
-    def _build_rtpc(self, node):
         # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)
-        rtpcs = bnode_rtpc.AkRtpcList(node)
-        if rtpcs.has_volume_rtpcs:
-            self.config.rtpcs = rtpcs
-            self.config.crossfaded = True
-            for nid, minmax in rtpcs.fields:
+        rtpclist = bnode_rtpc.AkRtpcList(nbase)
+        if not rtpclist.valid:
+            return None
+
+        # find songs that silence crossfade files with rtpcs
+        # mainly useful on Segment/Track level b/c usually games that set silence on
+        # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
+        hircname = self.node.get_name()
+        check_rtpc = hircname in ['CAkMusicTrack', 'CAkMusicSegment']
+        if check_rtpc:
+            brtpcs = rtpclist.get_volume_rtpcs()
+            self.config.crossfaded = len(brtpcs) != 0
+            self.config.rtpcs = brtpcs
+            for brtpc in brtpcs:
+                nid = brtpc.nid
+                minmax = brtpc.minmax()
                 self.fields.rtpc(nid, minmax)
-        return
+        return rtpclist
 
     def _build_transition_rules(self, node, is_switch):
         self.rules = bnode_rules.AkTransitionRules(node)
@@ -240,14 +202,13 @@ class CAkHircNode(object):
 
         return source
 
-    #todo
+    def _build_sfx(self, node, plugin_id):
+        return bnode_source.CAkFx(node, plugin_id)
+
+    #TODO
     def _build_silence(self, node, clip):
         sound = bnode_misc.NodeSound()
         sound.nsrc = node
         sound.silent = True
         sound.clip = clip
         return sound
-
-    def _build_sfx(self, node, plugin_id):
-        fx = bnode_source.NodeFx(node, plugin_id)
-        return fx

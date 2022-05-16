@@ -112,6 +112,9 @@ class CAkProps(object):
 
                 self.fields_rng.append( (nkey, nmin, nmax) )
 
+    def has_volumes(self):
+        return self.volume or self.makeupgain
+
 class CAkActionProps(object):
     pass
 

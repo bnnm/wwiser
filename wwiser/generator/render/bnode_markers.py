@@ -26,7 +26,6 @@ class AkMarkerList(object):
     def __init__(self, node):
         self._markers = []
         self.fields = []
-        self.has_volume_rtpcs = False
         self._build(node)
 
     def _build(self, node):

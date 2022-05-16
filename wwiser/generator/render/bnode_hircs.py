@@ -1,3 +1,4 @@
+import re
 from . import bnode_automation, bnode_misc
 from ..txtp import wtxtp_info
 
@@ -20,8 +21,10 @@ class CAkState(CAkHircNode):
         super(CAkState, self).__init__()
 
     def _build(self, node):
-        self._build_audio_config(node)
-        #save config (used to check silences)
+        nbase = node.find1(name='StateInitialValues')
+
+        self.props = self._make_props(nbase)
+        self._build_audio_props_old(nbase)
         return
 
 #plugin parameters, sometimes needed
@@ -31,8 +34,14 @@ class CAkFxCustom(CAkHircNode):
         self.fx = None
 
     def _build(self, node):
-        #save config (used for sources)
-        nfxid = node.find1(name='fxID')
+        nbase = node.find1(name='FxBaseInitialValues')
+
+        # probably not useful:
+        # InitialRTPC
+        # StateChunk
+
+        # save config (used for sources)
+        nfxid = nbase.find1(name='fxID')
         plugin_id = nfxid.value()
 
         self.fx = self._build_sfx(node, plugin_id)
@@ -47,8 +56,9 @@ class CAkEvent(CAkHircNode):
         self.ntids = None
 
     def _build(self, node):
-        #EventInitialValues
-        self.ntids = node.finds(name='ulActionID')
+        nbase = node.find1(name='EventInitialValues')
+
+        self.ntids = nbase.finds(name='ulActionID')
         # events that don't call anything seem trimmed so this should exist
         return
 
@@ -60,7 +70,10 @@ class CAkDialogueEvent(CAkHircNode):
         self.tree = None
 
     def _build(self, node):
-        self._build_audio_config(node)
+        nbase = node.find1(name='DialogueEventInitialValues')
+
+        self.props = self._make_props(nbase) # not sure how useful these are
+        self._build_audio_props_old(nbase) 
         if self.config.loop is not None:
             self._barf("loop flag")
 
@@ -75,14 +88,18 @@ class CAkAction(CAkHircNode):
         self.ntid = None
 
     def _build(self, node):
-        self._build_action(node)
+        nbase = node.find1(name='ActionInitialValues')
 
-        ntid = node.find(name='idExt')
+        ntid = nbase.find(name='idExt')
         if not ntid: #older
-            ntid = node.find(name='ulTargetID')
+            ntid = nbase.find(name='ulTargetID')
         self.ntid = ntid
 
-        self._build_subaction(node)
+        self.props = self._make_props(nbase)
+        self._build_action_props_old(nbase)
+
+        # common parent
+        self._build_subaction(nbase)
 
     def _build_subaction(self, node):
         return
@@ -92,7 +109,7 @@ class CAkActionPlayAndContinue(CAkAction):
     def __init__(self):
         super(CAkActionPlayAndContinue, self).__init__()
 
-    def _build(self, node):
+    def _build_subaction(self, node):
         self._barf()
 
 
@@ -108,13 +125,12 @@ class CAkActionPlay(CAkAction):
 
     def _build_subaction(self, node):
         nparams = node.find1(name='PlayActionParams')
-        if nparams:
-            nbankid = node.find1(name='bankID')
-            if not nbankid:
-                nbankid = node.find1(name='fileID') #older
-            # v26<= don't set bankID, automatically uses current
-            self.nbankid = nbankid
 
+        nbankid = nparams.find1(name='bankID')
+        if not nbankid:
+            nbankid = nparams.find1(name='fileID') #older
+        # v26<= don't set bankID, automatically uses current
+        self.nbankid = nbankid
 
 class CAkActionPlayEvent(CAkActionPlay): #_CAkActionPlay
     def __init__(self):
@@ -124,26 +140,70 @@ class CAkActionPlayEvent(CAkActionPlay): #_CAkActionPlay
 #******************************************************************************
 # ACTOR-MIXER HIERARCHY
 
-
-class CAkActorMixer(CAkHircNode):
+class CAkParameterNode(CAkHircNode):
     def __init__(self):
         super(CAkHircNode, self).__init__()
-
+    
     def _build(self, node):
-        # Actor-mixers are just a container of common values, and sound nodes can set this as parent to inherit them.
-        # There is a child list but it's not used directly (no action calls this).
+        # audio nodes have common values (from subclassing) and their own, ex.
+        #   CAkMusicTrack > SoundInitialValues > AkBankSourceData
+        #                                      > NodeBaseParams
+        #   CAkMusicTrack > MusicTrackInitialValues > pSource
+        #                                           > NodeBaseParams
+
+        self._build_nodebase(node)
+        self._build_audionode(node)
+
+    def _build_nodebase(self, node):
+
+        nbase = node.find1(name='NodeBaseParams')
+        if not nbase:
+            self._barf('wrong parameter node')
+
+        #NodeInitialFxParams: sfx list
+        #byBitVector: misc unneeded config
+
+        self.nbusid = nbase.find1(name='OverrideBusId')
+        self.nparentid = nbase.find1(name='DirectParentID')
+
+        #NodeInitialParams, sometimes
+        self.props = self._make_props(nbase)
+        self._build_audio_props_old(nbase)
+
+        #PositioningParams: object position stuff
+        #AuxParams: aux-bus config
+        #AdvSettingsParams: voice config etc
+
+        #nstatechunk = nbase.find1(name='StateChunk')
+        self.statechunk = self._make_statechunk(nbase)
+
+        #InitialRTPC, note that exists outside NodeBaseParams
+        ninitrtpc = nbase.find1(name='InitialRTPC')
+        self.rtpclist = self._make_rtpclist(ninitrtpc)
+
+
+    def _build_audionode(self, node):
+        self._barf()
+
+
+class CAkActorMixer(CAkParameterNode):
+    def __init__(self):
+        super(CAkActorMixer, self).__init__()
+
+    def _build_audionode(self, node):
+        # Actor-mixers are just a container of NodeBaseParams values, and sound nodes can set this as parent to inherit them.
+        # There is a Children list but it's not used directly (no action calls this).
         pass
 
 
-class CAkSwitchCntr(CAkHircNode):
+class CAkSwitchCntr(CAkParameterNode):
     def __init__(self):
         super(CAkSwitchCntr, self).__init__()
         self.gtype = None
         self.ngname = None
         self.gvalue_ntids = {}
 
-    def _build(self, node):
-        self._build_audio_config(node)
+    def _build_audionode(self, node):
         if self.config.loop is not None:
             self._barf("loop flag")
 
@@ -164,13 +224,12 @@ class CAkSwitchCntr(CAkHircNode):
         return
 
 
-class CAkRanSeqCntr(CAkHircNode):
+class CAkRanSeqCntr(CAkParameterNode):
     def __init__(self):
         super(CAkRanSeqCntr, self).__init__()
         self.ntids = []
 
-    def _build(self, node):
-        self._build_audio_config(node)
+    def _build_audionode(self, node):
         if self.config.loop is not None:
             self._barf("loop flag")
 
@@ -226,13 +285,13 @@ class CAkRanSeqCntr(CAkHircNode):
         return
 
 
-class CAkLayerCntr(CAkHircNode):
+class CAkLayerCntr(CAkParameterNode):
     def __init__(self):
         super(CAkLayerCntr, self).__init__()
         self.ntids = []
+        self.layer_rtpclist = None
 
-    def _build(self, node):
-        self._build_audio_config(node)
+    def _build_audionode(self, node):
         if self.config.loop is not None:
             self._barf("loop flag")
 
@@ -248,20 +307,19 @@ class CAkLayerCntr(CAkHircNode):
         nlayers = node.find1(name='pLayers')
         if nlayers:
             # RTPC linked to volume (ex. AC2 bgm+crowds)
-            self._build_rtpc(nlayers)
+            self.layer_rtpclist = self._build_rtpclist(nlayers)
 
         if nmode:
             self.fields.prop(nmode)
         return
 
 
-class CAkSound(CAkHircNode):
+class CAkSound(CAkParameterNode):
     def __init__(self):
         super(CAkSound, self).__init__()
         self.sound = bnode_misc.NodeSound()
 
-    def _build(self, node):
-        self._build_audio_config(node)
+    def _build_audionode(self, node):
 
         nloop = node.find(name='Loop')
         if nloop: #older
@@ -282,7 +340,7 @@ class CAkSound(CAkHircNode):
 #******************************************************************************
 # INTERACTIVE MUSIC HIERARCHY
 
-class CAkMusicSwitchCntr(CAkHircNode):
+class CAkMusicSwitchCntr(CAkParameterNode):
     def __init__(self):
         super(CAkMusicSwitchCntr, self).__init__()
         self.gtype = None
@@ -293,8 +351,7 @@ class CAkMusicSwitchCntr(CAkHircNode):
         self.rules = None
         self.tree = None
 
-    def _build(self, node):
-        self._build_audio_config(node)
+    def _build_audionode(self, node):
         self._build_transition_rules(node, True)
         self._build_stingers(node)
 
@@ -325,14 +382,13 @@ class CAkMusicSwitchCntr(CAkHircNode):
                 self.gvalue_ntid[gvalue] = (ntid, ngvalue)
 
 
-class CAkMusicRanSeqCntr(CAkHircNode):
+class CAkMusicRanSeqCntr(CAkParameterNode):
     def __init__(self):
         super(CAkMusicRanSeqCntr, self).__init__()
         self.items = []
         self.rules = None
 
-    def _build(self, node):
-        self._build_audio_config(node)
+    def _build_audionode(self, node):
         if self.config.loop is not None:
             self._barf("loop flag")
 
@@ -348,9 +404,9 @@ class CAkMusicRanSeqCntr(CAkHircNode):
         #         item: segment D
         # may play on loop: ABC ABC ABD ABC ABD ... (each group has its own loop config)
         nplaylist = node.find1(name='pPlayList')
-        self._playlist(node, nplaylist, self.items)
+        self._build_playlist(node, nplaylist, self.items)
 
-    def _playlist(self, node, nplaylist, items):
+    def _build_playlist(self, node, nplaylist, items):
         nitems = nplaylist.get_children()
         if not nitems:
             return
@@ -386,10 +442,10 @@ class CAkMusicRanSeqCntr(CAkHircNode):
              
             items.append(item)
 
-            self._playlist(node, nsubplaylist, item.items)
+            self._build_playlist(node, nsubplaylist, item.items)
         return
 
-class CAkMusicRanSeqCntr_Item():
+class CAkMusicRanSeqCntr_Item(object):
     def __init__(self):
         self.nitem = None
         self.ntid = None
@@ -399,15 +455,14 @@ class CAkMusicRanSeqCntr_Item():
         self.items = []
 
 
-class CAkMusicSegment(CAkHircNode):
+class CAkMusicSegment(CAkParameterNode):
     def __init__(self):
         super(CAkMusicSegment, self).__init__()
         self.ntids = []
         self.sound = None
         self.sconfig = None
 
-    def _build(self, node):
-        self._build_audio_config(node)
+    def _build_audionode(self, node):
         if self.config.loop is not None:
             self._barf("loop flag")
         self._build_stingers(node)
@@ -438,7 +493,7 @@ class CAkMusicSegment(CAkHircNode):
         return
 
 
-class CAkMusicTrack(CAkHircNode):
+class CAkMusicTrack(CAkParameterNode):
     def __init__(self):
         super(CAkMusicTrack, self).__init__()
         self.type = None
@@ -448,8 +503,7 @@ class CAkMusicTrack(CAkHircNode):
         self.gvalue_index = {}
         self.automations = {}
 
-    def _build(self, node):
-        self._build_audio_config(node)
+    def _build_audionode(self, node):
 
         nloop = node.find(name='Loop')
         if nloop: #older
@@ -559,7 +613,7 @@ class CAkMusicTrack(CAkHircNode):
 
         return clip
 
-class CAkMusicTrack_Clip(CAkHircNode):
+class CAkMusicTrack_Clip(object):
     def __init__(self):
         self.nitem = None
         self.ntid = None

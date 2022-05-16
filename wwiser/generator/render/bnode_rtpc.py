@@ -243,14 +243,16 @@ class AkRtpc(object):
     def __init__(self, nrtpc):
         self.is_volume = False
         self.nrtpc = nrtpc
+        self.version = None #used?
+        self.nid = None
+        self.id = None
+        self.graph = None
+        self.accum = 0
+        self._build(nrtpc)
 
-        #TODO call build, allow non-volume types
-
+    def _build(self, nrtpc):
         nparam = nrtpc.find1(name='ParamID')
-        if nparam.value() != 0: #volume
-            return #not usable for txtp
-
-        self.is_volume = True
+        self.is_volume = (nparam.value() != 0) #volume prop
 
         self.version = nrtpc.get_root().get_version()
 
@@ -263,10 +265,8 @@ class AkRtpc(object):
         #rtpcType: game parameter/midi/modulator, probably not important (>=112)
 
         naccum = nrtpc.find1(name='rtpcAccum') #~113
-        self.accum = 0
         if naccum:
             self.accum = naccum.value()
-
 
     def get(self, x, value):
         if not self.is_volume:
@@ -321,9 +321,8 @@ class AkRtpc(object):
 
 class AkRtpcList(object):
     def __init__(self, node):
+        self.valid = False
         self._rtpcs = []
-        self.fields = []
-        self.has_volume_rtpcs = False
         self._build(node)
 
     def empty(self):
@@ -335,10 +334,14 @@ class AkRtpcList(object):
         nrtpcs = node.finds(name='RTPC')
         if not nrtpcs:
             return
+        self.valid = True
         for nrtpc in nrtpcs:
             rtpc = AkRtpc(nrtpc)
-            if not rtpc.is_volume:
-                continue
-            self.has_volume_rtpcs = True
             self._rtpcs.append(rtpc)
-            self.fields.append((rtpc.nid, rtpc.minmax()))
+
+    def get_volume_rtpcs(self):
+        items = []
+        for rtpc in self._rtpcs:
+            if rtpc.is_volume:
+                items.append(rtpc)
+        return items

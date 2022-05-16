@@ -285,7 +285,7 @@ class Generator(object):
 
         # make txtp for nodes
         for node in nodes:
-            self._generate_txtp(node)
+            self._render_txtp(node)
 
         return
 
@@ -321,53 +321,35 @@ class Generator(object):
                 if not allow:
                     continue
 
-                self._generate_txtp(node)
+                self._render_txtp(node)
 
         self._txtpcache.stats.unused_mark = False
         self._txtpcache.no_txtp = False
         return
 
-    def _generate_txtp(self, node):
-        # When default_gsparams aren't set and objects need them, Txtp finds possible gsparams, added
-        # to "gpaths". Then, it makes one .txtp per combination (like first "music=b01" then "music=b02")
 
-        ncaller = node.find1(type='sid')
+    # TXTP GENERATION
+    # By default generator tries to make one .txtp per event. However, often there are multiple alts per
+    # event that we want to generate:
+    # - combinations of gamesyncs (states/switches)
+    # - combinations of states in statechunks
+    # - combinations of rtpc values
+    # - variations of "selectable" wems (random1, then random2, etc)
+    # - variations of externals that programmers can use to alter .wem on realtime
+    # - transitions/stingers that could apply to current event
+    # Generator goes step by step making combos of combos to cover all possible .txtp so the totals can be
+    # huge (all those almost never happen at once).
+    #
+    # Base generation is "rendered" from current values, following Wwise's internals untils it creates a
+    # rough tree that looks like a TXTP. This "rendering" varies depending on Wwise's internal state, meaning
+    # you need to re-render when this state is different ('combinations'), as the objects it reaches change.
+    # Changes that don't depend on Wwise's state can be done post-rendering ('variations').
+    # 
+    # Code below handles making 'combinations', while code in .txtp when writting handles all 'variations'.
 
+    def _render_txtp(self, node):
         try:
-            # base .txtp
-            txtp = wtxtp.Txtp(self._txtpcache, gsparams=self._default_gsparams)
-            self._renderer.begin_txtp(txtp, node)
-
-            gspaths = txtp.gspaths  # gamesync "paths" found during process
-            if gspaths.is_empty():
-                txtp.write()
-                txtp_sub = txtp
-
-            else:
-                txtp_sub = txtp #generate transitions/stingers for all base txtp with paths (lots of repeats otherwise)
-
-                # .txtp per variable combo
-                unreachables = False #check if any txtp has unreachables
-                combos = gspaths.combos()
-                for combo in combos:
-                    #logging.info("generator: combo %s", combo.elems)
-                    txtp = wtxtp.Txtp(self._txtpcache, gsparams=combo)
-                    self._renderer.begin_txtp(txtp, node)
-                    txtp.write()
-                    if txtp.scpaths.has_unreachables():
-                        unreachables = True
-
-                if unreachables:
-                    for combo in combos:
-                        #logging.info("generator: combo %s", combo.elems)
-                        txtp = wtxtp.Txtp(self._txtpcache, gsparams=combo)
-                        txtp.scpaths.set_unreachables_only()
-                        self._renderer.begin_txtp(txtp, node)
-                        txtp.write()
-
-            self._generate_sub(ncaller, txtp_sub)
-
-            #TODO improve combos (unreachables doesn't make transitions?)
+            self._render_base(node)
 
         except Exception: #as e
             sid = 0
@@ -380,9 +362,51 @@ class Generator(object):
             logging.info("generator: ERROR! node %s in %s", sid, bankname)
             raise
 
-        return
+    def _render_base(self, node):
+        ncaller = node.find1(type='sid')
 
-    def _generate_sub(self, ncaller, txtp):
+        # base .txtp
+        txtp = wtxtp.Txtp(self._txtpcache, gsparams=self._default_gsparams)
+        self._renderer.begin_txtp(txtp, node)
+
+        # When default_gsparams aren't set and objects need them, Txtp finds all possible gsparams, added
+        # to "gspaths", so we can makes .txtp per combination (like first "music=b01" then "music=b02")
+        gspaths = txtp.gspaths  # gamesync "paths" found during process
+        if gspaths.is_empty():
+            # regular single txtp
+            txtp.write()
+            txtp_sub = txtp
+
+        else:
+            txtp_sub = txtp #generate transitions/stingers for all base txtp with paths (lots of repeats otherwise)
+            self._render_gscombos(node, gspaths)
+
+        self._render_subs(ncaller, txtp_sub)
+        #TODO improve combos (unreachables doesn't make transitions?)
+
+
+    def _render_gscombos(self, node, gspaths):
+
+        # .txtp per variable combo
+        unreachables = False #check if any txtp has unreachables
+        combos = gspaths.combos()
+        for combo in combos:
+            txtp = wtxtp.Txtp(self._txtpcache, gsparams=combo)
+            self._renderer.begin_txtp(txtp, node)
+            txtp.write()
+            if txtp.scpaths.has_unreachables():
+                unreachables = True
+
+        #TODO separate combos of statechunks from Txtp()
+        if unreachables:
+            for combo in combos:
+                txtp = wtxtp.Txtp(self._txtpcache, gsparams=combo)
+                txtp.scpaths.set_unreachables_only()
+                self._renderer.begin_txtp(txtp, node)
+                txtp.write()
+
+
+    def _render_subs(self, ncaller, txtp):
         # stingers found during process
         bstingers = txtp.stingers.get_items()
         if bstingers:

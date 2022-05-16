@@ -59,6 +59,8 @@ class CAkEvent(CAkHircNode):
 
         self.ntids = nbase.finds(name='ulActionID')
         # events that don't call anything seem trimmed so this should exist
+
+        # no other config
         return
 
 
@@ -78,6 +80,7 @@ class CAkDialogueEvent(CAkHircNode):
         tree = self._build_tree(node)
         if tree.init:
             self.tree = tree
+        return
 
 
 class CAkAction(CAkHircNode):
@@ -133,6 +136,8 @@ class CAkActionPlayEvent(CAkActionPlay): #_CAkActionPlay
     def __init__(self):
         super(CAkActionPlayEvent, self).__init__()
 
+    def _build_subaction(self, node):
+        pass
 
 #******************************************************************************
 # ACTOR-MIXER HIERARCHY
@@ -187,8 +192,8 @@ class CAkActorMixer(CAkParameterNode):
         super(CAkActorMixer, self).__init__()
 
     def _build_audionode(self, node):
-        # Actor-mixers are just a container of NodeBaseParams values, and sound nodes can set this as parent to inherit them.
-        # There is a Children list but it's not used directly (no action calls this).
+        # Actor-mixers are just a container of NodeBaseParams values, and sound nodes can set this as
+        # parent to inherit them. There is a Children list but it's not used directly (no action calls this).
         pass
 
 
@@ -261,7 +266,7 @@ class CAkRanSeqCntr(CAkParameterNode):
         else:
             # in rare cases playlist is empty, seen with "sequence" types though children aren't ordered (Borderlands 3)
             self.ntids = node.find(name='Children').finds(type='tid') 
-            
+
         #if   self.mode == 0: #random
             #wAvoidRepeatCount: N objects must be played before one is repeated (also depends on normal/shuffle)
             #_bIsUsingWeight: unused? (AkPlaylistItem always has weight)
@@ -403,7 +408,8 @@ class CAkMusicRanSeqCntr(CAkParameterNode):
         self._build_playlist(node, nplaylist, self.items)
 
     def _build_playlist(self, node, nplaylist, items):
-        nitems = nplaylist.get_children()
+        #get AkMusicRanSeqPlaylistItem, but only for current level (as playlists can contain playlists)
+        nitems = nplaylist.get_children() #only direct
         if not nitems:
             return
 
@@ -429,19 +435,19 @@ class CAkMusicRanSeqCntr(CAkParameterNode):
             if type == -1 or not nsubplaylist or nsubplaylist and not nsubplaylist.get_children():
                 ntid = nitem.find(name='SegmentID') #0 on non-leaf nodes
 
-            item = CAkMusicRanSeqCntr_Item()
+            item = AkMusicRanSeqPlaylistItem()
             item.nitem = nitem
             item.ntid = ntid
             item.type = type
             item.config.loop = nloop.value()
             item.fields.props([ntype, nloop])
-             
+
             items.append(item)
 
             self._build_playlist(node, nsubplaylist, item.items)
         return
 
-class CAkMusicRanSeqCntr_Item(object):
+class AkMusicRanSeqPlaylistItem(object):
     def __init__(self):
         self.nitem = None
         self.ntid = None

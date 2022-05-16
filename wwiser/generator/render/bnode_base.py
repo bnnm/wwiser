@@ -65,7 +65,8 @@ class CAkHircNode(object):
         self.config.pitch = props.pitch
         self.config.delay = props.delay
         self.config.idelay = props.idelay
-
+        if self.config.delay and self.config.idelay:
+            self._barf('delay with idelay')
 
         for nfld in props.fields_fld:
             self.fields.prop(nfld)

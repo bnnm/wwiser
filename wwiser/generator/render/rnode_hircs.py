@@ -103,7 +103,7 @@ class RN_CAkActionPlay(RN_CAkAction):
 class RN_CAkActionPlayEvent(RN_CAkAction):
     def _render_txtp(self, bnode, txtp):
         txtp.group_single(bnode.config) # rare but may contain config
-        self._render_next_event(bnode.ntid, txtp, nbankid=bnode.nbankid)
+        self._render_next_event(bnode.ntid, txtp)
         txtp.group_done()
         return
 
@@ -205,7 +205,6 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
             return
 
         if bnode.tree:
-
             if not txtp.gsparams:
                 # find all possible gamesyncs paths (won't generate txtp)
                 for path, ntid in bnode.tree.paths:
@@ -265,10 +264,10 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
         self._register_stingers(txtp, bnode.stingerlist)
 
         txtp.group_single(bnode.config) #typically useless but may have volumes
-        self._process_playlist(txtp, bnode.items)
+        self._render_playlist(txtp, bnode.items)
         txtp.group_done()
 
-    def _process_playlist(self, txtp, items):
+    def _render_playlist(self, txtp, items):
         if not items:
             return
 
@@ -299,9 +298,9 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
                     txtp.group_random_step(subitems, item.config)
 
                 else:
-                    self._barf('unknown type')
+                    self._barf('unknown musicranseq type')
 
-                self._process_playlist(txtp, item.items)
+                self._render_playlist(txtp, item.items)
                 txtp.group_done(subitems)
             txtp.info.done()
 
@@ -338,10 +337,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
     def _render_txtp(self, bnode, txtp):
         if not bnode.subtracks: #empty / no clips
             return
-
-        # node defines states that muted sources
-        if bnode.config.volume_states:
-            txtp.scpaths.add_nstates(bnode.config.volume_states)
+        self._register_statechunks(txtp, bnode)
 
         # musictrack can play in various ways
         if   bnode.type == 0: #normal (plays one subtrack, N aren't allowed)
@@ -400,7 +396,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             txtp.group_done()
 
         else:
-            self._barf()
+            self._barf('unknown musictrack mode')
 
         return
 

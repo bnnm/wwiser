@@ -16,6 +16,12 @@ class RN_CAkHircNode(object):
     #--------------------------------------------------------------------------
 
     # info when generating transitions's musicsegments
+    def _register_statechunks(self, txtp, bnode):
+        # node defines states that muted sources
+        if bnode.config.volume_states:
+            txtp.scpaths.add_nstates(bnode.config.volume_states)
+        return
+
     def _register_transitions(self, txtp, rules):
         #if not txtp.gsparams:
         #    return
@@ -30,10 +36,10 @@ class RN_CAkHircNode(object):
         txtp.stingers.add(bstingerlist)
         return
 
+    #--------------------------------------------------------------------------
+
     def _barf(self, text="not implemented"):
         raise ValueError("%s - %s %s" % (text, self.name, self.sid))
-
-    #--------------------------------------------------------------------------
 
     def _render_base(self, bnode, txtp):
         try:
@@ -46,8 +52,8 @@ class RN_CAkHircNode(object):
     def _render_txtp(self, bnode, txtp):
         self._barf("must implement")
 
-    def _render_next_event(self, ntid, txtp, nbankid=None):
-        self._render_next(ntid, txtp, nbankid=nbankid, idtype=wbuilder_util.IDTYPE_EVENT)
+    def _render_next_event(self, ntid, txtp):
+        self._render_next(ntid, txtp, nbankid=None, idtype=wbuilder_util.IDTYPE_EVENT)
 
     def _render_next(self, ntid, txtp, nbankid=None, idtype=None):
         tid = ntid.value()

@@ -86,6 +86,12 @@ aot2_buggy_banks = {
 }
 
 
+#TODO
+# Wwise allows customs props/rtpcs (meaning not defined/registered in bnk), that start right after
+# last reserved ID (MaxNum*). In those cases we want some kind of readable default if not defined.
+#AkRTPC_MaxNumRTPC = { ... }
+
+
 # #############################################################################
 # AK ENUMS AND FORMATS
 
@@ -326,8 +332,11 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00AB0003: "Wwise Reflect", #AkReflect
 
   0x00AE0007: "System", #DefaultSink
+  0x00B00007: "Communication", #DefaultSink
+  0x00B10007: "Controller Headphones", #DefaultSink
   0x00B30007: "Controller Speaker", #DefaultSink
   0x00B50007: "No Output", #DefaultSink
+  0x03840009: "Wwise System Output Settings", #DefaultSink
   0x00B70002: "SoundSeed Grain", #
   0x00BA0003: "Mastering Suite", #MasteringSuite
   0x00C80002: "Wwise Audio Input", #AkAudioInput
@@ -436,8 +445,6 @@ AkTransitionRampingType = wfmt.FormatterLUT({
   0x2: "FilteringOverTime",
 })
 
-# Wwise allows customs props/rtpcs (meaning not defined in bnk), that start right after last valid ID.
-
 #062<=
 AkPropID_062 = wfmt.FormatterLUT({
   0x0: "Volume",
@@ -512,6 +519,7 @@ AkPropID_088 = wfmt.FormatterLUT({
   0x16: "GameAuxSendVolume",
   0x17: "OutputBusVolume",
   0x18: "OutputBusLPF",
+  #0x19: "NUM" #072 max
   #088>=
   0x19: "InitialDelay",
   0x1A: "HDRBusThreshold",
@@ -533,6 +541,7 @@ AkPropID_088 = wfmt.FormatterLUT({
   0x2A: "LoopCrossfadeDuration",
   0x2B: "CrossfadeUpCurve",
   0x2C: "CrossfadeDownCurve",
+  #0x2D: NUM #088 max
 })
 #112>= 113<=
 AkPropID_113 = wfmt.FormatterLUT({
@@ -660,7 +669,7 @@ AkPropID_126 = wfmt.FormatterLUT({
   0x3A: "Loop",
   0x3B: "InitialDelay",
 
-  0xFF: "Custom", #seen in DMC5, value 1.0
+  #0xFF: "?", #seen in DMC5, value 1.0
 })
 # 128>=
 AkPropID_128 = wfmt.FormatterLUT({
@@ -737,7 +746,7 @@ AkPropID_128 = wfmt.FormatterLUT({
   0x48: "ReflectionBusVolume", #135>=
   0x49: "PAN_UD", #140>=
   #AkPropID_NUM = max
-}) #default='Custom' ##should auto-set custom props?
+})
 AkPropID = None
 
 #046>= 088<=
@@ -1177,7 +1186,8 @@ AkRTPC_ParameterID_045 = wfmt.FormatterLUT({
   0x2: "Pitch",
   0x3: "LPF",
   0x4: "PlayMechanismSpecialTransitionsValue?",
-  0x6: "Unknown?", #AC2 (related to volume?)
+ #0x5: "Unknown?", # not defined
+  0x6: "Unknown?", # not defined (AC2: related to volume?)
   0x8: "Priority?",
   0x9: "MaxNumInstances?",
   0xA: "Positioning_Radius_LPF?",
@@ -1185,7 +1195,11 @@ AkRTPC_ParameterID_045 = wfmt.FormatterLUT({
   0xC: "Positioning_Cone_Attenuation_ON_OFF?",
   0xD: "Positioning_Cone_Attenuation?",
   0xE: "Positioning_Cone_LPF?",
-  0xF: "Unknown?", #KOF12
+  0xF: "Unknown?",  # not defined (KOF12)
+ #0x10: "Unknown?", # not defined
+ #0x11: "Unknown?", # not defined
+ #0x12: "Unknown?", # not defined
+ #0x13: "Unknown?", # not defined
   0x14: "Position_PAN_RL?",
   0x15: "Position_PAN_FR?",
   0x16: "Position_Radius_SIM_ON_OFF?",
@@ -1206,7 +1220,9 @@ AkRTPC_ParameterID_053 = wfmt.FormatterLUT({
   0x2: "Pitch",
   0x3: "LPF",
   0x4: "PlayMechanismSpecialTransitionsValue",
-  0x5: "Unknown?", #Wwise demos (related to speed, pitch?)
+  0x5: "Unknown?", # not defined (Wwise demos: related to speed, pitch?)
+ #0x6: "Unknown?", # not defined
+ #0x7: "Unknown?", # not defined
   0x8: "Priority",
   0x9: "MaxNumInstances",
   0xA: "Positioning_Radius_LPF",
@@ -1214,7 +1230,11 @@ AkRTPC_ParameterID_053 = wfmt.FormatterLUT({
   0xC: "Positioning_Cone_Attenuation_ON_OFF",
   0xD: "Positioning_Cone_Attenuation",
   0xE: "Positioning_Cone_LPF",
-  0xF: "Unknown?", #ACB
+  0xF: "Unknown?",  # not defined (AC:B)
+ #0x10: "Unknown?", # not defined
+ #0x11: "Unknown?", # not defined
+ #0x12: "Unknown?", # not defined
+ #0x13: "Unknown?", # not defined
   0x14: "Position_PAN_RL",
   0x15: "Position_PAN_FR",
   0x16: "Position_Radius_SIM_ON_OFF",
@@ -1227,6 +1247,7 @@ AkRTPC_ParameterID_053 = wfmt.FormatterLUT({
   0x1D: "FeedbackVolume",
   0x1E: "FeedbackLowpass",
   0x1F: "FeedbackPitch",
+ #0x20: MaxNumRTPC #046~
 })
 #056>= 065<=
 AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
@@ -1235,8 +1256,9 @@ AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
   0x2: "Pitch",
   0x3: "LPF",
   0x4: "PlayMechanismSpecialTransitionsValue?",
-  0x5: "Unknown?", #DmC
-  0x6: "Unknown?", #DmC
+  0x5: "Unknown?", # not defined (DmC)
+  0x6: "Unknown?", # not defined (DmC)
+ #0x7: "Unknown?", # not defined
   0x8: "Priority",
   0x9: "MaxNumInstances",
   0xA: "Positioning_Radius_LPF",
@@ -1244,6 +1266,11 @@ AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
   0xC: "Positioning_Cone_Attenuation_ON_OFF",
   0xD: "Positioning_Cone_Attenuation",
   0xE: "Positioning_Cone_LPF",
+ #0xF: "Unknown?",  # not defined
+ #0x10: "Unknown?", # not defined
+ #0x11: "Unknown?", # not defined
+ #0x12: "Unknown?", # not defined
+ #0x13: "Unknown?", # not defined
   0x14: "Position_PAN_RL",
   0x15: "Position_PAN_FR",
   0x16: "Position_Radius_SIM_ON_OFF", #056<=
@@ -1256,10 +1283,11 @@ AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
   0x1D: "FeedbackVolume",
   0x1E: "FeedbackLowpass",
   0x1F: "FeedbackPitch",
+ #0x20: MaxNumRTPC
 
-  0x3C: "Custom", #Quantum Conundrum (found near -96, some volume?)
-  0x3D: "Custom", #DmC (found near -96, some volume?)
-  0x3E: "Custom", #same
+ #0x3C: "?", #Quantum Conundrum (found near -96, some volume?)
+ #0x3D: "?", #DmC (found near -96, some volume?)
+ #0x3E: "?", #same
 })
 #072==
 AkRTPC_ParameterID_072 = wfmt.FormatterLUT({
@@ -1269,6 +1297,8 @@ AkRTPC_ParameterID_072 = wfmt.FormatterLUT({
   0x3: "LPF",
   0x4: "BusVolume",
   0x5: "PlayMechanismSpecialTransitionsValue",
+ #0x6: "Unknown?", # not defined
+ #0x7: "Unknown?", # not defined
   0x8: "Priority",
   0x9: "MaxNumInstances",
   0xA: "Positioning_Radius_LPF",
@@ -1293,8 +1323,9 @@ AkRTPC_ParameterID_072 = wfmt.FormatterLUT({
   0x1D: "FeedbackVolume",
   0x1E: "FeedbackLowpass",
   0x1F: "FeedbackPitch",
+ #0x20: MaxNumRTPC
 
-  0x3E: "Unknown?", #Metal Gear Rising (found near "DB" scaling, some volume?)
+ #0x3E: "?", #Metal Gear Rising (found near "DB" scaling, some volume?)
 })
 #088==
 AkRTPC_ParameterID_088 = wfmt.FormatterLUT({
@@ -1305,6 +1336,7 @@ AkRTPC_ParameterID_088 = wfmt.FormatterLUT({
   0x4: "BusVolume",
   0x5: "PlayMechanismSpecialTransitionsValue",
   0x6: "InitialDelay",
+ #0x7: "Unknown?" # not defined
   0x8: "Priority",
   0x9: "MaxNumInstances",
   0xA: "PositioningType",
@@ -1336,6 +1368,7 @@ AkRTPC_ParameterID_088 = wfmt.FormatterLUT({
   0x24: "MakeUpGain",
   0x25: "Position_PAN_X_3D",
   0x26: "Position_PAN_Y_3D",
+ #0x27~0x39: "Unknown?" # not defined/reserved
   #0x40: "MaxNumRTPC",
 })
 #112>= 113<=
@@ -1377,7 +1410,7 @@ AkRTPC_ParameterID_113 = wfmt.FormatterLUT({
   0x27: "MidiTransposition",
   0x28: "MidiVelocityOffset",
   0x29: "PlaybackSpeed",
- #0x2A: "ModulatorRTPCIDStart",
+ #0x2A: "ModulatorRTPCIDStart", #?
   0x2A: "ModulatorLfoDepth",
   0x2B: "ModulatorLfoAttack",
   0x2C: "ModulatorLfoFrequency",

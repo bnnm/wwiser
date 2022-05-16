@@ -22,7 +22,7 @@ class _AkMarker(object):
         #pMarkerName: optional, found in later versions
 
 
-class AkMarkers(object):
+class AkMarkerList(object):
     def __init__(self, node):
         self._markers = []
         self.fields = []

@@ -160,7 +160,7 @@ PLUGIN_NAME = {
     0x00660002: 'tone',
 }
 
-class AkBankSource(object):
+class AkBankSourceData(object):
     def __init__(self, nbnksrc, src_sid):
         self.src_sid = src_sid
         self.nsrc = nbnksrc
@@ -170,6 +170,11 @@ class AkBankSource(object):
         self.nfileid = nbnksrc.find(name='uFileID')
         self.nlang = nbnksrc.find(name='bIsLanguageSpecific')
         self._lang_loaded = False
+        self.plugin_size = None
+
+        nsize = nbnksrc.find(name='uSize')
+        if nsize:
+            self.plugin_size = nsize.value()
 
         self.version = None
         if self.nsrc:
@@ -309,7 +314,7 @@ class AkBankSource(object):
         else:
             subdir = "%s/" % (lang_name)
         self._subdir = subdir
-
+        
 
 class NodeFx(object):
     def __init__(self, node, plugin_id):

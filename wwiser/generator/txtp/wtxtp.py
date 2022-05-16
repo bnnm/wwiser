@@ -1,7 +1,6 @@
 import logging, os
 from ... import wversion
-from ..gamesync import wgamesync, wvolumes
-from .. import wtransitions, wstingers
+from ..registry import wgamesync, wvolumes, wtransitions, wstingers
 from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 # Helds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.

@@ -2,7 +2,7 @@ from . import bnode_automation, bnode_misc
 from ..txtp import wtxtp_info
 
 from .bnode_base import CAkHircNode
-from .bnode_markers import AkMarkers
+from .bnode_markers import AkMarkerList
 
 
 #non-audio node, doesn't contribute to txtp
@@ -35,7 +35,7 @@ class CAkFxCustom(CAkHircNode):
         nfxid = node.find1(name='fxID')
         plugin_id = nfxid.value()
 
-        self.fx = self._parse_sfx(node, plugin_id)
+        self.fx = self._build_sfx(node, plugin_id)
         return
 
 #******************************************************************************
@@ -270,7 +270,7 @@ class CAkSound(CAkHircNode):
             #there is min/max too
 
         nitem = node.find(name='AkBankSourceData')
-        source = self._parse_source(nitem)
+        source = self._build_source(nitem)
         self.sound.source = source
         self.sound.nsrc = source.nfileid
 
@@ -420,7 +420,7 @@ class CAkMusicSegment(CAkHircNode):
         self.fields.prop(nfdur)
 
         # markers for transitions
-        markers = AkMarkers(node)
+        markers = AkMarkerList(node)
         marker1 = markers.get_entry()
         marker2 = markers.get_exit()
 
@@ -472,7 +472,7 @@ class CAkMusicTrack(CAkHircNode):
         streaminfos = {}
         nitems = node.find1(name='pSource').finds(name='AkBankSourceData')
         for nitem in nitems:
-            source = self._parse_source(nitem)
+            source = self._build_source(nitem)
             tid = source.nsourceid.value()
             streaminfos[tid] = source
 

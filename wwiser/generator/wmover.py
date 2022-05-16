@@ -19,7 +19,7 @@ class Mover(object):
         if not node:
             return
 
-        source = bnode_source.AkBankSource(node, None)
+        source = bnode_source.AkBankSourceData(node, None)
         if not source or not source.tid: #?
             return
         if source.tid in self._moved_sources:

@@ -1,4 +1,4 @@
-from ..gamesync import wgamesync
+from ..registry import wgamesync
 
 
 # Handles tree with multi gamesync (order of gamesyncs is branch order in tree)

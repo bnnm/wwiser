@@ -1,5 +1,5 @@
 import os
-from ..gamesync import wgamesync
+from ..registry import wgamesync
 
 ###
 # saves a printable info tree

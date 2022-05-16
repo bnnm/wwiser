@@ -1,6 +1,6 @@
 import logging, math, os
 from . import wexternals, wstats
-from .gamesync import wgamevars
+from .registry import wgamevars
 from .render import wmediaindex
 from .txtp import wtxtp_namer
 

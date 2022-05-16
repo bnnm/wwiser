@@ -1,5 +1,5 @@
 import logging
-from . import bnode_misc, bnode_props, bnode_rtpc, bnode_source, bnode_transitions, bnode_tree, bnode_stinger
+from . import bnode_misc, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger
 from ..txtp import wtxtp_info
 
 
@@ -210,7 +210,7 @@ class CAkHircNode(object):
         return
 
     def _build_transition_rules(self, node, is_switch):
-        self.rules = bnode_transitions.AkTransitionRules(node)
+        self.rules = bnode_rules.AkTransitionRules(node)
         if not is_switch and self.rules.ntrns:
             # rare in playlists (Polyball, Spiderman)
             self._builder.report_transition_object()
@@ -223,22 +223,13 @@ class CAkHircNode(object):
         self.stingerlist = bnode_stinger.CAkStingerList(node)
         return
 
-    #todo
-    def _build_silence(self, node, clip):
-        sound = bnode_misc.NodeSound()
-        sound.nsrc = node
-        sound.silent = True
-        sound.clip = clip
-        return sound
-
-    def _parse_source(self, nbnksrc):
-        source = bnode_source.AkBankSource(nbnksrc, self.sid)
+    def _build_source(self, nbnksrc):
+        source = bnode_source.AkBankSourceData(nbnksrc, self.sid)
 
         if source.is_plugin_silence:
-            nsize = nbnksrc.find(name='uSize')
-            if nsize and nsize.value():
+            if source.plugin_size:
                 # older games have inline plugin info
-                source.plugin_fx = self._parse_sfx(nbnksrc, source.plugin_id)
+                source.plugin_fx = self._build_sfx(nbnksrc, source.plugin_id)
             else:
                 # newer games use another CAkFxCustom (though in theory could inline)
                 bank_id = source.nsrc.get_root().get_id()
@@ -249,6 +240,14 @@ class CAkHircNode(object):
 
         return source
 
-    def _parse_sfx(self, node, plugin_id):
+    #todo
+    def _build_silence(self, node, clip):
+        sound = bnode_misc.NodeSound()
+        sound.nsrc = node
+        sound.silent = True
+        sound.clip = clip
+        return sound
+
+    def _build_sfx(self, node, plugin_id):
         fx = bnode_source.NodeFx(node, plugin_id)
         return fx

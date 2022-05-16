@@ -203,7 +203,7 @@ class TxtpNamer(object):
             if not trigname:
                 trigname = ntrigger.value()
 
-            name += "~{stinger-%s=%s}" % (tid, trigname)
+            name += "~{stinger-%s}=%s" % (tid, trigname)
 
         # params
         name += txtp.info.get_gsnames()

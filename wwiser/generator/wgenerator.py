@@ -340,9 +340,12 @@ class Generator(object):
 
             ppaths = txtp.ppaths  # gamesync "paths" found during process
             if ppaths.is_empty():
-                self._generate_main(ncaller, txtp)
+                txtp.write()
+                txtp_sub = txtp
 
             else:
+                txtp_sub = txtp #generate transitions/stingers for all base txtp with paths (lots of repeats otherwise)
+
                 # .txtp per variable combo
                 unreachables = False #check if any txtp has unreachables
                 combos = ppaths.combos()
@@ -350,8 +353,7 @@ class Generator(object):
                     #logging.info("generator: combo %s", combo.elems)
                     txtp = wtxtp.Txtp(self._txtpcache, params=combo)
                     self._renderer.begin_txtp(txtp, node)
-
-                    self._generate_main(ncaller, txtp)
+                    txtp.write()
                     if txtp.vpaths.has_unreachables():
                         unreachables = True
 
@@ -361,8 +363,9 @@ class Generator(object):
                         txtp = wtxtp.Txtp(self._txtpcache, params=combo)
                         txtp.vpaths.set_unreachables_only()
                         self._renderer.begin_txtp(txtp, node)
+                        txtp.write()
 
-                        self._generate_main(ncaller, txtp)
+            self._generate_sub(ncaller, txtp_sub)
 
             #TODO improve combos (unreachables doesn't make transitions?)
 
@@ -379,10 +382,7 @@ class Generator(object):
 
         return
 
-    def _generate_main(self, ncaller, txtp):
-        # main .txtp
-        txtp.write()
-
+    def _generate_sub(self, ncaller, txtp):
         # stingers found during process
         bstingers = txtp.stingers.get_items()
         if bstingers:

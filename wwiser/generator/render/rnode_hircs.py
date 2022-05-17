@@ -263,7 +263,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
         self._register_transitions(txtp, bnode.rules)
         self._register_stingers(txtp, bnode.stingerlist)
 
-        txtp.group_single(bnode.config) #typically useless but may have volumes
+        txtp.group_single(bnode.config)
         self._render_playlist(txtp, bnode.items)
         txtp.group_done()
 

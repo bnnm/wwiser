@@ -94,7 +94,6 @@ class CAkProps(object):
     def _prop(self, name, default=0):
         value = self._props.get(name)
         minmax = self._ranges.get(name)
-        print("prop", name, value, minmax)
         if value is None and minmax is None:
             return default
 
@@ -210,5 +209,26 @@ class CAkProps(object):
         items[keyname] = val
 
 
+    #TODO remove/improve
     def has_volumes(self):
         return self.volume or self.makeupgain
+
+    # external in some cases, unifies handling
+    def set_loop(self, value, min=None, max=None):
+        key = '[Loop]'
+        self._props[key] = value
+        if min is not None and max is not None:
+            self._ranges[key] = (min, max)
+
+        self.loop = self._prop(key, default=None)
+        return
+
+    # messes up calculations in some cases
+    def disable_loop(self):
+        self.loop = None
+        pass
+
+    # unknown meaning in some cases
+    def barf_loop(self):
+        if self.loop is not None:
+            raise ValueError("loop flag found")

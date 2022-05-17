@@ -74,8 +74,8 @@ class CAkDialogueEvent(CAkHircNode):
         nbase = node.find1(name='DialogueEventInitialValues')
 
         self.props = self._make_props(nbase) # not sure how useful these are
-        if self.config.loop is not None:
-            self._barf("loop flag")
+
+        self.props.barf_loop()
 
         tree = self._build_tree(node)
         if tree.init:
@@ -205,8 +205,7 @@ class CAkSwitchCntr(CAkParameterNode):
         self.gvalue_ntids = {}
 
     def _build_audionode(self, node):
-        if self.config.loop is not None:
-            self._barf("loop flag")
+        self.props.barf_loop() #unknown meaning
 
         self.gtype = node.find(name='eGroupType').value()
         self.ngname = node.find(name='ulGroupID')
@@ -231,30 +230,36 @@ class CAkRanSeqCntr(CAkParameterNode):
         self.ntids = []
 
     def _build_audionode(self, node):
-        if self.config.loop is not None:
-            self._barf("loop flag")
+        self.props.barf_loop() #should have its own loop property below
 
         #bIsGlobal: this object is a global entity (not needed, affects sequences/shuffles/etc)
         nmode = node.find(name='eMode')  #0=random / 1=sequence
         nrandom = node.find(name='eRandomMode')  #0=normal (repeatable), 1=shuffle (no repeatable)
-        nloop = node.find(name='sLoopCount')  #1=once, 0=infinite, >1=N times
         ncontinuous = node.find(name='bIsContinuous')  #play one of the objects each time this is played, else play all
         navoidrepeat = node.find(name='wAvoidRepeatCount')  #excludes last played object from available list until N are played
 
         self.mode = nmode.value()
         self.random = nrandom.value()
-        self.config.loop = nloop.value()
         self.continuous = ncontinuous.value()
         self.avoidrepeat = navoidrepeat.value()
 
-        #sLoopModMin/sLoopModMax: random loop modifiers (loop -min +max)
+        nloop = node.find(name='sLoopCount')  #1=once, 0=infinite, >1=N times
+        nloopmin = node.find(name='sLoopModMin') #random loop modifiers (loop -min +max)
+        nloopmax = node.find(name='sLoopModMax')
+
+        # loop ignored by Wwise but sometimes set, simplify
+        if nloop.value() == 0 and not self.continuous:
+            self.config.loop = None #TODO
+        else:
+            self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
+            self.config.loop = self.props.loop #TODO
+
 
         #eTransitionMode: defines a transition type between objects (ex. "delay" + fTransitionTime)
         #fTransitionTime / fTransitionTimeModMin / fTransitionTimeModMax: values for transition (depending on mode)
         #ntmode = node.find(name='eTransitionMode')
         #if ntmode and ntmode.value() != 0:
         #    self._barf("ranseq transition")
-
 
         # try playlist or children (both can be empty)
         nitems = node.finds(name='AkPlaylistItem')
@@ -275,13 +280,6 @@ class CAkRanSeqCntr(CAkParameterNode):
             #bResetPlayListAtEachPlay: resets from 1st object each time is event replayed (in continuous mode)
             #bIsRestartBackward: once done, play item from last to first
 
-
-        #ignored by Wwise but sometimes set, simplify
-        if self.config.loop == 0 and not self.continuous:
-            #if not self.avoidrepeat:
-            #    self._barf("unknown loop mode in ranseq seq step")
-            self.config.loop = None
-
         self.fields.props([nmode, nrandom, nloop, ncontinuous, navoidrepeat])
         return
 
@@ -293,8 +291,7 @@ class CAkLayerCntr(CAkParameterNode):
         self.layer_rtpclist = None
 
     def _build_audionode(self, node):
-        if self.config.loop is not None:
-            self._barf("loop flag")
+        self.props.barf_loop() #unknown meaning
 
         nmode = node.find(name='bIsContinuousValidation')
 
@@ -324,9 +321,14 @@ class CAkSound(CAkParameterNode):
 
         nloop = node.find(name='Loop')
         if nloop: #older
-            self.config.loop = nloop.value()
+            nloopmin = node.find(name='LoopMod.Min')
+            nloopmax = node.find(name='LoopMod.Max')
+
+            self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
+            self.config.loop = self.props.loop #TODO
+
             self.fields.prop(nloop)
-            #there is min/max too
+
 
         nitem = node.find(name='AkBankSourceData')
         source = self._build_source(nitem)
@@ -390,8 +392,7 @@ class CAkMusicRanSeqCntr(CAkParameterNode):
         self.rules = None
 
     def _build_audionode(self, node):
-        if self.config.loop is not None:
-            self._barf("loop flag")
+        self.props.barf_loop() #unknown meaning
 
         self._build_transition_rules(node, False)
         self._build_stingers(node)
@@ -465,8 +466,8 @@ class CAkMusicSegment(CAkParameterNode):
         self.sconfig = None
 
     def _build_audionode(self, node):
-        if self.config.loop is not None:
-            self._barf("loop flag")
+        self.props.barf_loop() #unknown meaning
+
         self._build_stingers(node)
 
         # main duration
@@ -509,12 +510,16 @@ class CAkMusicTrack(CAkParameterNode):
 
         nloop = node.find(name='Loop')
         if nloop: #older
-            self.config.loop = nloop.value()
+            nloopmin = node.find(name='LoopMod.Min')
+            nloopmax = node.find(name='LoopMod.Max')
+
+            self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
+            self.config.loop = self.props.loop #TODO
+
             self.fields.prop(nloop)
-            #there is min/max too
 
         # loops in MusicTracks are meaningless, ignore to avoid confusing the parser
-        self.config.loop = None
+        self.props.disable_loop()
 
         # prepare for clips
         self.automations = bnode_automation.AkClipAutomationList(node)

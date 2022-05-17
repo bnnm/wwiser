@@ -21,7 +21,6 @@ class NodeConfig(object):
         self.duration = None
         self.entry = None
         self.exit = None
-        self.exit = None
 
         # states that when active silence group
         self.volume_states = []

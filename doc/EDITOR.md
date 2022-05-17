@@ -662,6 +662,7 @@ sound > (volumes) > bus > bus > ... > bus > output
 - volume, pitch, etc, set directly via editor and used as explained above
 - properties may set "enable randomizer" to select between values at play
   - volume -5 and +5 will play some value in between on each play
+  - offset after base values, so with volume=-96db and +-5 random, you get -99/-91db
 - enable "all properties" tab to (seemingly) include properties that are useless
 - possible to set custom properties (defined via bank/project)
   - not referenced anywhere, auto-set

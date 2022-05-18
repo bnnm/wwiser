@@ -252,7 +252,7 @@ class AkRtpc(object):
 
     def _build(self, nrtpc):
         nparam = nrtpc.find1(name='ParamID')
-        self.is_volume = (nparam.value() != 0) #volume prop
+        self.is_volume = (nparam.value() == 0) #volume prop
 
         self.version = nrtpc.get_root().get_version()
 

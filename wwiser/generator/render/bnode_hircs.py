@@ -304,8 +304,10 @@ class CAkLayerCntr(CAkParameterNode):
         # usually found with RTPCs (ex. RPMs) + pLayers that define when layers are played
         nlayers = node.find1(name='pLayers')
         if nlayers:
+            #TODO: layers have a base RTPC (read above) and a graph of children nodes <> RTPC value, but not sure how it works
+
             # RTPC linked to volume (ex. AC2 bgm+crowds)
-            self.layer_rtpclist = self._build_rtpclist(nlayers)
+            self.layer_rtpclist = self._make_rtpclist(nlayers)
 
         if nmode:
             self.fields.prop(nmode)

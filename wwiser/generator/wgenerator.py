@@ -1,6 +1,6 @@
 import logging
 from . import wfilter, wmover, wtxtp_cache, wreport
-from .render import wbuilder, wrenderer
+from .render import wbuilder, wrenderer, wstate
 from .registry import wgamesync
 from .txtp import wtxtp
 
@@ -27,7 +27,8 @@ class Generator(object):
         self._builder = wbuilder.Builder()
         self._txtpcache = wtxtp_cache.TxtpCache()
         self._filter = wfilter.GeneratorFilter()  # filter nodes
-        self._renderer = wrenderer.Renderer(self._builder, self._filter)
+        self._ws = wstate.WwiseState(self._txtpcache)
+        self._renderer = wrenderer.Renderer(self._builder, self._ws, self._filter)
         self._mover = wmover.Mover(self._txtpcache)
 
         self._txtpcache.set_basepath(banks)
@@ -349,6 +350,7 @@ class Generator(object):
 
     def _render_txtp(self, node):
         try:
+            self._ws.reset() #each new event starts from 0
             self._render_base(node)
 
         except Exception: #as e
@@ -366,22 +368,21 @@ class Generator(object):
         ncaller = node.find1(type='sid')
 
         # base .txtp
-        txtp = wtxtp.Txtp(self._txtpcache, gsparams=self._default_gsparams)
+        self._ws.gsparams = self._default_gsparams
+        txtp = wtxtp.Txtp(self._txtpcache)
         self._renderer.begin_txtp(txtp, node)
 
         # When default_gsparams aren't set and objects need them, Txtp finds all possible gsparams, added
         # to "gspaths", so we can makes .txtp per combination (like first "music=b01" then "music=b02")
-        gspaths = txtp.gspaths  # gamesync "paths" found during process
+        gspaths = self._ws.gspaths  # gamesync "paths" found during process
         if gspaths.is_empty():
             # regular single txtp
             txtp.write()
-            txtp_sub = txtp
 
         else:
-            txtp_sub = txtp #generate transitions/stingers for all base txtp with paths (lots of repeats otherwise)
             self._render_gscombos(node, gspaths)
 
-        self._render_subs(ncaller, txtp_sub)
+        self._render_subs(ncaller)
         #TODO improve combos (unreachables doesn't make transitions?)
 
 
@@ -391,7 +392,8 @@ class Generator(object):
         unreachables = False #check if any txtp has unreachables
         combos = gspaths.combos()
         for combo in combos:
-            txtp = wtxtp.Txtp(self._txtpcache, gsparams=combo)
+            self._ws.gsparams = combo
+            txtp = wtxtp.Txtp(self._txtpcache)
             self._renderer.begin_txtp(txtp, node)
             txtp.write()
             if txtp.scpaths.has_unreachables():
@@ -400,30 +402,31 @@ class Generator(object):
         #TODO separate combos of statechunks from Txtp()
         if unreachables:
             for combo in combos:
-                txtp = wtxtp.Txtp(self._txtpcache, gsparams=combo)
+                self._ws.gsparams = combo
+                txtp = wtxtp.Txtp(self._txtpcache)
                 txtp.scpaths.set_unreachables_only()
                 self._renderer.begin_txtp(txtp, node)
                 txtp.write()
 
 
-    def _render_subs(self, ncaller, txtp):
+    def _render_subs(self, ncaller):
         # stingers found during process
-        bstingers = txtp.stingers.get_items()
+        bstingers = self._ws.stingers.get_items()
         if bstingers:
-            gsparams = self._default_gsparams #?
+            self._ws.gsparams = self._default_gsparams #?
             for bstinger in bstingers:
-                txtp = wtxtp.Txtp(self._txtpcache, gsparams=gsparams)
+                txtp = wtxtp.Txtp(self._txtpcache)
                 self._renderer.begin_txtp_ntid(txtp, bstinger.ntid)
                 txtp.set_ncaller(ncaller)
                 txtp.set_bstinger(bstinger)
                 txtp.write()
 
         # transitions found during process
-        btransitions = txtp.transitions.get_items()
+        btransitions = self._ws.transitions.get_items()
         if btransitions:
-            gsparams = self._default_gsparams #?
+            self._ws.gsparams = self._default_gsparams #?
             for btransition in btransitions:
-                txtp = wtxtp.Txtp(self._txtpcache, gsparams=gsparams)
+                txtp = wtxtp.Txtp(self._txtpcache)
                 self._renderer.begin_txtp_ntid(txtp, btransition.ntid)
                 txtp.set_ncaller(ncaller)
                 txtp.set_btransition(btransition)

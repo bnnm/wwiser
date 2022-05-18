@@ -3,6 +3,7 @@
 class Transitions(object):
     def __init__(self):
         self._items = []
+        self._done = set()
         #self._transition_nodes = {}
 
     def get_items(self):
@@ -12,7 +13,15 @@ class Transitions(object):
     #--------------------------------------------------------------------------
 
     def add(self, rules):
-        self._items.extend(rules.ntrns)
+        for btrn in rules.ntrns:
+            
+            #TODO improve single ordered set
+            if btrn in self._done:
+                continue
+            self._done.add(btrn)
+            self._items.append(btrn)
+
+        #self._items.extend(rules.ntrns)
 
         #TODO check is this is needed
 

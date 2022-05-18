@@ -12,6 +12,8 @@ class RN_CAkHircNode(object):
         self._renderer = renderer
         self._builder = renderer._builder
         self._filter = renderer._filter
+        self._calculator = renderer._calculator
+        self._ws = renderer._ws
 
     #--------------------------------------------------------------------------
 
@@ -23,18 +25,30 @@ class RN_CAkHircNode(object):
         return
 
     def _register_transitions(self, txtp, rules):
-        #if not txtp.gsparams:
+        #if not self._ws.gsparams:
         #    return
 
-        txtp.transitions.add(rules)
+        self._ws.transitions.add(rules)
         return
 
     def _register_stingers(self, txtp, bstingerlist):
-        #if not txtp.gsparams:
+        #if not self._ws.gsparams:
         #    return
 
-        txtp.stingers.add(bstingerlist)
+        self._ws.stingers.add(bstingerlist)
         return
+
+    #--------------------------------------------------------------------------
+
+    # Get final prop values, that depend on wwise's state. Some object shouldn't have them (events)
+    # or limited types (actions), but can be used as a generic container.
+
+    def _calculate(self, bnode, txtp):
+        #TODO pass current properties to renderer
+        #TODO maybe set state to renderer, reset on begin x
+        config = self._calculator.get_properties(bnode)
+
+        return config
 
     #--------------------------------------------------------------------------
 

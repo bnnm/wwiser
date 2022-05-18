@@ -44,15 +44,12 @@ from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 class Txtp(object):
 
-    def __init__(self, txtpcache, gsparams=None):
-        self.gsparams = gsparams  #current gamesync "path" config (default/empty means must find paths)
-        self.gspaths = wgamesync.GamesyncPaths(txtpcache)  #gamesync paths and config found during process
-        self.scpaths = wstatechunks.StateChunkPaths() #states used to change volume/mute tracks
+    def __init__(self, txtpcache):
         self.txtpcache = txtpcache
-        self.transitions = wtransitions.Transitions()
-        self.stingers = wstingers.Stingers()
-
         self.info = wtxtp_info.TxtpInfo(txtpcache)  # node info to add in output as comment
+
+        self.gsparams = None #TODO remove, and paths
+        self.scpaths = wstatechunks.StateChunkPaths() #states used to change volume/mute tracks
 
         # config during printing
         self.selected = None        # current random selection in sub-txtp

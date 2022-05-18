@@ -1,10 +1,13 @@
-from . import wrenderer_util, bnode_misc
+from . import wproperties
+from . import wrenderer_util, bnode_misc, wstate
 
 
 class Renderer(object):
-    def __init__(self, builder, filter):
+    def __init__(self, builder, wwstate, filter):
         self._builder = builder
         self._filter = filter
+        self._ws = wwstate
+        self._calculator = wproperties.PropertyCalculator(self._builder)
 
     def get_generated_hircs(self):
         return wrenderer_util.GENERATED_BASE_HIRCS
@@ -15,7 +18,11 @@ class Renderer(object):
         if not bnode:
             return
 
-        root_config = bnode_misc.NodeConfig() #TODO use bnode's?
+        #TODO remove
+        txtp.gsparams = self._ws.gsparams
+        #txtp.scpaths = self._ws.scpaths
+
+        root_config = bnode_misc.NodeConfig() #empty
         txtp.begin(node, root_config)
 
         rnode = self._get_rnode(bnode)

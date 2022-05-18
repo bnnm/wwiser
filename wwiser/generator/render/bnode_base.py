@@ -1,4 +1,3 @@
-import logging
 from . import bnode_misc, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk
 from ..txtp import wtxtp_info
 
@@ -113,7 +112,7 @@ class CAkHircNode(object):
         # mainly useful on Segment/Track level b/c usually games that set silence on
         # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
         hircname = self.node.get_name()
-        check_rtpc = hircname in ['CAkMusicTrack', 'CAkMusicSegment']
+        check_rtpc = hircname in ['CAkMusicTrack', 'CAkMusicSegment'] #, 'CAkLayerCntr'?
         if check_rtpc:
             brtpcs = rtpclist.get_volume_rtpcs()
             self.config.crossfaded = len(brtpcs) != 0

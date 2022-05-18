@@ -101,9 +101,11 @@ class CAkProps(object):
             value = 0
         # try average
         if minmax:
-            min = value + minmax[0]
-            max = value + minmax[1]
-            value = (min + max) / 2
+            vmin, vmax = minmax
+            if vmin or vmax: #don't average if both are 0
+                min = value + vmin
+                max = value + vmax
+                value = (min + max) / 2
 
         return value
 

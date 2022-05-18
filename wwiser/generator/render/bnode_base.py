@@ -22,12 +22,13 @@ class CAkHircNode(object):
         self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
 
         # loaded during process, if object has them (different classes have more or less)
-        self.nbusid = None
-        self.nparentid = None
         self.props = None
         self.statechunk = None
         self.rtpclist = None
         self.stingerlist = None
+
+        self.bbus = None
+        self.bparent = None
 
         self._build(node)
 
@@ -50,6 +51,12 @@ class CAkHircNode(object):
         self._barf()
 
     #--------------------------------------------------------------------------
+
+    def _read_bus(self, ntid):
+        return self._builder._get_bnode_link_bus(ntid)
+
+    def _read_parent(self, ntid):
+        return self._builder._get_bnode_link(ntid)
 
     def _make_props(self, nbase):
         if not nbase:
@@ -85,6 +92,9 @@ class CAkHircNode(object):
         if not statechunk.valid:
             return None
 
+        for bsi in statechunk.get_states():
+            self.fields.keyvalvol(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.config.volume)
+
         # find songs that silence files with states
         # mainly useful on MSegment/MTrack level b/c usually games that set silence on those,
         # while on MSwitch/MRanSeq are often just to silence the whole song.
@@ -95,8 +105,6 @@ class CAkHircNode(object):
             self.config.crossfaded = len(bstates) != 0
             for bsi in bstates:
                 self.config.add_volume_state(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.config)
-                self.fields.keyvalvol(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.config.volume)
-
         return statechunk
 
     def _make_rtpclist(self, nbase):
@@ -108,6 +116,9 @@ class CAkHircNode(object):
         if not rtpclist.valid:
             return None
 
+        for brtpc in rtpclist.get_rtpcs():
+            self.fields.rtpc(brtpc.nid, brtpc.minmax())
+
         # find songs that silence crossfade files with rtpcs
         # mainly useful on Segment/Track level b/c usually games that set silence on
         # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
@@ -117,10 +128,6 @@ class CAkHircNode(object):
             brtpcs = rtpclist.get_volume_rtpcs()
             self.config.crossfaded = len(brtpcs) != 0
             self.config.rtpcs = brtpcs
-            for brtpc in brtpcs:
-                nid = brtpc.nid
-                minmax = brtpc.minmax()
-                self.fields.rtpc(nid, minmax)
         return rtpclist
 
     def _build_transition_rules(self, node, is_switch):

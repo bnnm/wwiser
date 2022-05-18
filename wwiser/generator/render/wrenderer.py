@@ -7,7 +7,7 @@ class Renderer(object):
         self._builder = builder
         self._filter = filter
         self._ws = wwstate
-        self._calculator = wproperties.PropertyCalculator(self._builder)
+        self._calculator = wproperties.PropertyCalculator()
 
     def get_generated_hircs(self):
         return wrenderer_util.GENERATED_BASE_HIRCS

@@ -323,6 +323,7 @@ class AkRtpcList(object):
     def __init__(self, node):
         self.valid = False
         self._rtpcs = []
+        self._volume_rtpcs = None
         self._build(node)
 
     def empty(self):
@@ -339,9 +340,14 @@ class AkRtpcList(object):
             rtpc = AkRtpc(nrtpc)
             self._rtpcs.append(rtpc)
 
+    def get_rtpcs(self):
+        return self._rtpcs
+
     def get_volume_rtpcs(self):
-        items = []
-        for rtpc in self._rtpcs:
-            if rtpc.is_volume:
-                items.append(rtpc)
-        return items
+        if self._volume_rtpcs is None:
+            items = []
+            for rtpc in self._rtpcs:
+                if rtpc.is_volume:
+                    items.append(rtpc)
+            self._volume_rtpcs = items
+        return self._volume_rtpcs

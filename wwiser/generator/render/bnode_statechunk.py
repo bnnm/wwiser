@@ -19,6 +19,7 @@ class AkStateChunk(object):
     def __init__(self, node, builder):
         self.valid = False
         self._states = []
+        self._volume_states = None
         self._build(node, builder)
 
     def _build(self, node, builder):
@@ -72,9 +73,14 @@ class AkStateChunk(object):
 
                 self._states.append(bsi)
 
+    def get_states(self):
+        return self._states
+
     def get_volume_states(self):
-        vstates = []
-        for bsi in self._states:
-            if bsi.bstate.props.has_volumes():
-                vstates.append(bsi)
-        return vstates
+        if self._volume_states is None:
+            items = []
+            for bsi in self._states:
+                if bsi.bstate.props.has_volumes():
+                    items.append(bsi)
+            self._volume_states = items
+        return self._volume_states

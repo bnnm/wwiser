@@ -68,8 +68,7 @@ _HIRC_AUDIBLE = {
 
 
 class PropertyCalculator(object):
-    def __init__(self, builder):
-        self._builder = builder
+    def __init__(self):
         self._gvparams = None
         self._scparams = None
         self._read_bus = False
@@ -135,9 +134,8 @@ class PropertyCalculator(object):
             pass
 
         # keep going in the hierarchy if possible
-        bparent = self._builder._get_node_link(bnode.nparentid)
-        if bparent:
-            self._calculate(bparent)
+        if bnode.bparent:
+            self._calculate(bnode.bparent)
             return
     
     def _calc_relative(self, p, bp):

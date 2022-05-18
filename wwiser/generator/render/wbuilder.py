@@ -139,16 +139,15 @@ class Builder(object):
         if not ntid:
             return None
 
-        bank_id = ntid.get_root().get_id()
         tid = ntid.value()
         if not tid:
             return None
+        bank_id = ntid.get_root().get_id()
 
         node = self.__get_node(bank_id, tid, wbuilder_util.IDTYPE_AUDIO)
-        #TODO remove?
+        #TODO remove? should be used somehow
         __ = self._init_bnode(node) #force parse/register (so doesn't appear as unused), but don't use yet
         return node
-
 
     def has_unused(self):
         # find if useful nodes where used
@@ -177,6 +176,16 @@ class Builder(object):
         return results
 
     #--------------------------------------------------------------------------
+
+    def _get_bnode_link_bus(self, ntid):
+        return self._get_bnode_link(ntid, idtype=wbuilder_util.IDTYPE_BUS)
+
+    def _get_bnode_link(self, ntid, idtype=None):
+        if not ntid:
+            return None
+        bank_id = ntid.get_root().get_id()
+        tid = ntid.value()
+        return self._get_bnode(bank_id, tid, idtype)
 
     # Finds a builder node from a bank+id ref
     def _get_bnode(self, bank_id, tid, idtype=None, sid_info=None, nbankid_info=None):

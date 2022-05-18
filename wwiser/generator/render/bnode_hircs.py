@@ -6,6 +6,9 @@ from .bnode_base import CAkHircNode
 from .bnode_markers import AkMarkerList
 
 
+#******************************************************************************
+# MISC
+
 #non-audio node, doesn't contribute to txtp
 class CAkNone(CAkHircNode):
     def __init__(self):
@@ -15,7 +18,7 @@ class CAkNone(CAkHircNode):
         #ignore
         return
 
-#non-audio node, but it's used as a reference
+# non-audio node, but it's used as a reference in StateChunks
 class CAkState(CAkHircNode):
     def __init__(self):
         super(CAkState, self).__init__()
@@ -26,7 +29,7 @@ class CAkState(CAkHircNode):
         self.props = self._make_props(nbase)
         return
 
-#plugin parameters, sometimes needed
+# plugin parameters, sometimes needed (referenced in AkBankSourceData)
 class CAkFxCustom(CAkHircNode):
     def __init__(self):
         super(CAkFxCustom, self).__init__()
@@ -45,6 +48,29 @@ class CAkFxCustom(CAkHircNode):
 
         self.fx = self._build_sfx(node, plugin_id)
         return
+
+# output config
+class CAkBus(CAkHircNode):
+    def __init__(self):
+        super(CAkBus, self).__init__()
+
+    def _build(self, node):
+        nbase = node.find1(name='BusInitialValues')
+
+        nbusid = nbase.find1(name='OverrideBusId')
+        self.bbus = self._read_bus(nbusid)
+
+        #idDeviceShareset #TODO needed to get if it's audio
+        #uChannelConfig #TODO use to guess is non-output bus?
+
+        self.props = self._make_props(nbase)
+        #PositioningParams
+
+        self.statechunk = self._make_statechunk(nbase)
+
+        return
+
+#CAkAuxBus is the same but only used in AuxParams
 
 #******************************************************************************
 # EVENTS AND ACTIONS
@@ -165,8 +191,11 @@ class CAkParameterNode(CAkHircNode):
         #NodeInitialFxParams: sfx list
         #byBitVector: misc unneeded config
 
-        self.nbusid = nbase.find1(name='OverrideBusId')
-        self.nparentid = nbase.find1(name='DirectParentID')
+        nbusid = nbase.find1(name='OverrideBusId')
+        self.bbus = self._read_bus(nbusid)
+
+        nparentid = nbase.find1(name='DirectParentID')
+        self.bparent = self._read_parent(nparentid)
 
         #NodeInitialParams, sometimes
         self.props = self._make_props(nbase)
@@ -228,6 +257,7 @@ class CAkRanSeqCntr(CAkParameterNode):
     def __init__(self):
         super(CAkRanSeqCntr, self).__init__()
         self.ntids = []
+        self.loop = None  #TODO
 
     def _build_audionode(self, node):
         self.props.barf_loop() #should have its own loop property below
@@ -249,11 +279,11 @@ class CAkRanSeqCntr(CAkParameterNode):
 
         # loop ignored by Wwise but sometimes set, simplify
         if nloop.value() == 0 and not self.continuous:
-            self.config.loop = None #TODO
+            self.loop = None
         else:
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
-            self.config.loop = self.props.loop #TODO
-
+            self.loop = self.props.loop
+        self.config.loop = self.loop #TODO
 
         #eTransitionMode: defines a transition type between objects (ex. "delay" + fTransitionTime)
         #fTransitionTime / fTransitionTimeModMin / fTransitionTimeModMax: values for transition (depending on mode)
@@ -318,6 +348,7 @@ class CAkSound(CAkParameterNode):
     def __init__(self):
         super(CAkSound, self).__init__()
         self.sound = bnode_misc.NodeSound()
+        self.loop = None
 
     def _build_audionode(self, node):
 
@@ -327,7 +358,8 @@ class CAkSound(CAkParameterNode):
             nloopmax = node.find(name='LoopMod.Max')
 
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
-            self.config.loop = self.props.loop #TODO
+            self.loop = self.props.loop #TODO
+            self.config.loop = self.loop
 
             self.fields.prop(nloop)
 

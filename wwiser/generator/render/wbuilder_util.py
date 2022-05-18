@@ -33,12 +33,12 @@ _HIRC_BUILDER_NODES = {
 
     # others
     'CAkState': CAkState,
-    'CAkFxCustom': CAkFxCustom, #similar to CAkFeedbackNode but config only (referenced in AkBankSourceData)
+    'CAkFxCustom': CAkFxCustom,
+    'CAkBus': CAkBus,
 
     #not useful
     #CAkActionSetState
     #CAkAction*
-    #CAkBus
     #CAkAuxBus
     #CAkFeedbackBus: accepts audio from regular sounds + creates rumble
     #CAkFeedbackNode: played like audio (play action) and has source ID, but it's simply a rumble generator

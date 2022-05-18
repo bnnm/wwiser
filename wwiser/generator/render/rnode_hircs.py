@@ -17,8 +17,10 @@ class RN_CAkNone(RN_CAkHircNode):
 class RN_CAkEvent(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        config = self._calculate(bnode, txtp)
+
         # N play actions are layered (may set a delay)
-        txtp.group_layer(bnode.ntids, bnode.config)
+        txtp.group_layer(bnode.ntids, config)
         for ntid in bnode.ntids:
             self._render_next(ntid, txtp)
         txtp.group_done(bnode.ntids)
@@ -29,10 +31,11 @@ class RN_CAkEvent(RN_CAkHircNode):
 class RN_CAkDialogueEvent(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        config = self._calculate(bnode, txtp)
 
         if bnode.ntid:
             # tree plays a single object with any state
-            txtp.group_single(bnode.config)
+            txtp.group_single(config)
             self._render_next(bnode.ntid, txtp)
             txtp.group_done()
             return
@@ -56,7 +59,7 @@ class RN_CAkDialogueEvent(RN_CAkHircNode):
             npath, ntid = npath_combo
             txtp.info.gamesyncs(npath)
 
-            txtp.group_single(bnode.config)
+            txtp.group_single(config)
             self._render_next(ntid, txtp)
             txtp.group_done()
         return
@@ -92,7 +95,9 @@ class RN_CAkActionTrigger(RN_CAkAction):
 class RN_CAkActionPlay(RN_CAkAction):
 
     def _render_txtp(self, bnode, txtp):
-        txtp.group_single(bnode.config)
+        config = self._calculate(bnode, txtp)
+
+        txtp.group_single(config)
         self._render_next(bnode.ntid, txtp, nbankid=bnode.nbankid)
         txtp.group_done()
         return
@@ -101,7 +106,9 @@ class RN_CAkActionPlay(RN_CAkAction):
 
 class RN_CAkActionPlayEvent(RN_CAkAction):
     def _render_txtp(self, bnode, txtp):
-        txtp.group_single(bnode.config)
+        config = self._calculate(bnode, txtp)
+
+        txtp.group_single(config)
         self._render_next_event(bnode.ntid, txtp)
         txtp.group_done()
         return
@@ -111,6 +118,8 @@ class RN_CAkActionPlayEvent(RN_CAkAction):
 class RN_CAkSwitchCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        config = self._calculate(bnode, txtp)
+
         gtype = bnode.gtype
         gname = bnode.ngname.value()
 
@@ -136,7 +145,7 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
 
 
         txtp.info.gamesync(gtype, bnode.ngname, ngvalue)
-        txtp.group_layer(ntids, bnode.config)
+        txtp.group_layer(ntids, config)
         for ntid in ntids: #multi IDs are possible but rare (KOF13)
             self._render_next(ntid, txtp)
         txtp.group_done()
@@ -147,18 +156,19 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
 class RN_CAkRanSeqCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        config = self._calculate(bnode, txtp)
 
         if   bnode.mode == 0 and bnode.continuous: #random + continuous (plays all objects randomly, on loop/next call restarts)
-            txtp.group_random_continuous(bnode.ntids, bnode.config)
+            txtp.group_random_continuous(bnode.ntids, config)
 
         elif bnode.mode == 0: #random + step (plays one object at random, on next call plays another object / cannot loop)
-            txtp.group_random_step(bnode.ntids, bnode.config)
+            txtp.group_random_step(bnode.ntids, config)
 
         elif bnode.mode == 1 and bnode.continuous: #sequence + continuous (plays all objects in sequence, on loop/next call restarts)
-            txtp.group_sequence_continuous(bnode.ntids, bnode.config)
+            txtp.group_sequence_continuous(bnode.ntids, config)
 
         elif bnode.mode == 1: #sequence + step (plays one object from first, on next call plays next object / cannot loop)
-            txtp.group_sequence_step(bnode.ntids, bnode.config)
+            txtp.group_sequence_step(bnode.ntids, config)
 
         else:
             self._barf('unknown ranseq mode')
@@ -174,7 +184,9 @@ class RN_CAkRanSeqCntr(RN_CAkHircNode):
 class RN_CAkLayerCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        txtp.group_layer(bnode.ntids, bnode.config)
+        config = self._calculate(bnode, txtp)
+
+        txtp.group_layer(bnode.ntids, config)
         for ntid in bnode.ntids:
             self._render_next(ntid, txtp)
         txtp.group_done(bnode.ntids)
@@ -185,8 +197,10 @@ class RN_CAkLayerCntr(RN_CAkHircNode):
 class RN_CAkSound(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        config = self._calculate(bnode, txtp)
+
         txtp.info.source(bnode.sound.nsrc, bnode.sound.source)
-        txtp.source_sound(bnode.sound, bnode.config)
+        txtp.source_sound(bnode.sound, config)
         return
 
 #******************************************************************************
@@ -194,12 +208,14 @@ class RN_CAkSound(RN_CAkHircNode):
 class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        config = self._calculate(bnode, txtp)
+
         self._register_transitions(txtp, bnode.rules)
         self._register_stingers(txtp, bnode.stingerlist)
 
         if bnode.ntid:
             # rarely tree plays a single object with any state
-            txtp.group_single(bnode.config)
+            txtp.group_single(config)
             self._render_next(bnode.ntid, txtp)
             txtp.group_done()
             return
@@ -221,7 +237,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
                 npath, ntid = npath_combo
                 txtp.info.gamesyncs(npath)
 
-                txtp.group_single(bnode.config) #rarely may contain volumes
+                txtp.group_single(config)
                 self._render_next(ntid, txtp)
                 txtp.group_done()
             return
@@ -249,7 +265,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
             ntid, ngvalue = bnode.gvalue_ntid[gvalue]
             txtp.info.gamesync(gtype, bnode.ngname, ngvalue)
 
-            txtp.group_single(bnode.config)
+            txtp.group_single(config)
             self._render_next(ntid, txtp)
             txtp.group_done()
             return
@@ -261,10 +277,12 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        config = self._calculate(bnode, txtp)
+
         self._register_transitions(txtp, bnode.rules)
         self._register_stingers(txtp, bnode.stingerlist)
 
-        txtp.group_single(bnode.config)
+        txtp.group_single(config)
         self._render_playlist(txtp, bnode.items)
         txtp.group_done()
 
@@ -275,6 +293,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
         for item in items:
             type = item.type
             subitems = item.items
+            config = item.config
 
             txtp.info.next(item.nitem, item.fields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
@@ -282,21 +301,21 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
                 transition = bnode_misc.NodeTransition()
                 transition.play_before = False
 
-                txtp.group_single(item.config, transition=transition)
+                txtp.group_single(config, transition=transition)
                 self._render_next(item.ntid, txtp)
                 txtp.group_done()
             else:
                 if   type == 0: #0: ContinuousSequence (plays all objects in sequence, on loop/next call restarts)
-                    txtp.group_sequence_continuous(subitems, item.config)
+                    txtp.group_sequence_continuous(subitems, config)
 
                 elif type == 1: #1: StepSequence (plays one object from first, on loop/next call plays next object)
-                    txtp.group_sequence_step(subitems, item.config)
+                    txtp.group_sequence_step(subitems, config)
 
                 elif type == 2: #2: ContinuousRandom (plays all objects randomly, on loop/next call restarts)
-                    txtp.group_random_continuous(subitems, item.config)
+                    txtp.group_random_continuous(subitems, config)
 
                 elif type == 3: #3: StepRandom (plays one object at random, on loop/next call plays another object)
-                    txtp.group_random_step(subitems, item.config)
+                    txtp.group_random_step(subitems, config)
 
                 else:
                     self._barf('unknown musicranseq type')
@@ -313,21 +332,23 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 class RN_CAkMusicSegment(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
+        config = self._calculate(bnode, txtp)
+
         self._register_stingers(txtp, bnode.stingerlist)
 
         # empty segments are allowed as silence
         if not bnode.ntids:
             #logging.info("generator: found empty segment %s" % (self.sid))
             elems = [bnode.sound] #force some list to fool group_layer
-            txtp.group_layer(elems, bnode.config)
+            txtp.group_layer(elems, config)
             txtp.source_sound(bnode.sound, bnode.sconfig)
             txtp.group_done(elems)
-            return
 
-        txtp.group_layer(bnode.ntids, bnode.config)
-        for ntid in bnode.ntids:
-            self._render_next(ntid, txtp)
-        txtp.group_done(bnode.ntids)
+        else:
+            txtp.group_layer(bnode.ntids, config)
+            for ntid in bnode.ntids:
+                self._render_next(ntid, txtp)
+            txtp.group_done(bnode.ntids)
         return
 
 
@@ -338,25 +359,27 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
     def _render_txtp(self, bnode, txtp):
         if not bnode.subtracks: #empty / no clips
             return
-        self._register_statechunks(txtp, bnode)
+        config = self._calculate(bnode, txtp)
+
+        self._register_statechunks(txtp, config)
 
         # musictrack can play in various ways
         if   bnode.type == 0: #normal (plays one subtrack, N aren't allowed)
             if len(bnode.subtracks) > 1:
                 raise ValueError("more than 1 track")
-            txtp.group_single(bnode.config)
+            txtp.group_single(config)
             for subtrack in bnode.subtracks:
                 self._render_clips(subtrack, txtp)
             txtp.group_done()
 
         elif bnode.type == 1: #random (plays random subtrack, on next call plays another)
-            txtp.group_random_step(bnode.subtracks, bnode.config)
+            txtp.group_random_step(bnode.subtracks, config)
             for subtrack in bnode.subtracks:
                 self._render_clips(subtrack, txtp)
             txtp.group_done(bnode.subtracks)
 
         elif bnode.type == 2: #sequence (plays first subtrack, on next call plays next)
-            txtp.group_sequence_step(bnode.subtracks, bnode.config)
+            txtp.group_sequence_step(bnode.subtracks, config)
             for subtrack in bnode.subtracks:
                 self._render_clips(subtrack, txtp)
             txtp.group_done(bnode.subtracks)
@@ -393,7 +416,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
                 return # no subtrack, after adding path to gamesync (NHM3)
             subtrack = bnode.subtracks[index]
 
-            txtp.group_single(bnode.config)
+            txtp.group_single(config)
             self._render_clips(subtrack, txtp)
             txtp.group_done()
 

@@ -17,22 +17,21 @@ class RN_CAkHircNode(object):
 
     #--------------------------------------------------------------------------
 
-    # info when generating transitions's musicsegments
-    def _register_statechunks(self, txtp, bnode):
+    def _register_statechunks(self, txtp, config):
         # node defines states that muted sources
-        if bnode.config.volume_states:
-            txtp.scpaths.add_nstates(bnode.config.volume_states)
+        if config.volume_states:
+            txtp.scpaths.add_nstates(config.volume_states)
         return
 
     def _register_transitions(self, txtp, rules):
-        #if not self._ws.gsparams:
+        #if not self._ws.gsparams: #may be useful to create with passed config
         #    return
 
         self._ws.transitions.add(rules)
         return
 
     def _register_stingers(self, txtp, bstingerlist):
-        #if not self._ws.gsparams:
+        #if not self._ws.gsparams: #may be useful to create with passed config
         #    return
 
         self._ws.stingers.add(bstingerlist)
@@ -44,9 +43,10 @@ class RN_CAkHircNode(object):
     # or limited types (actions), but can be used as a generic container.
 
     def _calculate(self, bnode, txtp):
-        #TODO pass current properties to renderer
-        #TODO maybe set state to renderer, reset on begin x
-        config = self._calculator.get_properties(bnode)
+
+        #TODO pass current _ws to renderer
+        #config = self._calculator.get_properties(bnode)
+        config = bnode.config
 
         return config
 

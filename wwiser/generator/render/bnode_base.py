@@ -66,6 +66,8 @@ class CAkHircNode(object):
             return None
         self._builder.report_unknown_props(props.unknowns)
 
+        self.config.loop = props.loop
+
         self.config.volume = props.volume
         self.config.makeupgain = props.makeupgain
         self.config.pitch = props.pitch

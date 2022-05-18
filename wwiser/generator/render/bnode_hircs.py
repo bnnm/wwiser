@@ -257,7 +257,6 @@ class CAkRanSeqCntr(CAkParameterNode):
     def __init__(self):
         super(CAkRanSeqCntr, self).__init__()
         self.ntids = []
-        self.loop = None  #TODO
 
     def _build_audionode(self, node):
         self.props.barf_loop() #should have its own loop property below
@@ -279,11 +278,11 @@ class CAkRanSeqCntr(CAkParameterNode):
 
         # loop ignored by Wwise but sometimes set, simplify
         if nloop.value() == 0 and not self.continuous:
-            self.loop = None
+            loop = None
         else:
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
-            self.loop = self.props.loop
-        self.config.loop = self.loop #TODO
+            loop = self.props.loop
+        self.config.loop = loop
 
         #eTransitionMode: defines a transition type between objects (ex. "delay" + fTransitionTime)
         #fTransitionTime / fTransitionTimeModMin / fTransitionTimeModMax: values for transition (depending on mode)
@@ -348,7 +347,6 @@ class CAkSound(CAkParameterNode):
     def __init__(self):
         super(CAkSound, self).__init__()
         self.sound = bnode_misc.NodeSound()
-        self.loop = None
 
     def _build_audionode(self, node):
 
@@ -358,8 +356,7 @@ class CAkSound(CAkParameterNode):
             nloopmax = node.find(name='LoopMod.Max')
 
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
-            self.loop = self.props.loop #TODO
-            self.config.loop = self.loop
+            self.config.loop = self.props.loop
 
             self.fields.prop(nloop)
 
@@ -554,6 +551,7 @@ class CAkMusicTrack(CAkParameterNode):
 
         # loops in MusicTracks are meaningless, ignore to avoid confusing the parser
         self.props.disable_loop()
+        self.config.loop = self.props.loop
 
         # prepare for clips
         self.automations = bnode_automation.AkClipAutomationList(node)

@@ -667,6 +667,16 @@ sound > (volumes) > bus > bus > ... > bus > output
 - possible to set custom properties (defined via bank/project)
   - not referenced anywhere, auto-set
   - if last valid PropID in v128+ is 0x49, custom IDs start at 0x4A
+- during propery calculations, props can be modified by a "driver" (a "cause of change" in Wwise terms)
+  - music segment envelopes
+  - attenuations based on game positions
+  - other attenuations (HDR, occlusion...)
+  - ducking
+  - events setting values (like "SetVolume" events)
+  - fades
+  - pauses/mutes
+  - randomizers
+  - RTPCs/StateChunks
 
 ## states tab
 - object may tie an state to some property (volume, pitch, bus volume, initial delay, etc)

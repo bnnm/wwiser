@@ -98,9 +98,11 @@ class PropertyCalculator(object):
 
     # older wwiser props
     def _calculate_simple(self, bnode):
+        iconfig = bnode.config
+
         config = bnode_misc.NodeConfig()
 
-        if not bnode.props:
+        if not bnode.props: #events
             return config
         props = bnode.props
 
@@ -111,6 +113,18 @@ class PropertyCalculator(object):
         config.pitch = props.pitch
         config.delay = props.delay
         config.idelay = 0 #props.idelay
+
+        #TODO change
+        config.crossfaded = iconfig.crossfaded
+        #TODO copy from rtpc
+        config.rtpcs = iconfig.rtpcs
+
+        config.duration = iconfig.duration
+        config.entry = iconfig.entry
+        config.exit = iconfig.exit
+
+        #TODO copy from vstates
+        config.volume_states = iconfig.volume_states
 
         #print("%s: props: " % (hircname))
         return config

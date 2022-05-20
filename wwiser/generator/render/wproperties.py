@@ -117,7 +117,8 @@ class PropertyCalculator(object):
         #TODO change
         config.crossfaded = iconfig.crossfaded
         #TODO copy from rtpc
-        config.rtpcs = iconfig.rtpcs
+
+        config.rtpcs = iconfig.rtpcs 
 
         config.duration = iconfig.duration
         config.entry = iconfig.entry

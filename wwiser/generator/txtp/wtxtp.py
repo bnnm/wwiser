@@ -137,43 +137,13 @@ class Txtp(object):
             # make one .txtp per random
             for i in range(1, count + 1):
                 self.selected = i
-                self._write_combos(printer)
+                self._write_txtp(printer)
 
         else:
             # make main .txtp
-            self._write_combos(printer)
+            self._write_txtp(printer)
 
-    def _write_combos(self, printer):
-        # handle sub-txtp per volume combo
-
-        # volume states are affected by current states
-        self.scpaths.filter(self.gsparams, self.txtpcache.wwnames)
-
-        if self.scpaths.is_empty():
-            # without variables
-            if not self.scpaths.is_unreachables_only():
-                self._write_txtp(printer)
-
-        else:
-            # per combo
-            sccombos = self.scpaths.combos()
-            for sccombo in sccombos:
-                if sccombo.has_unreachables() and not self.scpaths.is_unreachables_only():
-                    continue
-                if not sccombo.has_unreachables() and self.scpaths.is_unreachables_only():
-                    continue
-
-                self.scparams = sccombo
-                self._write_txtp(printer)
-
-            self.scparams = None
-
-            # needs a base .txtp in some cases
-            if self.scpaths.generate_default(sccombos):
-                self.scparams_make_default = True
-                self._write_txtp(printer)
-                self.scparams_make_default = False
-
+    # main write
     def _write_txtp(self, printer):
         # Some games have GS combos and events that end up being the same (ex. Nier Automata, Bayonetta 2).
         # We make the txtp text and check (without comments) if wasn't already generated = dupe = ignored.

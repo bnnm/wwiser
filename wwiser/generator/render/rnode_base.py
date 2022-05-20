@@ -21,6 +21,7 @@ class RN_CAkHircNode(object):
         # node defines states that muted sources
         if config.volume_states:
             txtp.scpaths.add_nstates(config.volume_states)
+            self._ws.scpaths.add_nstates(config.volume_states)
         return
 
     def _register_transitions(self, txtp, rules):

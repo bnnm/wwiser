@@ -43,8 +43,6 @@ class Generator(object):
         self._filter.set_default_hircs(self._default_hircs)
         self._builder.set_filter(self._filter)
 
-        self._default_gsparams = None
-
     #--------------------------------------------------------------------------
 
     def set_filter(self, filter):
@@ -75,10 +73,11 @@ class Generator(object):
     def set_gsparams(self, gsparams):
         if gsparams is None: #allow []
             return
-        self._default_gsparams = wgamesync.GamesyncParams(self._txtpcache)
-        self._default_gsparams.set_gsparams(gsparams)
+        default_gsparams = wgamesync.GamesyncParams(self._txtpcache)
+        self._ws.set_gsdefault(default_gsparams)
 
     def set_gamevars(self, items):
+        #TODO
         self._txtpcache.gamevars.add(items)
 
     def set_renames(self, items):
@@ -344,13 +343,14 @@ class Generator(object):
     # Base generation is "rendered" from current values, following Wwise's internals untils it creates a
     # rough tree that looks like a TXTP. This "rendering" varies depending on Wwise's internal state, meaning
     # you need to re-render when this state is different ('combinations'), as the objects it reaches change.
-    # Changes that don't depend on Wwise's state can be done post-rendering ('variations').
-    # 
-    # Code below handles making 'combinations', while code in .txtp when writting handles all 'variations'.
+    # Changes that don't depend on state and that could be done by editting a .txtp manually are done 
+    # post-rendering ('variations').
+    #
+    # Code below handles making 'combinations' (by chaining render_x calls), while code in Txtp handles
+    # all 'variations' (by chaining write_x calls)
 
     def _render_txtp(self, node):
         try:
-            self._ws.reset() #each new event starts from 0
             self._render_base(node)
 
         except Exception: #as e
@@ -364,56 +364,192 @@ class Generator(object):
             logging.info("generator: ERROR! node %s in %s", sid, bankname)
             raise
 
+    # RENDER CHAINS:
+    # Per each link, will try to find all possible combos. If there are combos,
+    # we re-render again with each one for that link (which in turn may find combos for next link(s).
+    # If no combo exists we skip to the next step (it's possible it didn't find GS combos but did SC combos).
+    # 
+    # example:
+    # has GS combos bgm=m01/m02, SC combos layer=hi/lo, GV combos rank=N.N
+    # - base (gets combos)
+    #   - GS combo bgm=m01
+    #     - SC combo layer=hi
+    #       - GV combo rank=N.N
+    #         - final txtp: "play_bgm (bgm=m01) {s}=(layer=hi) {rank=N.n}"
+    #     - SC combo layer=lo
+    #       - GV combo rank=N.N
+    #         - final txtp: "play_bgm (bgm=m01) {s}=(layer=lo) {rank=N.n}"
+    #   - GS combo bgm=m02
+    #     - SC combo layer=hi
+    #       - GV combo rank=N.N
+    #         - final txtp: "play_bgm (bgm=m02) {s}=(layer=hi) {rank=N.n}"
+    #     - SC combo layer=lo
+    #       - GV combo rank=N.N
+    #         - final txtp: "play_bgm (bgm=m02) {s}=(layer=lo) {rank=N.n}"
+    #
+    # base: no GS combos bgm=m01/m02, no SC combos, GV combos rank=N.N
+    # - base (gets combos)
+    #   - GS: none, skip
+    #     - SC: none, skip
+    #       - GV combo rank=N.n
+    #         - final txtp: "play_bgm {rank=N.n}"
+    #
+    # It's possible to set defaults with CLI/GUI, in which case combos/params are fixed to certain values
+    # and won't fill them during process or try multi-combos (outside those defined in config).
+    # 
+    # defaults: GS bgm=m01, SC layer=hi, GV rank=N.n
+    # - base (gets combos)
+    #   - GS combo bgm=m01
+    #     - SC combo layer=hi
+    #       - GV combo rank=N.N
+    #         - final txtp: "play_bgm (bgm=m01) {s}=(layer=hi) {rank=N.n}"
+    #
+    # On each combo we need to reset next link's combos, as they may depend on previous config.
+    # For example, by default it may find GS bgm=m01/m02, SC layer=hi/mid/lo (all possible combos of everything),
+    # but actually GS bgm=m01 has SC layer=hi/mid and GS bgm=m02 has SC layer=mid/lo (would create fake dupes if
+    # we just try all possible SCs every time).
+
+
+    # handle new txtp with default parameters
     def _render_base(self, node):
         ncaller = node.find1(type='sid')
 
-        # base .txtp
-        self._ws.gsparams = self._default_gsparams
+        self._ws.reset() #each new node starts from 0
+
+        # initial render. if there are no combos this will be passed until final step
         txtp = wtxtp.Txtp(self._txtpcache)
         self._renderer.begin_txtp(txtp, node)
 
-        # When default_gsparams aren't set and objects need them, Txtp finds all possible gsparams, added
-        # to "gspaths", so we can makes .txtp per combination (like first "music=b01" then "music=b02")
-        gspaths = self._ws.gspaths  # gamesync "paths" found during process
-        if gspaths.is_empty():
-            # regular single txtp
-            txtp.write()
-
-        else:
-            self._render_gscombos(node, gspaths)
+        self._render_gs(node, txtp)
 
         self._render_subs(ncaller)
         #TODO improve combos (unreachables doesn't make transitions?)
 
 
-    def _render_gscombos(self, node, gspaths):
+    # handle combinations of gamesyncs: "play_bgm (bgm=m01)", "play_bgm (bgm=m02)", ...
+    def _render_gs(self, node, txtp):
+        ws = self._ws
 
-        # .txtp per variable combo
-        unreachables = False #check if any txtp has unreachables
-        combos = gspaths.combos()
-        for combo in combos:
-            self._ws.gsparams = combo
-            txtp = wtxtp.Txtp(self._txtpcache)
-            self._renderer.begin_txtp(txtp, node)
-            txtp.write()
-            if txtp.scpaths.has_unreachables():
-                unreachables = True
+        # SCs have regular states and "unreachable" ones. If we have GS bgm=m01 and SC bgm=m01/m02,
+        # m02 is technically not reachable (since GS states and SC states are the same thing).
+        # Sometimes they are interesting so we want them, but *after* all regular SCs as they may be
+        # duped of others.
+        unreachables = []
 
-        #TODO separate combos of statechunks from Txtp()
-        if unreachables:
-            for combo in combos:
-                self._ws.gsparams = combo
+        gscombos = ws.get_gscombos()
+        if not gscombos:
+            # no combo to re-render, skips to next step
+            self._render_sc(node, txtp)
+
+        else:
+            # re-render with each combo
+            for gscombo in gscombos:
+                ws.set_gs(gscombo)
+                ws.reset_sc()
+                ws.reset_gv()
+
                 txtp = wtxtp.Txtp(self._txtpcache)
-                txtp.scpaths.set_unreachables_only()
                 self._renderer.begin_txtp(txtp, node)
-                txtp.write()
+
+                ws.scpaths.filter(ws.gsparams, self._txtpcache.wwnames) #TODO improve
+                if ws.scpaths.has_unreachables():
+                    unreachables.append(gscombo)
+
+                self._render_sc(node, txtp)
+                #break
+
+
+            for gscombo in unreachables:
+                ws.set_gs(gscombo)
+                ws.reset_sc()
+                ws.reset_gv()
+
+                txtp = wtxtp.Txtp(self._txtpcache)
+                self._renderer.begin_txtp(txtp, node)
+
+                self._render_sc(node, txtp, make_unreachables=True)
+
+
+
+    # handle combinations of statechunks: "play_bgm (bgm=m01) {s}=(bgm_layer=hi)", "play_bgm (bgm=m01) {s}=(bgm_layer=lo)", ...
+    def _render_sc(self, node, txtp, make_unreachables=False):
+        ws = self._ws
+
+        #TODO simplify: set scpaths to reachable/unreachable modes (no need to check sccombo_hash unreachables)
+
+        if make_unreachables:
+            ws.scpaths.filter(ws.gsparams, self._txtpcache.wwnames) #TODO improve
+            #ws.scpaths.set_unreachables_only()
+
+        sccombos = ws.get_sccombos() #found during process
+        if not sccombos:
+            # no combo to re-render, skips to next step
+            self._render_gv(node, txtp)
+
+        else:
+            # re-render with each combo
+            for sccombo in sccombos:
+                if not make_unreachables and sccombo.has_unreachables(): #not ws.scpaths.is_unreachables_only():
+                    continue
+                if make_unreachables and not sccombo.has_unreachables(): #ws.scpaths.is_unreachables_only():
+                    continue
+
+                ws.set_sc(sccombo)
+                ws.reset_gv()
+
+                txtp = wtxtp.Txtp(self._txtpcache)
+                txtp.scparams = sccombo #TODO remove
+                self._renderer.begin_txtp(txtp, node)
+
+                self._render_gv(node, txtp)
+
+
+            # needs a base .txtp in some cases
+            if not make_unreachables and ws.scpaths.generate_default(sccombos):
+                ws.set_sc(None)
+                ws.reset_gv()
+
+                txtp = wtxtp.Txtp(self._txtpcache)
+                txtp.scparams_make_default = True
+                self.scparams = None
+                self._renderer.begin_txtp(txtp, node)
+
+                self._render_gv(node, txtp)
+
+                txtp.scparams_make_default = False
+
+
+    # handle combinations of gamevars: "play_bgm (bgm=m01) {s}=(bgm_layer=hi) {bgm_rank=2.0}"
+    def _render_gv(self, node, txtp):
+        ws = self._ws
+
+        gvcombos = ws.get_gvcombos()
+        if not gvcombos:
+            # no combo to re-render, skips to next step
+            self._render_last(node, txtp)
+
+        else:
+            # re-render with each combo
+            for gvcombo in gvcombos:
+                ws.set_gv(gvcombo)
+
+                txtp = wtxtp.Txtp(self._txtpcache)
+                self._renderer.begin_txtp(txtp, node)
+
+                self._render_last(node, txtp)
+
+
+    # final chain link
+    def _render_last(self, node, txtp):
+        txtp.write()
 
 
     def _render_subs(self, ncaller):
+        ws = self._ws
+
         # stingers found during process
-        bstingers = self._ws.stingers.get_items()
+        bstingers = ws.stingers.get_items()
         if bstingers:
-            self._ws.gsparams = self._default_gsparams #?
             for bstinger in bstingers:
                 txtp = wtxtp.Txtp(self._txtpcache)
                 self._renderer.begin_txtp_ntid(txtp, bstinger.ntid)
@@ -422,9 +558,8 @@ class Generator(object):
                 txtp.write()
 
         # transitions found during process
-        btransitions = self._ws.transitions.get_items()
+        btransitions = ws.transitions.get_items()
         if btransitions:
-            self._ws.gsparams = self._default_gsparams #?
             for btransition in btransitions:
                 txtp = wtxtp.Txtp(self._txtpcache)
                 self._renderer.begin_txtp_ntid(txtp, btransition.ntid)

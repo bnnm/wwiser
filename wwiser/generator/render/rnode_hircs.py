@@ -293,7 +293,9 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
         for item in items:
             type = item.type
             subitems = item.items
-            config = item.config
+
+            iconfig = bnode_misc.NodeConfig()
+            iconfig.loop = item.loop
 
             txtp.info.next(item.nitem, item.fields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
@@ -301,21 +303,21 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
                 transition = bnode_misc.NodeTransition()
                 transition.play_before = False
 
-                txtp.group_single(config, transition=transition)
+                txtp.group_single(iconfig, transition=transition)
                 self._render_next(item.ntid, txtp)
                 txtp.group_done()
             else:
                 if   type == 0: #0: ContinuousSequence (plays all objects in sequence, on loop/next call restarts)
-                    txtp.group_sequence_continuous(subitems, config)
+                    txtp.group_sequence_continuous(subitems, iconfig)
 
                 elif type == 1: #1: StepSequence (plays one object from first, on loop/next call plays next object)
-                    txtp.group_sequence_step(subitems, config)
+                    txtp.group_sequence_step(subitems, iconfig)
 
                 elif type == 2: #2: ContinuousRandom (plays all objects randomly, on loop/next call restarts)
-                    txtp.group_random_continuous(subitems, config)
+                    txtp.group_random_continuous(subitems, iconfig)
 
                 elif type == 3: #3: StepRandom (plays one object at random, on loop/next call plays another object)
-                    txtp.group_random_step(subitems, config)
+                    txtp.group_random_step(subitems, iconfig)
 
                 else:
                     self._barf('unknown musicranseq type')
@@ -333,6 +335,9 @@ class RN_CAkMusicSegment(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
         config = self._calculate(bnode, txtp)
+        config.duration = bnode.duration
+        config.entry = bnode.entry
+        config.exit = bnode.exit
 
         self._register_stingers(txtp, bnode.stingerlist)
 
@@ -341,7 +346,7 @@ class RN_CAkMusicSegment(RN_CAkHircNode):
             #logging.info("generator: found empty segment %s" % (self.sid))
             elems = [bnode.sound] #force some list to fool group_layer
             txtp.group_layer(elems, config)
-            txtp.source_sound(bnode.sound, bnode.sconfig)
+            txtp.source_sound(bnode.sound, None)
             txtp.group_done(elems)
 
         else:
@@ -430,30 +435,26 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             #logging.info("generator: found empty subtrack %s" % (self.sid))
             # rarely may happen with default = no track = silence (NMH3)
             sound = self._build_silence(self.node, True)
-            config = bnode_misc.NodeConfig()
-            sconfig = bnode_misc.NodeConfig()
             elems = [sound]
-            txtp.group_layer(elems, config)
-            txtp.source_sound(sound, sconfig)
+            txtp.group_layer(elems, None)
+            txtp.source_sound(sound, None)
             txtp.group_done(elems)
             return
 
-        config = bnode_misc.NodeConfig()
-        txtp.group_layer(subtrack, config)
+        txtp.group_layer(subtrack, None)
         for clip in subtrack:
             if clip.neid and clip.neid.value():
                 econfig = bnode_misc.NodeConfig()
-                econfig.idelay = clip.sound.fpa #uses FPA to start segment, should work ok
+                econfig.idelay = clip.sound.fpa #uses FPA to start segment, should work ok #TODO??
 
                 txtp.group_single(econfig)
                 self._render_next(clip.neid, txtp)
                 txtp.group_done()
             else:
-                sconfig = bnode_misc.NodeConfig()
                 sound = clip.sound
                 txtp.info.next(clip.nitem, clip.fields)
                 txtp.info.source(clip.sound.nsrc, clip.sound.source)
                 txtp.info.done()
-                txtp.source_sound(clip.sound, sconfig)
+                txtp.source_sound(clip.sound, None)
         txtp.group_done(subtrack)
         return

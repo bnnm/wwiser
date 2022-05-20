@@ -1,6 +1,7 @@
 import logging, os
 from ... import wversion
-from ..registry import wgamesync, wstatechunks, wtransitions, wstingers
+from ..render import bnode_misc
+from ..registry import wstatechunks
 from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 # Helds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
@@ -232,6 +233,8 @@ class Txtp(object):
         return self._source_add(sound, config)
 
     def _group_add(self, config):
+        if not config:
+            config = bnode_misc.NodeConfig()
         tnode = wtxtp_tree.TxtpNode(self._current, config=config)
 
         self._current.append(tnode)
@@ -239,6 +242,8 @@ class Txtp(object):
         return tnode
 
     def _source_add(self, sound, config):
+        if not config:
+            config = bnode_misc.NodeConfig()
         tnode = wtxtp_tree.TxtpNode(self._current, sound=sound, config=config)
         self._current.append(tnode)
         return self._current

@@ -60,9 +60,7 @@ class RN_CAkHircNode(object):
 
     def _calculate(self, bnode, txtp):
 
-        #TODO pass current _ws to renderer
         config = self._calculator.get_properties(bnode)
-        #config = bnode.config
 
         return config
 

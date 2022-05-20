@@ -240,7 +240,7 @@ class CAkSwitchCntr(CAkParameterNode):
         self.ngname = node.find(name='ulGroupID')
         #ulDefaultSwitch: not used since we create all combos (must point to a valid path, or 0=none)
         #bIsContinuousValidation: step/continuous mode?
-        #ulNumSwitchParams: config for switches (ex. FadeOutTime/FadeInTime)
+        #ulNumSwitchParams: info for switches (ex. FadeOutTime/FadeInTime)
         #children: same as NodeList
 
         ngvalues = node.find(name='SwitchList').finds(name='ulSwitchID')
@@ -278,11 +278,10 @@ class CAkRanSeqCntr(CAkParameterNode):
 
         # loop ignored by Wwise but sometimes set, simplify
         if nloop.value() == 0 and not self.continuous:
-            loop = None
+            pass
         else:
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
-            loop = self.props.loop
-        self.config.loop = loop
+
 
         #eTransitionMode: defines a transition type between objects (ex. "delay" + fTransitionTime)
         #fTransitionTime / fTransitionTimeModMin / fTransitionTimeModMax: values for transition (depending on mode)
@@ -356,7 +355,6 @@ class CAkSound(CAkParameterNode):
             nloopmax = node.find(name='LoopMod.Max')
 
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
-            self.config.loop = self.props.loop
 
             self.fields.prop(nloop)
 
@@ -435,7 +433,7 @@ class CAkMusicRanSeqCntr(CAkParameterNode):
         #       item: playlist (random)
         #         item: segment C
         #         item: segment D
-        # may play on loop: ABC ABC ABD ABC ABD ... (each group has its own loop config)
+        # may play on loop: ABC ABC ABD ABC ABD ... (each group has its own loop info)
         nplaylist = node.find1(name='pPlayList')
         self._build_playlist(node, nplaylist, self.items)
 
@@ -471,7 +469,7 @@ class CAkMusicRanSeqCntr(CAkParameterNode):
             item.nitem = nitem
             item.ntid = ntid
             item.type = type
-            item.config.loop = nloop.value()
+            item.loop = nloop.value()
             item.fields.props([ntype, nloop])
 
             items.append(item)
@@ -484,7 +482,7 @@ class AkMusicRanSeqPlaylistItem(object):
         self.nitem = None
         self.ntid = None
         self.type = None
-        self.config = bnode_misc.NodeConfig()
+        self.loop = None
         self.fields = wtxtp_info.TxtpFields()
         self.items = []
 
@@ -494,7 +492,9 @@ class CAkMusicSegment(CAkParameterNode):
         super(CAkMusicSegment, self).__init__()
         self.ntids = []
         self.sound = None
-        self.sconfig = None
+        self.duration = None
+        self.entry = None
+        self.exit = None
 
     def _build_audionode(self, node):
         self.props.barf_loop() #unknown meaning
@@ -505,7 +505,7 @@ class CAkMusicSegment(CAkParameterNode):
         nfdur = node.find(name='fDuration')
         # AkMeterInfo: for switches
 
-        self.config.duration = nfdur.value()
+        self.duration = nfdur.value()
         self.fields.prop(nfdur)
 
         # markers for transitions
@@ -513,8 +513,8 @@ class CAkMusicSegment(CAkParameterNode):
         marker1 = markers.get_entry()
         marker2 = markers.get_exit()
 
-        self.config.entry = marker1.pos
-        self.config.exit = marker2.pos
+        self.entry = marker1.pos
+        self.exit = marker2.pos
         self.fields.keyval(marker1.node, marker1.npos)
         self.fields.keyval(marker2.node, marker2.npos)
 
@@ -523,7 +523,6 @@ class CAkMusicSegment(CAkParameterNode):
         if not self.ntids:
             # empty segments are allowed as silence
             self.sound = self._build_silence(self.node, True)
-            self.sconfig = bnode_misc.NodeConfig()
         return
 
 
@@ -545,13 +544,11 @@ class CAkMusicTrack(CAkParameterNode):
             nloopmax = node.find(name='LoopMod.Max')
 
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
-            self.config.loop = self.props.loop #TODO
 
             self.fields.prop(nloop)
 
         # loops in MusicTracks are meaningless, ignore to avoid confusing the parser
         self.props.disable_loop()
-        self.config.loop = self.props.loop
 
         # prepare for clips
         self.automations = bnode_automation.AkClipAutomationList(node)

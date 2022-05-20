@@ -97,8 +97,6 @@ class PropertyCalculator(object):
 
     # older wwiser props
     def _calculate_simple(self, bnode):
-        iconfig = bnode.config
-
         config = bnode_misc.NodeConfig()
 
         if not bnode.props: #events
@@ -111,19 +109,9 @@ class PropertyCalculator(object):
         config.makeupgain = props.makeupgain
         config.pitch = props.pitch
         config.delay = props.delay
-        config.idelay = 0 #props.idelay
-
-        #TODO change
-        config.crossfaded = iconfig.crossfaded
-        #TODO copy from rtpc
-
-        config.rtpcs = iconfig.rtpcs 
-
-        config.duration = iconfig.duration
-        config.entry = iconfig.entry
-        config.exit = iconfig.exit
 
         self._apply_statechunks(bnode, config)
+        self._apply_rtpclist(bnode, config)
 
         return config
 
@@ -156,19 +144,20 @@ class PropertyCalculator(object):
             config.makeupgain += props.makeupgain
 
     # some objects have rtpc > new value info in the statechunk, and if we have set those states we want the values
-    #def _apply_rtpclist(self, bnode, config):
-    #    if not bnode.rtpclist:
-    #        return
-#
-    #    # find songs that silence crossfade files with rtpcs
-    #    # mainly useful on Segment/Track level b/c usually games that set silence on
-    #    # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
-    #    check_rtpc = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO only on root nodes
-    #    if check_rtpc:
-    #        brtpcs = bnode.rtpclist.get_volume_rtpcs()
-    #        if len(brtpcs) > 0:
-    #            config.crossfaded = True
-#
+    def _apply_rtpclist(self, bnode, config):
+        if not bnode.rtpclist:
+            return
+
+        # find songs that silence crossfade files with rtpcs
+        # mainly useful on Segment/Track level b/c usually games that set silence on
+        # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
+        check_rtpc = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO only on root nodes
+        if check_rtpc:
+            brtpcs = bnode.rtpclist.get_volume_rtpcs()
+            if len(brtpcs) > 0:
+                config.crossfaded = True
+                config.rtpcs = brtpcs #TODO remove
+
     #    gvparams = self._ws.gvparams
     #    if not gvparams:
     #        return

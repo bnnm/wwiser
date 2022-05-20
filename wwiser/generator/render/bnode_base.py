@@ -18,7 +18,6 @@ class CAkHircNode(object):
     def init_node(self, node):
         self._build_defaults(node)
 
-        self.config = bnode_misc.NodeConfig()
         self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
 
         # loaded during process, if object has them (different classes have more or less)
@@ -66,14 +65,6 @@ class CAkHircNode(object):
             return None
         self._builder.report_unknown_props(props.unknowns)
 
-        self.config.loop = props.loop
-
-        self.config.volume = props.volume
-        self.config.makeupgain = props.makeupgain
-        self.config.pitch = props.pitch
-        self.config.delay = props.delay
-        self.config.idelay = 0 #props.idelay
-
         for nfld in props.fields_fld:
             self.fields.prop(nfld)
 
@@ -94,9 +85,9 @@ class CAkHircNode(object):
         if not statechunk.valid:
             return None
 
-        #TODO improve
-        for bsi in statechunk.get_states():
-            self.fields.keyvalvol(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.config.volume)
+        #TODO improve, needs bstate.fields
+        #for bsi in statechunk.get_states():
+        #    self.fields.keyvalprops(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props.fields)
 
         return statechunk
 
@@ -112,16 +103,6 @@ class CAkHircNode(object):
         #TODO improve
         for brtpc in rtpclist.get_rtpcs():
             self.fields.rtpc(brtpc.nid, brtpc.minmax())
-
-        # find songs that silence crossfade files with rtpcs
-        # mainly useful on Segment/Track level b/c usually games that set silence on
-        # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
-        hircname = self.node.get_name()
-        check_rtpc = hircname in ['CAkMusicTrack', 'CAkMusicSegment'] #, 'CAkLayerCntr'?
-        if check_rtpc:
-            brtpcs = rtpclist.get_volume_rtpcs()
-            self.config.crossfaded = len(brtpcs) != 0
-            self.config.rtpcs = brtpcs
         return rtpclist
 
     def _build_transition_rules(self, node, is_switch):

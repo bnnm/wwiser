@@ -67,7 +67,6 @@ class TxtpNode(object):
         self.envelopes = []
 
         # copy value as may need to simplify tree config (ex. multiple objects can set infinite loop)
-        # but changing config directly is no good (Wwise objects are reused)
         self.volume = config.volume
         self.makeupgain = config.makeupgain
         self.pitch = config.pitch
@@ -98,7 +97,7 @@ class TxtpNode(object):
         if not gv or not gv.active:
             return None
         rtpcs = self.config.rtpcs
-        if not rtpcs or not rtpcs.has_volume_rtpcs:
+        if not rtpcs:
             return None
 
         volume = self.volume or 0.0

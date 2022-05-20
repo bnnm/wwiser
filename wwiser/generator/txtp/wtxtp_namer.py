@@ -274,12 +274,12 @@ class TxtpNamer(object):
             return info
 
         info += '='
-        for vitem in txtp.scparams.items():
-            gn = vitem.group_name or vitem.group
-            vn = vitem.value_name or vitem.value
-            if vitem.value == 0:
+        for scitem in txtp.scparams.get_states():
+            gn = scitem.group_name or scitem.group
+            vn = scitem.value_name or scitem.value
+            if scitem.value == 0:
                 vn = '-'
-            if vitem.unreachable:
+            if scitem.unreachable:
                 info += '~'
             info += "(%s=%s)" % (gn, vn)
 

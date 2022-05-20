@@ -252,17 +252,20 @@ class AkRtpc(object):
 
     def _build(self, nrtpc):
         nparam = nrtpc.find1(name='ParamID')
+        #TODO improve
         self.is_volume = (nparam.value() == 0) #volume prop
 
         self.version = nrtpc.get_root().get_version()
 
-        self.nid = nrtpc.find1(name='RTPCID') #name/id
+        self.nid = nrtpc.find1(name='RTPCID') #gamevar name/id
         self.id = self.nid.value()
 
         scaling = nrtpc.find1(name='eScaling').value()
         self.graph = _AkGraph(nrtpc, scaling)
 
         #rtpcType: game parameter/midi/modulator, probably not important (>=112)
+        #ntype = nrtpc.find1(name='rtpcType').value()
+        #TODO
 
         naccum = nrtpc.find1(name='rtpcAccum') #~113
         if naccum:
@@ -339,6 +342,12 @@ class AkRtpcList(object):
         for nrtpc in nrtpcs:
             rtpc = AkRtpc(nrtpc)
             self._rtpcs.append(rtpc)
+
+    def get_brtpc(self, id):
+        for rtpc in self._rtpcs:
+            if rtpc.id == id:
+                return rtpc
+        return None
 
     def get_rtpcs(self):
         return self._rtpcs

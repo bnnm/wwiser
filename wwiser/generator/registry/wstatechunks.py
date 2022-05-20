@@ -46,10 +46,9 @@ class StateChunkItem(object):
         self.value = None
         self.group_name = None
         self.value_name = None
-        self.volume_state = 0
         self.unreachable = False
 
-    def init_nstate(self, ngroup, nvalue, config):
+    def init_nstate(self, ngroup, nvalue):
         self.group = ngroup.value()
         self.group_name = ngroup.get_attr('hashname')
         self.value = nvalue.value()
@@ -57,8 +56,6 @@ class StateChunkItem(object):
         # save volume instead of config b/c repeated groups+values may use different config objects
         # (but same volume), and "val" tuple would be seen as different due to config, in the "not in" checks
         # these are only used for combos, while config should be extracted from node's volume states
-        if config and config.volume: 
-            self.volume_state = config.volume
 
     def init_base(self, group, value, wwnames):
         self.group = group
@@ -94,8 +91,7 @@ class StateChunkItem(object):
     def __repr__(self):
         gn = self.group_name or str(self.group)
         vn = self.value_name or str(self.value)
-        vs = str(self.volume_state)
-        return str((gn,vn,vs))
+        return str((gn,vn))
         
 
 # saves possible volume paths in a txtp
@@ -121,9 +117,9 @@ class StateChunkPaths(object):
         self._unreachables_only = True
 
     def add_nstates(self, ngamesyncs):
-        for ngroup, nvalue, config in ngamesyncs:
+        for ngroup, nvalue in ngamesyncs:
             scitem = StateChunkItem()
-            scitem.init_nstate(ngroup, nvalue, config)
+            scitem.init_nstate(ngroup, nvalue)
             self._add_scstate(scitem)
 
     def _add_scstate(self, scitem):
@@ -290,14 +286,5 @@ class StateChunkParams(object):
         key = (scitem.group, scitem.value)
         self._elems[key] = scitem
 
-    def get_volume_states(self, nstates):
-        configs = []
-        for ngroup, nvalue, config in nstates:
-            group = ngroup.value()
-            value = nvalue.value()
-            if (group, value) in self._elems:
-                configs.append(config)
-        return configs
-
-    def items(self):
+    def get_states(self):
         return self._elems.values()

@@ -17,11 +17,26 @@ class RN_CAkHircNode(object):
 
     #--------------------------------------------------------------------------
 
-    def _register_statechunks(self, txtp, config):
-        # node defines states that muted sources
-        if config.volume_states:
-            txtp.scpaths.add_nstates(config.volume_states)
-            self._ws.scpaths.add_nstates(config.volume_states)
+    # node defines states that change properties
+    def _register_statechunks(self, bnode, txtp, config):
+        if not bnode.statechunk:
+            return
+
+        # find songs that silence files with states
+        # mainly useful on MSegment/MTrack level b/c usually games that set silence on those,
+        # while on MSwitch/MRanSeq are often just to silence the whole song.
+
+        #check_state = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO ?
+        ##if not check_state:
+        #    return
+
+        usable_states = []
+        for bsi in bnode.statechunk.get_usable_states():
+            item = (bsi.nstategroupid, bsi.nstatevalueid)
+            usable_states.append(item)
+        if usable_states:
+            self._ws.scpaths.add_nstates(usable_states)
+
         return
 
     def _register_transitions(self, txtp, rules):
@@ -46,8 +61,8 @@ class RN_CAkHircNode(object):
     def _calculate(self, bnode, txtp):
 
         #TODO pass current _ws to renderer
-        #config = self._calculator.get_properties(bnode)
-        config = bnode.config
+        config = self._calculator.get_properties(bnode)
+        #config = bnode.config
 
         return config
 
@@ -103,7 +118,7 @@ class RN_CAkHircNode(object):
     #--------------------------------------------------------------------------
 
 
-    #todo
+    #TODO
     def _build_silence(self, node, clip):
         sound = bnode_misc.NodeSound()
         sound.nsrc = node

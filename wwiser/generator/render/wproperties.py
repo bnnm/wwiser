@@ -68,9 +68,8 @@ _HIRC_AUDIBLE = {
 
 
 class PropertyCalculator(object):
-    def __init__(self):
-        self._gvparams = None
-        self._scparams = None
+    def __init__(self, ws):
+        self._ws = ws
         self._read_bus = False
 
     def get_properties(self, bnode):
@@ -124,11 +123,70 @@ class PropertyCalculator(object):
         config.entry = iconfig.entry
         config.exit = iconfig.exit
 
-        #TODO copy from vstates
-        config.volume_states = iconfig.volume_states
+        self._apply_statechunks(bnode, config)
 
-        #print("%s: props: " % (hircname))
         return config
+
+    # some objects have state > new value info in the statechunk, and if we have set those states we want the values
+    def _apply_statechunks(self, bnode, config):
+        if not bnode.statechunk:
+            return
+
+        # find songs that silence files with states
+        # mainly useful on MSegment/MTrack level b/c usually games that set silence on those,
+        # while on MSwitch/MRanSeq are often just to silence the whole song.
+        check_state = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO only on root nodes
+        if check_state:
+            bsis = bnode.statechunk.get_usable_states()
+            if len(bsis) > 0:
+                config.crossfaded = True
+
+        scparams = self._ws.scparams
+        if not scparams:
+            return
+
+        # get currently set states (may be N at once)
+        for state in scparams.get_states():
+            bstate = bnode.statechunk.get_bstate(state.group, state.value)
+            if not bstate:
+                continue
+            # apply props
+            props = bstate.props
+            config.volume += props.volume
+            config.makeupgain += props.makeupgain
+
+    # some objects have rtpc > new value info in the statechunk, and if we have set those states we want the values
+    #def _apply_rtpclist(self, bnode, config):
+    #    if not bnode.rtpclist:
+    #        return
+#
+    #    # find songs that silence crossfade files with rtpcs
+    #    # mainly useful on Segment/Track level b/c usually games that set silence on
+    #    # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
+    #    check_rtpc = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO only on root nodes
+    #    if check_rtpc:
+    #        brtpcs = bnode.rtpclist.get_volume_rtpcs()
+    #        if len(brtpcs) > 0:
+    #            config.crossfaded = True
+#
+    #    gvparams = self._ws.gvparams
+    #    if not gvparams:
+    #        return
+#
+    #    #get_gamevars
+#
+    #    # get currently set rtpcs (may be N at once)
+    #    for gvitem in gvparams.get_gamevars():
+    #        brtcp = bnode.rtpclist.get_brtpc(gvitem.key)
+    #        if not brtcp:
+    #            continue
+#
+    #        # apply props
+    #        if brtcp.is_volume:
+    #            config.has_rtpc = True
+    #            config.volume = brtcp.get()
+    #            config.makeupgain += props.makeupgain
+
 
     def _calculate(self, bnode):
         if not bnode.props: # should exist even if empty

@@ -246,10 +246,6 @@ class TxtpPrinter(object):
         volume = tnode.volume or 0
         if self._simpler:
             volume = 0
-        if tnode.crossfaded:
-            vstates = self._get_volume_states(tnode)
-            for vstate in vstates:
-                volume += vstate
         if self._txtpcache.silence or tnode.silenced:
             mods += '  #v 0'
         elif volume:
@@ -438,10 +434,6 @@ class TxtpPrinter(object):
         volume = tnode.volume or 0
         if self._simpler:
             volume = 0
-        if tnode.crossfaded:
-            vstates = self._get_volume_states(tnode)
-            for vstate in vstates:
-                volume += vstate
         if self._txtpcache.silence or tnode.silenced:
             silence_line = True #set "?" below as it's a bit simpler to use
         elif volume:
@@ -569,24 +561,3 @@ class TxtpPrinter(object):
 
     def _get_padding(self):
         return ' ' * (self._depth - 1) * TXTP_SPACES
-
-    # Some nodes change volume via states, test if those are currently set (multiple at once are ok).
-    # This info isn't passed around so must find (possibly ignored) parent node that has it.
-    #todo do in prepare()?
-    def _get_volume_states(self, tnode):
-        vstates = []
-        self._get_volume_states_internal(tnode, vstates)
-        return vstates
-
-    def _get_volume_states_internal(self, node, vstates):
-        if node.config.volume_states:
-            if self._txtp.scparams:
-                configs = self._txtp.scparams.get_volume_states(node.config.volume_states)
-                for config in configs:
-                    if config.volume:
-                        vstates.append(config.volume)
-
-        if node.parent:
-            self._get_volume_states_internal(node.parent, vstates)
-
-        return

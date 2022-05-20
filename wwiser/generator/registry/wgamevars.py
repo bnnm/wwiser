@@ -102,3 +102,6 @@ class GamevarsParams(object):
     def get_item(self, id):
         id = int(id)
         return self._items.get(id)
+
+    def get_gamevars(self):
+        return self._items.values()

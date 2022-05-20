@@ -22,13 +22,6 @@ class NodeConfig(object):
         self.entry = None
         self.exit = None
 
-        # states that when active silence group
-        self.volume_states = []
-
-    def add_volume_state(self, ngroup, nvalue, config):
-        item = (ngroup, nvalue, config)
-        self.volume_states.append(item)
-
 
 #common audio object with config
 class NodeSound(object):

@@ -94,19 +94,10 @@ class CAkHircNode(object):
         if not statechunk.valid:
             return None
 
+        #TODO improve
         for bsi in statechunk.get_states():
             self.fields.keyvalvol(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.config.volume)
 
-        # find songs that silence files with states
-        # mainly useful on MSegment/MTrack level b/c usually games that set silence on those,
-        # while on MSwitch/MRanSeq are often just to silence the whole song.
-        hircname = self.node.get_name()
-        check_state = hircname in ['CAkMusicTrack', 'CAkMusicSegment']
-        if check_state:
-            bstates = statechunk.get_volume_states()
-            self.config.crossfaded = len(bstates) != 0
-            for bsi in bstates:
-                self.config.add_volume_state(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.config)
         return statechunk
 
     def _make_rtpclist(self, nbase):
@@ -118,6 +109,7 @@ class CAkHircNode(object):
         if not rtpclist.valid:
             return None
 
+        #TODO improve
         for brtpc in rtpclist.get_rtpcs():
             self.fields.rtpc(brtpc.nid, brtpc.minmax())
 

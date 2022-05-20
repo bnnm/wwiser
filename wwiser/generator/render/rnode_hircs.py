@@ -361,7 +361,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             return
         config = self._calculate(bnode, txtp)
 
-        self._register_statechunks(txtp, config)
+        self._register_statechunks(bnode, txtp, config)
 
         # musictrack can play in various ways
         if   bnode.type == 0: #normal (plays one subtrack, N aren't allowed)

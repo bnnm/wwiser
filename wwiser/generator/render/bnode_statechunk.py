@@ -12,6 +12,8 @@ class _AkStateInfo(object):
     def __init__(self):
         self.nstategroupid = None
         self.nstatevalueid = None
+        self.group = None
+        self.value = None
         self.ntid = None
         self.bstate = None
 
@@ -19,7 +21,7 @@ class AkStateChunk(object):
     def __init__(self, node, builder):
         self.valid = False
         self._states = []
-        self._volume_states = None
+        self._usable_states = None
         self._build(node, builder)
 
     def _build(self, node, builder):
@@ -69,18 +71,28 @@ class AkStateChunk(object):
                 bsi.nstategroupid = nstategroupid
                 bsi.nstatevalueid = nstatevalueid
                 bsi.ntid = nstateinstanceid
+                bsi.group = nstategroupid.value()
+                bsi.value = nstatevalueid.value()
                 bsi.bstate = bstate
 
+                #TODO filter repeats
                 self._states.append(bsi)
+
+    def get_bstate(self, group, value):
+        for bsi in self._states:
+            if bsi.group == group and bsi.value == value:
+                return bsi.bstate
+        return None
 
     def get_states(self):
         return self._states
 
-    def get_volume_states(self):
-        if self._volume_states is None:
+    # states with properties that wwiser/vgmstream can handle (ignores stuff like auxs)
+    def get_usable_states(self):
+        if self._usable_states is None:
             items = []
             for bsi in self._states:
                 if bsi.bstate.props.has_volumes():
                     items.append(bsi)
-            self._volume_states = items
-        return self._volume_states
+            self._usable_states = items
+        return self._usable_states

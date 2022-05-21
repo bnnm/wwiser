@@ -522,7 +522,11 @@ class CAkMusicSegment(CAkParameterNode):
         self.ntids = node.find(name='Children').finds(type='tid')
         if not self.ntids:
             # empty segments are allowed as silence
-            self.sound = self._build_silence(self.node, True)
+            sound = bnode_misc.NodeSound()
+            sound.nsrc = self.node
+            sound.silent = True
+            sound.clip = True
+            self.sound = sound
         return
 
 
@@ -535,8 +539,10 @@ class CAkMusicTrack(CAkParameterNode):
         self.ngname = None
         self.gvalue_index = {}
         self.automations = {}
+        self.silence = None
 
     def _build_audionode(self, node):
+        self._build_silence()
 
         nloop = node.find(name='Loop')
         if nloop: #older
@@ -617,6 +623,14 @@ class CAkMusicTrack(CAkParameterNode):
 
         self.fields.props([ntype, ncount])
         return
+
+    def _build_silence(self):
+        # for (rare) cases that no track is defined
+        sound = bnode_misc.NodeSound()
+        sound.nsrc = self.node
+        sound.silent = True
+        sound.clip = True
+        self.silence = sound
 
     def _build_clip(self, streaminfos, nsrc):
         nfpa = nsrc.find(name='fPlayAt')

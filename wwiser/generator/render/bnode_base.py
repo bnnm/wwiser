@@ -138,11 +138,3 @@ class CAkHircNode(object):
 
     def _build_sfx(self, node, plugin_id):
         return bnode_source.CAkFx(node, plugin_id)
-
-    #TODO
-    def _build_silence(self, node, clip):
-        sound = bnode_misc.NodeSound()
-        sound.nsrc = node
-        sound.silent = True
-        sound.clip = clip
-        return sound

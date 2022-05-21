@@ -343,7 +343,6 @@ class RN_CAkMusicSegment(RN_CAkHircNode):
 
         # empty segments are allowed as silence
         if not bnode.ntids:
-            #logging.info("generator: found empty segment %s" % (self.sid))
             elems = [bnode.sound] #force some list to fool group_layer
             txtp.group_layer(elems, config)
             txtp.source_sound(bnode.sound, None)
@@ -374,19 +373,19 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
                 raise ValueError("more than 1 track")
             txtp.group_single(config)
             for subtrack in bnode.subtracks:
-                self._render_clips(subtrack, txtp)
+                self._render_clips(bnode, subtrack, txtp)
             txtp.group_done()
 
         elif bnode.type == 1: #random (plays random subtrack, on next call plays another)
             txtp.group_random_step(bnode.subtracks, config)
             for subtrack in bnode.subtracks:
-                self._render_clips(subtrack, txtp)
+                self._render_clips(bnode, subtrack, txtp)
             txtp.group_done(bnode.subtracks)
 
         elif bnode.type == 2: #sequence (plays first subtrack, on next call plays next)
             txtp.group_sequence_step(bnode.subtracks, config)
             for subtrack in bnode.subtracks:
-                self._render_clips(subtrack, txtp)
+                self._render_clips(bnode, subtrack, txtp)
             txtp.group_done(bnode.subtracks)
 
         elif bnode.type == 3: #switch (plays one subtrack depending on variables)
@@ -422,7 +421,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             subtrack = bnode.subtracks[index]
 
             txtp.group_single(config)
-            self._render_clips(subtrack, txtp)
+            self._render_clips(bnode, subtrack, txtp)
             txtp.group_done()
 
         else:
@@ -430,12 +429,10 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
 
         return
 
-    def _render_clips(self, subtrack, txtp):
+    def _render_clips(self, bnode, subtrack, txtp):
         if not subtrack:
-            #logging.info("generator: found empty subtrack %s" % (self.sid))
             # rarely may happen with default = no track = silence (NMH3)
-            sound = self._build_silence(self.node, True)
-            elems = [sound]
+            elems = [bnode.silence]
             txtp.group_layer(elems, None)
             txtp.source_sound(sound, None)
             txtp.group_done(elems)
@@ -444,8 +441,10 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
         txtp.group_layer(subtrack, None)
         for clip in subtrack:
             if clip.neid and clip.neid.value():
+                # When a neid (eventi id) is set clip will be a full event, and since
+                # it uses FPA to set when to start that clip, we can simulate it by using delay.
                 econfig = bnode_misc.NodeConfig()
-                econfig.delay = clip.sound.fpa #uses FPA to start segment, should work ok #TODO??
+                econfig.delay = clip.sound.fpa
 
                 txtp.group_single(econfig)
                 self._render_next(clip.neid, txtp)

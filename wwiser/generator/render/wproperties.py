@@ -168,32 +168,57 @@ class PropertyCalculator(object):
             return
 
         # get currently set rtpcs (may be N at once)
+        print("combos: ", len(gvparams.get_items()))
         for gvitem in gvparams.get_items():
+            print(gvitem.key, gvitem.value)
+            if not gvitem.key: #set all to gvitem's value
+                brtpcs = bnode.rtpclist.get_rtpcs()
+            else:
+                brtpc = bnode.rtpclist.get_rtpc(gvitem.key)
+                brtpcs = [brtpc]
 
-            brtcp = bnode.rtpclist.get_brtpc(gvitem.key)
-            if not brtcp or not brtcp.is_usable:
-                continue
+            for brtpc in brtpcs:
+                if not brtpc or not brtpc.is_usable:
+                    continue
+                self._apply_rtpc(gvitem, brtpc, config)
 
-            y = brtcp.get(gvitem.value)
-            if y == '*': #default #TODO load from data, put in gamevaritem
-                y = 0
-            elif y == '-' or y is None: #unset (no change)
-                continue
-            self.txtp.info.gamevar(brtcp.nid, y)
+
+    def _apply_rtpc(self, gvitem, brtpc, config):
+
+            if gvitem.is_default:
+                key = gvitem.key
+                if not key: #means: set all keys to default
+                    key = brtpc.id
+                value = self._ws.globalsettings.get_rtpc_default(key)
+            elif gvitem.is_unset:
+                value = None
+            elif gvitem.is_min:
+                value = brtpc.min()
+            elif gvitem.is_max:
+                value = brtpc.max()
+            else:
+                value = gvitem.value
+
+            if value is None: #not found or not set
+                return
+
+            y = brtpc.get(value)
+
+            self.txtp.info.gamevar(brtpc.nid, value)
 
             # apply props #TODO improve
-            if brtcp.is_volume:
-                config.volume = brtcp.accum(y, config.volume)
-            if brtcp.is_makeupgain:
-                config.makeupgain = brtcp.accum(y, config.makeupgain)
-            if brtcp.is_busvolume:
-                config.busvolume = brtcp.accum(y, config.busvolume)
-            if brtcp.is_outputbusvolume:
-                config.outputbusvolume = brtcp.accum(y, config.outputbusvolume)
-            if brtcp.is_pitch:
-                config.pitch = brtcp.accum(y, config.pitch)
-            if brtcp.is_delay:
-                config.delay = brtcp.accum(y, config.delay)
+            if brtpc.is_volume:
+                config.volume = brtpc.accum(y, config.volume)
+            if brtpc.is_makeupgain:
+                config.makeupgain = brtpc.accum(y, config.makeupgain)
+            if brtpc.is_busvolume:
+                config.busvolume = brtpc.accum(y, config.busvolume)
+            if brtpc.is_outputbusvolume:
+                config.outputbusvolume = brtpc.accum(y, config.outputbusvolume)
+            if brtpc.is_pitch:
+                config.pitch = brtpc.accum(y, config.pitch)
+            if brtpc.is_delay:
+                config.delay = brtpc.accum(y, config.delay)
 
 
     def _calculate(self, bnode):

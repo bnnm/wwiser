@@ -32,6 +32,7 @@ Low priority TODOs
 
 ## txtp
 - txtp should round up numbers? 1/48000 ~= 0.0000208333 * 48000 = 0.999999 > 1 or 0?
+  - makes it easier to compare vs tree and most times can't be rounded
 - overlapped transitions
   - needs fades (games use fading transition to smooth out loops)
   - next segment and looping to itself may have different transitions
@@ -46,10 +47,6 @@ Low priority TODOs
   - difference between them? 
 - apply default bus volumes for better results? (ex. Astral Chain, Gunslinger Stratos)
 - mark loop inside inner group (double loop) as multiloop (ex. DmC last boss)
-- set multiple rtpc and generate combos: VALUE=0.0,1.0 to make 2 txtp (ex. Batman Arkham City)
-  - multi-rtpc combine all: VALUE1=0.0,1.0 + VALUE2=2.0,3.0 = to make 4 txtp
-- rtpc of makeupgain?
-- apply rtcp default? option to use it? print in tree?
 - mark dialogueevents somehow as they can have the same name as events
 - check how argument is used in older wwise dialogue events
 - unused nodes may be affected by loading parent? (probably little effect)

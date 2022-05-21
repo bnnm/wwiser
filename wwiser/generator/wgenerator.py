@@ -1,7 +1,6 @@
 import logging
 from . import wfilter, wmover, wtxtp_cache, wreport
-from .render import wbuilder, wrenderer, wstate
-from .registry import wgamesync
+from .render import wbuilder, wrenderer, wstate, wglobalsettings
 from .txtp import wtxtp
 
 
@@ -166,11 +165,12 @@ class Generator(object):
 
     def _setup(self):
         self._setup_nodes()
-        self._txtpcache.mediaindex.load(self._banks)
         self._txtpcache.externals.load(self._banks)
         return
 
     def _setup_nodes(self):
+
+        # register sids/nodes first since banks can point to each other
         for bank in self._banks:
             root = bank.get_root()
             bank_id = root.get_id()
@@ -178,27 +178,38 @@ class Generator(object):
 
             self._builder.add_loaded_bank(bank_id, bankname)
 
-            # register sids/nodes first since banks can point to each other
-            items = bank.find(name='listLoadedItem')
-            if not items: # media-only banks don't have items
-                continue
+            for nchunk in root.get_children():
+                chunkname = nchunk.get_name()
 
-            for node in items.get_children():
-                nsid = node.find1(type='sid')
-                if not nsid:
-                    hircname = node.get_name()
-                    logging.info("generator: not found for %s in %s", hircname, bankname) #???
-                    continue
-                sid = nsid.value()
+                if chunkname == 'MediaIndex':
+                    self._txtpcache.mediaindex.load(nchunk)
 
-                self._builder.register_node(bank_id, sid, node)
+                elif chunkname == 'GlobalSettingsChunk':
+                    self._ws.globalsettings.load(nchunk)
+                
+                elif chunkname == 'HircChunk':
+                    items = bank.find(name='listLoadedItem')
+                    if not items: # media-only banks don't have items
+                        continue
 
-                # for nodes that can contain sources save them to move later
-                if self._move:
-                    self._mover.add_node(node)
+                    for node in items.get_children():
+                        nsid = node.find1(type='sid')
+                        if not nsid:
+                            hircname = node.get_name()
+                            logging.info("generator: not found for %s in %s", hircname, bankname) #???
+                            continue
+                        sid = nsid.value()
+
+                        self._builder.register_node(bank_id, sid, node)
+
+                        # for nodes that can contain sources save them to move later
+                        if self._move:
+                            self._mover.add_node(node)
 
         self._move_wems()
         return
+   
+
 
     def _write_normal(self):
         # save nodes in bank order rather than all together (allows fine tuning bank load order)

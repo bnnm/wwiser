@@ -14,22 +14,21 @@ class MediaIndex(object):
 
     #--------------------------------------------------------------------------
 
-    def load(self, banks):
-        for bank in banks:
-            bankname = bank.get_root().get_filename()
+    def load(self, nchunk):
+        # load another chunk (may be N)
+        chunkname = nchunk.get_name()
+        if chunkname != 'MediaIndex':
+            return
 
-            # preload indexes for internal wems for bigger banks
-            nindex = bank.find(name='MediaIndex')
-            if not nindex:
-                continue
-            nsids = nindex.finds(type='sid')
-            for nsid in nsids:
-                sid = nsid.value()
-                attrs = nsid.get_parent().get_attrs()
-                index = attrs.get('index')
-                if index is not None:
-                    self._add_media_index(bankname, sid, index)
-
+        # preload indexes for internal wems
+        bankname = nchunk.get_root().get_filename()
+        nsids = nchunk.finds(type='sid')
+        for nsid in nsids:
+            sid = nsid.value()
+            attrs = nsid.get_parent().get_attrs()
+            index = attrs.get('index')
+            if index is not None:
+                self._add_media_index(bankname, sid, index)
         return
 
     # A game could load bgm.bnk + media1.bnk, and bgm.bnk point to sid=123 in media1.bnk.

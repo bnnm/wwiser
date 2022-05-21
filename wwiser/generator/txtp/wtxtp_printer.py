@@ -431,11 +431,11 @@ class TxtpPrinter(object):
 
         # add volume
         volume = tnode.volume or 0
-        if self._simpler:
+        if self._simpler and not tnode.crossfaded: #don't silence rtpc-modified vars
             volume = 0
         if self._txtpcache.silence or tnode.silenced:
             silence_line = True #set "?" below as it's a bit simpler to use
-        elif volume:
+        if volume:
             mods += '  #v %sdB' % (volume)
 
         # add anchors

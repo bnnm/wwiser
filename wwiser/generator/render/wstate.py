@@ -1,4 +1,5 @@
 from ..registry import wgamesync, wstatechunks, wtransitions, wstingers, wgamevars
+from . import wglobalsettings
 
 # simple container/simulation of internal wwise state, that is, currently set
 # 
@@ -7,6 +8,7 @@ from ..registry import wgamesync, wstatechunks, wtransitions, wstingers, wgameva
 class WwiseState(object):
     def __init__(self, txtpcache):
         self._txtpcache = txtpcache
+        self.globalsettings = wglobalsettings.GlobalSettings()
 
         # combos found during process
         self.gspaths = None #gamesyncs: states/switches for dynamic object paths
@@ -24,7 +26,8 @@ class WwiseState(object):
 
         self._default_gs = None
         self._default_sc = None
-        self._default_gv = None
+        self._default_gvpaths = None
+        self._default_gvparams = None
 
         self.reset()
 
@@ -46,8 +49,8 @@ class WwiseState(object):
         self.scparams = self._default_sc
 
     def reset_gv(self):
-        self.gvpaths = None #?
-        self.gvparams = self._default_gv
+        self.gvpaths = self._default_gvpaths
+        self.gvparams = self._default_gvparams
 
     # ---
 
@@ -98,9 +101,9 @@ class WwiseState(object):
         return self.gvparams is not None
 
     def get_gvcombos(self):
-        if self.gvparams: #or self.gvpaths.is_empty():
+        if self.gvparams or not self.gvpaths:
             return None
-        return None #not self.gvpaths.is_empty()
+        return self.gvpaths.combos()
 
     def set_gv(self, gvparams):
         self.gvparams = gvparams
@@ -108,8 +111,16 @@ class WwiseState(object):
     def set_gvdefaults(self, items):
         if items is None: #allow []
             return
-        gvparams = wgamevars.GamevarsParams()
-        gvparams.adds(items)
 
-        self._default_gv = gvparams
-        self.gvparams = gvparams
+        # May set multiple params at once, so we save this default/fixed gvpaths.
+        # If there is only one 1 path set it default to optimize calls (otherwise would try to get combos for 1 type)
+        gvpaths = wgamevars.GamevarsPaths()
+        gvpaths.adds(items)
+
+        gvcombos = gvpaths.combos()
+        if len(gvcombos) == 1:
+            self._default_gvpaths = None
+            self._default_gvparams = gvcombos[0]
+        elif len(gvcombos) > 1:
+            self._default_gvpaths = gvpaths
+            self._default_gvparams = None

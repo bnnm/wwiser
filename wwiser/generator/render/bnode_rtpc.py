@@ -313,17 +313,7 @@ class AkRtpc(object):
 
 
     def get(self, x):
-        if   x == 'min':
-            y = self.min()
-        elif x == 'max':
-            y = self.max()
-        elif x == '*':
-            y = '*'
-        elif x == '-':
-            y = None
-        else:
-            y = self.graph.get(x)
-        return y
+        return self.graph.get(x)
 
 
     def accum(self, y, current_value):
@@ -387,7 +377,7 @@ class AkRtpcList(object):
 
             self._rtpcs.append(rtpc)
 
-    def get_brtpc(self, id):
+    def get_rtpc(self, id):
         for rtpc in self._rtpcs:
             if rtpc.id == id:
                 return rtpc

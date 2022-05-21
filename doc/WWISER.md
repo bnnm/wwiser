@@ -291,9 +291,9 @@ Main Wwise features missing are:
 - songs with random files/variations: selected from a list and may change dynamically in Wwise (like on every loop), can only play pre-selected values (configurable/editable).
 - multi-loops: Wwise can loop each element independently (since it's just "repeating" parts rather than "looping"), but .txtp doesn't (can be manually simulated).
 - effects: Wwise can apply effects like pitch, panning, filters and so on, none are simulated
-- special audio: songs with unusual features like midis/sfx plugins can't play (too complex)
+- plugins: Wwise can alter output (including volume) from multiple bank parameters, not simulated either
+- special audio: songs with unusual features like midis/tone generator plugins can't play (too complex)
 - crossfades: Wwise games sometimes silence or crossfade files while playing the rest (configurable)
-- volumes: Wwise can alter final volume from multiple bank parameters, so some songs may sound a bit quiet (configurable)
 - fade-in/outs: some audio parts should be faded but are ignored (to be fixed)
 
 Other limitations:
@@ -301,6 +301,7 @@ Other limitations:
 - object's values changed in real time through actor-mixers (a hierarchy or group of similar objects, like gunshots) aren't applied
 - actions like setting certain switch value before playing music inside an event are ignored (just autosets all values for that event)
 - multiple play actions with probability (ex. play A 100% of the time + play B 50% of the time) just play all actions
+
 
 ### Random mark {r}
 Events may play "random" parts. This usually means different footsteps, or random music stems (such as an "intro" and "outro" section) that change every time the game plays them.
@@ -311,11 +312,26 @@ There is an option to make `.txtp` per "base" group. This works for simple, sing
 
 
 ### Crossfade mark {s}
-In some cases parts of the song silence/change volume based on a in-game value. By default all plays at default volume, but you can mimic an specific value by passing "gamevars" (RTPC) config. For example `bgm_srank_param=0.0` would silence some beat layer, while `4.0` will start to add it, and `7.0` would peak. Min/max values are developer-defined and depend on the RTPC itself though. You can also use `value=min` or `value=max`.
+In some cases parts of the song silence or change volume based on a in-game variable. By default all plays at default volume (may play incorrectly all at once), but you can pass multiploe "gamevars" values, as `key=value`. For example `bgm_srank_param=0.0` would silence some beat layer, while `4.0` will start to add it, and `7.0` would peak.
+
+Min/max values and how values affect volumes is developer-defined per game (saved in Wwise's "RTPC" config) so there isn't a standard way to handle. Values are always numbers, but *wwiser* supports certain special values to simplify handling. Examples:
+- `health_points=30.0`: sets a gamevar to value (maybe lowers volume and add some low-pass filter)
+- `123456789=30.0`: same, but using a Wwise's short ID rather than text
+- `bgm_srank_param=min`: lowest possible value
+- `bgm_srank_param=min`: highest possible value
+- `bgm_srank_param=*`: game's default (needs loaded Init.bnk). Ignored if not found/loaded (same as not set).
+- `bgm_srank_param=-`: not set (realistically isn't possible in a game, but allowed in *wwiser*).
+- `health_points=10000000.0`: accepted but wrong values are clamped to min/max
+- `health_points=30.0,60.0,100.0`: makes 3 `.txtp` per different comma-separated value
+- `*=10.0`: any gamevar set to some value
 
 Inside the `.txtp` crossfade parts are marked with `##fade` near `.wem`, and RTPC info is down in the comment tree. You can also silence those by put `?` in front of `.wem`, or `#v 0` before `##fade`.
 
-In rare cases `{s}` means the volume is altered/silenced via states, which should be handled automatically by making one `.txtp` per state that changes volumes. Sometimes default `.txtp` marked with `{s}` and without state applied is also meant to be playable, for example game may define a base event that plays all then silence some layer with one state). Meaning  some `txtp` is marked with `{s}` don't need to be touched.
+
+### State mark {s}
+In rare cases `{s}` means the volume is altered/silenced via states, which should be handled automatically by making one `.txtp` per state that changes volumes.
+
+Sometimes default `.txtp` marked with `{s}` and without state applied is also meant to be playable. For example a game may define a base song that plays all, then silence some audio layer with one state. don't need to be touched. However other games may not need this and default  `.txtp` playing all at once makes no sense.  *wwiser* can't autodetect all invalid cases so just remove the offending `.txtp`.
 
 
 ### Multi-loops mark {m}

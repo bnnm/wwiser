@@ -50,3 +50,16 @@ Low priority TODOs
 - mark dialogueevents somehow as they can have the same name as events
 - check how argument is used in older wwise dialogue events
 - unused nodes may be affected by loading parent? (probably little effect)
+- builder: find0() / optional=True, return emptyNode where value() is None
+- maybe set option to not generate statechunks "nothing set" for MGR
+- add get_info() in model that converts tid to hashname and common props
+- prioritice variable order for Spiderman: Web of Shadows
+  - some kind of weight system?
+  - doesn't seem useful to order by wwnames since different events may order differently
+- layers of blend RTPCs (hard to understand and not very used)
+- state: may be useful to add multiple gsparams: "st=a1 / st=a2" (fake gspath combos)
+
+## properties
+- filter properties that can't combine: pitch<>music objects, etc
+  - AkProps.filter()?
+- simplify+unify RTPC and AkProp usage > AkPropertyInfo?

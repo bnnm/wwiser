@@ -64,7 +64,7 @@ class TxtpSimplifier(object):
     # simplifies tree to simulate some Wwise features with TXTP
     def modify(self):
 
-        #todo join some of these to minimize loops
+        #TODO join some of these to minimize loops
         self._clean_tree(self._tree)
         self._set_self_loops(self._tree)
         self._set_props(self._tree)

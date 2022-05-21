@@ -46,7 +46,7 @@ class CAkFxCustom(CAkHircNode):
         nfxid = nbase.find1(name='fxID')
         plugin_id = nfxid.value()
 
-        self.fx = self._build_sfx(node, plugin_id)
+        self.fx = self._make_sfx(node, plugin_id)
         return
 
 # output config
@@ -60,8 +60,8 @@ class CAkBus(CAkHircNode):
         nbusid = nbase.find1(name='OverrideBusId')
         self.bbus = self._read_bus(nbusid)
 
-        #idDeviceShareset #TODO needed to get if it's audio
-        #uChannelConfig #TODO use to guess is non-output bus?
+        #idDeviceShareset #needed to get if it's audio?
+        #uChannelConfig #use to guess is non-output bus?
 
         self.props = self._make_props(nbase)
         #PositioningParams
@@ -103,9 +103,7 @@ class CAkDialogueEvent(CAkHircNode):
 
         self.props.barf_loop()
 
-        tree = self._build_tree(node)
-        if tree.init:
-            self.tree = tree
+        self.tree = self._make_tree(node)
         return
 
 
@@ -280,7 +278,13 @@ class CAkRanSeqCntr(CAkParameterNode):
         if nloop.value() == 0 and not self.continuous:
             pass
         else:
-            self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
+            loopmin = None
+            loopmax = None
+            if nloopmin: #v72>
+                loopmin = nloopmin.value()
+            if nloopmax: #v72>
+                loopmax = nloopmax.value()
+            self.props.set_loop(nloop.value(), loopmin, loopmax)
 
 
         #eTransitionMode: defines a transition type between objects (ex. "delay" + fTransitionTime)
@@ -351,8 +355,8 @@ class CAkSound(CAkParameterNode):
 
         nloop = node.find(name='Loop')
         if nloop: #older
-            nloopmin = node.find(name='LoopMod.Min')
-            nloopmax = node.find(name='LoopMod.Max')
+            nloopmin = node.find(name='LoopMod.min')
+            nloopmax = node.find(name='LoopMod.max')
 
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
 
@@ -360,7 +364,7 @@ class CAkSound(CAkParameterNode):
 
 
         nitem = node.find(name='AkBankSourceData')
-        source = self._build_source(nitem)
+        source = self._make_source(nitem)
         self.sound.source = source
         self.sound.nsrc = source.nfileid
 
@@ -378,28 +382,21 @@ class CAkMusicSwitchCntr(CAkParameterNode):
         self.gtype = None
         self.ngname = None
         self.gvalue_ntid = {}
-        self.has_tree = None
         self.ntid = False
         self.rules = None
         self.tree = None
 
     def _build_audionode(self, node):
-        self._build_transition_rules(node, True)
-        self._build_stingers(node)
+        self.rules = self._make_transition_rules(node, True)
+        self.stingerlist = self._make_stingerlist(node)
 
         #Children: list, also in nodes
         #bIsContinuePlayback: ?
         #uMode: 0=BestMatch/1=Weighted
 
-        tree = self._build_tree(node)
-        if tree.init:
-            #later versions use a tree
-            self.tree = tree
-
-        else:
-            #earlier versions work like a normal switch
-            self.has_tree = False
-
+        self.tree = self._make_tree(node)
+        if not self.tree:
+            # earlier versions work like a normal switch and don't have a tree
             self.gtype = node.find(name='eGroupType').value()
             self.ngname = node.find(name='ulGroupID')
             #ulDefaultSwitch: not needed since we create all combos
@@ -423,8 +420,8 @@ class CAkMusicRanSeqCntr(CAkParameterNode):
     def _build_audionode(self, node):
         self.props.barf_loop() #unknown meaning
 
-        self._build_transition_rules(node, False)
-        self._build_stingers(node)
+        self.rules = self._make_transition_rules(node, False)
+        self.stingerlist = self._make_stingerlist(node)
 
         #playlists are "groups" that include 'leaf' objects or other groups
         # ex. item: playlist (sequence)
@@ -499,7 +496,7 @@ class CAkMusicSegment(CAkParameterNode):
     def _build_audionode(self, node):
         self.props.barf_loop() #unknown meaning
 
-        self._build_stingers(node)
+        self.stingerlist = self._make_stingerlist(node)
 
         # main duration
         nfdur = node.find(name='fDuration')
@@ -538,7 +535,7 @@ class CAkMusicTrack(CAkParameterNode):
         self.gtype = None
         self.ngname = None
         self.gvalue_index = {}
-        self.automations = {}
+        self.automationlist = {}
         self.silence = None
 
     def _build_audionode(self, node):
@@ -546,9 +543,8 @@ class CAkMusicTrack(CAkParameterNode):
 
         nloop = node.find(name='Loop')
         if nloop: #older
-            nloopmin = node.find(name='LoopMod.Min')
-            nloopmax = node.find(name='LoopMod.Max')
-
+            nloopmin = node.find(name='LoopMod.min')
+            nloopmax = node.find(name='LoopMod.max')
             self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
 
             self.fields.prop(nloop)
@@ -557,7 +553,7 @@ class CAkMusicTrack(CAkParameterNode):
         self.props.disable_loop()
 
         # prepare for clips
-        self.automations = bnode_automation.AkClipAutomationList(node)
+        self.automationlist = self._make_automations(node)
 
         ntype = node.find(name='eTrackType')
         if not ntype:
@@ -568,7 +564,7 @@ class CAkMusicTrack(CAkParameterNode):
         streaminfos = {}
         nitems = node.find1(name='pSource').finds(name='AkBankSourceData')
         for nitem in nitems:
-            source = self._build_source(nitem)
+            source = self._make_source(nitem)
             tid = source.nsourceid.value()
             streaminfos[tid] = source
 
@@ -592,7 +588,7 @@ class CAkMusicTrack(CAkParameterNode):
                 self.subtracks[track] = []
 
             clip = self._build_clip(streaminfos, nsrc)
-            clip.sound.automations = self.automations.get(index)
+            clip.sound.automations = self.automationlist.get(index)
 
             self.subtracks[track].append(clip)
             index += 1

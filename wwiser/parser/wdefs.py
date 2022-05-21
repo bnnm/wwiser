@@ -1260,9 +1260,9 @@ AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
   0x1: "LFE",
   0x2: "Pitch",
   0x3: "LPF",
-  0x4: "PlayMechanismSpecialTransitionsValue?",
+  0x4: "PlayMechanismSpecialTransitionsValue?", #AC3 in FxCustom
   0x5: "Unknown?", # not defined (DmC)
-  0x6: "Unknown?", # not defined (DmC)
+  0x6: "Unknown?", # not defined (DmC, related to volume in dB: BusVolume?)
  #0x7: "Unknown?", # not defined
   0x8: "Priority",
   0x9: "MaxNumInstances",
@@ -1271,7 +1271,7 @@ AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
   0xC: "Positioning_Cone_Attenuation_ON_OFF",
   0xD: "Positioning_Cone_Attenuation",
   0xE: "Positioning_Cone_LPF",
- #0xF: "Unknown?",  # not defined
+  0xF: "Unknown?",  # not defined (AC3)
  #0x10: "Unknown?", # not defined
  #0x11: "Unknown?", # not defined
  #0x12: "Unknown?", # not defined
@@ -1290,9 +1290,9 @@ AkRTPC_ParameterID_065 = wfmt.FormatterLUT({
   0x1F: "FeedbackPitch",
  #0x20: MaxNumRTPC
 
- #0x3C: "?", #Quantum Conundrum (found near -96, some volume?)
+ #0x3C: "?", #Quantum Conundrum (found near -96, some volume?), AC3
  #0x3D: "?", #DmC (found near -96, some volume?)
- #0x3E: "?", #same
+ #0x3E: "?", #same, AC3
 })
 #072==
 AkRTPC_ParameterID_072 = wfmt.FormatterLUT({

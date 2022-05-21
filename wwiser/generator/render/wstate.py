@@ -24,7 +24,7 @@ class WwiseState(object):
         self.transitions = None # sub-objects when changing from one GS path to other
         self.stingers = None # sub-objects triggered with another plays
 
-        self._default_gs = None
+        self._default_gsparams = None
         self._default_sc = None
         self._default_gvpaths = None
         self._default_gvparams = None
@@ -42,7 +42,7 @@ class WwiseState(object):
 
     def reset_gs(self):
         self.gspaths = wgamesync.GamesyncPaths(self._txtpcache)  
-        self.gsparams = self._default_gs
+        self.gsparams = self._default_gsparams
 
     def reset_sc(self):
         self.scpaths = wstatechunks.StateChunkPaths()  
@@ -63,20 +63,17 @@ class WwiseState(object):
         return self.gspaths.combos()
 
     def set_gs(self, gsparams):
-        if self._default_gs:
+        if self._default_gsparams:
             return
         self.gsparams = gsparams
 
     def set_gsdefaults(self, items):
         if items is None: #allow []
             return
+        gsparams = wgamesync.GamesyncParams(self._txtpcache)
+        gsparams.set_gsparams(items)
 
-        #default_gsparams = wgamesync.GamesyncParams(self._txtpcache)
-        #TODO items
-
-        #self._default_gs = gsparams
-        #self.gsparams = gsparams
-        pass
+        self._default_gsparams = gsparams
 
     # ---
 

@@ -1,4 +1,4 @@
-from . import bnode_misc, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk
+from . import bnode_automation, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk
 from ..txtp import wtxtp_info
 
 
@@ -65,6 +65,7 @@ class CAkHircNode(object):
             return None
         self._builder.report_unknown_props(props.unknowns)
 
+        #TODO improve props (inherited from parents)
         for nfld in props.fields_fld:
             self.fields.prop(nfld)
 
@@ -76,7 +77,6 @@ class CAkHircNode(object):
 
         return props
 
-
     def _make_statechunk(self, nbase):
         if not nbase:
             return None
@@ -85,9 +85,9 @@ class CAkHircNode(object):
         if not statechunk.valid:
             return None
 
-        #TODO improve, needs bstate.fields
-        #for bsi in statechunk.get_states():
-        #    self.fields.keyvalprops(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props.fields)
+        #TODO improve props (inherited from parents)
+        for bsi in statechunk.get_states():
+            self.fields.keyvalprops(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
 
         return statechunk
 
@@ -100,32 +100,37 @@ class CAkHircNode(object):
         if not rtpclist.valid:
             return None
 
-        #TODO improve
+        #TODO improve props (inherited from parents)
         for brtpc in rtpclist.get_rtpcs():
             self.fields.rtpc(brtpc.nid, brtpc.minmax())
         return rtpclist
 
-    def _build_transition_rules(self, node, is_switch):
-        self.rules = bnode_rules.AkTransitionRules(node)
-        if not is_switch and self.rules.ntrns:
+    def _make_transition_rules(self, node, is_switch):
+        rules = bnode_rules.AkTransitionRules(node)
+        if not is_switch and rules.ntrns:
             # rare in playlists (Polyball, Spiderman)
             self._builder.report_transition_object()
-        return
+        return rules
 
-    def _build_tree(self, node):
-        return bnode_tree.AkDecisionTree(node)
+    def _make_tree(self, node):
+        tree = bnode_tree.AkDecisionTree(node)
+        if not tree.init:
+            return None
+        return tree
 
-    def _build_stingers(self, node):
-        self.stingerlist = bnode_stinger.CAkStingerList(node)
-        return
+    def _make_automations(self, node):
+         return bnode_automation.AkClipAutomationList(node)
 
-    def _build_source(self, nbnksrc):
+    def _make_stingerlist(self, node):
+        return bnode_stinger.CAkStingerList(node)
+
+    def _make_source(self, nbnksrc):
         source = bnode_source.AkBankSourceData(nbnksrc, self.sid)
 
         if source.is_plugin_silence:
             if source.plugin_size:
                 # older games have inline plugin info
-                source.plugin_fx = self._build_sfx(nbnksrc, source.plugin_id)
+                source.plugin_fx = self._make_sfx(nbnksrc, source.plugin_id)
             else:
                 # newer games use another CAkFxCustom (though in theory could inline)
                 bank_id = source.nsrc.get_root().get_id()
@@ -136,5 +141,5 @@ class CAkHircNode(object):
 
         return source
 
-    def _build_sfx(self, node, plugin_id):
+    def _make_sfx(self, node, plugin_id):
         return bnode_source.CAkFx(node, plugin_id)

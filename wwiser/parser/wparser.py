@@ -964,8 +964,8 @@ def CAkSound__SetInitialValues(obj, cls):
 
     if cls.version <= 56:
         obj.s16('Loop')
-        obj.s16('LoopMod.Min')
-        obj.s16('LoopMod.Max')
+        obj.s16('LoopMod.min')
+        obj.s16('LoopMod.max')
     else:
         pass
 

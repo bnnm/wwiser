@@ -214,6 +214,7 @@ Since Wwise has a bunch of complex features that make playing `.wem` directly a 
 
 TXTP is a simple text file, so you can open it and see how audio is configured. Format is custom (see vgmstream's TXTP.md docs), but it also prints comments with extra info and a simplified tree of how Wwise plays the whole thing that may be useful to understand what's going on.
 
+Simply load all banks and generation will make a bunch of `.txtp` files that are playable by *vgmstream*. It's recommended to load `init.bnk` (sometimes `1355168291.bnk`) to improve volume output in some cases.
 
 ### Basic output
 By default it will try to create `.txtp` for all "usable" cases (mainly *events* with audio). If an event uses *variables* (meaning game gets to choose sounds) it'll try to make one `.txtp` per value combo. Pay attention to the log, as it prints about important, non obvious details you may need to tweak (detailed later).

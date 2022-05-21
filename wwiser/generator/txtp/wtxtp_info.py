@@ -340,7 +340,7 @@ FIELD_TYPE_PROP = 0
 FIELD_TYPE_KEYVAL = 1
 FIELD_TYPE_KEYMINMAX = 2
 FIELD_TYPE_RTPC = 3
-FIELD_TYPE_KEYVALVOL = 4
+FIELD_TYPE_KEYVALPROPS = 4
 
 class TxtpFields(object):
     def __init__(self):
@@ -358,9 +358,9 @@ class TxtpFields(object):
         if nkey:
             self._fields.append((FIELD_TYPE_KEYVAL, nkey, nval))
 
-    def keyvalvol(self, nkey, nval, vol):
+    def keyvalprops(self, nkey, nval, props):
         if nkey:
-            self._fields.append((FIELD_TYPE_KEYVALVOL, nkey, nval, vol))
+            self._fields.append((FIELD_TYPE_KEYVALPROPS, nkey, nval, props))
 
     def keyminmax(self, nkey, nmin, nmax):
         if nkey:
@@ -408,8 +408,8 @@ class TxtpFields(object):
                 if not val:
                     val = vattrs.get('value')
 
-            elif type == FIELD_TYPE_KEYVALVOL:
-                _, nkey, nval, vol = field
+            elif type == FIELD_TYPE_KEYVALPROPS:
+                _, nkey, nval, props = field
                 kattrs = nkey.get_attrs()
                 vattrs = nval.get_attrs()
 
@@ -423,10 +423,23 @@ class TxtpFields(object):
                 else:
                     key = "%s %s" % (kname, kvalue)
 
+                #info = ''
+                #for nkey, nval in props.fields_std:
+                #    pk = nkey.get_attrs().get('valuefmt')
+                #    pv = nval.value()
+                #    info += " %s=%s" % (pk, pv)
+                #
+                #for nkey, nmin, nmax in props.fields_rng:
+                #    pk = nkey.get_attrs().get('valuefmt')
+                #    pv1 = nmin.value()
+                #    pv2 = nmax.value()
+                #    info += " %s=(%s,%s)" % (pk, pv1, pv2)
+
                 val = vattrs.get('valuefmt', vattrs.get('hashname'))
                 if not val:
                     val = vattrs.get('value')
-                val = "%s {%s}" % (val, vol)
+                val = "%s" % (val)
+                #val = "%s {%s}" % (val, info.strip()) #looks a bit strange
 
             elif type == FIELD_TYPE_KEYMINMAX:
                 _, nkey, nmin, nmax = field

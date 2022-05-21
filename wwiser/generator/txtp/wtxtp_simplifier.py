@@ -341,10 +341,6 @@ class TxtpSimplifier(object):
             subnode.silenced = node.silenced
             node.silenced = None
 
-        if not subnode.pitch:
-            subnode.pitch = node.pitch
-            node.pitch = None
-
     def _set_props_config(self, node):
         for subnode in node.children:
             self._set_props_config(subnode)

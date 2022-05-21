@@ -102,6 +102,11 @@ class CAkProps(object):
         #CenterPCT: not useful?
         #Duration? for crossfades?
 
+    def is_usable(self, apply_bus):
+        if apply_bus and (self.busvolume or self.outputbusvolume):
+            return True
+        return self.loop is None or self.volume or self.makeupgain or self.delay
+
     def _prop(self, name, default=0):
         value = self._props.get(name)
         minmax = self._ranges.get(name)
@@ -220,11 +225,6 @@ class CAkProps(object):
         if keyname in items:
             raise ValueError("repeated prop " + keyname)
         items[keyname] = val
-
-
-    #TODO remove/improve
-    def has_volumes(self):
-        return self.volume or self.makeupgain
 
     # external in some cases, unifies handling
     def set_loop(self, value, min=None, max=None):

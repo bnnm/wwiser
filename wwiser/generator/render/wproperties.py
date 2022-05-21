@@ -59,6 +59,11 @@ from . import bnode_misc
 # there are "VoiceVolume", "MakeUpGain", "OutputBusVolume", "BusVolume", etc) but ultimately
 # are added the final value.
 #
+# Generally bus volumes aren't too important since final volume can be autonormalized, but in
+# rare cases buses are used to fix certain .wem volumes and may contain useful statechunks 
+# (seen in Astral Chain wems with  "low" "mid" buses + silence states). If init.bnk is
+# loaded those are applied, otherwise volumes aren't correct.
+#
 # Could cache some relative properties on build (default+parents) but still needs to apply
 # stateprops/rtpcs. Other config is added after creating the object.
 
@@ -72,7 +77,7 @@ _HIRC_AUDIBLE = {
 class PropertyCalculator(object):
     def __init__(self, ws):
         self._ws = ws
-        self._read_bus = False
+        self._apply_bus = False
 
 
     def get_properties(self, bnode, txtp):
@@ -111,10 +116,11 @@ class PropertyCalculator(object):
 
         config.gain += props.volume
         config.gain += props.makeupgain
-        config.busvolume = props.busvolume
-        config.outputbusvolume = props.outputbusvolume
-        config.pitch = props.pitch
         config.delay = props.delay
+
+        #config.busvolume = props.busvolume
+        #config.outputbusvolume = props.outputbusvolume
+
 
         self._apply_statechunks(bnode, config)
         self._apply_rtpclist(bnode, config)
@@ -131,7 +137,7 @@ class PropertyCalculator(object):
         # while on MSwitch/MRanSeq are often just to silence the whole song.
         check_state = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO only on root nodes
         if check_state:
-            bsis = bnode.statechunk.get_usable_states()
+            bsis = bnode.statechunk.get_usable_states(self._apply_bus)
             if len(bsis) > 0:
                 config.crossfaded = True
 
@@ -159,7 +165,7 @@ class PropertyCalculator(object):
         # Less common is on Switch/RanSeq (sometimes just silence the base song but also BGM rank in some DMC5 events).
         check_rtpc = True #bnode.name in ['CAkMusicTrack', 'CAkMusicSegment']
         if check_rtpc:
-            brtpcs = bnode.rtpclist.get_usable_rtpcs()
+            brtpcs = bnode.rtpclist.get_usable_rtpcs(self._apply_bus)
             if len(brtpcs) > 0:
                 config.crossfaded = True
 
@@ -168,9 +174,7 @@ class PropertyCalculator(object):
             return
 
         # get currently set rtpcs (may be N at once)
-        print("combos: ", len(gvparams.get_items()))
         for gvitem in gvparams.get_items():
-            print(gvitem.key, gvitem.value)
             if not gvitem.key: #set all to gvitem's value
                 brtpcs = bnode.rtpclist.get_rtpcs()
             else:
@@ -178,7 +182,7 @@ class PropertyCalculator(object):
                 brtpcs = [brtpc]
 
             for brtpc in brtpcs:
-                if not brtpc or not brtpc.is_usable:
+                if not brtpc or not brtpc.is_usable(self._apply_bus):
                     continue
                 self._apply_rtpc(gvitem, brtpc, config)
 
@@ -211,16 +215,14 @@ class PropertyCalculator(object):
                 config.gain = brtpc.accum(y, config.gain)
             if brtpc.is_makeupgain:
                 config.gain = brtpc.accum(y, config.gain)
+            if brtpc.is_delay:
+                config.delay = brtpc.accum(y, config.delay)
 
             if self._read_bus:
                 if brtpc.is_busvolume:
                     config.gain = brtpc.accum(y, config.gain)
                 if brtpc.is_outputbusvolume:
                     config.gain = brtpc.accum(y, config.gain)
-            if brtpc.is_pitch:
-                config.pitch = brtpc.accum(y, config.pitch)
-            if brtpc.is_delay:
-                config.delay = brtpc.accum(y, config.delay)
 
 
     def _calculate(self, bnode):

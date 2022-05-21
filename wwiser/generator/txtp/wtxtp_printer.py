@@ -278,11 +278,6 @@ class TxtpPrinter(object):
             info += '  ##fade'
             self.has_others = True
 
-        if tnode.pitch:
-            info += '  ##pitch %s' % (tnode.pitch)
-            self.has_others = True
-
-
         # final result
         pad = self._get_padding() #padded for clarity
         self._lines.append('%s%s%s%s\n' % (pad, line, mods, info))
@@ -448,10 +443,6 @@ class TxtpPrinter(object):
 
         if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'
-
-        if tnode.pitch:
-            info += '  ##pitch %s' % (tnode.pitch)
-            self.has_others = True
 
         if silence_line:
             line = "?" + line

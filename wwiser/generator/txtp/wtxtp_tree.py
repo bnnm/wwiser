@@ -48,9 +48,9 @@ VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but all
 class TxtpNode(object):
     def __init__(self, parent, config, sound=None):
         self.parent = parent
-        self.config = config #_NodeConfig
-        self.sound = sound #_NodeSound
-        self.transition = None #_NodeTransition
+        self.config = config #NodeConfig
+        self.sound = sound #NodeSound
+        self.transition = None #NodeTransition
 
         self.type = TYPE_GROUP_ROOT
         if sound:
@@ -68,7 +68,6 @@ class TxtpNode(object):
 
         # copy value as may need to simplify tree config (ex. multiple objects can set infinite loop)
         self.volume = config.gain
-        self.pitch = config.pitch
         self.loop = config.loop
         self.delay = config.delay
 

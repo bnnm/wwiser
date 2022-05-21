@@ -9,6 +9,7 @@ class RN_CAkHircNode(object):
         pass
 
     def init_renderer(self, renderer):
+        self._apply_bus = False
         self._renderer = renderer
         self._builder = renderer._builder
         self._filter = renderer._filter
@@ -31,7 +32,7 @@ class RN_CAkHircNode(object):
         #    return
 
         usable_states = []
-        for bsi in bnode.statechunk.get_usable_states():
+        for bsi in bnode.statechunk.get_usable_states(self._apply_bus):
             item = (bsi.nstategroupid, bsi.nstatevalueid)
             usable_states.append(item)
         if usable_states:
@@ -112,15 +113,3 @@ class RN_CAkHircNode(object):
         rnode = self._renderer._get_rnode(bnode)
         rnode._render_base(bnode, txtp)
         return
-
-    #--------------------------------------------------------------------------
-
-
-    #TODO
-    def _build_silence(self, node, clip):
-        sound = bnode_misc.NodeSound()
-        sound.nsrc = node
-        sound.silent = True
-        sound.clip = clip
-        return sound
-

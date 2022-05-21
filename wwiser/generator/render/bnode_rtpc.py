@@ -285,10 +285,7 @@ class AkRtpc(object):
         # (could handle positioning params)
         # behavior
         self.is_delay = '[InitialDelay]' in valuefmt
-
-        self.is_usable = self.is_volume or self.is_busvolume or self.is_outputbusvolume or self.is_makeupgain or self.is_pitch or self.is_playbackspeed or self.is_delay
-
-        #TODO: other props: "LFE", "Pitch", "LPF", "HPF"
+        #TODO: other props: "LFE", "LPF", "HPF"
 
     def _parse_accum(self, naccum):
         self._accum_exc = False
@@ -311,6 +308,10 @@ class AkRtpc(object):
         self._accum_mul = '[Multiply]' in valuefmt #playback speed
         self._accum_bln = '[Boolean]' in valuefmt #bypass FX flag
 
+    def is_usable(self, apply_bus):
+        if apply_bus and (self.is_busvolume or self.is_outputbusvolume):
+            return True
+        return self.is_volume or self.is_makeupgain or self.is_delay
 
     def get(self, x):
         return self.graph.get(x)
@@ -357,7 +358,7 @@ class AkRtpcList(object):
     def __init__(self, node):
         self.valid = False
         self._rtpcs = []
-        self._usable_rtpcs = None
+        self._usables = None
         self._build(node)
 
     def empty(self):
@@ -386,11 +387,11 @@ class AkRtpcList(object):
     def get_rtpcs(self):
         return self._rtpcs
 
-    def get_usable_rtpcs(self):
-        if self._usable_rtpcs is None:
+    def get_usable_rtpcs(self, apply_bus):
+        if self._usables is None:
             items = []
             for rtpc in self._rtpcs:
-                if rtpc.is_usable:
+                if rtpc.is_usable(apply_bus):
                     items.append(rtpc)
-            self._usable_rtpcs = items
-        return self._usable_rtpcs
+            self._usables = items
+        return self._usables

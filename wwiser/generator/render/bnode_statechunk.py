@@ -21,7 +21,7 @@ class AkStateChunk(object):
     def __init__(self, node, builder):
         self.valid = False
         self._states = []
-        self._usable_states = None
+        self._usables = None
         self._build(node, builder)
 
     def _build(self, node, builder):
@@ -88,11 +88,11 @@ class AkStateChunk(object):
         return self._states
 
     # states with properties that wwiser/vgmstream can handle (ignores stuff like auxs)
-    def get_usable_states(self):
-        if self._usable_states is None:
+    def get_usable_states(self, apply_bus):
+        if self._usables is None:
             items = []
             for bsi in self._states:
-                if bsi.bstate.props.has_volumes():
+                if bsi.bstate.props.is_usable(apply_bus):
                     items.append(bsi)
-            self._usable_states = items
-        return self._usable_states
+            self._usables = items
+        return self._usables

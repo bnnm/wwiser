@@ -1,15 +1,13 @@
 
 # common config from all nodes to pass around
-#
-# loop_flag = 0 in Wwise means "full loop or use loop points of file has (if file is sfx)",
-# and 1 means "don't loop even if the file has loop points" (like xma/dsp)
-# (>N also means "loop N times", but sounds shouldn't use this, only groups)
 class NodeConfig(object):
     def __init__(self):
+        # loop_flag = 0 in Wwise means "full loop or use loop points of file has (if file is sfx)",
+        # and 1 means "don't loop even if the file has loop points" (like xma/dsp)
+        # (>N also means "loop N times", but sounds shouldn't use this, only groups)
         self.loop = None
 
         self.gain = 0 #combination of all wwise's volume stuff (though technically still volume)
-        self.pitch = 0
         self.delay = 0
 
         self.crossfaded = False #RPTC/state controlled silence
@@ -19,8 +17,7 @@ class NodeConfig(object):
         self.entry = None
         self.exit = None
 
-
-#common audio object with config
+# common audio object with config
 class NodeSound(object):
     def __init__(self):
         self.source = None #original source info (may not exist for silence)
@@ -35,6 +32,7 @@ class NodeSound(object):
         self.fet = 0  #mods end (<0=trim, >0=add end repeat)
         self.fsd = 0  #original file duration (for calcs)
 
+# hack to simulate transitions
 class NodeTransition(object):
     def __init__(self):
         self.play_before = False

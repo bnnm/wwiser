@@ -109,8 +109,8 @@ class PropertyCalculator(object):
 
         config.loop = props.loop
 
-        config.volume = props.volume
-        config.makeupgain = props.makeupgain
+        config.gain += props.volume
+        config.gain += props.makeupgain
         config.busvolume = props.busvolume
         config.outputbusvolume = props.outputbusvolume
         config.pitch = props.pitch
@@ -146,8 +146,8 @@ class PropertyCalculator(object):
                 continue
             # apply props
             props = bstate.props
-            config.volume += props.volume
-            config.makeupgain += props.makeupgain
+            config.gain += props.volume
+            config.gain += props.makeupgain
 
 
     # some objects have rtpc > new value info in the statechunk, and if we have set those states we want the values
@@ -208,13 +208,15 @@ class PropertyCalculator(object):
 
             # apply props #TODO improve
             if brtpc.is_volume:
-                config.volume = brtpc.accum(y, config.volume)
+                config.gain = brtpc.accum(y, config.gain)
             if brtpc.is_makeupgain:
-                config.makeupgain = brtpc.accum(y, config.makeupgain)
-            if brtpc.is_busvolume:
-                config.busvolume = brtpc.accum(y, config.busvolume)
-            if brtpc.is_outputbusvolume:
-                config.outputbusvolume = brtpc.accum(y, config.outputbusvolume)
+                config.gain = brtpc.accum(y, config.gain)
+
+            if self._read_bus:
+                if brtpc.is_busvolume:
+                    config.gain = brtpc.accum(y, config.gain)
+                if brtpc.is_outputbusvolume:
+                    config.gain = brtpc.accum(y, config.gain)
             if brtpc.is_pitch:
                 config.pitch = brtpc.accum(y, config.pitch)
             if brtpc.is_delay:
@@ -246,7 +248,6 @@ class PropertyCalculator(object):
     
     def _calc_relative(self, p, bp):
         #p.volume += bp.voice_volume
-        #p.volume += bp.makeupgain
         #p.playbackspeed *= bp.playbackspeed #similar to pitch but for music hierarchy, multiplicative
         pass
 

@@ -67,12 +67,10 @@ class TxtpNode(object):
         self.envelopes = []
 
         # copy value as may need to simplify tree config (ex. multiple objects can set infinite loop)
-        self.volume = config.volume
-        self.makeupgain = config.makeupgain
+        self.volume = config.gain
         self.pitch = config.pitch
         self.loop = config.loop
         self.delay = config.delay
-        self.idelay = config.idelay
 
         self.crossfaded = config.crossfaded
         self.silenced = False
@@ -97,21 +95,6 @@ class TxtpNode(object):
         if self.volume and self.volume <= -96.0:
             #self.volume = None
             self.silenced = True
-
-        if self.makeupgain and self.makeupgain <= -96.0:
-            #self.makeupgain = None
-            self.silenced = True
-
-        # MakeUpGain is a secondary volume value, where first you set a "HDR window" in the container bus,
-        # and sounds volumes are altered depending on window and MakeUpGain (meant for temp focus on some sfxs).
-        # When HDR window has default settings it seems to behave like regular volume (ex. Gunslinger Stratos).
-        if self.makeupgain:
-            volume = self.volume or 0.0
-            self.volume = volume + self.makeupgain
-            self.makeupgain = 0 #todo leave gain for info in txtp?
-            self.has_others = True
-            #self.has_debug = True
-
 
     def clamp_volume(self):
         if not self.volume:
@@ -200,7 +183,7 @@ class TxtpNode(object):
         if len(self.children) > 1:
             return False
 
-        if (self.idelay or self.delay or self.volume) and not simpler:
+        if (self.delay or self.volume) and not simpler:
             return False
 
         #makeupgain, pitch: ignored

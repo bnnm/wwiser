@@ -322,10 +322,6 @@ class TxtpSimplifier(object):
             subnode.delay = node.delay
             node.delay = None
 
-        if not subnode.idelay and is_noloop_node and not is_clip_subnode:
-            subnode.idelay = node.idelay
-            node.idelay = None
-
 
         # move various props closer to source = better (less txtp groups)
 
@@ -344,10 +340,6 @@ class TxtpSimplifier(object):
         if not subnode.silenced:
             subnode.silenced = node.silenced
             node.silenced = None
-
-        if not subnode.makeupgain:
-            subnode.makeupgain = node.makeupgain
-            node.makeupgain = None
 
         if not subnode.pitch:
             subnode.pitch = node.pitch
@@ -567,7 +559,6 @@ class TxtpSimplifier(object):
         if node.is_sound() and node.sound and node.sound.clip:
             return
         node.pad_begin = 0
-        node.idelay = None
         node.delay = None
 
 
@@ -766,8 +757,8 @@ class TxtpSimplifier(object):
         sound = node.sound
         #config = node.config
 
-        if node.delay or node.idelay:
-            raise ValueError("found delay/idelay in clip (%s, %s)" % (node.delay, node.idelay))
+        if node.delay:
+            raise ValueError("found delay in clip (%s)" % (node.delay))
 
         body_time = 0.0
         pad_begin = 0.0
@@ -842,8 +833,6 @@ class TxtpSimplifier(object):
         if not node.pad_begin:
             node.pad_begin = 0
 
-        if node.idelay:
-            node.pad_begin += node.idelay
         if node.delay: #only seen if passed from group nodes to sfx
             node.pad_begin += node.delay
         return
@@ -869,8 +858,6 @@ class TxtpSimplifier(object):
         if not node.pad_begin:
             node.pad_begin = 0
 
-        if node.idelay:
-            node.pad_begin += node.idelay
         if node.delay:
             node.pad_begin += node.delay
         return

@@ -116,7 +116,7 @@ class TxtpPrinter(object):
 
         if post:
             if tnode.loop is not None:       config1 += " lpn=%s" % (tnode.loop)
-            if tnode.volume is not None:     config1 += " vol=%s" % (tnode.volume)
+            if tnode.volume:                 config1 += " vol=%s" % (tnode.volume)
             if tnode.ignorable():            config1 += " [i]"
 
             if tnode.body_time:              config2 += ' bt={0:.5f}'.format(tnode.body_time)
@@ -128,8 +128,7 @@ class TxtpPrinter(object):
         else:
             if tnode.config.loop is not None: config1 += " lpn=%s" % (tnode.config.loop)
             if tnode.config.delay:           config1 += " dly=%s" % (tnode.config.delay)
-            if tnode.config.idelay:          config1 += " idl=%s" % (tnode.config.idelay)
-            if tnode.config.volume:          config1 += " vol=%s" % (tnode.config.volume)
+            if tnode.config.gain:          config1 += " vol=%s" % (tnode.config.gain)
             if tnode.transition:             config1 += " (trn)"
 
             if tnode.config.entry or tnode.config.exit:
@@ -278,10 +277,6 @@ class TxtpPrinter(object):
         if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'
             self.has_others = True
-
-        #if node.makeupgain:
-        #    info += '  ##gain'
-        #    self.has_others = True
 
         if tnode.pitch:
             info += '  ##pitch %s' % (tnode.pitch)
@@ -453,10 +448,6 @@ class TxtpPrinter(object):
 
         if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'
-
-        #if node.makeupgain:
-        #    info += '  ##gain'
-        #    self.has_others = True
 
         if tnode.pitch:
             info += '  ##pitch %s' % (tnode.pitch)

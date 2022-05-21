@@ -8,13 +8,9 @@ class NodeConfig(object):
     def __init__(self):
         self.loop = None
 
-        self.volume = None
-        self.makeupgain = None
-        self.busvolume = None
-        self.outputbusvolume = None
-        self.pitch = None
-        self.delay = None
-        self.idelay = None
+        self.gain = 0 #combination of all wwise's volume stuff (though technically still volume)
+        self.pitch = 0
+        self.delay = 0
 
         self.crossfaded = False #RPTC/state controlled silence
 

@@ -24,6 +24,16 @@ _OLD_TRANSLATION_PROPS = {
     'TTime': 'TransitionTime',
 }
 
+# Extra info on some props:
+# - MakeUpGain: secondary volume value, where first you set a "HDR window" in the container bus,
+#   and sounds volumes are altered depending on window and MakeUpGain (meant for temp focus on some sfxs).
+#   When HDR window has default settings it seems to behave like regular volume (ex. Gunslinger Stratos).
+# - Delay/InitialDelay is the time between the object is reached and it starts to play.
+#   Both only differ on where are used (Delay=actions, InitialDelay=audio), while music hierarchy doesn't
+#   use them as it has clips. Only applies when an object is actually played again:
+#   - ranseq loop=inf + aksound idelay=1, loop=--- > each loop has 1 sec delay (aksound is played many times)
+#   - ranseq loop=--- + aksound idelay=1, loop=inf > only first play has 1 sec delay (aksound loops don't count as replaying)
+
 class CAkProps(object):
     def __init__(self, node):
         self.valid = False
@@ -74,11 +84,6 @@ class CAkProps(object):
         self.pitch = self._prop('[Pitch]') #for sound hierarchy
         self.playbackspeed = self._prop('[PlaybackSpeed]') #for music hierarchy
 
-        # "Delay/InitialDelay" is the time between the object is reached and it starts to play.
-        # Both only differ on where are used, and music hierarchy doesn't use them as it has clips.
-        # Delay only applies when an object is actually played again:
-        # - ranseq loop=inf + aksound idelay=1, loop=--- > each loop has 1 sec delay (aksound is played many times)
-        # - ranseq loop=--- + aksound idelay=1, loop=inf > only first play has 1 sec delay (aksound loops don't count as replaying)
         var1 = self._prop('[DelayTime]') #in actions
         var2 = self._prop('[InitialDelay]') #in actor-mixer hierarchy
         if var1 and var2:

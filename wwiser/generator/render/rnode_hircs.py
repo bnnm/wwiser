@@ -445,7 +445,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
         for clip in subtrack:
             if clip.neid and clip.neid.value():
                 econfig = bnode_misc.NodeConfig()
-                econfig.idelay = clip.sound.fpa #uses FPA to start segment, should work ok #TODO??
+                econfig.delay = clip.sound.fpa #uses FPA to start segment, should work ok #TODO??
 
                 txtp.group_single(econfig)
                 self._render_next(clip.neid, txtp)

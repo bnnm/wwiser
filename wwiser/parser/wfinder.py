@@ -118,7 +118,7 @@ class NodeFinder(object):
 
 
     def _query(self, node):
-        #todo may simplify with a list of find key + value (like contains)
+        # may simplify with a list of find key + value (like contains)?
         # find target values in attrs
         #attrs = node.get_attrs()
         valid = self.depth > 0 or self.depth == 0 and self.base #first

@@ -27,10 +27,6 @@ class RN_CAkHircNode(object):
         # mainly useful on MSegment/MTrack level b/c usually games that set silence on those,
         # while on MSwitch/MRanSeq are often just to silence the whole song.
 
-        #check_state = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO ?
-        ##if not check_state:
-        #    return
-
         usable_states = []
         for bsi in bnode.statechunk.get_usable_states(self._apply_bus):
             item = (bsi.nstategroupid, bsi.nstatevalueid)

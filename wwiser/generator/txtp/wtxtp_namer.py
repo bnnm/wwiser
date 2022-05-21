@@ -61,7 +61,7 @@ class TxtpNamer(object):
         if tags and tags.shortevent:
             longname = name
             if not tags.limit:
-                shortname = self.get_shortname() #todo should probably store after trimming
+                shortname = self.get_shortname() # should store after trimming?
             else:
                 if len(longname) > tags.limit:
                     cutname = longname[0:tags.limit] 

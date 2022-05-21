@@ -314,7 +314,6 @@ class GamesyncParams(object):
             self._elems[key] = []
         else:
             # detect if another non * value exists (may always useful as other paths could exist)
-            #TODO: test if actually useful
             if value not in self._elems[key] and value != 0 and 0 not in self._elems[key]:
                 logging.debug(" maybe unreachable: %s,%s,%s", type, name, value)
                 unreachable = True

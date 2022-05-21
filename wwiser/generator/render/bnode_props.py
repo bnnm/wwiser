@@ -92,7 +92,7 @@ class CAkProps(object):
             var1 = var2 * 1000.0 #idelay is float in seconds to ms
         self.delay = var1
 
-        #TODO missing useful effects:
+        # missing useful effects:
         #HPF
         #LPF
         #PAN_LR: seems to change voice LR

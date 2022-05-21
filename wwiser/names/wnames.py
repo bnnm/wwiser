@@ -771,11 +771,11 @@ class Names(object):
 
                 # log alts too (list should be cleaned up manually)
                 for hashname in row.hashnames:
-                    if extended: #todo improve
+                    if extended:
                         outfile.write('#alt\n')
                         outfile.write('%s%s\n' % (row.hashname, extended))
                     else:
-                        outfile.write('%s #alt\n' % (hashname)) #todo not read ok?
+                        outfile.write('%s #alt\n' % (hashname))
 
             # write IDs that don't should have hashnames but don't
             if save_missing:

@@ -218,7 +218,7 @@ class _AkGraph(object):
         if v <= min:
             v = min
 
-        # TODO: as found in code, but makes no sense since it should be +-1.0 = +-96.3db, +-0.5=6db
+        # as found in code, but makes no sense since it should be +-1.0 = +-96.3db, +-0.5=6db
         # but it makes +-1.0 = +-6.0db
         #vabs = abs(v)
         #db = math.log10(vabs + 1.0) * 20.0 #~FastLinTodB + ~FastLog10?
@@ -256,7 +256,7 @@ class AkRtpc(object):
         self.id = self.nid.value()
 
         # game parameter/midi/modulator, probably not important (>=112)
-        ntype = nrtpc.find1(name='rtpcType').value()
+        ntype = nrtpc.find1(name='rtpcType')
         self.is_gamevar = not ntype or ntype.value() == 0
 
         nparam = nrtpc.find1(name='ParamID')
@@ -268,7 +268,6 @@ class AkRtpc(object):
         naccum = nrtpc.find1(name='rtpcAccum') #112
         self._parse_accum(naccum)
 
-    # TODO: improve/unify with props
     def _parse_props(self, nparam):
         # see CAkProps, but RTPC's props are a bit different (different IDs, more limited like no Loop prop)
 
@@ -285,7 +284,7 @@ class AkRtpc(object):
         # (could handle positioning params)
         # behavior
         self.is_delay = '[InitialDelay]' in valuefmt
-        #TODO: other props: "LFE", "LPF", "HPF"
+        # other props: "LFE", "LPF", "HPF", etc
 
     def _parse_accum(self, naccum):
         self._accum_exc = False

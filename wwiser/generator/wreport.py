@@ -53,7 +53,7 @@ class Report(object):
             logging.info("generator: NOTICE! trimmed %s long filenames (use shorter dirs?)", stats.trims)
             logging.info("*** set 'tags.m3u' option for shorter names + tag file with full names")
 
-        if stats.multitrack and not gen._default_gsparams:
+        if stats.multitrack:
             logging.info("generator: multitracks detected (ignore, may generate in future versions)")
 
         dir = txc.get_txtp_dir()

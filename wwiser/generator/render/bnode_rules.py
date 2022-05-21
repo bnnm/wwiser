@@ -89,7 +89,6 @@ class AkMusicTransitionObject(object):
         self.pre  = node.find1(name='bPlayPreEntry').value() != 0
         self.post = node.find1(name='bPlayPostExit').value() != 0
 
-#TODO old versions check
 
 class AkTransitionRule(object):
     def __init__(self, node):
@@ -138,6 +137,6 @@ class AkTransitionRules(object):
                 self.ntrns.append(rule.rtrn)
 
     def get_rule(self, src_id, dst_id):
-        #TODO detect -1/0 too
+        #TODO implement (detect -1/0 too)
         #for ...
         return None

@@ -111,7 +111,7 @@ class Txtp(object):
     def _write_externals(self, printer):
 
         if printer.has_externals and self.txtpcache.externals.active:
-            # get external IDs #todo for now only one
+            # get external IDs
             if len(printer.externals) > 1:
                 logging.warn("generator: ignoring multiple externals (report)")
                 elems = None

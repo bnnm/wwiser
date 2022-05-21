@@ -450,7 +450,6 @@ class Gui(object):
             self.viewer.start(port, blocking=False)
         except:
             messagebox.showerror('Error', 'Could not start viewer')
-            #todo log
 
     def _stop_viewer(self):
         if not self.viewer:

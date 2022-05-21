@@ -254,10 +254,10 @@ class PropertyCalculator(object):
         pass
 
     def _calc_absolute(self, p, bp):
-        #TODO detect if some 
+        # detect if some 
         #self._read_absolute = False
         self._read_absolute = False
 
     def _calc_behavior(self, p, bp):
-        #TODO loop etc
+        # loop etc
         self._read_behavior = False

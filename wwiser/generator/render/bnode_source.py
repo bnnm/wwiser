@@ -327,7 +327,7 @@ class AkBankSourceData(object):
 
 class CAkFx(object):
     def __init__(self, node, plugin_id):
-        self.duration = 1.0 * 1000.0 #TODO default?
+        self.duration = 1.0 * 1000.0 #default?
         self.plugin_id = plugin_id
         self._build(node)
 

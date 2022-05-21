@@ -76,7 +76,6 @@ class Renderer(object):
         self._render_gs(node, txtp)
 
         self._render_subs(ncaller)
-        #TODO improve combos (unreachables doesn't make transitions?)
 
 
     # handle combinations of gamesyncs: "play_bgm (bgm=m01)", "play_bgm (bgm=m02)", ...

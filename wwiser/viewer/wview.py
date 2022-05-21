@@ -132,7 +132,7 @@ class NodePrinter(object):
         raise ValueError('no template found')
 
     def _is_stop(self, nodename, attrs):
-        #todo improve
+        #meh, improve
 
         if not self.stopper:
             return False
@@ -149,7 +149,7 @@ class NodePrinter(object):
 
         return True
 
-    #todo use list join
+    #meh, use list join
     def _print_node(self, node, stop=False):
         nodeid = id(node)
         nodename = node.get_nodename()
@@ -176,7 +176,6 @@ class NodePrinter(object):
         return msg
 
     def write_bank(self, node, all):
-        #todo improve
         # writes node + immediate children until conditions
         # we want to show the HIRC list, but not the objects so the browser can probably handle
         # the amount of DOM nodes (maybe should add a limit of results + "load more" too)
@@ -274,8 +273,7 @@ class ViewerHandler(http.server.BaseHTTPRequestHandler):
     # GENERAL ACTIONS
 
     def do_file(self, path, type):
-        #todo disallow only up to root?
-        #todo handle relative paths and stuff (see if python has something better)
+        # disallow only up to root?
         if '../' in path:
             raise ValueError("Path error")
         try:

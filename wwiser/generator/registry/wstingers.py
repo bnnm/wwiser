@@ -1,4 +1,4 @@
-# stingers are special musicsegments, register to generate at the end
+# stingers are special musicsegments, registered to generate at the end
 
 class Stingers(object):
     def __init__(self):

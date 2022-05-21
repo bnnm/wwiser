@@ -49,13 +49,10 @@ class Txtp(object):
         self.txtpcache = txtpcache
         self.info = wtxtp_info.TxtpInfo(txtpcache)  # node info to add in output as comment
 
-        self.gsparams = None #TODO remove, and paths
-        self.scpaths = wstatechunks.StateChunkPaths() #states used to change volume/mute tracks
-
         # config during printing
         self.selected = None        # current random selection in sub-txtp
         self.scparams = None         # current volume combo in sub-txtp
-        self.scparams_make_default = False
+        self.scparams_make_default = False #TODO improve
         self.external_path = None   # current external
         self.external_name = None   # current external
 

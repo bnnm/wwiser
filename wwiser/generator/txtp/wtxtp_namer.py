@@ -214,7 +214,7 @@ class TxtpNamer(object):
                 name += " {s-}" #"silence all"
             else:
                 name += " {s}"
-        name += self._get_vparams()
+        name += self._get_scparams()
         name += self._get_gamevars(printer)
 
 
@@ -267,7 +267,7 @@ class TxtpNamer(object):
 
         return name
 
-    def _get_vparams(self):
+    def _get_scparams(self):
         txtp = self.txtp
 
         if txtp.scparams_make_default:

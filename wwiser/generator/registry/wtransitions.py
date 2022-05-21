@@ -1,4 +1,4 @@
-# transition musicsegments in switches/playlists don't get used, register to generate at the end
+# transition musicsegments in switches/playlists don't get used, registered to generate at the end
 
 class Transitions(object):
     def __init__(self):

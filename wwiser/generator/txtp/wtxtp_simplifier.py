@@ -147,16 +147,6 @@ class TxtpSimplifier(object):
             if node.sound.source.tid not in self._printer.externals:
                 self._printer.externals.append(node.sound.source.tid)
 
-        # apply RTPCs
-        if self._txtpcache.gamevars.active:
-            used = node.apply_gamevars(self._txtpcache.gamevars)
-            if used:
-                gvs = self._printer.gamevars
-                for item in used:
-                    if item in gvs:
-                        continue
-                    gvs.append(item)
-
         return
 
     def _kill_node(self, node):

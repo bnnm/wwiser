@@ -52,5 +52,4 @@ Low priority TODOs
 - apply rtcp default? option to use it? print in tree?
 - mark dialogueevents somehow as they can have the same name as events
 - check how argument is used in older wwise dialogue events
-- externals: write {e=x,x...} for easier identify? (name "cookie")
-  - may be confused on a glance with an state?
+- unused nodes may be affected by loading parent? (probably little effect)

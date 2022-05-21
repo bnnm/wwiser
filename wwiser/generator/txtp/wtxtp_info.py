@@ -17,17 +17,34 @@ class TxtpInfo(object):
         self._gsnames_long = ''
         self._gsnames_short = ''
 
+        self._gvnames_init = False
+        self._gvitems = []
+        self._gvdone = set()
+        self._gvnames = ''
+
         self._txtpcache = txtpcache
         pass
 
-    def get_gsnames(self, long=False):
-        if not self._gsnames_init:
-            self._load_gsnames()
+    def _print_tree(self):
+        print("node")
+        for i, ninfo in enumerate(self._ninfo):
+            text = ninfo.gstext_long
+            if not text:
+                text = bool(ninfo.source)
+            print(' '* ninfo.depth, "ninfo", i, ":", text)
+        print("gs",self._gsnames_idx)
 
-        if long:
-            return self._gsnames_long
-        return self._gsnames_short
-    
+
+    # set next node
+    def next(self, node, fields, nsid=None):
+        self._depth += 1
+
+        inext = TxtpInfoNode(self._depth, node, fields, nsid=nsid)
+        self._ninfo.append(inext)
+
+    def done(self):
+        self._depth -= 1
+
 
     # Typically gamesyncs can be written one after another, but rarely some may not
     # lead to anything playable, thus useless in final name so we want them out.
@@ -55,14 +72,25 @@ class TxtpInfo(object):
     # There is a lot of FORs needed to find sources, but a long event may have ~10 GSs and
     # a short one ~2, so it shouldn't be that slow on average
 
-    def _print_tree(self):
-        print("node")
-        for i, ninfo in enumerate(self._ninfo):
-            text = ninfo.gstext_long
-            if not text:
-                text = bool(ninfo.source)
-            print(' '* ninfo.depth, "ninfo", i, ":", text)
-        print("gs",self._gsnames_idx)
+    # register gamesync for current node
+    def gamesync(self, gtype, ngname, ngvalue):
+        self.gamesyncs([(gtype, ngname, ngvalue)])
+
+    def gamesyncs(self, gamesyncs):
+        current = self._ninfo[-1]
+
+        current.add_gamesyncs_info(gamesyncs, self._txtpcache.name_vars)
+
+        if current.gstext_long or current.gstext_short:
+            self._gsnames_idx.append(len(self._ninfo) - 1)
+
+    def get_gsnames(self, long=False):
+        if not self._gsnames_init:
+            self._load_gsnames()
+
+        if long:
+            return self._gsnames_long
+        return self._gsnames_short
 
     def _load_gsnames(self):
         self._gsnames_init = True
@@ -89,6 +117,37 @@ class TxtpInfo(object):
 
         return False
 
+    # Gamevars (RTPC ID+values) are only interesting when used, and usage may depend on current set GVs
+    # and if any node or its parent uses them. So instead of finding them in the tree, useds GVs are registered.
+
+    # register gamesync for current node, but only once since one gamevar may apply to many nodes
+    def gamevar(self, ngvname, value):
+        self.gamevars([(ngvname, value)])
+
+    def gamevars(self, gamevars):
+        for gamevar in gamevars:
+            gvname = gamevar[0].value()
+            if gvname in self._gvdone:
+                continue
+            self._gvdone.add(gvname)
+            self._gvitems.append(gamevar)
+
+    def get_gvnames(self):
+        if not self._gvnames_init:
+            self._load_gvnames()
+        return self._gvnames
+
+    def _load_gvnames(self):
+        self._gvnames_init = True
+        for ngvname, value in self._gvitems:
+            name = ngvname.get_attrs().get('hashname')
+            if not name:
+                name = ngvname.value()
+            #value can be string or number
+            info = "{%s=%s}" % (name, value)
+            self._gvnames += info
+
+    # other registered info found during process
     def get_wemnames(self):
         return self._wemnames
 
@@ -134,25 +193,7 @@ class TxtpInfo(object):
                 if finalname not in self._wemnames:
                     self._wemnames += ' ' + finalname
 
-    def next(self, node, fields, nsid=None):
-        self._depth += 1
 
-        inext = TxtpInfoNode(self._depth, node, fields, nsid=nsid)
-        self._ninfo.append(inext)
-
-    def done(self):
-        self._depth -= 1
-
-    def gamesync(self, gtype, ngname, ngvalue):
-        self.gamesyncs([(gtype, ngname, ngvalue)])
-
-    def gamesyncs(self, gamesyncs):
-        current = self._ninfo[-1]
-
-        current.add_gamesyncs_info(gamesyncs, self._txtpcache.name_vars)
-
-        if current.gstext_long or current.gstext_short:
-            self._gsnames_idx.append(len(self._ninfo) - 1)
 
 #class NameInfo(object):
 #    def __init__(self, ntid=None):

@@ -70,15 +70,11 @@ class Generator(object):
             return
         self._move = move
 
-    def set_gsparams(self, gsparams):
-        if gsparams is None: #allow []
-            return
-        default_gsparams = wgamesync.GamesyncParams(self._txtpcache)
-        self._ws.set_gsdefault(default_gsparams)
+    def set_gsparams(self, items):
+        self._ws.set_gsdefaults(items)
 
     def set_gamevars(self, items):
-        #TODO
-        self._txtpcache.gamevars.add(items)
+        self._ws.set_gvdefaults(items)
 
     def set_renames(self, items):
         self._txtpcache.renamer.add(items)

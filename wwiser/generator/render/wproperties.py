@@ -58,7 +58,9 @@ from . import bnode_misc
 # Some properties have special meanings and are applied at different points (for example
 # there are "VoiceVolume", "MakeUpGain", "OutputBusVolume", "BusVolume", etc) but ultimately
 # are added the final value.
-
+#
+# Could cache some relative properties on build (default+parents) but still needs to apply
+# stateprops/rtpcs. Other config is added after creating the object.
 
 # we only want 
 _HIRC_AUDIBLE = {
@@ -72,8 +74,11 @@ class PropertyCalculator(object):
         self._ws = ws
         self._read_bus = False
 
-    def get_properties(self, bnode):
+
+    def get_properties(self, bnode, txtp):
+        self.txtp = txtp
         if True:
+            self._gvitems = []
             return self._calculate_simple(bnode)
 
         # calculate certain values depending on class
@@ -98,7 +103,6 @@ class PropertyCalculator(object):
     # older wwiser props
     def _calculate_simple(self, bnode):
         config = bnode_misc.NodeConfig()
-
         if not bnode.props: #events
             return config
         props = bnode.props
@@ -107,6 +111,8 @@ class PropertyCalculator(object):
 
         config.volume = props.volume
         config.makeupgain = props.makeupgain
+        config.busvolume = props.busvolume
+        config.outputbusvolume = props.outputbusvolume
         config.pitch = props.pitch
         config.delay = props.delay
 
@@ -143,38 +149,51 @@ class PropertyCalculator(object):
             config.volume += props.volume
             config.makeupgain += props.makeupgain
 
+
     # some objects have rtpc > new value info in the statechunk, and if we have set those states we want the values
     def _apply_rtpclist(self, bnode, config):
         if not bnode.rtpclist:
             return
 
-        # find songs that silence crossfade files with rtpcs
-        # mainly useful on Segment/Track level b/c usually games that set silence on
-        # Switch/RanSeq do nothing interesting with it (ex. just to silence the whole song)
-        check_rtpc = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO only on root nodes
+        # Find songs that silence crossfade files with rtpcs,  mainly useful on Segment/Track level.
+        # Less common is on Switch/RanSeq (sometimes just silence the base song but also BGM rank in some DMC5 events).
+        check_rtpc = True #bnode.name in ['CAkMusicTrack', 'CAkMusicSegment']
         if check_rtpc:
-            brtpcs = bnode.rtpclist.get_volume_rtpcs()
+            brtpcs = bnode.rtpclist.get_usable_rtpcs()
             if len(brtpcs) > 0:
                 config.crossfaded = True
-                config.rtpcs = brtpcs #TODO remove
 
-    #    gvparams = self._ws.gvparams
-    #    if not gvparams:
-    #        return
-#
-    #    #get_gamevars
-#
-    #    # get currently set rtpcs (may be N at once)
-    #    for gvitem in gvparams.get_gamevars():
-    #        brtcp = bnode.rtpclist.get_brtpc(gvitem.key)
-    #        if not brtcp:
-    #            continue
-#
-    #        # apply props
-    #        if brtcp.is_volume:
-    #            config.has_rtpc = True
-    #            config.volume = brtcp.get()
-    #            config.makeupgain += props.makeupgain
+        gvparams = self._ws.gvparams
+        if not gvparams:
+            return
+
+        # get currently set rtpcs (may be N at once)
+        for gvitem in gvparams.get_items():
+
+            brtcp = bnode.rtpclist.get_brtpc(gvitem.key)
+            if not brtcp or not brtcp.is_usable:
+                continue
+
+            y = brtcp.get(gvitem.value)
+            if y == '*': #default #TODO load from data, put in gamevaritem
+                y = 0
+            elif y == '-' or y is None: #unset (no change)
+                continue
+            self.txtp.info.gamevar(brtcp.nid, y)
+
+            # apply props #TODO improve
+            if brtcp.is_volume:
+                config.volume = brtcp.accum(y, config.volume)
+            if brtcp.is_makeupgain:
+                config.makeupgain = brtcp.accum(y, config.makeupgain)
+            if brtcp.is_busvolume:
+                config.busvolume = brtcp.accum(y, config.busvolume)
+            if brtcp.is_outputbusvolume:
+                config.outputbusvolume = brtcp.accum(y, config.outputbusvolume)
+            if brtcp.is_pitch:
+                config.pitch = brtcp.accum(y, config.pitch)
+            if brtcp.is_delay:
+                config.delay = brtcp.accum(y, config.delay)
 
 
     def _calculate(self, bnode):

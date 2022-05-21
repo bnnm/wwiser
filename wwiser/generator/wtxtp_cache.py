@@ -38,7 +38,6 @@ class TxtpCache(object):
 
         # process helpers (passed around)
         self.tags = None
-        self.gamevars = wgamevars.GamevarsParams()
         self.mediaindex = wmediaindex.MediaIndex()
         self.externals = wexternals.Externals()
         self.renamer = wtxtp_namer.TxtpRenamer()

@@ -217,6 +217,7 @@ class TxtpNamer(object):
         name += self._get_vparams()
         name += self._get_gamevars(printer)
 
+
         name += txtp.info.get_wemnames()
 
         if printer.has_random_steps:
@@ -243,6 +244,9 @@ class TxtpNamer(object):
             if txtp.external_name:
                 name += " {e=%s}" % (txtp.external_name)
             else:
+                # could try to set list of used "cookie" IDs ({e=123456}) to help users, but probably useless
+                # since txtp name has tons of numbers already and may be confused at a glance with those,
+                # plus externals aren't that used.
                 name += " {e}"
 
         if printer.has_unsupported:
@@ -286,17 +290,19 @@ class TxtpNamer(object):
         return info
 
     def _get_gamevars(self, printer):
-        gvs = printer.gamevars
+        txtp = self.txtp
         info = ''
-        if not gvs:
+
+        gvnames = txtp.info.get_gvnames()
+        if not gvnames:
             return info
         
         if printer.has_silences:
             info += '='
         else:
             info += ' '
-        for gv in gvs:
-            info += "{%s}" % (gv.info())
+        info += txtp.info.get_gvnames()
+
         return info
 
     # gets final txtp name, short version (without .txtp)

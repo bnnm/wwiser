@@ -50,7 +50,6 @@ class TxtpPrinter(object):
         # during simplify
         self._simplifier = wtxtp_simplifier.TxtpSimplifier(self, txtp, tree)
         self.externals = []
-        self.gamevars = []
         self.volume_auto = None
 
         # output flags (loaded during simplify or write)

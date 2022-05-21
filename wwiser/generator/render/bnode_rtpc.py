@@ -237,70 +237,111 @@ class _AkGraph(object):
     def _dBToLin(self, v):
         return math.pow(10.0, v * 0.050000001) #~FastPow10?
 
-#_RTPC_NEW_ACCUM = 120 #>=
+
+# ---------------------------------------------------------
+
+#_RTPC_NEW_ACCUM = 125 #>= #adds "none"
 
 class AkRtpc(object):
     def __init__(self, nrtpc):
-        self.is_volume = False
-        self.nrtpc = nrtpc
-        self.version = None #used?
         self.nid = None
         self.id = None
         self.graph = None
-        self.accum = 0
+        self.is_gamevar = False
+
         self._build(nrtpc)
 
     def _build(self, nrtpc):
-        nparam = nrtpc.find1(name='ParamID')
-        #TODO improve
-        self.is_volume = (nparam.value() == 0) #volume prop
-
-        self.version = nrtpc.get_root().get_version()
-
         self.nid = nrtpc.find1(name='RTPCID') #gamevar name/id
         self.id = self.nid.value()
+
+        # game parameter/midi/modulator, probably not important (>=112)
+        ntype = nrtpc.find1(name='rtpcType').value()
+        self.is_gamevar = not ntype or ntype.value() == 0
+
+        nparam = nrtpc.find1(name='ParamID')
+        self._parse_props(nparam)
 
         scaling = nrtpc.find1(name='eScaling').value()
         self.graph = _AkGraph(nrtpc, scaling)
 
-        #rtpcType: game parameter/midi/modulator, probably not important (>=112)
-        #ntype = nrtpc.find1(name='rtpcType').value()
-        #TODO
+        naccum = nrtpc.find1(name='rtpcAccum') #112
+        self._parse_accum(naccum)
 
-        naccum = nrtpc.find1(name='rtpcAccum') #~113
-        if naccum:
-            self.accum = naccum.value()
+    # TODO: improve/unify with props
+    def _parse_props(self, nparam):
+        # see CAkProps, but RTPC's props are a bit different (different IDs, more limited like no Loop prop)
 
-    def get(self, x, value):
-        if not self.is_volume:
-            return value
-        y = self.graph.get(x)
+        valuefmt = nparam.get_attrs().get('valuefmt')
 
-        if value is None:
-            value = 0
+        # relative
+        self.is_volume = '[Volume]' in valuefmt or (nparam.value() == 0) #volume prop
+        self.is_busvolume = '[BusVolume]' in valuefmt
+        self.is_outputbusvolume = '[OutputBusVolume]' in valuefmt
+        self.is_makeupgain = '[MakeUpGain]' in valuefmt
+        self.is_pitch = '[Pitch]' in valuefmt
+        self.is_playbackspeed = '[PlaybackSpeed]' in valuefmt #multiplicative
+        # absolute
+        # (could handle positioning params)
+        # behavior
+        self.is_delay = '[InitialDelay]' in valuefmt
 
-        # accum type seems to affect how value is added to current, but volume looks fixed to "additive",
-        # ignoring actual value that may be set to "exclusive" (at least in Wwise editor value modifies
-        # current volume). Docs also mention property behavior is fixed per property
-        return y + value
+        self.is_usable = self.is_volume or self.is_busvolume or self.is_outputbusvolume or self.is_makeupgain or self.is_pitch or self.is_playbackspeed or self.is_delay
 
-        #if self.version < _RTPC_NEW_ACCUM:
-        #    if self.accum == 0: #exclusive
-        #        return y + value #??? (sounds better with volumes?)
-        #    if self.accum == 1: #additive
-        #        return y + value
-        #    if self.accum == 2: #multiply
-        #        return y * value
-        #else:
-        #    if self.accum == 1: #exclusive
-        #        return y + value #??? (sounds better with volumes?)
-        #    if self.accum == 2: #additive
-        #        return y + value
-        #    if self.accum == 3: #multiply
-        #        return y * value
-        #    if self.accum == 4: #boolean
-        #        return y or value #???
-        #raise ValueError("unknown accum")
+        #TODO: other props: "LFE", "Pitch", "LPF", "HPF"
+
+    def _parse_accum(self, naccum):
+        self._accum_exc = False
+        self._accum_add = False
+        self._accum_mul = False
+        self._accum_bln = False
+
+        if not naccum: #older:  fixed per property
+            self._accum_add = self.is_volume or self.is_busvolume or self.is_outputbusvolume or self.is_makeupgain or self.is_pitch
+            self._accum_mul = self.is_playbackspeed
+            self._accum_exc = self.is_delay
+            return
+
+        valuefmt = naccum.get_attrs().get('valuefmt')
+        if '[None]' in valuefmt: #not seen
+            raise ValueError("unknown rtpc None")
+
+        self._accum_exc = '[Exclusive]' in valuefmt #initial delay
+        self._accum_add = '[Additive]' in valuefmt #volumes, most others
+        self._accum_mul = '[Multiply]' in valuefmt #playback speed
+        self._accum_bln = '[Boolean]' in valuefmt #bypass FX flag
+
+
+    def get(self, x):
+        if   x == 'min':
+            y = self.min()
+        elif x == 'max':
+            y = self.max()
+        elif x == '*':
+            y = '*'
+        elif x == '-':
+            y = None
+        else:
+            y = self.graph.get(x)
+        return y
+
+
+    def accum(self, y, current_value):
+        # Accum type affects how values are added to current. Property behavior is fixed (regular props
+        # like volume are additive, actions like delay are exclusive, etc) but also described in the RTPC.
+        if current_value is None:
+            current_value = 0
+
+        if self._accum_exc == 0: #exclusive (RTPC has priority)
+            return y
+        if self._accum_add == 1: #additive
+            return y + current_value
+        if self._accum_mul == 2: #multiply
+            return y * current_value
+        if self._accum_bln == 4: #boolean
+            return y or current_value #???
+        raise ValueError("unknown accum")
+
 
     def minmax(self):
         ps = self.graph.points
@@ -326,7 +367,7 @@ class AkRtpcList(object):
     def __init__(self, node):
         self.valid = False
         self._rtpcs = []
-        self._volume_rtpcs = None
+        self._usable_rtpcs = None
         self._build(node)
 
     def empty(self):
@@ -341,6 +382,9 @@ class AkRtpcList(object):
         self.valid = True
         for nrtpc in nrtpcs:
             rtpc = AkRtpc(nrtpc)
+            #if not rtpc.is_gamevar:
+            #    continue
+
             self._rtpcs.append(rtpc)
 
     def get_brtpc(self, id):
@@ -352,11 +396,11 @@ class AkRtpcList(object):
     def get_rtpcs(self):
         return self._rtpcs
 
-    def get_volume_rtpcs(self):
-        if self._volume_rtpcs is None:
+    def get_usable_rtpcs(self):
+        if self._usable_rtpcs is None:
             items = []
             for rtpc in self._rtpcs:
-                if rtpc.is_volume:
+                if rtpc.is_usable:
                     items.append(rtpc)
-            self._volume_rtpcs = items
-        return self._volume_rtpcs
+            self._usable_rtpcs = items
+        return self._usable_rtpcs

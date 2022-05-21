@@ -60,7 +60,7 @@ class RN_CAkHircNode(object):
 
     def _calculate(self, bnode, txtp):
 
-        config = self._calculator.get_properties(bnode)
+        config = self._calculator.get_properties(bnode, txtp)
 
         return config
 

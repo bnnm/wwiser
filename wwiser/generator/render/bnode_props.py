@@ -31,7 +31,7 @@ class CAkProps(object):
         # relative
         self.volume = 0 #main "voice" volume (objects) or volume added to input voices (bus)
         self.busvolume = 0 #main volume for the bus itself (bus only)
-        self.outbusvolume = 0 #volume used when passing to a main bus (aux-buses have their own)
+        self.outputbusvolume = 0 #volume used when passing to a main bus (aux-buses have their own)
         self.makeupgain = 0 #special volume added to voice volume (objects)
         self.pitch = 0
         self.playbackspeed = 0 #multiplicative!
@@ -69,13 +69,18 @@ class CAkProps(object):
         self.volume = self._prop('[Volume]')
         self.makeupgain = self._prop('[MakeUpGain]')
         self.busvolume = self._prop('[BusVolume]')
-        self.outbusvolume = self._prop('[OutputBusVolume]')
+        self.outputbusvolume = self._prop('[OutputBusVolume]')
 
         self.pitch = self._prop('[Pitch]') #for sound hierarchy
         self.playbackspeed = self._prop('[PlaybackSpeed]') #for music hierarchy
 
+        # "Delay/InitialDelay" is the time between the object is reached and it starts to play.
+        # Both only differ on where are used, and music hierarchy doesn't use them as it has clips.
+        # Delay only applies when an object is actually played again:
+        # - ranseq loop=inf + aksound idelay=1, loop=--- > each loop has 1 sec delay (aksound is played many times)
+        # - ranseq loop=--- + aksound idelay=1, loop=inf > only first play has 1 sec delay (aksound loops don't count as replaying)
         var1 = self._prop('[DelayTime]') #in actions
-        var2 = self._prop('[InitialDelay]') #in objects
+        var2 = self._prop('[InitialDelay]') #in actor-mixer hierarchy
         if var1 and var2:
             raise ValueError("2 delays found")
         if var2:
@@ -90,6 +95,7 @@ class CAkProps(object):
         #TransitionTime: action fade-in time (also has a PlayActionParams > eFadeCurve)
         #Probability: used in play events to fade-in event
         #CenterPCT: not useful?
+        #Duration? for crossfades?
 
     def _prop(self, name, default=0):
         value = self._props.get(name)

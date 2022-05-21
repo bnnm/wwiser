@@ -267,8 +267,9 @@ class Txtp(object):
         if gs_s != gs_l:
             info += '# * full vars: %s\n' % (gs_l)
 
-        if self.txtpcache.gamevars.active and printer.gamevars:
-            info += '# * gamevars: %s\n' % (self.txtpcache.gamevars.get_info())
+        gv = self.info.get_gvnames()
+        if gv:
+            info += '# * gamevars: %s\n' % (gv)
 
         if self.txtpcache.volume_master:
             info += '# * master volume: %sdB\n' % (self.txtpcache.volume_master)

@@ -1,4 +1,4 @@
-from ..registry import wgamesync, wstatechunks, wtransitions, wstingers
+from ..registry import wgamesync, wstatechunks, wtransitions, wstingers, wgamevars
 
 # simple container/simulation of internal wwise state, that is, currently set
 # 
@@ -64,9 +64,16 @@ class WwiseState(object):
             return
         self.gsparams = gsparams
 
-    def set_gsdefault(self, gsparams):
-        self._default_gs = gsparams
-        self.gsparams = gsparams
+    def set_gsdefaults(self, items):
+        if items is None: #allow []
+            return
+
+        #default_gsparams = wgamesync.GamesyncParams(self._txtpcache)
+        #TODO items
+
+        #self._default_gs = gsparams
+        #self.gsparams = gsparams
+        pass
 
     # ---
 
@@ -81,7 +88,7 @@ class WwiseState(object):
     def set_sc(self, scparams):
         self.scparams = scparams
 
-    def set_scdefault(self, scparams):
+    def set_scdefaults(self, scparams):
         self._default_sc = scparams
         self.scparams = scparams
 
@@ -98,6 +105,11 @@ class WwiseState(object):
     def set_gv(self, gvparams):
         self.gvparams = gvparams
 
-    def set_gvdefault(self, gvparams):
+    def set_gvdefaults(self, items):
+        if items is None: #allow []
+            return
+        gvparams = wgamevars.GamevarsParams()
+        gvparams.adds(items)
+
         self._default_gv = gvparams
         self.gvparams = gvparams

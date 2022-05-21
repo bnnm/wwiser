@@ -10,12 +10,13 @@ class NodeConfig(object):
 
         self.volume = None
         self.makeupgain = None
+        self.busvolume = None
+        self.outputbusvolume = None
         self.pitch = None
         self.delay = None
         self.idelay = None
 
         self.crossfaded = False #RPTC/state controlled silence
-        self.rtpcs = None
 
         #markers
         self.duration = None

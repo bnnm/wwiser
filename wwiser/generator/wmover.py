@@ -14,6 +14,8 @@ class Mover(object):
         self._txtpcache = txtpcache
         self._nodes = []
         self._moved_sources = {}
+        # conserve case stuff
+        self._dirs = {}
 
     def add_node(self, node):
         hircname = node.get_name()
@@ -79,11 +81,47 @@ class Mover(object):
             logging.info("generator: cannot move %s (file not found) / %s", in_name, bank)
             return
 
-        #todo: with alt-exts maybe could keep case, ex .OGG to .LOGG (how?)
+        # it's nice to keep original extension case (also for case-sensitive OSs)
+        in_name, out_name = self.fix_case(in_name, out_name)
+
         os.rename(in_name, out_name)
         logging.debug("generator: moved %s / %s", in_name, bank)
 
         return
+
+    def fix_case(self, in_name, out_name):
+        dir = os.path.dirname(in_name) 
+        name = os.path.basename(in_name)
+        if not dir:
+            dir = '.'
+
+        if dir not in self._dirs:
+            self._dirs[dir] = os.listdir(dir)
+        items = self._dirs[dir]
+
+        # find OS's file as see if it's named differently
+        name_lw = name.lower()
+        
+        for item in items:
+            if name_lw.endswith(item.lower()):
+                if name != item:
+                    _, item_in_ext = os.path.splitext(item)
+                    item_out_ext = item_in_ext
+
+                    in_base, _ = os.path.splitext(in_name)
+                    _, in_ext = os.path.splitext(in_name)
+                    
+                    out_base, _ = os.path.splitext(out_name)
+                    _, out_ext = os.path.splitext(out_name)
+
+                    if in_ext != out_ext and out_ext.lower().startswith('.l'): #localized
+                        item_out_ext = '.L' + item_out_ext[1:]
+
+                    in_name = in_base + item_in_ext
+                    out_name = out_base + item_out_ext
+                break
+
+        return (in_name, out_name)
 
     def _get_names(self, source, in_dir, out_dir, dir):
         if dir:

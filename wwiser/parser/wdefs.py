@@ -447,41 +447,41 @@ AkTransitionRampingType = wfmt.FormatterLUT({
 
 #062<=
 AkPropID_062 = wfmt.FormatterLUT({
-  0x0: "Volume",
-  0x1: "LFE",
-  0x2: "Pitch",
-  0x3: "LPF",
-  0x4: "Priority",
-  0x5: "PriorityDistanceOffset",
-  0x6: "Loop",
-  0x7: "FeedbackVolume",
-  0x8: "FeedbackLPF",
-  0x9: "MuteRatio",
-  0xA: "PAN_LR",
-  0xB: "PAN_FR",
-  0xC: "CenterPCT",
-  0xD: "DelayTime",
-  0xE: "TransitionTime",
-  0xF: "Probability",
+  0x00: "Volume",
+  0x01: "LFE",
+  0x02: "Pitch",
+  0x03: "LPF",
+  0x04: "Priority",
+  0x05: "PriorityDistanceOffset",
+  0x06: "Loop",
+  0x07: "FeedbackVolume",
+  0x08: "FeedbackLPF",
+  0x09: "MuteRatio",
+  0x0A: "PAN_LR",
+  0x0B: "PAN_FR",
+  0x0C: "CenterPCT",
+  0x0D: "DelayTime",
+  0x0E: "TransitionTime",
+  0x0F: "Probability",
 })
 #065<=
 AkPropID_065 = wfmt.FormatterLUT({
-  0x0: "Volume",
-  0x1: "LFE",
-  0x2: "Pitch",
-  0x3: "LPF",
-  0x4: "Priority",
-  0x5: "PriorityDistanceOffset",
-  0x6: "Loop",
-  0x7: "FeedbackVolume",
-  0x8: "FeedbackLPF",
-  0x9: "MuteRatio",
-  0xA: "PAN_LR",
-  0xB: "PAN_FR",
-  0xC: "CenterPCT",
-  0xD: "DelayTime",
-  0xE: "TransitionTime",
-  0xF: "Probability?",
+  0x00: "Volume",
+  0x01: "LFE",
+  0x02: "Pitch",
+  0x03: "LPF",
+  0x04: "Priority",
+  0x05: "PriorityDistanceOffset",
+  0x06: "Loop",
+  0x07: "FeedbackVolume",
+  0x08: "FeedbackLPF",
+  0x09: "MuteRatio",
+  0x0A: "PAN_LR",
+  0x0B: "PAN_FR",
+  0x0C: "CenterPCT",
+  0x0D: "DelayTime",
+  0x0E: "TransitionTime",
+  0x0F: "Probability?",
   0x10: "Probability?",
   0x11: "DialogueMode?",
   0x12: "UserAuxSendVolume0?",
@@ -494,22 +494,22 @@ AkPropID_065 = wfmt.FormatterLUT({
 })
 #088<=
 AkPropID_088 = wfmt.FormatterLUT({
-  0x0: "Volume",
-  0x1: "LFE",
-  0x2: "Pitch",
-  0x3: "LPF",
-  0x4: "BusVolume",
-  0x5: "Priority",
-  0x6: "PriorityDistanceOffset",
-  0x7: "Loop",
-  0x8: "FeedbackVolume",
-  0x9: "FeedbackLPF",
-  0xA: "MuteRatio",
-  0xB: "PAN_LR",
-  0xC: "PAN_FR",
-  0xD: "CenterPCT",
-  0xE: "DelayTime",
-  0xF: "TransitionTime",
+  0x00: "Volume",
+  0x01: "LFE",
+  0x02: "Pitch",
+  0x03: "LPF",
+  0x04: "BusVolume",
+  0x05: "Priority",
+  0x06: "PriorityDistanceOffset",
+  0x07: "Loop",
+  0x08: "FeedbackVolume",
+  0x09: "FeedbackLPF",
+  0x0A: "MuteRatio",
+  0x0B: "PAN_LR",
+  0x0C: "PAN_FR",
+  0x0D: "CenterPCT",
+  0x0E: "DelayTime",
+  0x0F: "TransitionTime",
   0x10: "Probability",
   0x11: "DialogueMode",
   0x12: "UserAuxSendVolume0",
@@ -545,22 +545,23 @@ AkPropID_088 = wfmt.FormatterLUT({
 })
 #112>= 113<=
 AkPropID_113 = wfmt.FormatterLUT({
-  0x0: "Volume",
-  0x1: "LFE",
-  0x2: "Pitch",
-  0x3: "LPF",
-  0x4: "HPF",
-  0x5: "BusVolume",
-  0x6: "StatePropNum/Priority",
-  0x7: "PriorityDistanceOffset",
-  0x8: "FeedbackVolume",
-  0x9: "FeedbackLPF",
-  0xA: "MuteRatio",
-  0xB: "PAN_LR",
-  0xC: "PAN_FR",
-  0xD: "CenterPCT",
-  0xE: "DelayTime",
-  0xF: "TransitionTime",
+  0x00: "Volume",
+  0x01: "LFE",
+  0x02: "Pitch",
+  0x03: "LPF",
+  0x04: "HPF",
+  0x05: "BusVolume",
+  0x06: "Priority",
+ #0x06: "StatePropNum", #same ID and used in priority methods too (decomp issue?)
+  0x07: "PriorityDistanceOffset",
+  0x08: "FeedbackVolume",
+  0x09: "FeedbackLPF",
+  0x0A: "MuteRatio",
+  0x0B: "PAN_LR",
+  0x0C: "PAN_FR",
+  0x0D: "CenterPCT",
+  0x0E: "DelayTime",
+  0x0F: "TransitionTime",
   0x10: "Probability",
   0x11: "DialogueMode",
   0x12: "UserAuxSendVolume0",
@@ -608,22 +609,23 @@ AkPropID_113 = wfmt.FormatterLUT({
 })
 #118>= 125<=
 AkPropID_126 = wfmt.FormatterLUT({
-  0x0: "Volume",
-  0x1: "LFE",
-  0x2: "Pitch",
-  0x3: "LPF",
-  0x4: "HPF",
-  0x5: "BusVolume",
-  0x6: "MakeUpGain",
-  0x7: "StatePropNum/Priority",
-  0x8: "PriorityDistanceOffset",
-  0x9: "FeedbackVolume",
-  0xA: "FeedbackLPF",
-  0xB: "MuteRatio",
-  0xC: "PAN_LR",
-  0xD: "PAN_FR",
-  0xE: "CenterPCT",
-  0xF: "DelayTime",
+  0x00: "Volume",
+  0x01: "LFE",
+  0x02: "Pitch",
+  0x03: "LPF",
+  0x04: "HPF",
+  0x05: "BusVolume",
+  0x06: "MakeUpGain",
+  0x07: "Priority",
+ #0x07: "StatePropNum", #same ID and used in priority methods too (decomp issue?)
+  0x08: "PriorityDistanceOffset",
+  0x09: "FeedbackVolume",
+  0x0A: "FeedbackLPF",
+  0x0B: "MuteRatio",
+  0x0C: "PAN_LR",
+  0x0D: "PAN_FR",
+  0x0E: "CenterPCT",
+  0x0F: "DelayTime",
   0x10: "TransitionTime",
   0x11: "Probability",
   0x12: "DialogueMode",
@@ -680,8 +682,11 @@ AkPropID_128 = wfmt.FormatterLUT({
   0x04: "HPF",
   0x05: "BusVolume",
   0x06: "MakeUpGain",
-  0x07: "StatePropNum/Priority",
+  0x07: "Priority",
+ #0x07: "StatePropNum", #same ID and used in priority methods too (decomp issue?)
   0x08: "PriorityDistanceOffset",
+  0x09: "_FeedbackVolume", #removed
+  0x0A: "_FeedbackLPF", #removed
   0x0B: "MuteRatio",
   0x0C: "PAN_LR",
   0x0D: "PAN_FR",
@@ -1085,15 +1090,15 @@ AkPathMode = wfmt.FormatterLUT({
   0x5: "StepRandomPickNewPath", #same
 })
 
-#113~~ 118<=
-AkRtpcAccum_118 = wfmt.FormatterLUT({
+#112~ 125<=
+AkRtpcAccum_125 = wfmt.FormatterLUT({
   0x0: "Exclusive",
   0x1: "Additive",
   0x2: "Multiply",
-  #0x8: "MaxNum",
+ #0x8: "MaxNum",
 })
-#120>=
-AkRtpcAccum_120 = wfmt.FormatterLUT({
+#128>=
+AkRtpcAccum_128 = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "Exclusive",
   0x2: "Additive",
@@ -1918,10 +1923,10 @@ def setup(version):
         AkRTPC_ParameterID = AkRTPC_ParameterID_135
 
     global AkRtpcAccum
-    if  version <= 118:
-        AkRtpcAccum = AkRtpcAccum_118
+    if  version <= 125:
+        AkRtpcAccum = AkRtpcAccum_125
     else:
-        AkRtpcAccum = AkRtpcAccum_120
+        AkRtpcAccum = AkRtpcAccum_128
 
     global AkActionType
     if  version <= 56:

@@ -2767,7 +2767,7 @@ def CAkFxBase__SetInitialValues(obj, cls):
         obj.u16('numValues')
         for elem in obj.list('propertyValues', 'PluginPropertyValue', obj.lastval):
             elem.var('propertyId').fmt(wdefs.AkRTPC_ParameterID)
-            elem.U8x('rtpcAccum')
+            elem.U8x('rtpcAccum').fmt(wdefs.AkRtpcAccum)
             elem.f32('fValue')
 
     return

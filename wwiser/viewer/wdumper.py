@@ -34,7 +34,7 @@ class DumpPrinter(object):
         self._file = None
         self._formatted = False
         self._smaller = False
-        self._hide = True
+        self._hide = False
 
 
     def dump(self):

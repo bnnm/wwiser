@@ -1,4 +1,4 @@
-from . import bnode_misc
+from ..txtp import hnode_misc
 
 # PROPERTY CALCULATIONS
 #
@@ -95,7 +95,7 @@ class PropertyCalculator(object):
         self._read_behavior = True #read behavior props only once
 
         # final calculated props
-        self._props = bnode_misc.NodeConfig()
+        self._props = hnode_misc.NodeConfig()
 
         # read props from hierarchy
         self._calculate(bnode)
@@ -107,7 +107,7 @@ class PropertyCalculator(object):
 
     # older wwiser props
     def _calculate_simple(self, bnode):
-        config = bnode_misc.NodeConfig()
+        config = hnode_misc.NodeConfig()
         if not bnode.props: #events
             return config
         props = bnode.props

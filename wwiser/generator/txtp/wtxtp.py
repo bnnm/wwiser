@@ -1,8 +1,6 @@
 import logging, os
 from ... import wversion
-from ..render import bnode_misc
-from ..registry import wstatechunks
-from . import wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
+from . import hnode_misc, wtxtp_tree, wtxtp_info, wtxtp_namer, wtxtp_printer
 
 # Helds a TXTP tree from original CAkSound/etc nodes, recreated as a playlist to simplify generation.
 # 'Renderer' code follows the path, while this has the redone playlist, that is then further simplified.
@@ -93,7 +91,7 @@ class Txtp(object):
 
     # write main .txtp
     # Sometimes there are multiple small variations with the same .txtp tree, in those cases 
-    # we don't need to re-render and just create multiple sub-txtp.
+    # we don't need to re-render and just create multiple sub-txtp with different settings here.
     def write(self):
         printer = wtxtp_printer.TxtpPrinter(self, self._troot)
         printer.prepare() #simplify tree
@@ -136,10 +134,9 @@ class Txtp(object):
             for i in range(1, count + 1):
                 self.selected = i
                 self._write_txtp(printer)
+            return
 
-        else:
-            # make main .txtp
-            self._write_txtp(printer)
+        self._write_txtp(printer)
 
     # main write
     def _write_txtp(self, printer):
@@ -149,7 +146,7 @@ class Txtp(object):
         # be ignored, meaning text for checking and text for printing is slightly different
         # (this can be disabled so only exact dupes are printed).
 
-        # make txtp + txtp for dupe checking
+        # make txtp + hash for dupe checking
         text = printer.generate()
         if self.txtpcache.dupes_exact:
             # only considers dupes exact repeats
@@ -171,9 +168,11 @@ class Txtp(object):
         name = self._namer.clean_name(name)
         if self.txtpcache.renamer.skip:
             return
-
         logging.debug("txtp: saving '%s' (%s)", name, texthash)
+        if self.txtpcache.no_txtp:
+            return
 
+        # prepare dirs and final output
         outdir = self.txtpcache.outdir
         if outdir:
             outdir = os.path.join(self._basepath, outdir)
@@ -182,15 +181,13 @@ class Txtp(object):
         outname = self._namer.get_outname(name, outdir)
         info = self._get_info(name, longname, printer)
 
-        if self.txtpcache.no_txtp:
-            return
-
         with open(outname, 'w', encoding='utf-8') as outfile:
             outfile.write(text)
             outfile.write(info)
         return
 
     #--------------------------------------------------------------------------
+    # txtp helpers, register a type of group/sound during "rendering".
 
     def group_random_continuous(self, elems, config):
         if not elems:
@@ -231,7 +228,7 @@ class Txtp(object):
 
     def _group_add(self, config):
         if not config:
-            config = bnode_misc.NodeConfig()
+            config = hnode_misc.NodeConfig()
         tnode = wtxtp_tree.TxtpNode(self._current, config=config)
 
         self._current.append(tnode)
@@ -240,7 +237,7 @@ class Txtp(object):
 
     def _source_add(self, sound, config):
         if not config:
-            config = bnode_misc.NodeConfig()
+            config = hnode_misc.NodeConfig()
         tnode = wtxtp_tree.TxtpNode(self._current, sound=sound, config=config)
         self._current.append(tnode)
         return self._current

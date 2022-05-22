@@ -38,7 +38,7 @@ class AkClipAutomation(object):
 
 class AkClipAutomationList(object):
     def __init__(self, node):
-        self.cas = {} #may have N clips per track
+        self._cas = {} #may have N clips per track
         self._build(node)
 
     def _build(self, node):
@@ -47,9 +47,11 @@ class AkClipAutomationList(object):
         for nclipam in nclipams:
             ca = AkClipAutomation(nclipam)
 
-            if not ca.index in self.cas:
-                self.cas[ca.index] = []
-            self.cas[ca.index].append(ca)
+            # each automation is associated to some musictrack's track index, so trackN = M automations
+            # (where each track has different clips)
+            if not ca.index in self._cas:
+                self._cas[ca.index] = []
+            self._cas[ca.index].append(ca)
 
     def get(self, track_index):
-        return self.cas.get(track_index)
+        return self._cas.get(track_index)

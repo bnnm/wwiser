@@ -118,7 +118,7 @@ class CAkHircNode(object):
             return None
         return tree
 
-    def _make_automations(self, node):
+    def _make_automationlist(self, node):
          return bnode_automation.AkClipAutomationList(node)
 
     def _make_stingerlist(self, node):

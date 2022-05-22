@@ -1,6 +1,6 @@
 import logging, math, copy
 
-from . import wnode_envelope
+from . import hnode_envelope
 from . import wtxtp_tree
 
 
@@ -64,7 +64,7 @@ class TxtpSimplifier(object):
     # simplifies tree to simulate some Wwise features with TXTP
     def modify(self):
 
-        #TODO join some of these to minimize loops
+        #todo join some of these to minimize loops
         self._clean_tree(self._tree)
         self._set_self_loops(self._tree)
         self._set_props(self._tree)
@@ -202,7 +202,17 @@ class TxtpSimplifier(object):
     # Hack for objects that loops to itself like: mranseq (loop=0) > item [transitions] > segment
     # There are 2 transitions used: "nothing to segment start" and "segment to segment",
     # so we need a segment that plays "play_before" and loop that doesn't (since overlapped
-    # transitions don't work ATM)
+    # transitions don't work ATM). Though in most cases this loop is very small.
+    #
+    # ex.    0.0 ........ 3.0 ............ 100.0 .....101.0
+    #        (pre-entry)  ^ entry          ^ exit  (post-exit)
+    # We have 0.0..3.0 (intro) + 3.0..100.0 (body) parts, could be simulated this like:
+    # - loop point on segment level: #I 3.0 100.0
+    #   - simpler but harder to handle with loop anchors (that loop whole segments)
+    # - force 2 tracks: 0.. 3.0 + 3.0..100.0
+    #   - more flexible but harder to adjust automations and other config
+    # For now we use the later
+
     def _set_self_loops(self, node):
 
         if self._make_self_loop(node):
@@ -261,8 +271,6 @@ class TxtpSimplifier(object):
         new_node = wtxtp_tree.TxtpNode(new_parent, sound=new_sound, config=new_config)
         new_node.type = node.type
         new_node.transition = new_transition
-        # volumes can be adjusted via RTPCs after constructor
-        new_node.volume = node.volume
 
         for envelope in node.envelopes:
             new_envelope = copy.copy(envelope)
@@ -845,7 +853,7 @@ class TxtpSimplifier(object):
         version = sound.source.version
 
         #todo apply delays
-        envelopes = wnode_envelope.build_txtp_envelopes(sound.automations, version, base_time)
+        envelopes = hnode_envelope.build_txtp_envelopes(sound.automations, version, base_time)
         node.envelopes.extend(envelopes)
 
 

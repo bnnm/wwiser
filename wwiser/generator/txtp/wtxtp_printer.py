@@ -4,12 +4,12 @@ from . import wtxtp_tree, wtxtp_simplifier
 
 TXTP_SPACES = 1
 
-DEBUG_PRINT_TREE_PRE = False
-DEBUG_PRINT_TREE_POST = False
-DEBUG_PRINT_GROUP_HEADER = False
-# envelopes tend to make giant lines in some cases and vgmstream max line is ~1000, to be improved
-DEBUG_PRINT_ENVELOPES = True
-DEBUG_PRINT_ENVELOPES_LIMIT = 1800
+_DEBUG_PRINT_TREE_PRE = False
+_DEBUG_PRINT_TREE_POST = False
+_DEBUG_PRINT_GROUP_HEADER = False
+# envelopes tend to make giant lines in some cases and vgmstream max line is ~2000, adjust as needed
+_ENVELOPES_LIMIT = 1800
+
 
 GROUPS_TYPE = {
     wtxtp_tree.TYPE_GROUP_SINGLE: 'S',
@@ -28,8 +28,6 @@ GROUPS_INFO = {
     wtxtp_tree.TYPE_GROUP_LAYER: 'layer',
 }
 
-
-VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but allowed editable max is +-200
 
 #******************************************************************************
 
@@ -92,7 +90,7 @@ class TxtpPrinter(object):
 
     # simplifies tree to simulate some Wwise features with TXTP
     def _modify(self):
-        if DEBUG_PRINT_TREE_PRE:
+        if _DEBUG_PRINT_TREE_PRE:
             logging.info("*** tree pre:")
             self._mdepth = 0
             self._print_tree(self._tree, False)
@@ -100,7 +98,7 @@ class TxtpPrinter(object):
 
         self._simplifier.modify()
 
-        if DEBUG_PRINT_TREE_POST:
+        if _DEBUG_PRINT_TREE_POST:
             logging.info("*** tree post:")
             self._mdepth = 0
             self._print_tree(self._tree, True)
@@ -285,7 +283,7 @@ class TxtpPrinter(object):
 
     # make a TXTP group header
     def _write_group_header(self, tnode):
-        if not DEBUG_PRINT_GROUP_HEADER:
+        if not _DEBUG_PRINT_GROUP_HEADER:
             return #not too useful
         if tnode.ignorable(simpler=self._simpler):
             return
@@ -395,12 +393,13 @@ class TxtpPrinter(object):
 
         # add envelopes
         if tnode.envelopes:
-            # ch(type)(position)(time-start)+(time-length)
-            # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
-            if DEBUG_PRINT_ENVELOPES:
+            if self._simpler:
+                # rarely there are .txtp clones with fading and non-fading paths [Pokemon BDSP, Death Stranding]
+                pass
+            else:
+                # ch(type)(position)(time-start)+(time-length)
+                # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
                 info_envs = ''
-                #TODO: some games add too many envelopes making huge lines that are ignored by vgmstream
-                # (Tetris Beat on Apple Arcade: Play_Music [Music=Hydra] (MUSIC_PROGRESS=FULL_SONG), Jedi Fallen Order)
                 for envelope in tnode.envelopes:
                     vol_st = self._get_sec(envelope.vol1)
                     vol_ed = self._get_sec(envelope.vol2)
@@ -410,14 +409,13 @@ class TxtpPrinter(object):
                     #TODO: seems to reapply on loops (time becomes 0 again)
                     info_env = ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
                     info_envs += info_env
-                    if len(info_envs) >= DEBUG_PRINT_ENVELOPES_LIMIT:
+
+                    # some games add too many envelopes making huge lines, and vgmstream has a "reasonable line" limit
+                    # (Tetris Beat on Apple Arcade: Play_Music [Music=Hydra] (MUSIC_PROGRESS=FULL_SONG), Jedi Fallen Order)
+                    if len(info_envs) >= _ENVELOPES_LIMIT:
                         info_envs += ' ##(...)'
                         break
                 info += info_envs
-            else:
-                # rarely there are .txtp clones with fading and non-fading paths, ignore for now [Pokemon BDSP, Death Stranding]
-                #info += ' ##envelopes'
-                pass
 
         # add volume
         volume = tnode.volume or 0

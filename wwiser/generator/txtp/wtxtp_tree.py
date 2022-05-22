@@ -1,10 +1,6 @@
-#import logging, math, copy
 
 
-
-TXTP_SPACES = 1
-
-DEBUG_PRINT_IGNORABLE = False
+_DEBUG_PRINT_IGNORABLE = False
 
 TYPE_SOUND_LEAF = 'snd'
 TYPE_GROUP_ROOT = '.'
@@ -187,7 +183,7 @@ class TxtpNode(object):
 
         #makeupgain, pitch: ignored
 
-        if DEBUG_PRINT_IGNORABLE:
+        if _DEBUG_PRINT_IGNORABLE:
             return False
 
         return True

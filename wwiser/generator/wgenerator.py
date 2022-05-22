@@ -169,7 +169,7 @@ class Generator(object):
 
     def _setup_nodes(self):
 
-        # register sids/nodes first since banks can point to each other
+        # register nodes first since banks can point to each other
         for bank in self._banks:
             root = bank.get_root()
             bank_id = root.get_id()
@@ -190,6 +190,35 @@ class Generator(object):
                     items = bank.find(name='listLoadedItem')
                     if not items: # media-only banks don't have items
                         continue
+
+                    # HIRC node order is semi-fixed following these rules:
+                    # - devices xN > buses xN > audio hierarchy (sound or music) xN > action+event xN
+                    #   (all audio, then all action+events)
+                    # - bus objects are saved as parent > children
+                    # - audio objects are saved as childen > parent:
+                    # - objects are ordered by parent's sid
+                    #   (basically orders object tree but writes leafs first)
+                    # - banks can contain only certain objects (manually selected) but always include parents
+                    #   (can't have a musictrack without its musicsegment)
+                    # - banks may also manually include bus hierarchy, that init.bnk also has, repeating them
+                    # - example:
+                    #     master-bus                3803692087
+                    #         bus                   1983303249
+                    #     bus                       714721605
+                    #     musictrack                923536282
+                    #         musicsegment          1065645898
+                    #             musicranseq       715118501
+                    #     aksound                   831435981
+                    #         ranseq                874844450
+                    #         aksound               81651614
+                    #             actor-mixer       1004834203
+                    #     ...
+                    #     playaction                1058420436
+                    #         event                 123597788
+                    #     playaction                1018786158
+                    #         event                 1317523067
+                    #
+                    # So might as well be random.
 
                     for node in items.get_children():
                         nsid = node.find1(type='sid')

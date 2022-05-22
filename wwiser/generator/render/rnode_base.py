@@ -1,4 +1,3 @@
-from . import bnode_misc
 from . import wbuilder_util
 
 

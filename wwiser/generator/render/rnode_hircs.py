@@ -1,4 +1,4 @@
-from . import bnode_misc
+from ..txtp import hnode_misc
 from .rnode_base import RN_CAkHircNode
 
 
@@ -294,13 +294,13 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
             type = item.type
             subitems = item.items
 
-            iconfig = bnode_misc.NodeConfig()
+            iconfig = hnode_misc.NodeConfig()
             iconfig.loop = item.loop
 
             txtp.info.next(item.nitem, item.fields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
             if type == -1 or item.ntid:
-                transition = bnode_misc.NodeTransition()
+                transition = hnode_misc.NodeTransition()
                 transition.play_before = False
 
                 txtp.group_single(iconfig, transition=transition)
@@ -443,7 +443,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             if clip.neid and clip.neid.value():
                 # When a neid (eventi id) is set clip will be a full event, and since
                 # it uses FPA to set when to start that clip, we can simulate it by using delay.
-                econfig = bnode_misc.NodeConfig()
+                econfig = hnode_misc.NodeConfig()
                 econfig.delay = clip.sound.fpa
 
                 txtp.group_single(econfig)

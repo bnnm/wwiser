@@ -1,6 +1,5 @@
-from . import wproperties
-from . import wrenderer_util, bnode_misc, wstate
-from ..txtp import wtxtp
+from . import wproperties, wrenderer_util
+from ..txtp import hnode_misc, wtxtp
 
 
 class Renderer(object):
@@ -222,7 +221,7 @@ class Renderer(object):
         if not bnode:
             return
 
-        root_config = bnode_misc.NodeConfig() #empty
+        root_config = hnode_misc.NodeConfig() #empty
         txtp.begin(node, root_config)
 
         rnode = self._get_rnode(bnode)

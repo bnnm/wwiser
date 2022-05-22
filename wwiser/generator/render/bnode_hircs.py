@@ -1,6 +1,4 @@
-import re
-from . import bnode_automation, bnode_misc
-from ..txtp import wtxtp_info
+from ..txtp import hnode_misc, wtxtp_info
 
 from .bnode_base import CAkHircNode
 from .bnode_markers import AkMarkerList
@@ -349,7 +347,7 @@ class CAkLayerCntr(CAkParameterNode):
 class CAkSound(CAkParameterNode):
     def __init__(self):
         super(CAkSound, self).__init__()
-        self.sound = bnode_misc.NodeSound()
+        self.sound = hnode_misc.NodeSound()
 
     def _build_audionode(self, node):
 
@@ -519,7 +517,7 @@ class CAkMusicSegment(CAkParameterNode):
         self.ntids = node.find(name='Children').finds(type='tid')
         if not self.ntids:
             # empty segments are allowed as silence
-            sound = bnode_misc.NodeSound()
+            sound = hnode_misc.NodeSound()
             sound.nsrc = self.node
             sound.silent = True
             sound.clip = True
@@ -553,7 +551,7 @@ class CAkMusicTrack(CAkParameterNode):
         self.props.disable_loop()
 
         # prepare for clips
-        self.automationlist = self._make_automations(node)
+        self.automationlist = self._make_automationlist(node)
 
         ntype = node.find(name='eTrackType')
         if not ntype:
@@ -622,7 +620,7 @@ class CAkMusicTrack(CAkParameterNode):
 
     def _build_silence(self):
         # for (rare) cases that no track is defined
-        sound = bnode_misc.NodeSound()
+        sound = hnode_misc.NodeSound()
         sound.nsrc = self.node
         sound.silent = True
         sound.clip = True
@@ -664,6 +662,6 @@ class CAkMusicTrack_Clip(object):
         self.nitem = None
         self.ntid = None
         self.neid = None
-        self.sound = bnode_misc.NodeSound()
+        self.sound = hnode_misc.NodeSound()
         self.sound.clip = True
         self.fields = wtxtp_info.TxtpFields()

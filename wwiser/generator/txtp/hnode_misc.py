@@ -1,3 +1,4 @@
+# Misc helper nodes, for rendering
 
 # common config from all nodes to pass around
 class NodeConfig(object):

@@ -66,13 +66,13 @@ class TxtpSimplifier(object):
 
         #todo join some of these to minimize loops
         self._clean_tree(self._tree)
-        self._set_self_loops(self._tree)
+        self._make_self_loops(self._tree)
         self._set_props(self._tree)
         self._set_times(self._tree)
         self._reorder_wem(self._tree)
         self._find_loops(self._tree)
-        self._set_extra(self._tree)
-        self._set_volume(self._tree)
+        self._tweak_first(self._tree)
+        self._set_master_volume(self._tree)
 
 
     def has_sounds(self):
@@ -213,13 +213,13 @@ class TxtpSimplifier(object):
     #   - more flexible but harder to adjust automations and other config
     # For now we use the later
 
-    def _set_self_loops(self, node):
+    def _make_self_loops(self, node):
 
         if self._make_self_loop(node):
             pass #?
 
         for subnode in node.children:
-            self._set_self_loops(subnode)
+            self._make_self_loops(subnode)
 
         return
 
@@ -272,9 +272,10 @@ class TxtpSimplifier(object):
         new_node.type = node.type
         new_node.transition = new_transition
 
-        for envelope in node.envelopes:
-            new_envelope = copy.copy(envelope)
-            new_node.envelopes.append(new_envelope)
+        #TODO
+        #for envelope in node.envelopes:
+        #    new_envelope = copy.copy(envelope)
+        #    new_node.envelopes.append(new_envelope)
 
         new_parent.append(new_node)
 
@@ -368,7 +369,7 @@ class TxtpSimplifier(object):
 
     #--------------------------------------------------------------------------
 
-    # applies clip and transition times to nodes
+    # applies time config, such as delays/duration/clip/transitions
     def _set_times(self, node):
         # find leaf clips and set duration
         if node.is_sound():
@@ -380,7 +381,6 @@ class TxtpSimplifier(object):
                 self._apply_clip(node)
             else:
                 self._apply_sfx(node)
-            self._apply_automations(node)
 
         for subnode in node.children:
             self._set_times(subnode)
@@ -390,39 +390,41 @@ class TxtpSimplifier(object):
 
         if node.transition:
             self._set_transition(node, node, None)
+
+        self._apply_envelopes(node) #after mods
         return
 
-    def _set_duration(self, node, snode):
-        if node != snode and node.config.duration:
+    def _set_duration(self, node, seg_node):
+        if node != seg_node and node.config.duration:
             logging.info("txtp: found duration inside duration")
             return
 
         if node.sound and node.sound.clip:
-            self._apply_duration(node, snode.config)
+            self._apply_duration(node, seg_node.config)
 
         for subnode in node.children:
-            self._set_duration(subnode, snode)
+            self._set_duration(subnode, seg_node)
 
-    def _set_transition(self, node, tnode, snode):
-        if node != tnode and node.transition:
+    def _set_transition(self, node, trn_node, seg_node):
+        if node != trn_node and node.transition:
             #logging.info("txtp: transition inside transition")
-            #this is possible in stuff like: switch (tnode) > mranseq (node)
+            #this is possible in stuff like: switch (trn_node) > mranseq (node)
             return
 
         is_segment = node.config.duration is not None #(node.config.exit or node.config.entry)
-        if is_segment and snode:
+        if is_segment and seg_node:
             logging.info("txtp: double segment")
             return
 
         if is_segment:
-            snode = node
+            seg_node = node
             self._transition_count += 1
 
         if node.sound and node.sound.clip:
-            self._apply_transition(node, tnode, snode)
+            self._apply_transition(node, trn_node, seg_node)
 
         for subnode in node.children:
-            self._set_transition(subnode, tnode, snode)
+            self._set_transition(subnode, trn_node, seg_node)
 
     #--------------------------------------------------------------------------
 
@@ -541,19 +543,19 @@ class TxtpSimplifier(object):
 
     #--------------------------------------------------------------------------
 
-    # extra stuff
-    def _set_extra(self, node):
+    # extra stuff for first node
+    def _tweak_first(self, node):
 
         # simplify first node
         basenode = self._get_first_child(node)
         if not basenode:
             return
 
-        self._set_initial_delay(basenode)
-        self._set_selectable(basenode)
+        self._set_first_delay(basenode)
+        self._set_first_selectable(basenode)
         return
 
-    def _set_initial_delay(self, node):
+    def _set_first_delay(self, node):
         # Sometimes games have events where "play" and similar objects starts delayed.
         # Not very useful and sometimes the same event without delay exists, so it's removed by default.
 
@@ -566,7 +568,7 @@ class TxtpSimplifier(object):
         node.delay = None
 
 
-    def _set_selectable(self, node):
+    def _set_first_selectable(self, node):
         if not node.is_group():
             return
 
@@ -610,9 +612,9 @@ class TxtpSimplifier(object):
     #
     # Decreasing master volume is applied to wems (lowers chances of clipping due to vgmstream's pcm16)
     # While increasing volume is applied to outmost group ()
-    def _set_volume(self, node):
+    def _set_master_volume(self, node):
 
-        self._set_volume_auto(node)
+        self._set_master_volume_auto(node)
 
         if not self.volume_master or self.volume_master == 0:
             # no actual volume
@@ -620,11 +622,11 @@ class TxtpSimplifier(object):
 
         if self.volume_master < 0:
             # negative volumes are applied per source
-            self._set_volume_negative(node)
+            self._set_master_volume_negative(node)
             self.volume_master = 0 #always consumed
         else:
             # positive volumes are applied in the first group that has volumes, or sound leafs otherwise
-            self._set_volume_positive(node)
+            self._set_master_volume_positive(node)
             # consumed manually
             return
 
@@ -660,7 +662,7 @@ class TxtpSimplifier(object):
     # - a:-10 + b:+0 = a:-10
     # > result: auto output +10
 
-    def _set_volume_auto(self, node):
+    def _set_master_volume_auto(self, node):
         if not self.volume_master_auto:
             return
 
@@ -683,7 +685,7 @@ class TxtpSimplifier(object):
 
         return output_self
 
-    def _set_volume_negative(self, node):
+    def _set_master_volume_negative(self, node):
         if node.is_sound():
             node_volume = node.volume or 0.0
             node_volume += self.volume_master
@@ -691,11 +693,11 @@ class TxtpSimplifier(object):
             node.clamp_volume()
 
         for subnode in node.children:
-            self._set_volume_negative(subnode)
+            self._set_master_volume_negative(subnode)
 
         return
 
-    def _set_volume_positive(self, node):
+    def _set_master_volume_positive(self, node):
 
         basenode = self._get_first_child(node)
         if not basenode:
@@ -841,20 +843,25 @@ class TxtpSimplifier(object):
             node.pad_begin += node.delay
         return
 
-    def _apply_automations(self, node):
-        sound = node.sound
-
-        if not sound.automations:
+    def _apply_envelopes(self, node):
+        if not node.envelopelist:
             return
 
-        # automations are relative to clip start, after applying trims/padding, that should correspond to this
-        # time in seconds, unlike clip values
-        base_time =  node.pad_begin / 1000.0
-        version = sound.source.version
+        # Automations have points, from N.n "from" time of M.m volume making a graph (see hnode_envelope).
+        # "from" time is relative to clip start (after final result with all trimming/padding/etc):
+        # - clip fpa=5.0, fbt=0.0, fet=0.0, fsd=54.8 > automation from=0.0..55.8 [fpa has no effect]
+        # - clip fpa=5.0, fbt=-1.0, fet=0.0, fsd=54.8 > automation from=0.0..55.8 [fbt also has no effect here]
+        # - clip fpa=5.0, fbt=-1.0, fet=-0.8, fsd=54.8 > automation from=0.0..55.0 [fet only reduces curve time]
+        # - clip fpa=5.0, fbt=-1.0, fet=0.2, fsd=54.8 > automation from=0.0..56.0 [***]
+        # - clip fpa=5.0, fbt=1.0, fet=0.2, fsd=54.8 > automation from=0.0..56.0
+        # - clip fpa=-2.0, fbt=2.0, fet=0.2, fsd=54.8 > automation from=0.0..53.0
+        # *** End seems to add 1 second for some reason (doesn't affect calcs).
+        # Rarely "from" becomes a very small number (-4.75...e-07), but this seems an editor oddity rather
+        # than some intended meaning, as all values are near 0.0.
 
-        #todo apply delays
-        envelopes = hnode_envelope.build_txtp_envelopes(sound.automations, version, base_time)
-        node.envelopes.extend(envelopes)
+        # after applying clip fpas + delays we have some padding, apply to envelopes to align
+        pad_time = node.pad_begin / 1000.0
+        node.envelopelist.pad(pad_time)
 
 
     def _apply_group(self, node):
@@ -896,13 +903,13 @@ class TxtpSimplifier(object):
     # previous simplification detects self-loops and clones 2 segments, then this parts adjust segment times:
     # if entry=10, exit=100: segment1 = 0..10, segment2 = 10..100
     # since each segment may have N tracks, this applies directly to their config (body/padding/etc) values.
-    def _apply_transition(self, node, tnode, snode):
-        #if not snode:
+    def _apply_transition(self, node, trn_node, seg_node):
+        #if not seg_node:
         #    logging.info("generator: empty segment?")
         #    return
 
-        #transition = tnode.transition
-        pconfig = snode.config
+        #transition = trn_node.transition
+        pconfig = seg_node.config
 
         body = node.pad_begin + node.body_time - node.trim_begin - node.trim_end + node.pad_end
         entry = pconfig.entry
@@ -916,16 +923,11 @@ class TxtpSimplifier(object):
         #print("**A b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))
 
         # hack for self-looping files: 
-        if play_before and tnode.self_loop:
+        if play_before and trn_node.self_loop:
             # settings for 0..entry
             entry = 0
             exit = pconfig.entry
             self.set_self_loops()
-
-        #todo fix
-        #for envelope in node.envelopes:
-        #    print(tnode.self_loop, play_before, entry, exit, envelope.time1, envelope.time2)
-        #    pass
 
         if not play_before:
             # settings for entry..exit

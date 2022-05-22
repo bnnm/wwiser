@@ -1,4 +1,4 @@
-
+from . import hnode_envelope
 
 _DEBUG_PRINT_IGNORABLE = False
 
@@ -33,7 +33,7 @@ TYPE_SOUNDS = {
     TYPE_SOUND_LEAF,
 }
 
-VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but allowed editable max is +-200
+_VOLUME_DB_MAX = 200.0 # 96.3 #wwise editor typical range is -96.0 to +12 but allowed editable max is +-200
 
 # Represents a TXTP tree node, that can be a "sound" (leaf file) or a "group" (includes files or groups).
 # The rough tree is created by the renderer, then simplified progressively to make a cleaner .txtp file,
@@ -53,14 +53,12 @@ class TxtpNode(object):
             self.type = TYPE_SOUND_LEAF
         self.children = []
 
-        # config
+        # calculated config
         self.pad_begin = None
         self.trim_begin = None
         self.body_time = None
         self.trim_end = None
         self.pad_end = None
-
-        self.envelopes = []
 
         # copy value as may need to simplify tree config (ex. multiple objects can set infinite loop)
         self.volume = config.gain
@@ -69,8 +67,12 @@ class TxtpNode(object):
 
         self.crossfaded = config.crossfaded
         self.silenced = False
-        self._adjust_volume()
+        if self.volume and self.volume <= -96.0:
+            self.silenced = True
 
+        self.envelopelist = None
+        if sound:
+            self.envelopelist = hnode_envelope.NodeEnvelopeList(sound)
 
         # allowed to separate "loop not set" and "loop set but not looping"
         #if self.loop == 1:
@@ -86,18 +88,14 @@ class TxtpNode(object):
         self.self_loop = False
         self.force_selectable = False
 
-    def _adjust_volume(self):
-        if self.volume and self.volume <= -96.0:
-            #self.volume = None
-            self.silenced = True
 
     def clamp_volume(self):
         if not self.volume:
             return
-        if self.volume > VOLUME_DB_MAX:
-            self.volume = VOLUME_DB_MAX
-        elif self.volume < -VOLUME_DB_MAX:
-            self.volume = -VOLUME_DB_MAX
+        if self.volume > _VOLUME_DB_MAX:
+            self.volume = _VOLUME_DB_MAX
+        elif self.volume < -_VOLUME_DB_MAX:
+            self.volume = -_VOLUME_DB_MAX
 
     def append(self, tnode):
         self.children.append(tnode)

@@ -2,7 +2,7 @@ import logging
 from . import wtxtp_tree, wtxtp_simplifier
 
 
-TXTP_SPACES = 1
+_TXTP_INDENTATION_SPACES = 1
 
 _DEBUG_PRINT_TREE_PRE = False
 _DEBUG_PRINT_TREE_POST = False
@@ -392,7 +392,7 @@ class TxtpPrinter(object):
             mods += self._get_sfx(sound, tnode)
 
         # add envelopes
-        if tnode.envelopes:
+        if tnode.envelopelist and not tnode.envelopelist.empty:
             if self._simpler:
                 # rarely there are .txtp clones with fading and non-fading paths [Pokemon BDSP, Death Stranding]
                 pass
@@ -400,7 +400,7 @@ class TxtpPrinter(object):
                 # ch(type)(position)(time-start)+(time-length)
                 # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
                 info_envs = ''
-                for envelope in tnode.envelopes:
+                for envelope in tnode.envelopelist.items():
                     vol_st = self._get_sec(envelope.vol1)
                     vol_ed = self._get_sec(envelope.vol2)
                     shape = envelope.shape
@@ -413,7 +413,7 @@ class TxtpPrinter(object):
                     # some games add too many envelopes making huge lines, and vgmstream has a "reasonable line" limit
                     # (Tetris Beat on Apple Arcade: Play_Music [Music=Hydra] (MUSIC_PROGRESS=FULL_SONG), Jedi Fallen Order)
                     if len(info_envs) >= _ENVELOPES_LIMIT:
-                        info_envs += ' ##(...)'
+                        info_envs += ' ##(envelopes...)'
                         break
                 info += info_envs
 
@@ -539,4 +539,4 @@ class TxtpPrinter(object):
 
 
     def _get_padding(self):
-        return ' ' * (self._depth - 1) * TXTP_SPACES
+        return ' ' * (self._depth - 1) * _TXTP_INDENTATION_SPACES

@@ -7,6 +7,11 @@ _WARN_PROPS = [
     "[LoopStart]", "[LoopEnd]",
 ]
 
+# fields props that are shown (basically behavior ones)
+_FIELD_PROPS = {
+    "[Loop]", '[Delay]', '[InitialDelay]'
+}
+
 _OLD_AUDIO_PROPS = [
     ('Volume', 'Volume.min', 'Volume.max'),
     ('LFE', 'LFE.min', 'LFE.max'),
@@ -141,11 +146,12 @@ class CAkProps(object):
                 nkey = nprop.find(name='pID')
                 nval = nprop.find(name='pValue')
 
-                self.fields_std.append( (nkey, nval) )
-
                 keyname = nkey.get_attr('valuefmt') # "0xNN [name]"
                 pval = nval.value()
                 self._add_prop(self._props, keyname, pval)
+
+                if not _FIELD_PROPS or keyname in _FIELD_PROPS:
+                    self.fields_std.append( (nkey, nval) )
 
 
         # ranged values, wwise picks one value at random on each play
@@ -158,11 +164,12 @@ class CAkProps(object):
                 nmin = nprop.find(name='min')
                 nmax = nprop.find(name='max')
 
-                self.fields_rng.append( (nkey, nmin, nmax) )
-
                 keyname = nkey.get_attr('valuefmt')
                 rval = (nmin.value(), nmax.value())
                 self._add_prop(self._ranges, keyname, rval)
+
+                if not _FIELD_PROPS or keyname in _FIELD_PROPS:
+                    self.fields_rng.append( (nkey, nmin, nmax) )
 
 
     def _build_old(self, node):

@@ -142,7 +142,7 @@ class _AkGraph(object):
                 pass
 
             elif sc == 1: #db_255 (v46<=) / not implemented (rest)
-                raise ValueError("unknown rtpc")
+                raise ValueError("unknown graph scaling")
 
             elif sc == 2 or sc == 4: # dB_96_3: rescaled from -96db to +96db (4 is same but errors on min/max)
                 # 0 = 0db, 96.3 = 96db, -96 = -96db, 20.0 = 2db, 50.0=6db, etc
@@ -152,14 +152,14 @@ class _AkGraph(object):
                 v = self._linearToFrequency_20_20000(v)
 
             else:
-                raise ValueError("unknown rtpc scaling")
+                raise ValueError("unknown graph scaling")
 
         else:
             if sc == 0: #no scaling
                 pass
 
             elif sc == 1: #not defined
-                raise ValueError("unknown rtpc")
+                raise ValueError("unknown graph scaling")
 
             elif sc == 2:
                 v = self._ScalingFromLin_dB(v)
@@ -171,7 +171,7 @@ class _AkGraph(object):
                 v = self._dBToLin(v)
 
             else:
-                raise ValueError("unknown rtpc scaling")
+                raise ValueError("unknown graph scaling")
 
         return v
 

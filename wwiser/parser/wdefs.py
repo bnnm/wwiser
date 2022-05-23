@@ -403,12 +403,13 @@ AkCurveScaling_065 = wfmt.FormatterLUT({
   0x0: "None",
   0x1: "Unsupported",
   0x2: "dB_96_3",
-  0x3: "Frequency_20_20000/",
+  0x3: "Frequency_20_20000",
   0x4: "dB_96_3_NoCheck",
 })
 #072>=
 AkCurveScaling_072 = wfmt.FormatterLUT({
   0x0: "None",
+ #0x1: "Unsupported",
   0x2: "dB",
   0x3: "Log",
   0x4: "dBToLin", #088>=
@@ -1063,14 +1064,14 @@ AkBelowThresholdBehavior = wfmt.FormatterLUT({
   0x3: "KillIfOneShotElseVirtual", #later 088>>
 })
 
-#065>= 088~~
+#065>= 088<=
 AkClipAutomationType_088 = wfmt.FormatterLUT({
   0x0: "Volume",
   0x1: "LPF",
   0x2: "FadeIn",
   0x3: "FadeOut",
 })
-#112~~
+#112>=
 AkClipAutomationType_112 = wfmt.FormatterLUT({
   0x0: "Volume",
   0x1: "LPF",

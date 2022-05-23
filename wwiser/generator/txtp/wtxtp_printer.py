@@ -1,11 +1,8 @@
-import logging
 from . import wtxtp_tree, wtxtp_simplifier
 
 
 _TXTP_INDENTATION_SPACES = 1
 
-_DEBUG_PRINT_TREE_PRE = False
-_DEBUG_PRINT_TREE_POST = False
 _DEBUG_PRINT_GROUP_HEADER = False
 # envelopes tend to make giant lines in some cases and vgmstream max line is ~2000, adjust as needed
 _ENVELOPES_LIMIT = 1800
@@ -90,79 +87,8 @@ class TxtpPrinter(object):
 
     # simplifies tree to simulate some Wwise features with TXTP
     def _modify(self):
-        if _DEBUG_PRINT_TREE_PRE:
-            logging.info("*** tree pre:")
-            self._mdepth = 0
-            self._print_tree(self._tree, False)
-            logging.info("")
-
         self._simplifier.modify()
-
-        if _DEBUG_PRINT_TREE_POST:
-            logging.info("*** tree post:")
-            self._mdepth = 0
-            self._print_tree(self._tree, True)
-            logging.info("")
         return
-
-
-    def _print_tree(self, tnode, post):
-        line1 = ''
-        line2 = ''
-        config1 = ''
-        config2 = ''
-
-        if post:
-            if tnode.loop is not None:       config1 += " lpn=%s" % (tnode.loop)
-            if tnode.volume:                 config1 += " vol=%s" % (tnode.volume)
-            if tnode.ignorable():            config1 += " [i]"
-
-            if tnode.body_time:              config2 += ' bt={0:.5f}'.format(tnode.body_time)
-            if tnode.pad_begin:              config2 += ' pb={0:.5f}'.format(tnode.pad_begin)
-            if tnode.trim_begin:             config2 += ' tb={0:.5f}'.format(tnode.trim_begin)
-            if tnode.trim_end:               config2 += ' te={0:.5f}'.format(tnode.trim_end)
-            if tnode.pad_end:                config2 += ' pb={0:.5f}'.format(tnode.pad_end)
-
-        else:
-            if tnode.config.loop is not None: config1 += " lpn=%s" % (tnode.config.loop)
-            if tnode.config.delay:           config1 += " dly=%s" % (tnode.config.delay)
-            if tnode.config.gain:          config1 += " vol=%s" % (tnode.config.gain)
-            if tnode.transition:             config1 += " (trn)"
-
-            if tnode.config.entry or tnode.config.exit:
-                dur = '{0:.5f}'.format(tnode.config.duration)
-                ent = '{0:.5f}'.format(tnode.config.entry)
-                exi = '{0:.5f}'.format(tnode.config.exit)
-                config2 += " (dur=%s, ent=%s, exi=%s)" % (dur, ent, exi)
-
-            if tnode.sound and tnode.sound.clip:
-                fsd = '{0:.5f}'.format(tnode.sound.fsd)
-                fpa = '{0:.5f}'.format(tnode.sound.fpa)
-                fbt = '{0:.5f}'.format(tnode.sound.fbt)
-                fet = '{0:.5f}'.format(tnode.sound.fet)
-                config2 += " (fsd=%s, fpa=%s, fbt=%s, fet=%s)" % (fsd, fpa, fbt, fet)
-
-        if tnode.is_sound():
-            tid = None
-            if tnode.sound.source:
-                tid = tnode.sound.source.tid
-            line1 += "%s %s" % (tnode.type, tid)
-            line1 += config1
-            line2 += config2
-        else:
-            line1 += "%s%i" % (tnode.type, len(tnode.children))
-            line1 += config1
-            line2 += config2
-
-        logging.info("%s%s", ' ' * self._mdepth, line1)
-        if line2:
-            logging.info("%s%s", ' ' * self._mdepth, line2)
-
-
-        self._mdepth += 1
-        for subtnode in tnode.children:
-            self._print_tree(subtnode, post)
-        self._mdepth -= 1
 
     #--------------------------------------------------------------------------
 
@@ -391,32 +317,6 @@ class TxtpPrinter(object):
         else: #CAkSound
             mods += self._get_sfx(sound, tnode)
 
-        # add envelopes
-        if tnode.envelopelist and not tnode.envelopelist.empty:
-            if self._simpler:
-                # rarely there are .txtp clones with fading and non-fading paths [Pokemon BDSP, Death Stranding]
-                pass
-            else:
-                # ch(type)(position)(time-start)+(time-length)
-                # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
-                info_envs = ''
-                for envelope in tnode.envelopelist.items():
-                    vol_st = self._get_sec(envelope.vol1)
-                    vol_ed = self._get_sec(envelope.vol2)
-                    shape = envelope.shape
-                    time_st = self._get_sec(envelope.time1)
-                    time_ed = self._get_sec(envelope.time2)
-                    #TODO: seems to reapply on loops (time becomes 0 again)
-                    info_env = ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
-                    info_envs += info_env
-
-                    # some games add too many envelopes making huge lines, and vgmstream has a "reasonable line" limit
-                    # (Tetris Beat on Apple Arcade: Play_Music [Music=Hydra] (MUSIC_PROGRESS=FULL_SONG), Jedi Fallen Order)
-                    if len(info_envs) >= _ENVELOPES_LIMIT:
-                        info_envs += ' ##(envelopes...)'
-                        break
-                info += info_envs
-
         # add volume
         volume = tnode.volume or 0
         if self._simpler and not tnode.crossfaded: #don't silence rtpc-modified vars
@@ -432,6 +332,31 @@ class TxtpPrinter(object):
             if tnode.loop_end:
                 mods += ' #@loop-end'
 
+        # add envelopes
+        if tnode.envelopelist and not tnode.envelopelist.empty:
+            if self._simpler:
+                # rarely there are .txtp clones with fading and non-fading paths [Pokemon BDSP, Death Stranding]
+                pass
+            else:
+                # ch(type)(position)(time-start)+(time-length)
+                # N^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last)
+                envs = ''
+                for envelope in tnode.envelopelist.items():
+                    vol_st = self._get_sec(envelope.vol1)
+                    vol_ed = self._get_sec(envelope.vol2)
+                    shape = envelope.shape
+                    time_st = self._get_sec(envelope.time1)
+                    time_ed = self._get_sec(envelope.time2)
+                    #TODO: seems to reapply on loops (time becomes 0 again)
+                    env = ' ##m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
+                    envs += env
+
+                    # some games add too many envelopes making huge lines, and vgmstream has a "reasonable line" limit
+                    # (Tetris Beat on Apple Arcade: Play_Music [Music=Hydra] (MUSIC_PROGRESS=FULL_SONG), Jedi Fallen Order)
+                    if len(envs) >= _ENVELOPES_LIMIT:
+                        info += ' ##(more envelopes...)'
+                        break
+                info += envs
 
         # extra info
         if tnode.loop_killed:

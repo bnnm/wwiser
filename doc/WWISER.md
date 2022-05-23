@@ -255,7 +255,7 @@ Typically, there is a bank per section (such as, *BGM*, *SFX* and so on), and yo
 
 You need to load all related banks at once then generate to ensure everything works correctly, as *wwiser* can't guess how the game loads banks (this is managed in-game). If all fails just load every bank, but that usually means tons of txtp (there are filtering options, explained below).
 
-Sometimes after loading everything you may still get WARNINGs about missing objects. First, make sure you *really* have every bank, as some games put them inside other game files and must be extracted first. Then, sometimes there is no way to fix those errors and can be ignored, since `.bnk` may simply contain garbage (Wwise does little clean-up when creating `.bnk`, for some reason) but *wwiser* can't predict this.
+Sometimes after loading everything you may still get WARNINGs about missing audio. First, make sure you *really* have every bank, as some games put them inside other game files and must be extracted first. Then, sometimes there is no way to fix those errors and can be ignored, since `.bnk` may simply contain garbage (Wwise does little clean-up when creating `.bnk`, for some reason), though *wwiser* tries minimize those missing errors.
 
 
 ### Unused audio

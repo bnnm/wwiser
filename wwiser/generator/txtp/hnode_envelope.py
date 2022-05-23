@@ -51,12 +51,12 @@ class NodeEnvelope(object):
 
         # normalize volumes
         if version < _AUTOMATION_NEW_VOLUME_VERSION:
-            # convert -96.0 .. 0.0 .. 96.0 dB to volume
+            # convert -96.0 .. 0.0 .. 96.0 dB to volume (scaling "dB_96_3")
             self.vol1 = pow(10.0, self.vol1 / 20.0)
             self.vol2 = pow(10.0, self.vol2 / 20.0)
         else:
             if automation.type == 0: # volume
-                # convert -1.0 .. 0.0 .. 1.0 to 0.0 .. 1.0 .. 2.0
+                # convert -1.0 .. 0.0 .. 1.0 to 0.0 .. 1.0 .. 2.0 (scaling "dB")
                 self.vol1 += 1.0
                 self.vol2 += 1.0
             else: # fades
@@ -95,6 +95,10 @@ class NodeEnvelopeList(object):
 
     def _build(self, sound):
         if not sound:
+            return
+        if sound.automations and not sound.source:
+            raise ValueError("unexpected automations without source")
+        if not sound.source:
             return
         automations = sound.automations
         version = sound.source.version 

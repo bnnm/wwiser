@@ -1,7 +1,8 @@
 import logging, math, copy
+from . import wtxtp_tree, wtxtp_debug
 
-from . import hnode_envelope
-from . import wtxtp_tree
+_DEBUG_PRINT_TREE_PRE = False
+_DEBUG_PRINT_TREE_POST = False
 
 
 # Takes the TXTP pre-built tree and readjusts it to create a final usable tree.
@@ -63,8 +64,10 @@ class TxtpSimplifier(object):
 
     # simplifies tree to simulate some Wwise features with TXTP
     def modify(self):
+        if _DEBUG_PRINT_TREE_PRE:
+            wtxtp_debug.TxtpDebug().print(self._tree, False)
 
-        #todo join some of these to minimize loops
+        #TODO join some of these to minimize loops
         self._clean_tree(self._tree)
         self._make_self_loops(self._tree)
         self._set_props(self._tree)
@@ -73,6 +76,9 @@ class TxtpSimplifier(object):
         self._find_loops(self._tree)
         self._tweak_first(self._tree)
         self._set_master_volume(self._tree)
+
+        if _DEBUG_PRINT_TREE_POST:
+            wtxtp_debug.TxtpDebug().print(self._tree, True)
 
 
     def has_sounds(self):
@@ -223,39 +229,50 @@ class TxtpSimplifier(object):
 
         return
 
-    def _make_self_loop(self, node):
-        if node.loop is None or node.loop == 1: #must loop
+    def _make_self_loop(self, node_item):
+        # typical tree is:
+        #    SC1 lpn=0              [playlist item]
+        #     N1 lpn=1 (trn)        [playlist subitem]
+        #      L1                   [music segment]
+        #       (dur=5000.00000, ent=2000.00000, exi=4000.00000)
+        #       N1 vol=1.0          [music track]
+        #        L1                 [music subtracks]
+        #         snd 722952693     [music subclip]
+        #          (fsd=54856.10417, fpa=1000.00000, fbt=0.00000, fet=-50856.10417)
+        # We want to detect the playlist parent and clone all below SC1
+
+        if node_item.loop is None or node_item.loop == 1: #item: must loop
             return False
 
-        if len(node.children) != 1: #loops to itself
+        if len(node_item.children) != 1: #item: loops to itself (with N music segment there is no loop)
             return False
 
-        subnode = node.children[0]
-        if not subnode.transition: #next part is a transition
+        node_subitem = node_item.children[0] #item: get subitem
+        if not node_subitem.transition: #subitem: has transition
             return False
 
-        if len(subnode.children) != 1: #loops to itself
+        if len(node_subitem.children) != 1: #subitem: loops to itself
             return False
 
-        subsubnode = subnode.children[0]
-        if not subsubnode.config.duration or subsubnode.config.entry == 0: #next part must be a segment
+        node_segment = node_subitem.children[0] #subitem: get segment
+        if not node_segment.config.duration or node_segment.config.entry == 0: #segment: has defined info
             return False
 
         threshold = 1 / 48000.0
-        if subsubnode.config.entry <= threshold: #min len
+        if node_segment.config.entry <= threshold: #segment: min lenght of entry (otherwise no point)
             return False
 
+        # self loop is possible, where node_item will become a container of 2:
+        # - node_subitem (original): 0..entry (no loop)
+        # - new_subitem (clone): entry..exit (loops)
+        # Clone needs to clone the whole subtree, since values need to be modified
+        node_item.sequence_continuous()
+        new_subitem = self._make_copy(node_item, node_subitem)
 
-        # self loop: make a clone branch (new loop), then mark the original:
-        # - subnode (original): 0..entry (no loop)
-        # - new_subnode (clone): entry..exit (loops)
-        node.sequence_continuous()
-        new_subnode = self._make_copy(node, subnode)
-
-        subnode.self_loop = True #mark transition node
-        subnode.loop = None  #0..entry
-        new_subnode.loop = node.loop #mark loop node
-        node.loop = None
+        node_subitem.self_loop = True #mark transition node
+        node_subitem.loop = None  #0..entry
+        new_subitem.loop = node_item.loop #mark loop node
+        node_item.loop = None
 
         return True
 
@@ -273,9 +290,8 @@ class TxtpSimplifier(object):
         new_node.transition = new_transition
 
         #TODO
-        #for envelope in node.envelopes:
-        #    new_envelope = copy.copy(envelope)
-        #    new_node.envelopes.append(new_envelope)
+        # when cloning nodes that have envelopes, list is automatically generated and unique,
+        # but when applying entry/exit must also fix start values
 
         new_parent.append(new_node)
 
@@ -381,6 +397,7 @@ class TxtpSimplifier(object):
                 self._apply_clip(node)
             else:
                 self._apply_sfx(node)
+            self._apply_envelopes(node)
 
         for subnode in node.children:
             self._set_times(subnode)
@@ -391,7 +408,6 @@ class TxtpSimplifier(object):
         if node.transition:
             self._set_transition(node, node, None)
 
-        self._apply_envelopes(node) #after mods
         return
 
     def _set_duration(self, node, seg_node):
@@ -421,7 +437,7 @@ class TxtpSimplifier(object):
             self._transition_count += 1
 
         if node.sound and node.sound.clip:
-            self._apply_transition(node, trn_node, seg_node)
+            self._apply_transition_clip(node, trn_node, seg_node)
 
         for subnode in node.children:
             self._set_transition(subnode, trn_node, seg_node)
@@ -903,7 +919,7 @@ class TxtpSimplifier(object):
     # previous simplification detects self-loops and clones 2 segments, then this parts adjust segment times:
     # if entry=10, exit=100: segment1 = 0..10, segment2 = 10..100
     # since each segment may have N tracks, this applies directly to their config (body/padding/etc) values.
-    def _apply_transition(self, node, trn_node, seg_node):
+    def _apply_transition_clip(self, node, trn_node, seg_node):
         #if not seg_node:
         #    logging.info("generator: empty segment?")
         #    return

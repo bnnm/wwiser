@@ -1,8 +1,7 @@
 import logging, math, os
 from . import wexternals, wstats
-from .registry import wgamevars
 from .render import wmediaindex
-from .txtp import wtxtp_namer
+from .txtp import wtxtp_renamer
 
 DEFAULT_OUTDIR = 'txtp/'
 DEFAULT_WEMDIR = 'wem/'
@@ -40,7 +39,7 @@ class TxtpCache(object):
         self.tags = None
         self.mediaindex = wmediaindex.MediaIndex()
         self.externals = wexternals.Externals()
-        self.renamer = wtxtp_namer.TxtpRenamer()
+        self.renamer = wtxtp_renamer.TxtpRenamer()
         self.stats = wstats.Stats()
 
         # other helpers

@@ -447,7 +447,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
                 econfig.delay = clip.sound.fpa
 
                 txtp.group_single(econfig)
-                self._render_next(clip.neid, txtp)
+                self._render_next_event(clip.neid, txtp)
                 txtp.group_done()
             else:
                 sound = clip.sound

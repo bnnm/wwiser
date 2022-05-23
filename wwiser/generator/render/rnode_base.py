@@ -77,9 +77,9 @@ class RN_CAkHircNode(object):
         self._barf("must implement")
 
     def _render_next_event(self, ntid, txtp):
-        self._render_next(ntid, txtp, nbankid=None, idtype=wbuilder_util.IDTYPE_EVENT)
+        self._render_next(ntid, txtp, idtype=wbuilder_util.IDTYPE_EVENT, nbankid=None)
 
-    def _render_next(self, ntid, txtp, nbankid=None, idtype=None):
+    def _render_next(self, ntid, txtp, idtype=None, nbankid=None):
         tid = ntid.value()
         if tid == 0:
             #this is fairly common in switches, that may define all combos but some nodes don't point to anything
@@ -93,7 +93,7 @@ class RN_CAkHircNode(object):
             bank_id = ntid.get_root().get_id()
 
         builder = self._builder
-        bnode = builder._get_bnode(bank_id, tid, idtype, sid_info=None, nbankid_info=nbankid) #self.sid
+        bnode = builder._get_bnode(bank_id, tid, idtype, nbankid_target=nbankid)
         if not bnode:
             return
 

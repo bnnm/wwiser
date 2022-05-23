@@ -135,7 +135,7 @@ class CAkHircNode(object):
                 # newer games use another CAkFxCustom (though in theory could inline)
                 bank_id = source.nsrc.get_root().get_id()
                 tid = source.tid
-                bfxcustom = self._builder._get_bnode(bank_id, tid, sid_info=self.sid)
+                bfxcustom = self._builder._get_bnode(bank_id, tid)
                 if bfxcustom:
                     source.plugin_fx = bfxcustom.fx
 

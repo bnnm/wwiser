@@ -22,6 +22,7 @@ class Builder(object):
         self._missing_nodes_loaded = {}     # missing nodes that should be in loaded banks (event garbage left by Wwise)
         self._missing_nodes_others = {}     # missing nodes in other banks (even pointing to other banks)
         self._missing_nodes_unknown = {}    # missing nodes of unknown type
+        self._missing_nodes_buses = {}      # missing nodes of bus type (usually in init.bnk, but may be in others)
         self._multiple_nodes = {}           # nodes that exist but were loaded in multiple banks and can't decide which one is best
 
         self._loaded_banks = {}             # id of banks that participate in generating
@@ -48,6 +49,9 @@ class Builder(object):
 
     def get_missing_nodes_unknown(self):
         return self._missing_nodes_unknown
+
+    def get_missing_nodes_buses(self):
+        return self._missing_nodes_buses
 
     def get_missing_banks(self):
         banks = list(self._missing_banks.keys())
@@ -109,7 +113,7 @@ class Builder(object):
 
     # gets a registered node (from HIRC chunk)
     def __get_node(self, bank_id, sid, idtype):
-        if not idtype:
+        if idtype is None:
             idtype = wbuilder_util.IDTYPE_AUDIO
 
         ref = (bank_id, sid, idtype)
@@ -188,7 +192,7 @@ class Builder(object):
         return self._get_bnode(bank_id, tid, idtype)
 
     # Finds a builder node from a bank+id ref
-    def _get_bnode(self, bank_id, tid, idtype=None, sid_info=None, nbankid_info=None):
+    def _get_bnode(self, bank_id, tid, idtype=None, nbankid_target=None):
         if bank_id <= 0  or tid <= 0:
             # bank -1 seen in KOF12 bgm's play action referencing nothing
             return
@@ -200,25 +204,40 @@ class Builder(object):
             bnode = None
 
         if not bnode:
-            # register info about missing node
+            # May need to register info about missing node. Those are possible and common in Wwise, some rules:
+            # - object hierarchy is always saved together (object > parents > parents)
+            # - objects like switches/ranseqs can only use dirent children
+            # - families are saved together in a bank (can't have one bank with children, another with parents)
+            # - parent may reference missing children (unsure how wwise creates this, can't simulate with latest versions)
+            # - objects may reference buses that aren't loaded in init.bnk
+            #
+            # Basically we have those types of calls:
+            # - audio > audio: can be ignored (must be garbage, knowing regular objects go together)
+            # - audio > bus: missing init.bnk
+            # - action > audio: missing bnk with audio (one bank may save events, another audio)
+            if idtype == wbuilder_util.IDTYPE_BUS:
+                if (bank_id, tid) not in self._missing_nodes_buses:
+                    logging.debug("generator: missing bus node %s in unknown bank", tid)
 
-            if nbankid_info:
-                # when asked for a target bank
+                self._missing_nodes_buses[(bank_id, tid)] = True
+
+            elif nbankid_target:
+                # when asked for a target bank (action): should exist
                 if bank_id in self._loaded_banks:
                     if (bank_id, tid) not in self._missing_nodes_loaded: 
                         bankname = self._loaded_banks[bank_id]
-                        logging.debug("generator: missing node %s in loaded bank %s, called by %s", tid, bankname, sid_info)
+                        logging.debug("generator: missing node %s in loaded bank %s", tid, bankname)
 
                     # bank is loaded: requested ID must be leftover garbage
                     self._missing_nodes_loaded[(bank_id, tid)] = True
 
                 else:
-                    bankname = nbankid_info.get_attr('hashname')
+                    bankname = nbankid_target.get_attr('hashname')
                     if not bankname:
-                        bankname = str(nbankid_info.value())
+                        bankname = str(nbankid_target.value())
 
                     if (bank_id, tid) not in self._missing_nodes_others:
-                        logging.debug("generator: missing node %s in non-loaded bank %s, called by %s", tid, bankname, sid_info)
+                        logging.debug("generator: missing node %s in non-loaded bank %s", tid, bankname)
 
                     # bank not loaded: save bank name too
                     self._missing_nodes_others[(bank_id, tid)] = True
@@ -226,7 +245,7 @@ class Builder(object):
 
             else:
                 if (bank_id, tid) not in self._missing_nodes_unknown:
-                    logging.debug("generator: missing node %s in unknown bank, called by %s", tid, sid_info)
+                    logging.debug("generator: missing other node %s in unknown bank", tid)
 
                 # unknown if node is in other bank or leftover garbage
                 self._missing_nodes_unknown[(bank_id, tid)] = True

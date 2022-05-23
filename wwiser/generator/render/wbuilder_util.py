@@ -94,25 +94,25 @@ UNUSED_HIRCS = [
 # IDs (though it's rare). Not all named objects in the editor have an hashname though.
 #
 # implicits
-IDTYPE_EVENT = 0
-IDTYPE_DIALOGUEEVENT = 1
+IDTYPE_EVENT = 'ev'
+IDTYPE_DIALOGUEEVENT = 'de'
 # not used directly in hircs (kind of implicit)
-IDTYPE_STATE_GROUP = 2
-IDTYPE_STATE_VALUE = 3
-IDTYPE_SWITCH_GROUP = 4
-IDTYPE_SWITCH_VALUE = 5
-IDTYPE_GAMEPARAMETER = 6
-IDTYPE_TRIGGER = 7
-IDTYPE_ARGUMENTS = 8 #old dialogueevent args, uses switches or states in later versions
+IDTYPE_STATE_GROUP = 'stgr'
+IDTYPE_STATE_VALUE = 'stvl'
+IDTYPE_SWITCH_GROUP = 'swgr'
+IDTYPE_SWITCH_VALUE = 'swvl'
+IDTYPE_GAMEPARAMETER = 'gp'
+IDTYPE_TRIGGER = 'tr'
+IDTYPE_ARGUMENTS = 'ar' #old dialogueevent args, uses switches or states in later versions
 
 # actor-mixer / interactive music (guidnames)
-IDTYPE_AUDIO = 10
+IDTYPE_AUDIO = 'au'
 # master-mixer (usually a hashname)
-IDTYPE_BUS = 20
+IDTYPE_BUS = 'bu'
 # share sets > effects
-IDTYPE_EFFECT = 30
+IDTYPE_EFFECT = 'ef'
 # from tests
-IDTYPE_AUDIODEVICE = 40
+IDTYPE_AUDIODEVICE = 'ad'
 
 
 _IDTYPE_HIRCS = {

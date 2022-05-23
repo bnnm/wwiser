@@ -21,9 +21,10 @@ class Report(object):
             missing = len(mdi.get_missing_media())
             logging.info("generator: WARNING! missing %s memory audio (load more banks?)", missing)
 
-        if reb.get_missing_nodes_loaded():
-            missing = len(reb.get_missing_nodes_loaded())
-            logging.info("generator: WARNING! missing %s Wwise objects in loaded banks (ignore?)", missing)
+        # probably same as missing audio nodes
+        #if reb.get_missing_nodes_loaded():
+        #    missing = len(reb.get_missing_nodes_loaded())
+        #    logging.info("generator: WARNING! missing %s Wwise objects in loaded banks (ignore?)", missing)
 
         if reb.get_missing_nodes_others():
             missing = len(reb.get_missing_nodes_others())
@@ -31,9 +32,14 @@ class Report(object):
             for bankinfo in reb.get_missing_banks():
                 logging.info("- %s.bnk" % (bankinfo))
 
-        if reb.get_missing_nodes_unknown():
-            missing = len(reb.get_missing_nodes_unknown())
-            logging.info("generator: WARNING! missing %s Wwise objects in unknown banks (load/ignore?)", missing)
+        # usually missing audio nodes that were removed but some refs are left in the bank
+        #if reb.get_missing_nodes_unknown():
+        #    missing = len(reb.get_missing_nodes_unknown())
+        #    logging.info("generator: WARNING! missing %s Wwise objects in unknown banks (load/ignore?)", missing)
+
+        if reb.get_missing_nodes_buses():
+            missing = len(reb.get_missing_nodes_buses())
+            logging.info("generator: WARNING! missing %s Wwise buses (load init.bnk/1355168291.bnk?)", missing)
 
         if reb.get_multiple_nodes():
             missing = len(reb.get_multiple_nodes())

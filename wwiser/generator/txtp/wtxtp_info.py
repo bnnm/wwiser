@@ -12,6 +12,9 @@ class TxtpInfo(object):
         self._banks = None
         self._wemnames = ''
 
+        self._rtpc_fields = TxtpFields()
+        self._statechunk_fields = TxtpFields()
+
         self._gsnames_init = False
         self._gsnames_idx = []
         self._gsnames_long = ''
@@ -190,7 +193,7 @@ class TxtpInfo(object):
     def get_wemnames(self):
         return self._wemnames
 
-    def get_lines(self):
+    def get_tree_lines(self):
         if self._banks is None:
             self.get_banks()
 
@@ -232,6 +235,28 @@ class TxtpInfo(object):
                 if finalname not in self._wemnames:
                     self._wemnames += ' ' + finalname
 
+
+    def _get_fields_lines(self, info, fields):
+        lines = fields.generate()
+        if not lines:
+            return None
+
+        out_lines = ["# %s\n" % (info)]
+        for line in lines:
+            out_lines.append( '#%s%s\n' % (" ", line) )
+        return out_lines
+
+    def add_rtpc(self, brtpc):
+        self._rtpc_fields.rtpc(brtpc.nid, brtpc.minmax())
+
+    def get_rtpc_lines(self):
+        return self._get_fields_lines("RTPCs", self._rtpc_fields)
+
+    def add_statechunk(self, bsi):
+        self._statechunk_fields.keyvalprops(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
+
+    def get_statechunk_lines(self):
+        return self._get_fields_lines("STATECHUNKs", self._statechunk_fields)
 
 
 #class NameInfo(object):
@@ -384,6 +409,14 @@ FIELD_TYPE_KEYVALPROPS = 4
 class TxtpFields(object):
     def __init__(self):
         self._fields = []
+        self._done = {}
+
+    def _add(self, key, testkey):
+        done = (key[0], ) + testkey
+        if done in self._done:
+            return
+        self._done[done] = True
+        self._fields.append(key)
 
     def prop(self, nfield):
         if nfield:
@@ -399,7 +432,7 @@ class TxtpFields(object):
 
     def keyvalprops(self, nkey, nval, props):
         if nkey:
-            self._fields.append((FIELD_TYPE_KEYVALPROPS, nkey, nval, props))
+            self._add((FIELD_TYPE_KEYVALPROPS, nkey, nval, props), (nkey.value(), nval.value()))
 
     def keyminmax(self, nkey, nmin, nmax):
         if nkey:
@@ -407,7 +440,7 @@ class TxtpFields(object):
 
     def rtpc(self, nrtpc, minmax):
         if nrtpc:
-            self._fields.append((FIELD_TYPE_RTPC, nrtpc, minmax))
+            self._add((FIELD_TYPE_RTPC, nrtpc, minmax), (nrtpc.value(), minmax))
 
     def generate(self):
         lines = []

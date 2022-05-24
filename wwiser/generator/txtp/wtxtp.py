@@ -288,9 +288,20 @@ class Txtp(object):
             info += '# - %s\n' % (bank)
 
         # tree info
-        info += '#\n'
-        lines = self.info.get_lines()
-        info += ''.join(lines)
+        tree_lines = self.info.get_tree_lines()
+        if tree_lines:
+            info += '#\n'
+            info += ''.join(tree_lines)
+
+        statechunk_lines = self.info.get_statechunk_lines()
+        if statechunk_lines:
+            info += '#\n'
+            info += ''.join(statechunk_lines)
+
+        rtpc_lines = self.info.get_rtpc_lines()
+        if rtpc_lines:
+            info += '#\n'
+            info += ''.join(rtpc_lines)
 
 
         return info

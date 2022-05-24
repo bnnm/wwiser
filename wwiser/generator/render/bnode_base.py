@@ -85,9 +85,9 @@ class CAkHircNode(object):
         if not statechunk.valid:
             return None
 
-        #TODO improve props (inherited from parents)
-        for bsi in statechunk.get_states():
-            self.fields.keyvalprops(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
+        # during during calculations to make a final list
+        #for bsi in statechunk.get_states():
+        #    self.fields.keyvalprops(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
 
         return statechunk
 
@@ -100,9 +100,9 @@ class CAkHircNode(object):
         if not rtpclist.valid:
             return None
 
-        #TODO improve props (inherited from parents)
-        for brtpc in rtpclist.get_rtpcs():
-            self.fields.rtpc(brtpc.nid, brtpc.minmax())
+        # during during calculations to make a final list
+        #for brtpc in rtpclist.get_rtpcs():
+        #    self.fields.rtpc(brtpc.nid, brtpc.minmax())
         return rtpclist
 
     def _make_transition_rules(self, node, is_switch):

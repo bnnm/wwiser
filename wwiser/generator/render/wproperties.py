@@ -137,9 +137,11 @@ class PropertyCalculator(object):
         # while on MSwitch/MRanSeq are often just to silence the whole song.
         check_state = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO only on root nodes
         if check_state:
-            bsis = bnode.statechunk.get_usable_states(self._apply_bus)
-            if len(bsis) > 0:
+            bscis = bnode.statechunk.get_usable_states(self._apply_bus)
+            if len(bscis) > 0:
                 config.crossfaded = True
+            for bsci in bscis:
+                self.txtp.info.add_statechunk(bsci)
 
         scparams = self._ws.scparams
         if not scparams:
@@ -170,6 +172,8 @@ class PropertyCalculator(object):
             brtpcs = bnode.rtpclist.get_usable_rtpcs(self._apply_bus)
             if len(brtpcs) > 0:
                 config.crossfaded = True
+            for brtpc in brtpcs:
+                self.txtp.info.add_rtpc(brtpc)
 
         gvparams = self._ws.gvparams
         if not gvparams:

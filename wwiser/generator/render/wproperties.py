@@ -155,6 +155,8 @@ class PropertyCalculator(object):
             config.gain += props.volume
             config.gain += props.makeupgain
 
+            self.txtp.info.statechunk(state)
+
 
     # some objects have rtpc > new value info in the statechunk, and if we have set those states we want the values
     def _apply_rtpclist(self, bnode, config):

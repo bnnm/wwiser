@@ -49,7 +49,6 @@ class Txtp(object):
 
         # config during printing
         self.selected = None        # current random selection in sub-txtp
-        self.scparams = None         # current volume combo in sub-txtp
         self.scparams_make_default = False #TODO improve
         self.external_path = None   # current external
         self.external_name = None   # current external

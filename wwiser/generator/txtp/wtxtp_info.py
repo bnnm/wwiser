@@ -22,6 +22,11 @@ class TxtpInfo(object):
         self._gvdone = set()
         self._gvnames = ''
 
+        self._scnames_init = False
+        self._scitems = []
+        self._scdone = set()
+        self._scnames = ''
+
         self._txtpcache = txtpcache
         pass
 
@@ -143,9 +148,43 @@ class TxtpInfo(object):
             name = ngvname.get_attrs().get('hashname')
             if not name:
                 name = ngvname.value()
-            #value can be string or number
+
             info = "{%s=%s}" % (name, value)
             self._gvnames += info
+
+    # statechunks, same as gamevars (register when used)
+    def statechunk(self, state):
+        self.statechunks([(state)])
+
+    def statechunks(self, states):
+        for state in states:
+            key = (state.group, state.value) #probably key only is ok, leave both to detect logic bugs
+            if key in self._scdone:
+                continue
+            self._scdone.add(key)
+            self._scitems.append(state)
+
+    def get_scnames(self):
+        if not self._scnames_init:
+            self._load_scnames()
+        return self._scnames
+
+    def _load_scnames(self):
+        self._scnames_init = True
+        for state in self._scitems:
+            name = state.group_name
+            if not name:
+                name = state.group
+            value = state.value_name
+            if not value:
+                value = state.value
+
+            info = "{%s=%s}" % (name, value)
+            if state.unreachable:
+                info = '~' + info
+            self._scnames += info
+
+    #----------------------------------------------------------------------------------
 
     # other registered info found during process
     def get_wemnames(self):

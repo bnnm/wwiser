@@ -270,22 +270,14 @@ class TxtpNamer(object):
     def _get_scparams(self):
         txtp = self.txtp
 
-        if txtp.scparams_make_default:
-            return '=-'
+        scnames = txtp.info.get_scnames()
+        if not scnames:
+            if txtp.scparams_make_default:
+                return '=-'
+            return scnames
 
-        info = ''
-        if not txtp.scparams:
-            return info
-
-        info += '='
-        for scitem in txtp.scparams.get_states():
-            gn = scitem.group_name or scitem.group
-            vn = scitem.value_name or scitem.value
-            if scitem.value == 0:
-                vn = '-'
-            if scitem.unreachable:
-                info += '~'
-            info += "(%s=%s)" % (gn, vn)
+        info = '='
+        info += txtp.info.get_scnames()
 
         return info
 

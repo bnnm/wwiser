@@ -54,7 +54,7 @@ class RN_CAkHircNode(object):
     # Get final prop values, that depend on wwise's state. Some object shouldn't have them (events)
     # or limited types (actions), but can be used as a generic container.
 
-    def _calculate(self, bnode, txtp):
+    def _calculate_config(self, bnode, txtp):
 
         config = self._calculator.get_properties(bnode, txtp)
 

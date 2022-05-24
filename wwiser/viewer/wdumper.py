@@ -78,25 +78,25 @@ class DumpPrinter(object):
     def _write(self, outname, callback):
         if not self._banks: #no banks loaded
             return
-        logging.info("printer: writting %s" % (outname))
+        logging.info("dumper: writting %s" % (outname))
         #it's possible to set 'buffering' on open, but doesn't seem to have any positive effect
         with open(outname, 'w', encoding='utf-8') as outfile:
             self._file = outfile
             callback()
             self._file = None
-        logging.info("printer: done")
+        logging.info("dumper: done")
 
     def write_empty(self):
         if not self._banks: #no banks loaded
             return
-        logging.info("printer: processing empty type")
+        logging.info("dumper: processing empty type")
 
         # making empty "files" is a way to force the whole tree to read names, since by
         # default they are only loaded on demand, but full list is needed in some cases
         for bank in self._banks:
             self._print_empty_node(bank)
 
-        logging.info("printer: done")
+        logging.info("dumper: done")
 
     #--------------------------------------------------------------------------
 

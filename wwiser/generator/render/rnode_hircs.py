@@ -17,7 +17,7 @@ class RN_CAkNone(RN_CAkHircNode):
 class RN_CAkEvent(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         # N play actions are layered (may set a delay)
         txtp.group_layer(bnode.ntids, config)
@@ -31,7 +31,7 @@ class RN_CAkEvent(RN_CAkHircNode):
 class RN_CAkDialogueEvent(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         if bnode.ntid:
             # tree plays a single object with any state
@@ -95,7 +95,7 @@ class RN_CAkActionTrigger(RN_CAkAction):
 class RN_CAkActionPlay(RN_CAkAction):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         txtp.group_single(config)
         self._render_next(bnode.ntid, txtp, nbankid=bnode.nbankid)
@@ -106,7 +106,7 @@ class RN_CAkActionPlay(RN_CAkAction):
 
 class RN_CAkActionPlayEvent(RN_CAkAction):
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         txtp.group_single(config)
         self._render_next_event(bnode.ntid, txtp)
@@ -118,7 +118,7 @@ class RN_CAkActionPlayEvent(RN_CAkAction):
 class RN_CAkSwitchCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         gtype = bnode.gtype
         gname = bnode.ngname.value()
@@ -156,7 +156,7 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
 class RN_CAkRanSeqCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         if   bnode.mode == 0 and bnode.continuous: #random + continuous (plays all objects randomly, on loop/next call restarts)
             txtp.group_random_continuous(bnode.ntids, config)
@@ -184,7 +184,7 @@ class RN_CAkRanSeqCntr(RN_CAkHircNode):
 class RN_CAkLayerCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         txtp.group_layer(bnode.ntids, config)
         for ntid in bnode.ntids:
@@ -197,7 +197,7 @@ class RN_CAkLayerCntr(RN_CAkHircNode):
 class RN_CAkSound(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         txtp.info.source(bnode.sound.nsrc, bnode.sound.source)
         txtp.source_sound(bnode.sound, config)
@@ -208,7 +208,7 @@ class RN_CAkSound(RN_CAkHircNode):
 class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         self._register_transitions(txtp, bnode.rules)
         self._register_stingers(txtp, bnode.stingerlist)
@@ -277,7 +277,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         self._register_transitions(txtp, bnode.rules)
         self._register_stingers(txtp, bnode.stingerlist)
@@ -334,7 +334,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 class RN_CAkMusicSegment(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
         config.duration = bnode.duration
         config.entry = bnode.entry
         config.exit = bnode.exit
@@ -363,7 +363,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
     def _render_txtp(self, bnode, txtp):
         if not bnode.subtracks: #empty / no clips
             return
-        config = self._calculate(bnode, txtp)
+        config = self._calculate_config(bnode, txtp)
 
         self._register_statechunks(bnode, txtp, config)
 

@@ -70,23 +70,13 @@ class StateChunkItem(object):
             if row and row.hashname:
                 self.value_name = row.hashname
 
-    def eq_base(self, other):
-        return (
-            self.type == other.type and 
-            self.group == other.group and 
-            self.value == other.value
-        )
-
-    def eq_vol(self, other):
-        return (
-            self.type == other.type and 
-            self.group == other.group and 
-            self.value == other.value
-        )
-
     # used with "not in"
     def __eq__(self, other):
-        return self.eq_vol(other)
+        return (
+            self.type == other.type and 
+            self.group == other.group and 
+            self.value == other.value
+        )
 
     def __repr__(self):
         gn = self.group_name or str(self.group)
@@ -155,7 +145,6 @@ class StateChunkPaths(object):
         elems.sort(key=lambda x: (not x[0].unreachable, x[0].group_name or '~', x[0].group))
 
         # combos of existing variables
-        #items = itertools.product(*self._elems.values())
         items = itertools.product(*elems)
         for item in items:
             scparam = StateChunkParams()    
@@ -191,8 +180,7 @@ class StateChunkPaths(object):
             #    if not all_set:
             #        return False
 
-        # multivars like in MGR probably don't need a base value
-        # but Pokemon Legends Arceus does :(
+        # multivars like in MGR probably don't need a base value, but Pokemon Legends Arceus does
         #if len(sccombos) >= 1:
         #    vcombo = sccombos[0]
         #    if len(vcombo.items()) > 1: #g1=v1 + g2=v2
@@ -222,19 +210,17 @@ class StateChunkPaths(object):
         #   play_m00_boss_bgm (bgm_boss=em5900_bat_start) {s}=(bgm_boss=em5900_bat_start)
 
         for key in self._elems.keys():
-            _, group = key
-            pvalue = gsparams.current(*key)
-            if pvalue is None:
+            gs_type, gs_group = key
+            gs_value = gsparams.current(gs_type, gs_group)
+            if gs_value is None:
                 continue
+
+            # mark that current path is forced, as it affects defaults in some cases
+            self._forced_path = True
 
             # "any" set means all volume states should be generated (DMC5's bgm_07_stage.bnk)
-            if pvalue == 0:
-                #todo force output base instead of generate_default? needs to be reordered so it goes last
+            if gs_value == 0:
                 continue
-
-            # mark that current path is forced, as it affects defaults in some cases, except when using "any"
-            # (this creates a useless base {s} in some cases but it's needed in others)
-            self._forced_path = True
 
             # Remove all that aren't current bgm=a. This may remove bgm=b, bgm=c and leave original bgm=a (with some volume).
             # If there wasn't a bgm=a, remove the key (so no {s} combos is actually generated).
@@ -243,18 +229,18 @@ class StateChunkPaths(object):
             scitems = self._elems[key]
 
             curr_scitem = StateChunkItem()
-            curr_scitem.init_base(group, pvalue, wwnames) #todo improve name handling
+            curr_scitem.init_base(gs_group, gs_value, wwnames) #todo improve name handling
 
             # check and add itself for better names (can't use not-in since we don't know volume)
             curr_exists = False
             for scitem in scitems:
-                if curr_scitem.eq_base(scitem):
+                if curr_scitem == scitem: #eq
                     curr_exists = True
             if not curr_exists:
                 scitems.append(curr_scitem)
 
             for scitem in list(scitems): #clone for iteration+removal
-                if scitem.value != pvalue:
+                if scitem.value != gs_value:
                     scitem.unreachable = True
                     self._unreachables = True
                     #scitems.remove(scitem) #skipped externally

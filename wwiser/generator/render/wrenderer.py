@@ -83,8 +83,7 @@ class Renderer(object):
 
         # SCs have regular states and "unreachable" ones. If we have GS bgm=m01 and SC bgm=m01/m02,
         # m02 is technically not reachable (since GS states and SC states are the same thing).
-        # Sometimes they are interesting so we want them, but *after* all regular SCs as they may be
-        # duped of others.
+        # Sometimes they are interesting so we want them, but *after* all regular SCs to skip dupes.
         unreachables = []
 
         gscombos = ws.get_gscombos()
@@ -102,12 +101,11 @@ class Renderer(object):
                 txtp = wtxtp.Txtp(self._txtpcache)
                 self._begin_txtp(txtp, node)
 
-                ws.scpaths.filter(ws.gsparams, self._txtpcache.wwnames) #TODO improve
+                self._render_sc(node, txtp)
+
                 if ws.scpaths.has_unreachables():
                     unreachables.append(gscombo)
 
-                self._render_sc(node, txtp)
-                #break
 
 
             for gscombo in unreachables:
@@ -127,10 +125,7 @@ class Renderer(object):
         ws = self._ws
 
         #TODO simplify: set scpaths to reachable/unreachable modes (no need to check sccombo_hash unreachables)
-
-        if make_unreachables:
-            ws.scpaths.filter(ws.gsparams, self._txtpcache.wwnames) #TODO improve
-            #ws.scpaths.set_unreachables_only()
+        ws.scpaths.filter(ws.gsparams, self._txtpcache.wwnames) #detect unreachables
 
         sccombos = ws.get_sccombos() #found during process
         if not sccombos:

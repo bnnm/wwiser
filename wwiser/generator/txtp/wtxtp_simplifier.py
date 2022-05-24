@@ -81,8 +81,8 @@ class TxtpSimplifier(object):
             wtxtp_debug.TxtpDebug().print(self._tree, True)
 
 
-    def has_sounds(self):
-        return self._sound_count > 0
+    def get_sounds_count(self):
+        return self._sound_count
 
     def has_noloops(self):
         return self._loop_groups == 0 and self._loop_sounds == 0

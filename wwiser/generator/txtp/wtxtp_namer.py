@@ -249,7 +249,7 @@ class TxtpNamer(object):
                 # plus externals aren't that used.
                 name += " {e}"
 
-        if printer.has_unsupported:
+        if printer.has_unsupported or printer.has_many_sounds():
             name += " {!}"
 
         if not is_new: #dupe

@@ -6,6 +6,8 @@ _TXTP_INDENTATION_SPACES = 1
 _DEBUG_PRINT_GROUP_HEADER = False
 # envelopes tend to make giant lines in some cases and vgmstream max line is ~2000, adjust as needed
 _ENVELOPES_LIMIT = 1800
+# many sounds are problematic due to txtp limit, mark as {!}
+_SOUNDS_LIMIT = 250
 
 
 GROUPS_TYPE = {
@@ -80,7 +82,10 @@ class TxtpPrinter(object):
         return text
 
     def has_sounds(self):
-        return self._simplifier.has_sounds()
+        return self._simplifier.get_sounds_count() > 0
+
+    def has_many_sounds(self):
+        return self._simplifier.get_sounds_count() > _SOUNDS_LIMIT
 
 
     #--------------------------------------------------------------------------

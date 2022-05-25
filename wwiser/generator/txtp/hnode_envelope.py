@@ -5,16 +5,64 @@ _AUTOMATION_NEW_VOLUME_VERSION = 70
 # 
 _AUTOMATION_NEW_TYPE_VERSION = 112
 
-_TXTP_INTERPOLATIONS = {
+
+# Wwise marks a type like "Exp1" when doing any fades, but due to how curves
+# are programmed, fade-ins are standard and fade-outs must use the inverse curve.
+# So fade-in Exp1 uses 'E' (lowered) while fade-out must be 'L' (raised).
+# TXTP's curves (not documented) are more limited, so fades aren't 100% exact:
+# - E: exponential (2.5)
+# - L: logaritmic (2.5)
+# - H: raised sine/cosine 
+# - Q: quarter sine/cosine 
+# - p: parabola
+# - P: inverted parabola
+# - T: triangular/linear
+# - {}: alias of one of the above
+# - (): alias of one of the above
+#
+# And Wwise's curves:                           
+# - 0: Log3 (raised high)
+# - 1: Sine (raised normal)
+# - 2: Log1 (raised low, almost linear)
+# - 3: InvSCurve (sharp S in the middle)
+# - 4: Linear (simple)
+# - 5: SCurve (shoft S in the middle)
+# - 6: Exp1 (lowered low, almost linear)
+# - 7: SineRecip (lowered mid)
+# - 8: Exp3 (lowered low)
+# - 9: Constant (fixed output)
+#
+# Where 'raised' = rises soon, and 'lowered' = rises later, roughly:
+#       .....               ...
+#     ..                   .
+#    .                     .
+#   .                     .
+#   .                   .. 
+#  .                ....
+
+_TXTP_INTERPOLATIONS_FADEIN = {
     0:'L', #Log3
-    1:'Q', #Sine
-    2:'L', #Log1
+    1:'P', #Sine
+    2:'P', #Log1
     3:'H', #InvSCurve
     4:'T', #Linear
-    5:'H', #SCurve
-    6:'E', #Exp1
-    7:'Q', #SineRecip
+    5:'Q', #SCurve
+    6:'p', #Exp1
+    7:'p', #SineRecip
     8:'E', #Exp3
+    9:'T', #Constant
+}
+
+_TXTP_INTERPOLATIONS_FADEOUT = {
+    0:'E', #Log3
+    1:'p', #Sine
+    2:'p', #Log1
+    3:'Q', #InvSCurve
+    4:'T', #Linear
+    5:'H', #SCurve
+    6:'P', #Exp1
+    7:'P', #SineRecip
+    8:'L', #Exp3
     9:'T', #Constant
 }
 
@@ -69,7 +117,11 @@ class NodeEnvelope(object):
             return
 
         # approximate curves
-        self.shape = _TXTP_INTERPOLATIONS.get(p1.interp, '{')
+        if self.vol1 < self.vol2:
+            interpolations = _TXTP_INTERPOLATIONS_FADEIN
+        else:
+            interpolations = _TXTP_INTERPOLATIONS_FADEOUT
+        self.shape = interpolations.get(p1.interp, '{')
 
         self.time1 = p1.time
         self.time2 = p2.time - p1.time

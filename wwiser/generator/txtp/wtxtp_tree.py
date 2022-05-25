@@ -86,6 +86,7 @@ class TxtpNode(object):
             self.loop = None
 
         self.self_loop = False
+        self.self_loop_end = False
         self.force_selectable = False
 
 
@@ -180,6 +181,9 @@ class TxtpNode(object):
             return False
 
         #makeupgain, pitch: ignored
+
+        if self.trim_begin or self.trim_end or self.pad_begin or self.pad_end or self.body_time:
+            return False
 
         if _DEBUG_PRINT_IGNORABLE:
             return False

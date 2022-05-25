@@ -271,6 +271,7 @@ class TxtpSimplifier(object):
 
         node_subitem.self_loop = True #mark transition node
         node_subitem.loop = None  #0..entry
+        new_subitem.self_loop_end = True #mark transition node
         new_subitem.loop = node_item.loop #mark loop node
         node_item.loop = None
 
@@ -333,7 +334,7 @@ class TxtpSimplifier(object):
 
         # move loop (not to sounds since loop is applied over finished track)
         #todo maybe can apply on some sounds (ex. S1 l=0 > L2 --- = S1 --- > L2 l=0)
-        if subnode.is_group():
+        if subnode.is_group() and not node.self_loop_end:
             is_noloop_subnode = subnode.loop is None or subnode.loop == 1
             is_bothloop = node.loop == 0 and subnode.loop == 0
             if is_noloop_subnode or is_bothloop:
@@ -947,13 +948,22 @@ class TxtpSimplifier(object):
 
         if not play_before:
             # settings for entry..exit
-            time = entry
+
+            # When doing self-loops, we have intro + loop (transition > segment > clip), and to optimize total groups we
+            # clamp the clips to entry-exit and ignore the segment. Clip is clamped to entry (trim_begin) + exit (body_time).
+            # If loop clip has envelopes, we can't alter it though (envelopes apply after trims, and can't change their start
+            # as curve meaning would change), so simply trim the parent transition segment (that has loop, not moved down) to
+            # remove initial audio including envelope. Must still clamp the exit though
+            if node.envelopelist:
+                trn_node.trim_begin = entry
+                #trn_node.loop = 0 #should loop
+                time = 0
+            else:
+                time = entry
 
             remove = time
-            #print("*remove end: ", remove, node.pad_begin)
             if remove > node.pad_begin:
                 remove = node.pad_begin
-            #print("remove end: ", remove)
             node.pad_begin -= remove
             time -= remove
 
@@ -964,7 +974,6 @@ class TxtpSimplifier(object):
             time = (exit - body)
             node.pad_end += time
         else:
-            #print("*b", body, exit, time)
             time = (body - exit)
             removed = time
             if removed > node.pad_end:
@@ -976,7 +985,7 @@ class TxtpSimplifier(object):
             if removed > node.body_time:
                 removed = node.body_time
             node.body_time -= removed
-            
+
             # in odd cases entry may fall in the padding, so body doesn't play
             # since vgmstream needs a body ATM and this code is just a hack,
             # make some fake, tiny body (would be fixed with an overlapped layout)

@@ -38,6 +38,9 @@ from . import wgamesync
 # Technically this list should exist as parts gamesync (in Wwise states are globals), but it's separate as
 # sometimes it generates insteresting variations that aren't possible in regular cases. It also makes easier
 # to handle state combos.
+#
+# Editor shows all possible values in Statechunks (ex. using "bgm" group has m01, m02...) but only those states
+# that change something (not 0) are saved in .bnk
 
 class StateChunkItem(object):
     def __init__(self):
@@ -108,9 +111,12 @@ class StateChunkPaths(object):
 
     def add_nstates(self, ngamesyncs):
         for ngroup, nvalue in ngamesyncs:
-            scitem = StateChunkItem()
-            scitem.init_nstate(ngroup, nvalue)
-            self._add_scstate(scitem)
+            self.add_nstate(ngroup, nvalue)
+
+    def add_nstate(self, ngroup, nvalue):
+        scitem = StateChunkItem()
+        scitem.init_nstate(ngroup, nvalue)
+        self._add_scstate(scitem)
 
     def _add_scstate(self, scitem):
         key = (scitem.type, scitem.group)

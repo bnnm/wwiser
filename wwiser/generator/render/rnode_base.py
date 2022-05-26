@@ -1,4 +1,4 @@
-from . import wbuilder_util
+from . import wbuilder_util, wproperties
 
 
 # common for all renderer nodes (rnode)
@@ -8,45 +8,25 @@ class RN_CAkHircNode(object):
         pass
 
     def init_renderer(self, renderer):
-        self._apply_bus = False
         self._renderer = renderer
         self._builder = renderer._builder
         self._filter = renderer._filter
-        self._calculator = renderer._calculator
         self._ws = renderer._ws
 
     #--------------------------------------------------------------------------
 
-    # node defines states that change properties
-    def _register_statechunks(self, bnode, txtp, config):
-        if not bnode.statechunk:
+    def _register_transitions(self, rules):
+        if self._ws.gsparams: # only on default/everything path
             return
-
-        # find songs that silence files with states
-        # mainly useful on MSegment/MTrack level b/c usually games that set silence on those,
-        # while on MSwitch/MRanSeq are often just to silence the whole song.
-
-        usable_states = []
-        for bsi in bnode.statechunk.get_usable_states(self._apply_bus):
-            item = (bsi.nstategroupid, bsi.nstatevalueid)
-            usable_states.append(item)
-        if usable_states:
-            self._ws.scpaths.add_nstates(usable_states)
-
-        return
-
-    def _register_transitions(self, txtp, rules):
-        #if not self._ws.gsparams: #may be useful to create with passed config
-        #    return
 
         self._ws.transitions.add(rules)
         return
 
-    def _register_stingers(self, txtp, bstingerlist):
-        #if not self._ws.gsparams: #may be useful to create with passed config
-        #    return
+    def _register_stingers(self, stingerlist):
+        if self._ws.gsparams: # only on default/everything path
+            return
 
-        self._ws.stingers.add(bstingerlist)
+        self._ws.stingers.add(stingerlist)
         return
 
     #--------------------------------------------------------------------------
@@ -56,7 +36,9 @@ class RN_CAkHircNode(object):
 
     def _calculate_config(self, bnode, txtp):
 
-        config = self._calculator.get_properties(bnode, txtp)
+        # will also detect and register RTPCs and statechunks
+        calculator = wproperties.PropertyCalculator(self._ws, bnode, txtp)
+        config = calculator.get_properties()
 
         return config
 

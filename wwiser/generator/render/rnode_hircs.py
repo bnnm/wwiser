@@ -210,8 +210,8 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
     def _render_txtp(self, bnode, txtp):
         config = self._calculate_config(bnode, txtp)
 
-        self._register_transitions(txtp, bnode.rules)
-        self._register_stingers(txtp, bnode.stingerlist)
+        self._register_transitions(bnode.rules)
+        self._register_stingers(bnode.stingerlist)
 
         if bnode.ntid:
             # rarely tree plays a single object with any state
@@ -279,8 +279,8 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
     def _render_txtp(self, bnode, txtp):
         config = self._calculate_config(bnode, txtp)
 
-        self._register_transitions(txtp, bnode.rules)
-        self._register_stingers(txtp, bnode.stingerlist)
+        self._register_transitions(bnode.rules)
+        self._register_stingers(bnode.stingerlist)
 
         txtp.group_single(config)
         self._render_playlist(txtp, bnode.items)
@@ -335,11 +335,12 @@ class RN_CAkMusicSegment(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
         config = self._calculate_config(bnode, txtp)
+
         config.duration = bnode.duration
         config.entry = bnode.entry
         config.exit = bnode.exit
 
-        self._register_stingers(txtp, bnode.stingerlist)
+        self._register_stingers(bnode.stingerlist)
 
         # empty segments are allowed as silence
         if not bnode.ntids:
@@ -364,8 +365,6 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
         if not bnode.subtracks: #empty / no clips
             return
         config = self._calculate_config(bnode, txtp)
-
-        self._register_statechunks(bnode, txtp, config)
 
         # musictrack can play in various ways
         if   bnode.type == 0: #normal (plays one subtrack, N aren't allowed)

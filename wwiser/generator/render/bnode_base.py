@@ -65,7 +65,7 @@ class CAkHircNode(object):
             return None
         self._builder.report_unknown_props(props.unknowns)
 
-        #TODO improve props (inherited from parents)
+        #TODO improve props (useful?)
         for nfld in props.fields_fld:
             self.fields.prop(nfld)
 
@@ -87,7 +87,7 @@ class CAkHircNode(object):
 
         # during during calculations to make a final list
         #for bsi in statechunk.get_states():
-        #    self.fields.keyvalprops(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
+        #    self.fields.statechunk(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
 
         return statechunk
 
@@ -102,7 +102,7 @@ class CAkHircNode(object):
 
         # during during calculations to make a final list
         #for brtpc in rtpclist.get_rtpcs():
-        #    self.fields.rtpc(brtpc.nid, brtpc.minmax())
+        #    self.fields.rtpc(brtpc.nid, brtpc.minmax(), brtpc.nparam)
         return rtpclist
 
     def _make_transition_rules(self, node, is_switch):

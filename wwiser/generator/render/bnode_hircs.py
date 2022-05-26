@@ -56,7 +56,7 @@ class CAkBus(CAkHircNode):
         nbase = node.find1(name='BusInitialValues')
 
         nbusid = nbase.find1(name='OverrideBusId')
-        self.bbus = self._read_bus(nbusid)
+        self.bparent = self._read_bus(nbusid) #parent bus of this bus
 
         #idDeviceShareset #needed to get if it's audio?
         #uChannelConfig #use to guess is non-output bus?
@@ -65,6 +65,8 @@ class CAkBus(CAkHircNode):
         #PositioningParams
 
         self.statechunk = self._make_statechunk(nbase)
+        
+        self.rtpclist = self._make_rtpclist(nbase)
 
         return
 

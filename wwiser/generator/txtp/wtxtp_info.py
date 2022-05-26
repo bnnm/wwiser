@@ -174,6 +174,7 @@ class TxtpInfo(object):
 
     def _load_scnames(self):
         self._scnames_init = True
+        has_unreachables = False
         for state in self._scitems:
             name = state.group_name
             if not name:
@@ -184,8 +185,12 @@ class TxtpInfo(object):
 
             info = "{%s=%s}" % (name, value)
             if state.unreachable:
-                info = '~' + info
+                has_unreachables = True
             self._scnames += info
+
+        # extra mark
+        if has_unreachables:
+            self._scnames = '~' + self._scnames
 
     #----------------------------------------------------------------------------------
 
@@ -199,7 +204,7 @@ class TxtpInfo(object):
 
         is_multibank = len(self._banks) > 1
 
-        lines = []
+        lines = ["# PATH\n"]
         for ninfo in self._ninfo:
             info = ninfo.generate(is_multibank)
             lines.append(info)
@@ -246,17 +251,17 @@ class TxtpInfo(object):
             out_lines.append( '#%s%s\n' % (" ", line) )
         return out_lines
 
-    def add_rtpc(self, brtpc):
-        self._rtpc_fields.rtpc(brtpc.nid, brtpc.minmax())
+    def report_rtpc(self, brtpc):
+        self._rtpc_fields.rtpc(brtpc.nid, brtpc.minmax(), brtpc.nparam)
 
-    def get_rtpc_lines(self):
-        return self._get_fields_lines("RTPCs", self._rtpc_fields)
+    def get_gamevar_lines(self):
+        return self._get_fields_lines("GAMEVARS", self._rtpc_fields)
 
-    def add_statechunk(self, bsi):
-        self._statechunk_fields.keyvalprops(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
+    def report_statechunk(self, bsi):
+        self._statechunk_fields.statechunk(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
 
     def get_statechunk_lines(self):
-        return self._get_fields_lines("STATECHUNKs", self._statechunk_fields)
+        return self._get_fields_lines("STATECHUNKS", self._statechunk_fields)
 
 
 #class NameInfo(object):
@@ -404,7 +409,7 @@ FIELD_TYPE_PROP = 0
 FIELD_TYPE_KEYVAL = 1
 FIELD_TYPE_KEYMINMAX = 2
 FIELD_TYPE_RTPC = 3
-FIELD_TYPE_KEYVALPROPS = 4
+FIELD_TYPE_SC = 4
 
 class TxtpFields(object):
     def __init__(self):
@@ -430,17 +435,26 @@ class TxtpFields(object):
         if nkey:
             self._fields.append((FIELD_TYPE_KEYVAL, nkey, nval))
 
-    def keyvalprops(self, nkey, nval, props):
+    def statechunk(self, nkey, nval, props):
         if nkey:
-            self._add((FIELD_TYPE_KEYVALPROPS, nkey, nval, props), (nkey.value(), nval.value()))
+            self._add((FIELD_TYPE_SC, nkey, nval, props), (nkey.value(), nval.value()))
 
     def keyminmax(self, nkey, nmin, nmax):
         if nkey:
             self._fields.append((FIELD_TYPE_KEYMINMAX, nkey, nmin, nmax))
 
-    def rtpc(self, nrtpc, minmax):
+    def rtpc(self, nrtpc, minmax, nparam):
         if nrtpc:
-            self._add((FIELD_TYPE_RTPC, nrtpc, minmax), (nrtpc.value(), minmax))
+            self._add((FIELD_TYPE_RTPC, nrtpc, minmax, nparam), (nrtpc.value(), minmax, nparam.value()))
+
+    def _info_prop(self, nfield):
+        attrs = nfield.get_attrs()
+
+        key = attrs.get('name')
+        val = attrs.get('valuefmt', attrs.get('hashname'))
+        if not val:
+            val = attrs.get('value')
+        return key, val
 
     def generate(self):
         lines = []
@@ -454,12 +468,7 @@ class TxtpFields(object):
 
             if   type == FIELD_TYPE_PROP:
                 _, nfield = field
-                attrs = nfield.get_attrs()
-
-                key = attrs.get('name')
-                val = attrs.get('valuefmt', attrs.get('hashname'))
-                if not val:
-                    val = attrs.get('value')
+                key, val =  self._info_prop(nfield)
 
             elif type == FIELD_TYPE_KEYVAL:
                 _, nkey, nval = field
@@ -480,38 +489,32 @@ class TxtpFields(object):
                 if not val:
                     val = vattrs.get('value')
 
-            elif type == FIELD_TYPE_KEYVALPROPS:
+            elif type == FIELD_TYPE_SC:
                 _, nkey, nval, props = field
-                kattrs = nkey.get_attrs()
-                vattrs = nval.get_attrs()
+                kattrs = nkey.get_attrs() #nstategroupid
+                vattrs = nval.get_attrs() #nstatevalueid
 
-                kname = kattrs.get('name')
-                kvalue = kattrs.get('valuefmt', kattrs.get('hashname'))
-                if not kvalue:
-                    kvalue = kattrs.get('value')
+                kname = kattrs.get('name') #field's name
+                kvalue = kattrs.get('hashname', kattrs.get('value')) #statechunk's group name/id
+                vvalue = vattrs.get('hashname', vattrs.get('value')) #statechunk's value name/id
 
-                if not kvalue:
-                    key = "%s" % (kname)
-                else:
-                    key = "%s %s" % (kname, kvalue)
+                info = ''
+                if True:
+                    for nkey, nval in props.fields_std:
+                        pk = nkey.get_attrs().get('valuefmt')
+                        pv = nval.value()
+                        info += " %s=%s" % (pk, pv)
+                    
+                    for nkey, nmin, nmax in props.fields_rng:
+                        pk = nkey.get_attrs().get('valuefmt')
+                        pv1 = nmin.value()
+                        pv2 = nmax.value()
+                        info += " %s=(%s,%s)" % (pk, pv1, pv2)
 
-                #info = ''
-                #for nkey, nval in props.fields_std:
-                #    pk = nkey.get_attrs().get('valuefmt')
-                #    pv = nval.value()
-                #    info += " %s=%s" % (pk, pv)
-                #
-                #for nkey, nmin, nmax in props.fields_rng:
-                #    pk = nkey.get_attrs().get('valuefmt')
-                #    pv1 = nmin.value()
-                #    pv2 = nmax.value()
-                #    info += " %s=(%s,%s)" % (pk, pv1, pv2)
-
-                val = vattrs.get('valuefmt', vattrs.get('hashname'))
-                if not val:
-                    val = vattrs.get('value')
-                val = "%s" % (val)
-                #val = "%s {%s}" % (val, info.strip()) #looks a bit strange
+                key = "%s" % (kname)
+                val = "(%s=%s)" % (kvalue, vvalue)
+                if info:
+                    val += " {%s}" % (info.strip()) #looks a bit strange though
 
             elif type == FIELD_TYPE_KEYMINMAX:
                 _, nkey, nmin, nmax = field
@@ -523,16 +526,20 @@ class TxtpFields(object):
                 val = "(%s, %s)" % (minattrs.get('valuefmt', minattrs.get('value')), maxattrs.get('valuefmt', maxattrs.get('value')))
 
             elif   type == FIELD_TYPE_RTPC:
-                _, nfield, minmax = field
+                _, nfield, minmax, nparam = field
                 attrs = nfield.get_attrs()
 
                 key = attrs.get('name')
                 val = attrs.get('valuefmt', attrs.get('hashname'))
                 if not val:
                     val = str(attrs.get('value'))
+                min, max = minmax
 
+                val = "{%s=%s,%s}" % (val, min, max)
 
-                val += " {%s, %s}" % minmax
+                if nparam:
+                    pkey, pval = self._info_prop(nparam)
+                    val += " <%s: %s>" % (pkey, pval)
 
             else:
                 raise ValueError("bad field")

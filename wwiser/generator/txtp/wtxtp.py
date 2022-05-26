@@ -255,14 +255,18 @@ class Txtp(object):
         if longname and longname != name:
             info += '# * full name: %s\n' % (longname)
 
-        gs_s = self.info.get_gsnames(False)
-        gs_l = self.info.get_gsnames(True)
-        if gs_s != gs_l:
-            info += '# * full vars: %s\n' % (gs_l)
+        #gs_used_s = self.info.get_gsnames(False)
+        gs_used_l = self.info.get_gsnames(True)
+        if gs_used_l: #gs_used_s != gs_used_l:
+            info += '# * gamesyncs: %s\n' % (gs_used_l)
 
-        gv = self.info.get_gvnames()
-        if gv:
-            info += '# * gamevars: %s\n' % (gv)
+        sc_used = self.info.get_scnames()
+        if sc_used:
+            info += '# * statechunks: %s\n' % (sc_used)
+
+        gv_used = self.info.get_gvnames()
+        if gv_used:
+            info += '# * gamevars: %s\n' % (gv_used)
 
         if self.txtpcache.volume_master:
             info += '# * master volume: %sdB\n' % (self.txtpcache.volume_master)
@@ -288,20 +292,20 @@ class Txtp(object):
             info += '# - %s\n' % (bank)
 
         # tree info
-        tree_lines = self.info.get_tree_lines()
-        if tree_lines:
+        path_lines = self.info.get_tree_lines()
+        if path_lines:
             info += '#\n'
-            info += ''.join(tree_lines)
+            info += ''.join(path_lines)
 
-        statechunk_lines = self.info.get_statechunk_lines()
-        if statechunk_lines:
+        sc_lines = self.info.get_statechunk_lines()
+        if sc_lines:
             info += '#\n'
-            info += ''.join(statechunk_lines)
+            info += ''.join(sc_lines)
 
-        rtpc_lines = self.info.get_rtpc_lines()
-        if rtpc_lines:
+        gv_lines = self.info.get_gamevar_lines()
+        if gv_lines:
             info += '#\n'
-            info += ''.join(rtpc_lines)
+            info += ''.join(gv_lines)
 
 
         return info

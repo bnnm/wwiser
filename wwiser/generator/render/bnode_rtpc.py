@@ -5,6 +5,9 @@ import math
 # RTPCs are a graph/curve of params, where passing a value (usually a gamevar) returns another
 # (usually a defined property like volume), to calculate expected values in real time.
 #  For example, PARAM_HP at 100~30 could be volume 100, at 30~0 volume decreses progressively.
+#
+# It's possible to make dummy RTPCs that don't change anything (constant value 0) but probably
+# aren't common enough to bother detecting.
 
 _GRAPH_NEW_SCALING = 72 #>=
 
@@ -248,6 +251,7 @@ class AkRtpc(object):
         self.id = None
         self.graph = None
         self.is_gamevar = False
+        self.nparam = None
 
         self._build(nrtpc)
 
@@ -259,8 +263,8 @@ class AkRtpc(object):
         ntype = nrtpc.find1(name='rtpcType')
         self.is_gamevar = not ntype or ntype.value() == 0
 
-        nparam = nrtpc.find1(name='ParamID')
-        self._parse_props(nparam)
+        self.nparam = nrtpc.find1(name='ParamID')
+        self._parse_props(self.nparam)
 
         scaling = nrtpc.find1(name='eScaling').value()
         self.graph = _AkGraph(nrtpc, scaling)
@@ -313,8 +317,10 @@ class AkRtpc(object):
         return self.is_volume or self.is_makeupgain or self.is_delay
 
     def get(self, x):
-        return self.graph.get(x)
-
+        y = self.graph.get(x)
+        if self.is_delay:
+            y = y * 1000.0 #idelay is float in seconds to ms
+        return y
 
     def accum(self, y, current_value):
         # Accum type affects how values are added to current. Property behavior is fixed (regular props

@@ -1,4 +1,4 @@
-from . import wproperties, wrenderer_util
+from . import wrenderer_util
 from ..txtp import hnode_misc, wtxtp
 
 
@@ -8,7 +8,6 @@ class Renderer(object):
         self._builder = builder
         self._filter = filter
         self._ws = wwstate
-        self._calculator = wproperties.PropertyCalculator(wwstate)
 
 
     def get_generated_hircs(self):

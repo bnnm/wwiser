@@ -64,206 +64,276 @@ from ..txtp import hnode_misc
 # (seen in Astral Chain wems with  "low" "mid" buses + silence states). If init.bnk is
 # loaded those are applied, otherwise volumes aren't correct.
 #
-# Could cache some relative properties on build (default+parents) but still needs to apply
-# stateprops/rtpcs. Other config is added after creating the object.
+# Also buses are only used in "audible" objects, while parent's buses are just to be inherited
+# and don't pass properties to regular objects:
+#   ranseq > aksound          ranseq > aksound
+#   > bus1   > ---            > bus1   > bus2
+# In the first case, aksound uses bus1's props, but in the second bus1 is ignored completely
+# (if bus1 has -96db, aksound will be silent in the first case, not in the second).
+#
+# Could cache some relative properties on build (default+parents) and parent's state/rptc lists
+# to minimize loops, still needs to check most.
 
-# we only want 
+# relative props are only added when node is an actual sound output object
 _HIRC_AUDIBLE = {
     'CAkSound',
     'CAkMusicTrack'
 }
 
 
+# Objects that may contain useful statechunks/rtpcs. Mainly useful on "playable audio" level,
+# on parents usually just silence the base song in various ways.
+# (leave empty to include all, but sometimes makes humongous number of combos)
+# This is only for detection+report combos, states/gamevars are applied if set.
+_HIRC_COMBOS_STATECHUNKS = {
+    'CAkSound',
+    'CAkMusicTrack',
+    'CAkMusicSegment',
+}
+_HIRC_COMBOS_RTPCS = {
+    'CAkSound',
+    'CAkMusicTrack',
+    'CAkMusicSegment',
+}
+
+
 class PropertyCalculator(object):
-    def __init__(self, ws):
+    def __init__(self, ws, bnode, txtp):
         self._ws = ws
-        self._apply_bus = False
+        self._bnode = bnode
+        self._txtp = txtp
+        self._config = hnode_misc.NodeConfig()
+
+        self._bbus = None
+        self._audible = bnode.name in _HIRC_AUDIBLE
+        self._is_base = None #process flag
+        self._include_bus = False #process flag
+
+        self._simple = False # calculate like old wwiser versions (enables some of those flags)
 
 
-    def get_properties(self, bnode, txtp):
-        self.txtp = txtp
-        if True:
-            self._gvitems = []
-            return self._calculate_simple(bnode)
+    def get_properties(self):
+        if self._simple:
+            self._audible = True
 
-        # calculate certain values depending on class
-        hircname = bnode.node.get_name()
+        # get output bus, if possible
+        self._find_bus()
 
-        # process flags (see _calculate)
-        self._read_relative = hircname in _HIRC_AUDIBLE
-        self._read_absolute = True #read absolute props until first found
-        self._read_behavior = True #read behavior props only once
+        # read props from current objects and its parents
+        # (base node gets behavior props, and relative only if it's audible)
+        self._calculate(self._bnode)
 
-        # final calculated props
-        self._props = hnode_misc.NodeConfig()
+        # read props from bus and its parents
+        # those work basically the same (has parents, props/rtpcs/statechunks)
+        # will also register rtpcs and statechunk combos while reading props (may be repeated)
+        # (buses can't apply certain props like delays, but shouldn't be possible anyway)
+        if self._include_bus:
+            self._calculate(self._bbus)
 
-        # read props from hierarchy
-        self._calculate(bnode)
+        return self._config
 
-        # calculate buses' values
-        if self._read_bus:
-            pass
+    # -------------------------------------------------------------------------
 
+    def _find_bus(self):
+        if self._simple:
+            return
+        # only audible nodes use buses
+        if not self._audible:
+            return
+        # buses are inherited or overwritten, find first one (absolute prop)
+        self._bbus = self._get_bus(self._bnode)
 
-    # older wwiser props
-    def _calculate_simple(self, bnode):
-        config = hnode_misc.NodeConfig()
-        if not bnode.props: #events
-            return config
+        # if buses aren't loaded shouldn't apply buses' properties (like busvolume)
+        self._include_bus = self._bbus is not None
+
+    def _get_bus(self, bnode):
+        if not bnode:
+            return None
+        if bnode.bbus:
+            return bnode.bbus
+        return self._get_bus(bnode.bparent)
+
+    # -------------------------------------------------------------------------
+
+    # apply all properties for a node
+    def _calculate(self, bnode):
+        if not bnode:  #no parent
+            return
+
+        # base node applies extra props that aren't inherited
+        self._is_base = self._bnode == bnode
+
+        self._apply_props(bnode)
+
+        self._apply_statechunks(bnode)
+        self._apply_rtpclist(bnode)
+
+        # repeat with parent nodes to simulate prop inheritance (non-playable nodes don't inherit directly)
+        if self._audible and not self._simple:
+            self._calculate(bnode.bparent)
+
+    # -------------------------------------------------------------------------
+
+    # standard props
+    def _apply_props(self, bnode):
+        if not bnode.props:  #events don't have props
+            return
+
+        cfg = self._config
         props = bnode.props
 
-        config.loop = props.loop
+        # behavior props: only on base node
+        # (props from statechunks/rtpcs are included, so must add to existing values)
+        if self._is_base:
+            if cfg.loop is None: #statechunks can't have this though
+                cfg.loop = props.loop
+            cfg.delay += props.delay
 
-        config.gain += props.volume
-        config.gain += props.makeupgain
-        config.delay = props.delay
+        # absolute props: first found only?
+        # ...
 
-        #config.busvolume = props.busvolume
-        #config.outputbusvolume = props.outputbusvolume
+        # relative props: only add current if base node will output audio
+        if self._audible:
+            cfg.gain += props.volume
+            cfg.gain += props.makeupgain
+            # only if we output through a bus (these are separate from bus's props)
+            if self._include_bus:
+                cfg.gain += props.busvolume
+                cfg.gain += props.outputbusvolume
 
+    # -------------------------------------------------------------------------
 
-        self._apply_statechunks(bnode, config)
-        self._apply_rtpclist(bnode, config)
-
-        return config
-
-    # some objects have state > new value info in the statechunk, and if we have set those states we want the values
-    def _apply_statechunks(self, bnode, config):
+    # some objects have state = props in the statechunk, and if we have set those states we want the values
+    def _apply_statechunks(self, bnode):
         if not bnode.statechunk:
             return
-
-        # find songs that silence files with states
-        # mainly useful on MSegment/MTrack level b/c usually games that set silence on those,
-        # while on MSwitch/MRanSeq are often just to silence the whole song.
-        check_state = bnode.name in ['CAkMusicTrack', 'CAkMusicSegment'] #TODO only on root nodes
-        if check_state:
-            bscis = bnode.statechunk.get_usable_states(self._apply_bus)
-            if len(bscis) > 0:
-                config.crossfaded = True
-            for bsci in bscis:
-                self.txtp.info.add_statechunk(bsci)
-
+        cfg = self._config
         scparams = self._ws.scparams
+
+        check_info = True # always?
+        if check_info:
+            bscis = bnode.statechunk.get_usable_states(self._include_bus)
+
+            # useful? may mark lots of uninteresting {s}
+            #if len(bscis) > 0:
+            #    cfg.crossfaded = True
+
+            # register info list and possible combo states while we are at it
+            include_combo = not _HIRC_COMBOS_STATECHUNKS or bnode.name in _HIRC_COMBOS_STATECHUNKS
+            for bsci in bscis:
+                self._txtp.info.report_statechunk(bsci)
+
+                if not scparams and include_combo:
+                    item = (bsci.nstategroupid, bsci.nstatevalueid)
+                    self._ws.scpaths.add_nstate(*item)
+
+                    # mark audio can be modified (technically could be delay only so maybe shouldn't be 'crossfades')
+                    cfg.crossfaded = True
+
+
+        # find currently set states (may be N)
         if not scparams:
             return
-
-        # get currently set states (may be N at once)
         for state in scparams.get_states():
             bstate = bnode.statechunk.get_bstate(state.group, state.value)
             if not bstate:
                 continue
-            # apply props
-            props = bstate.props
-            config.gain += props.volume
-            config.gain += props.makeupgain
 
-            self.txtp.info.statechunk(state)
+            cfg.crossfaded = True
+            self._apply_props(bstate)
+            self._txtp.info.statechunk(state)
 
+    # -------------------------------------------------------------------------
 
-    # some objects have rtpc > new value info in the statechunk, and if we have set those states we want the values
-    def _apply_rtpclist(self, bnode, config):
+    # some objects have rtpc > new value info that can be optionally applied
+    def _apply_rtpclist(self, bnode):
         if not bnode.rtpclist:
             return
-
-        # Find songs that silence crossfade files with rtpcs,  mainly useful on Segment/Track level.
-        # Less common is on Switch/RanSeq (sometimes just silence the base song but also BGM rank in some DMC5 events).
-        check_rtpc = True #bnode.name in ['CAkMusicTrack', 'CAkMusicSegment']
-        if check_rtpc:
-            brtpcs = bnode.rtpclist.get_usable_rtpcs(self._apply_bus)
-            if len(brtpcs) > 0:
-                config.crossfaded = True
-            for brtpc in brtpcs:
-                self.txtp.info.add_rtpc(brtpc)
-
+        cfg = self._config
         gvparams = self._ws.gvparams
+
+
+        check_info = True # always?
+        if check_info:
+            brtpcs = bnode.rtpclist.get_usable_rtpcs(self._include_bus)
+
+            # useful? may mark lots of uninteresting {s}
+            #if len(brtpcs) > 0:
+            #    cfg.crossfaded = True
+
+            include_combo = not _HIRC_COMBOS_RTPCS or bnode.name in _HIRC_COMBOS_RTPCS
+            for brtpc in brtpcs:
+                self._txtp.info.report_rtpc(brtpc)
+
+                if not gvparams and include_combo:
+                    # no autocombos for GVs since thet need careful consideration by users
+
+                    # mark audio can be modified (technically could be delay only so maybe shouldn't be 'crossfades')
+                    cfg.crossfaded = True
+
+
+        # get currently set rtpcs (may be N)
         if not gvparams:
             return
-
-        # get currently set rtpcs (may be N at once)
         for gvitem in gvparams.get_items():
-            if not gvitem.key: #set all to gvitem's value
+            if not gvitem.key: #special meaning of set all to gvitem's value
                 brtpcs = bnode.rtpclist.get_rtpcs()
             else:
                 brtpc = bnode.rtpclist.get_rtpc(gvitem.key)
                 brtpcs = [brtpc]
 
             for brtpc in brtpcs:
-                if not brtpc or not brtpc.is_usable(self._apply_bus):
+                if not brtpc or not brtpc.is_usable(self._include_bus):
                     continue
-                self._apply_rtpc(gvitem, brtpc, config)
 
+                cfg.crossfaded = True
+                self._apply_rtpc(gvitem, brtpc)
 
-    def _apply_rtpc(self, gvitem, brtpc, config):
+    def _apply_rtpc(self, gvitem, brtpc):
 
-            if gvitem.is_default:
-                key = gvitem.key
-                if not key: #means: set all keys to default
-                    key = brtpc.id
-                value = self._ws.globalsettings.get_rtpc_default(key)
-            elif gvitem.is_unset:
-                value = None
-            elif gvitem.is_min:
-                value = brtpc.min()
-            elif gvitem.is_max:
-                value = brtpc.max()
-            else:
-                value = gvitem.value
+        if gvitem.is_default:
+            key = gvitem.key
+            if not key: #means: set all keys to default
+                key = brtpc.id
+            value = self._ws.globalsettings.get_rtpc_default(key)
+        elif gvitem.is_unset:
+            value = None
+        elif gvitem.is_min:
+            value = brtpc.min()
+        elif gvitem.is_max:
+            value = brtpc.max()
+        else:
+            value = gvitem.value
 
-            if value is None: #not found or not set
-                return
+        if value is None: #not found or not set
+            return
 
-            y = brtpc.get(value)
+        y = brtpc.get(value)
 
-            self.txtp.info.gamevar(brtpc.nid, value)
+        #TODO improve (maybe rtpc should return some mini props?)
+        # apply props
+        cfg = self._config
 
-            # apply props #TODO improve
-            if brtpc.is_volume:
-                config.gain = brtpc.accum(y, config.gain)
-            if brtpc.is_makeupgain:
-                config.gain = brtpc.accum(y, config.gain)
+        # behavior props: only on base node
+        if self._is_base:
+            # RTPCs can't have loops
             if brtpc.is_delay:
-                config.delay = brtpc.accum(y, config.delay)
+                cfg.delay = brtpc.accum(y, cfg.delay)
 
-            if self._read_bus:
+        # absolute props: first found only?
+        # ...
+
+        # relative props: only add current if base node will output audio
+        if self._audible:
+            if brtpc.is_volume:
+                cfg.gain = brtpc.accum(y, cfg.gain)
+            if brtpc.is_makeupgain:
+                cfg.gain = brtpc.accum(y, cfg.gain)
+
+            if self._include_bus:
                 if brtpc.is_busvolume:
-                    config.gain = brtpc.accum(y, config.gain)
+                    cfg.gain = brtpc.accum(y, cfg.gain)
                 if brtpc.is_outputbusvolume:
-                    config.gain = brtpc.accum(y, config.gain)
+                    cfg.gain = brtpc.accum(y, cfg.gain)
 
-
-    def _calculate(self, bnode):
-        if not bnode.props: # should exist even if empty
-            return
-
-        # read relative props only if initial HIRC is at the bottom
-        if self._read_relative:
-            self._calc_relative(self._props, bnode.props)
-            pass
-
-        # read absolute props until first found, once ly
-        if self._read_absolute:
-            self._calc_relative(self._props, bnode.props)
-            pass
-
-        # read behavior props on initial object
-        if self._read_behavior:
-            pass
-
-        # keep going in the hierarchy if possible
-        if bnode.bparent:
-            self._calculate(bnode.bparent)
-            return
-    
-    def _calc_relative(self, p, bp):
-        #p.volume += bp.voice_volume
-        #p.playbackspeed *= bp.playbackspeed #similar to pitch but for music hierarchy, multiplicative
-        pass
-
-    def _calc_absolute(self, p, bp):
-        # detect if some 
-        #self._read_absolute = False
-        self._read_absolute = False
-
-    def _calc_behavior(self, p, bp):
-        # loop etc
-        self._read_behavior = False
+        self._txtp.info.gamevar(brtpc.nid, value)

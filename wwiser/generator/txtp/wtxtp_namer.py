@@ -191,19 +191,32 @@ class TxtpNamer(object):
                 name += "-%s" % (ntid.value())
 
         if is_transition:
-            tid = self.btransition.tid
-            name += '~{transition-%s}' % (tid)
+            attrs_node = node.get_attrs()
+            index = attrs_node.get('index') #segment index
+            if index is None: #shouldn't happen...
+                info = self.btransition.tid #segment id, looks a bit messier
+            else:
+                info = "%04u" % (int(index))
+
+            # in theory same transition segment could be in different banks but 
+            # since we have the event name should be enough to tell them apart
+            name += '~{transition-%s}' % (info)
 
         # a trigger (hashname) can call different segments, so we need both
         if is_stinger:
-            ntrigger = self.bstinger.ntrigger
-            tid = self.bstinger.tid
+            attrs_node = node.get_attrs()
+            index = attrs_node.get('index') #segment index
+            if index is None: #shouldn't happen...
+                info = self.bstinger.tid #segment id, looks a bit messier
+            else:
+                info = "%04u" % (int(index))
 
+            ntrigger = self.bstinger.ntrigger
             trigname = ntrigger.get_attrs().get('hashname')
             if not trigname:
                 trigname = ntrigger.value()
 
-            name += "~{stinger-%s}=%s" % (tid, trigname)
+            name += "~{stinger-%s}=%s" % (info, trigname)
 
         # params
         name += txtp.info.get_gsnames()

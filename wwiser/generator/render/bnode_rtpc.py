@@ -316,6 +316,7 @@ class AkRtpc(object):
             return True
         return self.is_volume or self.is_makeupgain or self.is_delay
 
+    # get resulting value: X = game parameter, Y = Wwise property
     def get(self, x):
         y = self.graph.get(x)
         if self.is_delay:

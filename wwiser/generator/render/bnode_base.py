@@ -1,5 +1,5 @@
 from . import bnode_automation, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk
-from ..txtp import wtxtp_info
+from ..txtp import wtxtp_fields
 
 
 #beware circular refs
@@ -18,7 +18,7 @@ class CAkHircNode(object):
     def init_node(self, node):
         self._build_defaults(node)
 
-        self.fields = wtxtp_info.TxtpFields() #main node fields, for printing
+        self.fields = wtxtp_fields.TxtpFields() #main node fields, for printing
 
         # loaded during process, if object has them (different classes have more or less)
         self.props = None

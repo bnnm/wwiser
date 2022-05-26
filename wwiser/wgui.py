@@ -1,6 +1,7 @@
 import os, logging, threading, platform
-from tkinter import *
+import tkinter as tk
 from tkinter import ttk, font, filedialog, scrolledtext, messagebox
+from tkinter import TOP, BOTTOM, LEFT, RIGHT, BOTH, END, X, Y, NORMAL, DISABLED, EXTENDED
 
 from . import wversion, wlogs
 from .names import wnames
@@ -41,10 +42,15 @@ class Gui(object):
         #----------------------------------------------------------------------
         # base
 
-        root = Tk()
+        root = tk.Tk()
         root.geometry('900x900')
         #root.resizable(width=False,height=False)
         #root.iconbitmap(wloader.Loader.get_resource('resources/wwiser.ico'))
+
+        #style = ttk.Style(root)
+        #style.theme_use('default')
+        #root.tk.call("source", "theme.tcl")
+        #root.tk.call("set_theme", "light")
 
         title = "WWISER"
         if wversion.WWISER_VERSION:
@@ -64,8 +70,8 @@ class Gui(object):
 
         self._lbl(frame, "Banks:").pack(side=TOP, fill=BOTH)
 
-        lst = Listbox(frame, selectmode=EXTENDED, height=20)
-        scr = Scrollbar(lst, orient="vertical")
+        lst = tk.Listbox(frame, selectmode=EXTENDED, height=20)
+        scr = tk.Scrollbar(lst, orient="vertical")
         scr.config(command=lst.yview)
         lst.config(yscrollcommand=scr.set)
 
@@ -304,11 +310,11 @@ class Gui(object):
     def _box(self, field, frame, text, info, width=50, type=None):
         lbl = ttk.Label(frame, text=text)
         if   type == 'int':
-            var = IntVar()
+            var = tk.IntVar()
         elif type == 'float':
-            var = DoubleVar()
+            var = tk.DoubleVar()
         else:
-            var = StringVar()
+            var = tk.StringVar()
 
         ent = ttk.Entry(frame, textvariable=var, width=width)
         if info:
@@ -342,7 +348,7 @@ class Gui(object):
         return sep
 
     def _chk(self, field, frame, text, command=None):
-        var = BooleanVar()
+        var = tk.BooleanVar()
         var.set(False)
         chk = ttk.Checkbutton(frame, text=text, variable=var, command=command)
         self._fields[field] = var

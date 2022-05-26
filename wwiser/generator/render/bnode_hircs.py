@@ -1,4 +1,4 @@
-from ..txtp import hnode_misc, wtxtp_info
+from ..txtp import hnode_misc, wtxtp_fields
 
 from .bnode_base import CAkHircNode
 from .bnode_markers import AkMarkerList
@@ -480,7 +480,7 @@ class AkMusicRanSeqPlaylistItem(object):
         self.ntid = None
         self.type = None
         self.loop = None
-        self.fields = wtxtp_info.TxtpFields()
+        self.fields = wtxtp_fields.TxtpFields()
         self.items = []
 
 
@@ -666,4 +666,4 @@ class CAkMusicTrack_Clip(object):
         self.neid = None
         self.sound = hnode_misc.NodeSound()
         self.sound.clip = True
-        self.fields = wtxtp_info.TxtpFields()
+        self.fields = wtxtp_fields.TxtpFields()

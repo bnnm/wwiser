@@ -243,6 +243,7 @@ class TxtpInfo(object):
 
 
     def _get_fields_lines(self, info, fields):
+        fields.sort()
         lines = fields.generate()
         if not lines:
             return None

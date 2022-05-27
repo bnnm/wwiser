@@ -65,15 +65,10 @@ class CAkHircNode(object):
             return None
         self._builder.report_unknown_props(props.unknowns)
 
-        #TODO improve props (useful?)
-        for nfld in props.fields_fld:
-            self.fields.prop(nfld)
-
-        for nkey, nval in props.fields_std:
-            self.fields.keyval(nkey, nval)
-
-        for nkey, nmin, nmax in props.fields_rng:
-            self.fields.keyminmax(nkey, nmin, nmax)
+        # add only behavior props (relative props include parents+buses, which aren't always part of path tree)
+        self.fields.props(props.fields_bfld)
+        self.fields.keyvals(props.fields_bstd)
+        self.fields.keyminmaxs(props.fields_brng)
 
         return props
 

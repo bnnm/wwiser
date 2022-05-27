@@ -7,9 +7,21 @@ _WARN_PROPS = [
     "[LoopStart]", "[LoopEnd]",
 ]
 
-# fields props that are shown (basically behavior ones)
-_FIELD_PROPS = {
-    "[Loop]", '[Delay]', '[InitialDelay]'
+
+# "behavior" field props (shown in path tree)
+_FIELD_BEHAVIOR_PROPS = {
+    '[Loop]', '[DelayTime]', '[InitialDelay]'
+}
+
+# fields props for statechunk info (most others aren't interesting for txtp purposes)
+_FIELD_REGISTER_PROPS = {
+    '[Volume]','[LFE]','[Pitch]','[LPF]','[HPF]','[BusVolume]','[MakeUpGain]',
+    '[PAN_LR]','[PAN_FR]','[CenterPCT]','[DelayTime]','[TransitionTime]','[Probability]',
+    '[OutputBusVolume]','[OutputBusHPF]','[OutputBusLPF]',
+    '[LoopStart]','[LoopEnd]', '[TrimInTime]','[TrimOutTime]',
+    '[FadeInTime]','[FadeOutTime]', '[FadeInCurve]','[FadeOutCurve]',
+    '[LoopCrossfadeDuration]', '[CrossfadeUpCurve]','[CrossfadeDownCurve]',
+    '[PlaybackSpeed]','[Loop]','[InitialDelay]','[PAN_UD]',
 }
 
 _OLD_AUDIO_PROPS = [
@@ -61,9 +73,14 @@ class CAkProps(object):
 
         # external info
         self.unknowns = []
-        self.fields_fld = []
-        self.fields_std = []
-        self.fields_rng = []
+        # default/all
+        self.fields_fld = [] #single field
+        self.fields_std = [] # key-val
+        self.fields_rng = [] # key-min/max
+        # behavior props
+        self.fields_bfld = self.fields_fld
+        self.fields_bstd = []
+        self.fields_brng = []
 
         self._build(node)
 
@@ -130,6 +147,16 @@ class CAkProps(object):
 
         return value
 
+    def _keyname(self, nkey):
+        keyname = nkey.get_attr('valuefmt') # "0xNN [name]"
+
+        # by default keyname is "0xNN [thing]", change to "[thing]"
+        # but not for unknown values, as text may not be unique ("[?]")
+        if '?' not in keyname and 'Custom' not in keyname:
+            pos = keyname.index('[')
+            keyname = keyname[pos:]
+
+        return keyname
 
     def _build_new(self, node):
 
@@ -146,12 +173,16 @@ class CAkProps(object):
                 nkey = nprop.find(name='pID')
                 nval = nprop.find(name='pValue')
 
-                keyname = nkey.get_attr('valuefmt') # "0xNN [name]"
+                keyname = self._keyname(nkey)
                 pval = nval.value()
                 self._add_prop(self._props, keyname, pval)
 
-                if not _FIELD_PROPS or keyname in _FIELD_PROPS:
-                    self.fields_std.append( (nkey, nval) )
+                if keyname not in _FIELD_REGISTER_PROPS:
+                    continue
+                item = (nkey, nval)
+                self.fields_std.append(item)
+                if not _FIELD_BEHAVIOR_PROPS or keyname in _FIELD_BEHAVIOR_PROPS:
+                    self.fields_bstd.append(item)
 
 
         # ranged values, wwise picks one value at random on each play
@@ -164,12 +195,16 @@ class CAkProps(object):
                 nmin = nprop.find(name='min')
                 nmax = nprop.find(name='max')
 
-                keyname = nkey.get_attr('valuefmt')
+                keyname = self._keyname(nkey)
                 rval = (nmin.value(), nmax.value())
                 self._add_prop(self._ranges, keyname, rval)
 
-                if not _FIELD_PROPS or keyname in _FIELD_PROPS:
-                    self.fields_rng.append( (nkey, nmin, nmax) )
+                if keyname not in _FIELD_REGISTER_PROPS:
+                    continue
+                item = (nkey, nmin, nmax)
+                self.fields_rng.append(item)
+                if not _FIELD_BEHAVIOR_PROPS or keyname in _FIELD_BEHAVIOR_PROPS:
+                    self.fields_brng.append(item)
 
 
     def _build_old(self, node):
@@ -218,14 +253,6 @@ class CAkProps(object):
 
 
     def _add_prop(self, items, keyname, val):
-
-        # by default keyname is "0xNN [thing]", change to "[thing]"
-        # but not for unknown values, as text may not be unique ("[?]")
-        if '?' not in keyname and 'Custom' not in keyname:
-            pos = keyname.index('[')
-            keyname = keyname[pos:]
-
-
         if any(prop in keyname for prop in _WARN_PROPS):
             self.unknowns.append(keyname)
 

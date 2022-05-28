@@ -1,4 +1,4 @@
-from ..registry import wgamesync
+from ..registry import wparams
 
 
 # Handles tree with multi gamesync (order of gamesyncs is branch order in tree)
@@ -61,7 +61,7 @@ class AkDecisionTree(object):
             if ngtype:
                 gtype = ngtype.value()
             else: #DialogueEvent in older versions, assumed default
-                gtype = wgamesync.TYPE_STATE
+                gtype = wparams.TYPE_STATE
             self.args.append( (gtype, ngname) )
 
         # make a tree for access, plus a path list (similar to how the editor shows them) for GS combos

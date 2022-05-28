@@ -1,4 +1,4 @@
-import logging, itertools
+import logging
 from collections import OrderedDict
 from ... import wfnv
 
@@ -47,12 +47,10 @@ class GamevarsParams(object):
     def __init__(self):
         self._items = OrderedDict()
 
-    def adds(self, items):
-        if not items:
+    def add(self, item):
+        if not item:
             return
-
-        for item in items:
-            self._items[item.key] = item
+        self._items[item.key] = item
 
     def get_item(self, id):
         id = int(id)
@@ -66,64 +64,36 @@ class GamevarsParams(object):
 # stores combos of gamevars (rtpc) config
 class GamevarsPaths(object):
     def __init__(self):
-        self._items = OrderedDict()
         self._combos = []
         self._fnv = wfnv.Fnv()
 
-    def adds(self, elems):
-        if not elems:
-            return
+    def add_params(self, params):
+        for combo in params.combos():
+            gparams = GamevarsParams()
+            for item in combo:
+                gitem = self._make_gitem(item)
+                gparams.add(gitem)
+            self._combos.append(gparams)
 
-        # this allows making combos in the form of:
-        # bgm=m01 > bgm=m01
-        # bgm=m01 sfx=s01 > bgm=m01 sfx=s01
-        # bgm=m01,m02 > bgm=m01 / bgm=m01
-        # bgm=m01,m02 + sfx=s01,s02 > bgm=m01 sfx=s01 / bgm=m01 sfx=s02 / bgm=m02 sfx=s01 / bgm=m02 sfx=s02
+    def _make_gitem(self, item):
+        key = item.key
+        val = item.val
 
-        for elem in elems:
-            parts = elem.split('=')
-            if len(parts) != 2:
-                continue
-            key = parts[0]
-            val = parts[1]
+        if key == '*': #special
+            keyname = None
+        elif not key.isnumeric():
+            keyname = key
+            key = self._fnv.get_hash(key)
+        else:
+            keyname = None
 
-            if key == '*': #special
-                keyname = None
-            elif not key.isnumeric():
-                keyname = key
-                key = self._fnv.get_hash(key)
-            else:
-                keyname = None
+        gitem = GamevarItem(key, val, keyname)
+        if not gitem.ok:
+            logging.info('parser: ignored incorrect gamevar %s', item.elem)
+            return None
 
-            if ',' in val:
-                item = None
-                subvals = val.split(",")
-                for subval in subvals:
-                    item = GamevarItem(key, subval, keyname)
-                    self._add_item(item, elem)
-            else:
-                item = GamevarItem(key, val, keyname)
-                self._add_item(item, elem)
+        return gitem
 
-        # make possible combos
-        itemproduct = itertools.product(*self._items.values())
-        for itemlist in itemproduct:
-            gvparams = GamevarsParams()
-            gvparams.adds(itemlist)
-            self._combos.append(gvparams)
-
-    def _add_item(self, item, elem):
-        if not item or not item.ok:
-            logging.info('parser: ignored incorrect gamevar %s', elem)
-            return
-
-        if item.key not in self._items:
-            self._items[item.key] = []
-        items = self._items[item.key]
-        for old_item in items:
-            if old_item.value == item.value:
-                return
-        items.append(item)
 
     def combos(self):
         return self._combos

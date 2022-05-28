@@ -1,6 +1,6 @@
 import os
 from . import wtxtp_fields
-from ..registry import wgamesync
+from ..registry import wparams
 
 ###
 # saves a printable info tree
@@ -308,9 +308,9 @@ class TxtpInfoNode(object):
             if value == 0:
                 value = '-'
 
-            if   gtype == wgamesync.TYPE_STATE:
+            if   gtype == wparams.TYPE_STATE:
                 type = "(%s=%s)" % (name, value) # states = more globals = "("
-            elif gtype == wgamesync.TYPE_SWITCH:
+            elif gtype == wparams.TYPE_SWITCH:
                 type = "[%s=%s]" % (name, value) # switches = more restrictive = "["
             else:
                 raise ValueError("unknown gamesync type %i" % (gtype))

@@ -1,6 +1,6 @@
 import itertools
 from collections import OrderedDict
-from . import wgamesync
+from . import wparams
 
 
 # Sometimes (ex. Platinum games) set states control volumes, so musictracks must play or mute.
@@ -44,7 +44,7 @@ from . import wgamesync
 
 class StateChunkItem(object):
     def __init__(self):
-        self.type = wgamesync.TYPE_STATE
+        self.type = wparams.TYPE_STATE #used?
         self.group = None
         self.value = None
         self.group_name = None
@@ -76,8 +76,8 @@ class StateChunkItem(object):
     # used with "not in"
     def __eq__(self, other):
         return (
-            self.type == other.type and 
-            self.group == other.group and 
+            self.type == other.type and
+            self.group == other.group and
             self.value == other.value
         )
 
@@ -85,7 +85,35 @@ class StateChunkItem(object):
         gn = self.group_name or str(self.group)
         vn = self.value_name or str(self.value)
         return str((gn,vn))
-        
+
+# ---------------------------------------------------------
+
+# stores current selected statechunk path
+class StateChunkParams(object):
+    def __init__(self):
+        self._elems = OrderedDict()
+        self._unreachables = False
+        pass
+
+    def has_unreachables(self):
+        return self._unreachables
+
+    def adds(self, scparams):
+        for scparam in scparams:
+            self.add(scparam)
+
+    def add(self, scitem):
+        if scitem.group is None or scitem.value is None:
+            return
+        if scitem.unreachable:
+            self._unreachables = True
+        key = (scitem.group, scitem.value)
+        self._elems[key] = scitem
+
+    def get_states(self):
+        return self._elems.values()
+
+# ---------------------------------------------------------
 
 # saves possible volume paths in a txtp
 class StateChunkPaths(object):
@@ -109,11 +137,12 @@ class StateChunkPaths(object):
     def set_unreachables_only(self):
         self._unreachables_only = True
 
-    def add_nstates(self, ngamesyncs):
+    # register
+    def adds(self, ngamesyncs):
         for ngroup, nvalue in ngamesyncs:
-            self.add_nstate(ngroup, nvalue)
+            self.add(ngroup, nvalue)
 
-    def add_nstate(self, ngroup, nvalue):
+    def add(self, ngroup, nvalue):
         scitem = StateChunkItem()
         scitem.init_nstate(ngroup, nvalue)
         self._add_scstate(scitem)
@@ -126,7 +155,6 @@ class StateChunkPaths(object):
             #val_default = (group, 0, group_name, None)
             #items.append(val_default)
             self._elems[key] = items
-
 
         #for scitem in self._elems[key]:
         #    if scitem not in self._elems[key]:
@@ -153,7 +181,7 @@ class StateChunkPaths(object):
         # combos of existing variables
         items = itertools.product(*elems)
         for item in items:
-            scparam = StateChunkParams()    
+            scparam = StateChunkParams()
             scparam.adds(item)
             self._paths.append(scparam)
 
@@ -253,30 +281,3 @@ class StateChunkPaths(object):
 
             #if not items:
             #    self._elems.pop(key)
-
-#******************************************************************************
-
-# stores current selected statechunk path
-class StateChunkParams(object):
-    def __init__(self):
-        self._elems = OrderedDict()
-        self._unreachables = False
-        pass
-
-    def has_unreachables(self):
-        return self._unreachables
-
-    def adds(self, scparams):
-        for scparam in scparams:
-            self.add(scparam)
-
-    def add(self, scitem):
-        if scitem.group is None or scitem.value is None:
-            return
-        if scitem.unreachable:
-            self._unreachables = True
-        key = (scitem.group, scitem.value)
-        self._elems[key] = scitem
-
-    def get_states(self):
-        return self._elems.values()

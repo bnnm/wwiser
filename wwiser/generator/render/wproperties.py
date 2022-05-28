@@ -60,7 +60,7 @@ from ..txtp import hnode_misc
 # are added the final value.
 #
 # Generally bus volumes aren't too important since final volume can be autonormalized, but in
-# rare cases buses are used to fix certain .wem volumes and may contain useful statechunks 
+# rare cases buses are used to fix certain .wem volumes and may contain useful statechunks
 # (seen in Astral Chain wems with  "low" "mid" buses + silence states). If init.bnk is
 # loaded those are applied, otherwise volumes aren't correct.
 #
@@ -80,7 +80,6 @@ _HIRC_AUDIBLE = {
     'CAkMusicTrack'
 }
 
-
 # Objects that may contain useful statechunks/rtpcs. Mainly useful on "playable audio" level,
 # on parents usually just silence the base song in various ways.
 # (leave empty to include all, but sometimes makes humongous number of combos)
@@ -96,6 +95,11 @@ _HIRC_COMBOS_RTPCS = {
     'CAkMusicSegment',
 }
 
+
+_CLAMP_LOOPS = (0, 32767) # number
+_CLAMP_VOLUME = (-200.0, 200.0) # db
+_CLAMP_DELAY = (0 * 1000.0,  3200 * 1000.0) # seconds to ms
+#_CLAMP_FILTER = (0, 100) # percent (for HPF/LPF)
 
 class PropertyCalculator(object):
     def __init__(self, ws, bnode, txtp):
@@ -130,6 +134,9 @@ class PropertyCalculator(object):
         if self._include_bus:
             self._calculate(self._bbus)
 
+        # props are clamped in Wwise to certain min/max
+        self._clamp()
+
         return self._config
 
     # -------------------------------------------------------------------------
@@ -152,6 +159,25 @@ class PropertyCalculator(object):
         if bnode.bbus:
             return bnode.bbus
         return self._get_bus(bnode.bparent)
+
+
+    def _clamp(self):
+        cfg = self._config
+
+        # simulate Wwise's clamps, useless but might as well
+        cfg.loop = self._clamp_prop(cfg.loop, *_CLAMP_LOOPS)
+        cfg.gain = self._clamp_prop(cfg.gain, *_CLAMP_VOLUME)
+        cfg.delay = self._clamp_prop(cfg.delay, *_CLAMP_DELAY)
+
+
+    def _clamp_prop(self, prop, min, max):
+        if prop is None:
+            return prop
+        if prop < min:
+            return min
+        if prop > max:
+            return max
+        return prop
 
     # -------------------------------------------------------------------------
 
@@ -208,7 +234,7 @@ class PropertyCalculator(object):
         if not bnode.statechunk:
             return
         cfg = self._config
-        scparams = self._ws.scparams
+        ws = self._ws
 
         check_info = True # always?
         if check_info:
@@ -223,18 +249,19 @@ class PropertyCalculator(object):
             for bsci in bscis:
                 self._txtp.info.report_statechunk(bsci)
 
-                if not scparams and include_combo:
+                if not ws.scparams and include_combo:
                     item = (bsci.nstategroupid, bsci.nstatevalueid)
-                    self._ws.scpaths.add_nstate(*item)
+                    ws.scpaths.add(*item)
 
+                if include_combo:
                     # mark audio can be modified (technically could be delay only so maybe shouldn't be 'crossfades')
                     cfg.crossfaded = True
 
 
         # find currently set states (may be N)
-        if not scparams:
+        if not ws.scparams:
             return
-        for state in scparams.get_states():
+        for state in ws.scparams.get_states():
             bstate = bnode.statechunk.get_bstate(state.group, state.value)
             if not bstate:
                 continue
@@ -267,7 +294,9 @@ class PropertyCalculator(object):
 
                 if not gvparams and include_combo:
                     # no autocombos for GVs since thet need careful consideration by users
+                    pass
 
+                if include_combo:
                     # mark audio can be modified (technically could be delay only so maybe shouldn't be 'crossfades')
                     cfg.crossfaded = True
 

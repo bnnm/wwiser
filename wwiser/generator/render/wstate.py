@@ -1,9 +1,7 @@
-from ..registry import wgamesync, wstatechunks, wtransitions, wstingers, wgamevars
+from ..registry import wgamesync, wstatechunks, wtransitions, wstingers, wgamevars, wparams
 from . import wglobalsettings
 
-# simple container/simulation of internal wwise state, that is, currently set
-# 
-# It also serves as a way to register info
+# Simple container/simulation of internal wwise state, (currently set or newly registered paths).
 
 class WwiseState(object):
     def __init__(self, txtpcache):
@@ -41,11 +39,11 @@ class WwiseState(object):
 
 
     def reset_gs(self):
-        self.gspaths = wgamesync.GamesyncPaths(self._txtpcache)  
+        self.gspaths = wgamesync.GamesyncPaths(self._txtpcache)
         self.gsparams = self._default_gsparams
 
     def reset_sc(self):
-        self.scpaths = wstatechunks.StateChunkPaths()  
+        self.scpaths = wstatechunks.StateChunkPaths()
         self.scparams = self._default_sc
 
     def reset_gv(self):
@@ -108,11 +106,13 @@ class WwiseState(object):
     def set_gvdefaults(self, items):
         if items is None: #allow []
             return
+        params = wparams.Params(allow_gp=True)
+        params.adds(items)
 
         # May set multiple params at once, so we save this default/fixed gvpaths.
         # If there is only one 1 path set it default to optimize calls (otherwise would try to get combos for 1 type)
         gvpaths = wgamevars.GamevarsPaths()
-        gvpaths.adds(items)
+        gvpaths.add_params(params)
 
         gvcombos = gvpaths.combos()
         if len(gvcombos) == 1:

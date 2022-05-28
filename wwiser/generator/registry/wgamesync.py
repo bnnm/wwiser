@@ -1,4 +1,5 @@
 import logging, re
+from . import wparams
 from ... import wfnv
 
 
@@ -9,12 +10,6 @@ DEBUG_PRINT_TREE_MAKING = False
 DEBUG_PRINT_TREE_TEXT = False
 DEBUG_DEPTH_MULT = 2
 
-TYPE_SWITCH = 0
-TYPE_STATE = 1
-TYPE_NAMES = {
-    TYPE_SWITCH: 'SW',
-    TYPE_STATE: 'ST',
-}
 
 # GAMESYNCS' STATE/SWITCH PATHS
 # Some objects depend on states/switches. When parsing a root node, by default the
@@ -116,7 +111,7 @@ TYPE_NAMES = {
 #     \                   =gameplay  > track1
 #     > action > switch: (music)
 #                         =gameplay  > track2
-#                       
+#
 # * layered switches (different)
 #   - path1: music=gameplay + scene=invalid (track1)
 #   - path2: music=invalid  + scene=s1 (track2)
@@ -143,7 +138,7 @@ TYPE_NAMES = {
 # ? option to enable layered combos after non-layered (use combinations)
 # ? check itertools generator instead of lists
 #
-#******************************************************************************
+# ---------------------------------------------------------
 
 class _GamesyncNode(object):
     def __init__(self, parent, gamesyncs):
@@ -154,7 +149,7 @@ class _GamesyncNode(object):
     def append(self, node):
         self.children.append(node)
 
-#******************************************************************************
+# ---------------------------------------------------------
 
 def _get_info(txtpcache, id):
     try:
@@ -169,103 +164,6 @@ def _get_info(txtpcache, id):
     else:
         return id
 
-
-# saves possible switch paths in a txtp
-class GamesyncPaths(object):
-
-    def __init__(self, txtpcache):
-        self._empty = True
-        self._txtpcache = txtpcache
-        self._root = _GamesyncNode(None, [])
-        self._current = self._root
-
-    def is_empty(self):
-        return self._empty
-
-    def adds(self, gamesyncs):
-        #for gamesync in gamesyncs: #todo
-        #    logging.info("GP added: %i, %i, %i" % gamesync)
-
-        self._empty = False
-        node = _GamesyncNode(self._current, gamesyncs)
-        self._current.append(node)
-        self._current = node
-
-    def add(self, type, name, value):
-        self.adds([(type, name, value)])
-
-
-    def done(self):
-        self._current = self._current.parent
-
-
-    def _print_combos(self, node):
-        self._depth += 1
-        for subnode in node.children:
-            elems = self._print_elems(subnode.elems)
-            logging.info("%s%s", ' ' * self._depth * DEBUG_DEPTH_MULT, elems)
-            if not subnode.children:
-                self._leaf_count += 1
-            self._print_combos(subnode)
-        self._depth -= 1
-
-    def combos(self):
-        if DEBUG_PRINT_TREE_BASE:
-            self._depth = 0
-            self._leaf_count = 0
-            logging.info("*** tree")
-            self._print_combos(self._root)
-            logging.info(" >> (total %i)" % (self._leaf_count))
-            logging.info("")
-
-        self._paths = []
-        self._find_path(self._root)
-
-
-        if DEBUG_PRINT_TREE_COMBOS:
-            logging.info("*** combos")
-            for path in self._paths:
-                elems = self._print_elems(path.get_elems())
-                logging.info(elems)
-            logging.info(" >> (total %i)" % (len(self._paths)))
-            logging.info("")
-
-        return self._paths
-
-    def _print_elems(self, elems):
-        lines =['[']
-        for elem in elems:
-            if len(elem) == 2:
-                type, name = elem
-                lines.append('(%s,%s)' % (type, self._get_info(name)))
-            else:
-                type, name, value = elem
-                lines.append('(%s,%s,%s)' % (type, self._get_info(name), self._get_info(value)))
-        lines.append(']')
-        return ''.join(lines)
-
-    def _get_info(self, id):
-        return _get_info(self._txtpcache, id)
-
-    def _find_path(self, node):
-        if not node.children:
-            # leaf node found, add all gamesyncs to path (in reverse to simplify)
-            path = GamesyncParams(self._txtpcache)
-
-            path_node = node
-            while path_node:
-                path.adds(path_node.elems)
-                path_node = path_node.parent
-                path._depth += 1
-
-            if DEBUG_PRINT_TREE_MAKING:
-                logging.debug("GS path added")
-            self._paths.append(path)
-
-        for child in node.children:
-            self._find_path(child)
-
-#******************************************************************************
 
 # stores current selected switch path
 class GamesyncParams(object):
@@ -290,6 +188,7 @@ class GamesyncParams(object):
                 elems.append((type, name, value))
         return elems
 
+    # standard add
     def adds(self, gamesyncs):
         unreachables = False
         for gamesync in gamesyncs:
@@ -343,7 +242,7 @@ class GamesyncParams(object):
             # and other paths won't find their variables set (combos get too complex when mixing multi-paths)
             # ex. multiple play actions in event, or multiple switch-type tracks in a segment
             # May happen when generating certain paths too?
-            logging.debug("generator: expected gamesync (%s, %s) not set" % (TYPE_NAMES[type], self._get_info(name)))
+            logging.debug("generator: expected gamesync (%s, %s) not set" % (wparams.TYPE_NAMES[type], self._get_info(name)))
             self._txtpcache.stats.multitrack += 1
             return None
 
@@ -410,12 +309,12 @@ class GamesyncParams(object):
             match = pattern_st.match(gsparam)
             if match:
                 key, val = match.groups()
-                self.add_gsparam(TYPE_STATE, key, val)
+                self.add_gsparam(wparams.TYPE_STATE, key, val)
 
             match = pattern_sw.match(gsparam)
             if match:
                 key, val = match.groups()
-                self.add_gsparam(TYPE_SWITCH, key, val)
+                self.add_gsparam(wparams.TYPE_SWITCH, key, val)
 
         if DEBUG_PRINT_TREE_PARAMS:
             logging.info("*** params")
@@ -426,3 +325,109 @@ class GamesyncParams(object):
 
     def _get_info(self, id):
         return _get_info(self._txtpcache, id)
+
+# ---------------------------------------------------------
+
+# saves possible switch paths in a txtp
+class GamesyncPaths(object):
+
+    def __init__(self, txtpcache):
+        self._empty = True
+        self._txtpcache = txtpcache
+        self._root = _GamesyncNode(None, [])
+        self._current = self._root
+        self._paths = None
+
+    def is_empty(self):
+        return self._empty
+
+    # register path
+    def adds(self, gamesyncs):
+        self._empty = False
+        node = _GamesyncNode(self._current, gamesyncs)
+        self._current.append(node)
+        self._current = node
+
+    def add(self, type, name, value):
+        self.adds([(type, name, value)])
+
+    # current path is done
+    def done(self):
+        self._current = self._current.parent
+
+    def combos(self):
+        if self._paths is not None:
+            return self._paths
+
+        if DEBUG_PRINT_TREE_BASE:
+            self._debug_print_tree_base()
+
+        self._paths = []
+        self._include_path(self._root)
+
+        if DEBUG_PRINT_TREE_COMBOS:
+            self._debug_print_tree_combos()
+
+        return self._paths
+
+    def _include_path(self, node):
+        if not node.children:
+            # leaf node found, add all gamesyncs to path (in reverse to simplify)
+            path = GamesyncParams(self._txtpcache)
+
+            path_node = node
+            while path_node:
+                path.adds(path_node.elems)
+                path_node = path_node.parent
+                path._depth += 1
+
+            if DEBUG_PRINT_TREE_MAKING:
+                logging.debug("GS path added")
+            self._paths.append(path)
+
+        for child in node.children:
+            self._include_path(child)
+
+    # -----------------------------------------------------
+
+    def _get_info(self, id):
+        return _get_info(self._txtpcache, id)
+
+    def _debug_print_tree_base(self):
+        self._depth = 0
+        self._leaf_count = 0
+        logging.info("*** tree")
+        self._debug_print_combos(self._root)
+        logging.info(" >> (total %i)" % (self._leaf_count))
+        logging.info("")
+
+    def _debug_print_tree_combos(self):
+        logging.info("*** combos")
+        for path in self._paths:
+            elems = self._print_elems(path.get_elems())
+            logging.info(elems)
+        logging.info(" >> (total %i)" % (len(self._paths)))
+        logging.info("")
+
+    def _debug_print_combos(self, node):
+        self._depth += 1
+        for subnode in node.children:
+            elems = self._debug_print_elems(subnode.elems)
+            logging.info("%s%s", ' ' * self._depth * DEBUG_DEPTH_MULT, elems)
+            if not subnode.children:
+                self._leaf_count += 1
+            self._debug_print_combos(subnode)
+        self._depth -= 1
+
+    def _debug_print_elems(self, elems):
+        lines =['[']
+        for elem in elems:
+            if len(elem) == 2:
+                type, name = elem
+                lines.append('(%s,%s)' % (type, self._get_info(name)))
+            else:
+                type, name, value = elem
+                lines.append('(%s,%s,%s)' % (type, self._get_info(name), self._get_info(value)))
+        lines.append(']')
+        return ''.join(lines)
+

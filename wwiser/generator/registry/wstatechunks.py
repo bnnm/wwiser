@@ -260,12 +260,13 @@ class StateChunkPaths(object):
             if gs_value is None:
                 continue
 
-            # mark that current path is forced, as it affects defaults in some cases
-            self._forced_path = True
-
-            # "any" set means all volume states should be generated (DMC5's bgm_07_stage.bnk)
+            # "any" set means all volume states should be generated (DMC5's bgm_m07/03_stage.bnk)
             if gs_value == 0:
                 continue
+
+            # mark that current path is forced, as it affects defaults in some cases
+            # (don't do it with "any" as could be another value; needed in some DMC5 cases)
+            self._forced_path = True
 
             # Remove all that aren't current bgm=a. This may remove bgm=b, bgm=c and leave original bgm=a (with some volume).
             # If there wasn't a bgm=a, remove the key (so no {s} combos is actually generated).

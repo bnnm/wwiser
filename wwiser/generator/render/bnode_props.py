@@ -84,6 +84,21 @@ class CAkProps(object):
 
         self._build(node)
 
+    # info list for dupe check
+    def values(self):
+        values = []
+
+        for nkey, nval in self.fields_std:
+            values.append( (nkey.value(), nval.value()))
+
+        for nkey, nmin, nmax in self.fields_rng:
+            values.append( (nkey.value(), nmin.value(), nmax.value()))
+
+        for nprop, nmin, nmax in self.fields_fld:
+            values.append( (nprop.value(), nmin.value(), nmax.value()))
+
+        return frozenset(values) #otherwise unhashable
+
     def _build(self, node):
         # props are a list of values or ranged values.
         # newer wwise use 2 lists (both should exist even if empty), while

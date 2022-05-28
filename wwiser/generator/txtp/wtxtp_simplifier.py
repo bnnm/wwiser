@@ -240,9 +240,7 @@ class TxtpSimplifier(object):
         #         snd 722952693     [music subclip]
         #          (fsd=54856.10417, fpa=1000.00000, fbt=0.00000, fet=-50856.10417)
         # We want to detect the playlist parent and clone all below SC1
-
-        if node_item.loop is None or node_item.loop == 1: #item: must loop
-            return False
+        # SC1 may also not loop if N1 loops, same result (seen in Astral Chain)
 
         if len(node_item.children) != 1: #item: loops to itself (with N music segment there is no loop)
             return False
@@ -252,6 +250,11 @@ class TxtpSimplifier(object):
             return False
 
         if len(node_subitem.children) != 1: #subitem: loops to itself
+            return False
+
+        item_loops = node_item.loop == 0
+        subitem_loops = node_subitem.loop == 0
+        if not item_loops and not subitem_loops: #item+subitem: one must loop (both also ok due to trap loops)
             return False
 
         node_segment = node_subitem.children[0] #subitem: get segment
@@ -269,11 +272,11 @@ class TxtpSimplifier(object):
         node_item.sequence_continuous()
         new_subitem = self._make_copy(node_item, node_subitem)
 
-        node_subitem.self_loop = True #mark transition node
-        node_subitem.loop = None  #0..entry
-        new_subitem.self_loop_end = True #mark transition node
-        new_subitem.loop = node_item.loop #mark loop node
         node_item.loop = None
+        node_subitem.loop = None
+        node_subitem.self_loop = True #mark transition node (original 0..entry)
+        new_subitem.self_loop_end = True #mark transition node (clone entry..exit)
+        new_subitem.loop = 0 #mark loop node (clone)
 
         return True
 
@@ -934,7 +937,7 @@ class TxtpSimplifier(object):
 
 
         #since we don't simulate pre-entry, just play it if it's first segment
-        play_before = self._transition_count == 1 #todo load + check transition.play_begin
+        play_before = self._transition_count == 1 #TODO handle properly
         #print("transition: entry=%s, exit=%s, before=%s" % (entry, exit, play_before))
  
         #print("**A b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))

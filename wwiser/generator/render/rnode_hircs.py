@@ -300,8 +300,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
             txtp.info.next(item.nitem, item.fields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
             if type == -1 or item.ntid:
-                transition = hnode_misc.NodeTransition()
-                transition.play_before = False
+                transition = hnode_misc.NodeTransition() #just a flag for now
 
                 txtp.group_single(iconfig, transition=transition)
                 self._render_next(item.ntid, txtp)

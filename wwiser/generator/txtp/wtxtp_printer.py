@@ -354,6 +354,8 @@ class TxtpPrinter(object):
             info += '  ##loop'
             if tnode.loop_end:
                 info += ' #loop-end'
+        if tnode.self_loop_end:
+            info += '  ##self-loop'
 
         if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'

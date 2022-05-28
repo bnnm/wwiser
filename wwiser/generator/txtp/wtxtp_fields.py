@@ -1,11 +1,11 @@
 # Info fields that get printed in the .txtp
 
 # meh... (make one TxtpField per type? sorting?)
-_FIELD_TYPE_PROP = 0
-_FIELD_TYPE_KEYVAL = 1
-_FIELD_TYPE_KEYMINMAX = 2
-_FIELD_TYPE_RTPC = 3
-_FIELD_TYPE_SC = 4
+_FIELD_TYPE_PROP = 1
+_FIELD_TYPE_KEYVAL = 2
+_FIELD_TYPE_KEYMINMAX = 3
+_FIELD_TYPE_RTPC = 4
+_FIELD_TYPE_SC = 5
 
 
 class _TxtpField(object):
@@ -114,7 +114,7 @@ class TxtpFields(object):
 
     def statechunk(self, nkey, nval, props):
         if nkey and nval:
-            self._add(_FIELD_TYPE_SC, (nkey, nval, props), (nkey.value(), nval.value(), props))
+            self._add(_FIELD_TYPE_SC, (nkey, nval, props), (nkey.value(), nval.value(), props.values()))
 
     def rtpc(self, nrtpc, nparam, values_x, values_y):
         if nrtpc and nparam:
@@ -155,7 +155,7 @@ class TxtpFields(object):
             items = field.items
 
             if   type == _FIELD_TYPE_PROP:
-                nfield, = items
+                nfield = items
                 key, val =  self._prop_info(nfield)
 
             elif type == _FIELD_TYPE_KEYVAL:

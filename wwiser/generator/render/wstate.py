@@ -1,12 +1,10 @@
 from ..registry import wgamesync, wstatechunks, wtransitions, wstingers, wgamevars, wparams
-from . import wglobalsettings
 
 # Simple container/simulation of internal wwise state, (currently set or newly registered paths).
 
 class WwiseState(object):
     def __init__(self, txtpcache):
         self._txtpcache = txtpcache
-        self.globalsettings = wglobalsettings.GlobalSettings()
 
         # combos found during process
         self.gspaths = None #gamesyncs: states/switches for dynamic object paths

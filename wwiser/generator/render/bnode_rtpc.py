@@ -252,8 +252,12 @@ class AkRtpc(object):
         self.graph = None
         self.is_gamevar = False
         self.nparam = None
+        self.default_x = None
+        self.min_x = None
+        self.max_x = None
 
         self._build(nrtpc)
+        self._set_minmax()
 
     def _build(self, nrtpc):
         self.nid = nrtpc.find1(name='RTPCID') #gamevar name/id
@@ -318,6 +322,8 @@ class AkRtpc(object):
 
     # get resulting value: X = game parameter, Y = Wwise property
     def get(self, x):
+        if x is None:
+            return None
         y = self.graph.get(x)
         if self.is_delay:
             y = y * 1000.0 #idelay is float in seconds to ms
@@ -339,8 +345,7 @@ class AkRtpc(object):
             return y or current_value #???
         raise ValueError("unknown accum")
 
-
-    def minmax(self):
+    def _set_minmax(self):
         ps = self.graph.points
         if not ps:
             return (0.0, 0.0)
@@ -351,26 +356,26 @@ class AkRtpc(object):
         else:
             p2 = ps[len(ps)-1]
 
-        return (p1.x, p2.x)
+        self.min_x = p1.x
+        self.max_x = p2.x
 
-    def min(self):
-        return self.minmax()[0]
+    def values_x(self):
+        return (self.min_x, self.default_x, self.max_x)
 
-    def max(self):
-        return self.minmax()[1]
-
+    def values_y(self):
+        return (self.get(self.min_x), self.get(self.default_x), self.get(self.max_x))
 
 class AkRtpcList(object):
-    def __init__(self, node):
+    def __init__(self, node, globalsettings):
         self.valid = False
         self._rtpcs = []
         self._usables = None
-        self._build(node)
+        self._build(node, globalsettings)
 
     def empty(self):
         return self._rtpcs.empty()
 
-    def _build(self, node):
+    def _build(self, node, globalsettings):
         if not node:
             return
         nrtpcs = node.finds(name='RTPC')
@@ -381,6 +386,8 @@ class AkRtpcList(object):
             rtpc = AkRtpc(nrtpc)
             #if not rtpc.is_gamevar:
             #    continue
+
+            rtpc.default_x = globalsettings.get_rtpc_default(rtpc.id) #preload if possible
 
             self._rtpcs.append(rtpc)
 

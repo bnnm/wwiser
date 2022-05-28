@@ -91,13 +91,14 @@ class CAkHircNode(object):
             return None
 
         # RTPC linked to volume (ex. DMC5 battle rank layers, ACB whispers)
-        rtpclist = bnode_rtpc.AkRtpcList(nbase)
+        globalsettings = self._builder._globalsettings
+        rtpclist = bnode_rtpc.AkRtpcList(nbase, globalsettings)
         if not rtpclist.valid:
             return None
 
         # during during calculations to make a final list
         #for brtpc in rtpclist.get_rtpcs():
-        #    self.fields.rtpc(brtpc.nid, brtpc.minmax(), brtpc.nparam)
+        #    self.fields.rtpc(brtpc.nid, brtpc.nparam, brtpc.values_x(), brtpc.values_y())
         return rtpclist
 
     def _make_transition_rules(self, node, is_switch):

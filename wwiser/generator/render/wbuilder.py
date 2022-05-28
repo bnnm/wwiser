@@ -13,7 +13,7 @@ from . import wbuilder_util
 #******************************************************************************
 
 class Builder(object):
-    def __init__(self):
+    def __init__(self, globalsettings):
         # nodes (default parser nodes) and bnodes (rebuilt simplified nodes)
         self._ref_to_node = {}              # bank + sid + type > parser node
         self._id_to_refs = {}               # sid + type > bank + sid + type list
@@ -36,10 +36,8 @@ class Builder(object):
         self._used_node = {}                # marks which node_refs has been used
         self._hircname_to_nodes = {}        # registered types > list of nodes
 
+        self._globalsettings = globalsettings
         return
-
-    def set_filter(self, filter):
-        self._filter = filter
 
     def get_missing_nodes_loaded(self):
         return self._missing_nodes_loaded

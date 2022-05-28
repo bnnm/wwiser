@@ -34,15 +34,6 @@ class TxtpInfo(object):
         self._txtpcache = txtpcache
         pass
 
-    def _print_tree(self):
-        print("node")
-        for i, ninfo in enumerate(self._ninfo):
-            text = ninfo.gstext_long
-            if not text:
-                text = bool(ninfo.source)
-            print(' '* ninfo.depth, "ninfo", i, ":", text)
-        print("gs",self._gsnames_idx)
-
 
     # set next node
     def next(self, node, fields, nsid=None):
@@ -254,7 +245,7 @@ class TxtpInfo(object):
         return out_lines
 
     def report_rtpc(self, brtpc):
-        self._rtpc_fields.rtpc(brtpc.nid, brtpc.minmax(), brtpc.nparam)
+        self._rtpc_fields.rtpc(brtpc.nid, brtpc.nparam, brtpc.values_x(), brtpc.values_y())
 
     def get_gamevar_lines(self):
         return self._get_fields_lines("GAMEVARS", self._rtpc_fields)

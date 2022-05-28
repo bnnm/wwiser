@@ -1,6 +1,6 @@
 import logging
 from . import wfilter, wmover, wtxtp_cache, wreport
-from .render import wbuilder, wrenderer, wstate
+from .render import wbuilder, wrenderer, wstate, wglobalsettings
 
 
 
@@ -22,10 +22,11 @@ class Generator(object):
     def __init__(self, banks, wwnames=None):
         self._banks = banks
 
-        self._builder = wbuilder.Builder()
+        self._globalsettings = wglobalsettings.GlobalSettings()
+        self._builder = wbuilder.Builder(self._globalsettings)
         self._txtpcache = wtxtp_cache.TxtpCache()
-        self._filter = wfilter.GeneratorFilter()  # filter nodes
         self._ws = wstate.WwiseState(self._txtpcache)
+        self._filter = wfilter.GeneratorFilter()  # filter nodes
         self._renderer = wrenderer.Renderer(self._txtpcache, self._builder, self._ws, self._filter)
         self._mover = wmover.Mover(self._txtpcache)
 
@@ -39,7 +40,6 @@ class Generator(object):
 
         self._default_hircs = self._renderer.get_generated_hircs()
         self._filter.set_default_hircs(self._default_hircs)
-        self._builder.set_filter(self._filter)
 
     #--------------------------------------------------------------------------
 
@@ -187,8 +187,8 @@ class Generator(object):
                     self._txtpcache.mediaindex.load(nchunk)
 
                 elif chunkname == 'GlobalSettingsChunk':
-                    self._ws.globalsettings.load(nchunk)
-                
+                    self._globalsettings.load(nchunk)
+
                 elif chunkname == 'HircChunk':
                     items = bank.find(name='listLoadedItem')
                     if not items: # media-only banks don't have items

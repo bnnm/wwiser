@@ -249,7 +249,7 @@ class PropertyCalculator(object):
             for bsci in bscis:
                 self._txtp.info.report_statechunk(bsci)
 
-                if not ws.scparams and include_combo:
+                if ws.sc_registrable() and include_combo:
                     item = (bsci.nstategroupid, bsci.nstatevalueid)
                     ws.scpaths.add(*item)
 
@@ -257,10 +257,10 @@ class PropertyCalculator(object):
                     # mark audio can be modified (technically could be delay only so maybe shouldn't be 'crossfades')
                     cfg.crossfaded = True
 
-
-        # find currently set states (may be N)
-        if not ws.scparams:
+        # during register phase no need to apply
+        if ws.sc_registrable():
             return
+        # find currently set states (may be N)
         for state in ws.scparams.get_states():
             bstate = bnode.statechunk.get_bstate(state.group, state.value)
             if not bstate:
@@ -321,23 +321,18 @@ class PropertyCalculator(object):
     def _apply_rtpc(self, gvitem, brtpc):
 
         if gvitem.is_default:
-            key = gvitem.key
-            if not key: #means: set all keys to default
-                key = brtpc.id
-            value = self._ws.globalsettings.get_rtpc_default(key)
-        elif gvitem.is_unset:
-            value = None
+            value_x = brtpc.default_x
         elif gvitem.is_min:
-            value = brtpc.min()
+            value_x = brtpc.min_x
         elif gvitem.is_max:
-            value = brtpc.max()
+            value_x = brtpc.max_x
         else:
-            value = gvitem.value
+            value_x = gvitem.value
 
-        if value is None: #not found or not set
+        if value_x is None: #not found or not set
             return
 
-        y = brtpc.get(value)
+        value_y = brtpc.get(value_x)
 
         #TODO improve (maybe rtpc should return some mini props?)
         # apply props
@@ -347,7 +342,7 @@ class PropertyCalculator(object):
         if self._is_base:
             # RTPCs can't have loops
             if brtpc.is_delay:
-                cfg.delay = brtpc.accum(y, cfg.delay)
+                cfg.delay = brtpc.accum(value_y, cfg.delay)
 
         # absolute props: first found only?
         # ...
@@ -355,14 +350,14 @@ class PropertyCalculator(object):
         # relative props: only add current if base node will output audio
         if self._audible:
             if brtpc.is_volume:
-                cfg.gain = brtpc.accum(y, cfg.gain)
+                cfg.gain = brtpc.accum(value_y, cfg.gain)
             if brtpc.is_makeupgain:
-                cfg.gain = brtpc.accum(y, cfg.gain)
+                cfg.gain = brtpc.accum(value_y, cfg.gain)
 
             if self._include_bus:
                 if brtpc.is_busvolume:
-                    cfg.gain = brtpc.accum(y, cfg.gain)
+                    cfg.gain = brtpc.accum(value_y, cfg.gain)
                 if brtpc.is_outputbusvolume:
-                    cfg.gain = brtpc.accum(y, cfg.gain)
+                    cfg.gain = brtpc.accum(value_y, cfg.gain)
 
-        self._txtp.info.gamevar(brtpc.nid, value)
+        self._txtp.info.gamevar(brtpc.nid, value_x)

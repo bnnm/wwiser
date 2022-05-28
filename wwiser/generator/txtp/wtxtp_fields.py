@@ -29,8 +29,8 @@ class _TxtpField(object):
             return self._compare(nval1, nval2)
 
         if self.type == _FIELD_TYPE_RTPC:
-            nfield1, _, _ = self.items
-            nfield2, _, _ = other.items
+            nfield1, _, _, _ = self.items
+            nfield2, _, _, _ = other.items
             return self._compare(nfield1, nfield2)
 
         return False
@@ -114,9 +114,9 @@ class TxtpFields(object):
         if nkey and nval:
             self._add(_FIELD_TYPE_SC, (nkey, nval, props), (nkey.value(), nval.value(), props))
 
-    def rtpc(self, nrtpc, minmax, nparam):
-        if nrtpc and minmax and nparam:
-            self._add(_FIELD_TYPE_RTPC, (nrtpc, minmax, nparam), (nrtpc.value(), minmax, nparam.value()))
+    def rtpc(self, nrtpc, nparam, values_x, values_y):
+        if nrtpc and nparam:
+            self._add(_FIELD_TYPE_RTPC, (nrtpc, nparam, values_x, values_y), (nrtpc.value(), nparam.value(), values_x, values_y))
 
     def sort(self):
         self._fields.sort()
@@ -220,20 +220,25 @@ class TxtpFields(object):
                     val += " <%s>" % (info) #looks a bit strange though
 
             elif   type == _FIELD_TYPE_RTPC:
-                nfield, minmax, nparam = items
+                nfield, nparam, values_x, values_y = items
                 attrs = nfield.get_attrs()
 
                 key = attrs.get('name')
                 val = attrs.get('hashname', attrs.get('value'))
                 if not val:
                     val = str(attrs.get('value'))
-                min, max = minmax
 
-                val = "{%s=%s,%s}" % (val, min, max)
+                min_x, default_x, max_x = values_x
+                val = "{%s=%s,%s}" % (val, min_x, max_x)
 
                 if nparam:
                     pfmt = self._prop_name(nparam)
-                    val += " <%s>" % (pfmt)
+
+                    min_y, default_y, max_y = values_y
+                    val += " <%s: %s,%s>" % (pfmt, min_y, max_y)
+
+                    if default_x is not None:
+                        val += " (default %s: %s)" % (default_x, default_y)
                     #pkey, pval = self._prop_info(nparam)
                     #val += " <%s>" % (pkey, pval)
 

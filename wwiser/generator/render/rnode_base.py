@@ -16,14 +16,16 @@ class RN_CAkHircNode(object):
     #--------------------------------------------------------------------------
 
     def _register_transitions(self, rules):
-        if self._ws.gsparams: # only on default/everything path
-            return
+        # could do only default/everything path, but may be needed when passing manual combos
+        #if self._ws.gs_registrable():
+        #    return
 
         self._ws.transitions.add(rules)
         return
 
     def _register_stingers(self, stingerlist):
-        if self._ws.gsparams: # only on default/everything path
+        # could do only default/everything path, but may be needed when passing manual combos
+        if self._ws.gs_registrable():
             return
 
         self._ws.stingers.add(stingerlist)

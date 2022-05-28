@@ -44,7 +44,7 @@ class RN_CAkDialogueEvent(RN_CAkHircNode):
             return 
 
         ws = self._ws
-        if not ws.gsparams:
+        if ws.gs_registrable():
             # find all possible gamesyncs paths (won't generate txtp)
             for path, ntid in bnode.tree.paths:
                 unreachable = ws.gspaths.adds(path)
@@ -124,7 +124,7 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
         gname = bnode.ngname.value()
 
         ws = self._ws
-        if not ws.gsparams:
+        if ws.gs_registrable():
             # find all possible gamesyncs paths (won't generate txtp)
             for ntids, ngvalue in bnode.gvalue_ntids.values(): #order doesn't matter
                 gvalue = ngvalue.value()
@@ -222,7 +222,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
 
         ws = self._ws
         if bnode.tree:
-            if not ws.gsparams:
+            if ws.gs_registrable():
                 # find all possible gamesyncs paths (won't generate txtp)
                 for path, ntid in bnode.tree.paths:
                     unreachable = ws.gspaths.adds(path)
@@ -246,7 +246,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
             gtype = bnode.gtype
             gname = bnode.ngname.value()
 
-            if not ws.gsparams:
+            if ws.gs_registrable():
                 # find all possible gamesyncs paths (won't generate txtp)
                 for ntid, ngvalue in bnode.gvalue_ntid.values(): #order doesn't matter
                     gvalue = ngvalue.value()
@@ -392,7 +392,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             gname = bnode.ngname.value()
 
             ws = self._ws
-            if not ws.gsparams:
+            if ws.gs_registrable():
                 # find all possible gamesyncs paths (won't generate txtp)
                 for __, ngvalue in bnode.gvalue_index.values(): #order doesn't matter
                     if not ngvalue:

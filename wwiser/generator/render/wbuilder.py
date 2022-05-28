@@ -182,6 +182,9 @@ class Builder(object):
     def _get_bnode_link_bus(self, ntid):
         return self._get_bnode_link(ntid, idtype=wbuilder_util.IDTYPE_BUS)
 
+    def _get_bnode_link_device(self, ntid):
+        return self._get_bnode_link(ntid, idtype=wbuilder_util.IDTYPE_AUDIODEVICE)
+
     def _get_bnode_link(self, ntid, idtype=None):
         if not ntid:
             return None

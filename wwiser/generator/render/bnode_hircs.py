@@ -51,6 +51,7 @@ class CAkFxCustom(CAkHircNode):
 class CAkBus(CAkHircNode):
     def __init__(self):
         super(CAkBus, self).__init__()
+        self.bdevice = None
 
     def _build(self, node):
         nbase = node.find1(name='BusInitialValues')
@@ -58,11 +59,11 @@ class CAkBus(CAkHircNode):
         nbusid = nbase.find1(name='OverrideBusId')
         self.bparent = self._read_bus(nbusid) #parent bus of this bus
 
-        # needed to get if it's audio?
-        # (internally CAkAudioDevice has InitialRTPC/StateChunk but doesn't seem possible in editor)
-        #idDeviceShareset
+        # needed to check audio output? (only on later versions)
+        ndeviceid = nbase.find1(name='OverrideBusId')
+        self.bdevice = self._read_device(ndeviceid)
 
-        # use to guess is non-output bus?
+        # use to guess is non-output bus? (usually not set)
         #uChannelConfig
 
         self.props = self._make_props(nbase)
@@ -75,6 +76,32 @@ class CAkBus(CAkHircNode):
         return
 
 #CAkAuxBus is the same but only used in AuxParams
+
+
+class CAkAudioDevice(CAkHircNode):
+    def __init__(self):
+        super(CAkAudioDevice, self).__init__()
+        self.silent = False
+
+    def _build(self, node):
+        nbase = node.find1(name='AudioDeviceInitialValues')
+        nfxbase = nbase.find1(name='FxBaseInitialValues')
+        nfxid = nfxbase.find1(name='fxID')
+
+        fxid = nfxid.value()
+        if fxid == 0x00B50007: #No Output
+            self.silent = True
+
+            # only used in latest versions (no known games) and this just means there is no
+            # output (txtp config could be marked 'silenced'), not sure when would be used though.
+            self._barf("No_Output CAkAudioDevice, report")
+
+        # Internally has InitialRTPC/StateChunk/PluginPropertyValue/FXList but doesn't
+        # seem possible in editor, just that internally works like an FX plugin.
+        # It does have an FX list
+
+        return
+
 
 #******************************************************************************
 # EVENTS AND ACTIONS

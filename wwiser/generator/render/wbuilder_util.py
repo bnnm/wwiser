@@ -35,6 +35,7 @@ _HIRC_BUILDER_NODES = {
     'CAkState': CAkState,
     'CAkFxCustom': CAkFxCustom,
     'CAkBus': CAkBus,
+    'CAkAudioDevice': CAkAudioDevice,
 
     #not useful
     #CAkActionSetState
@@ -43,7 +44,6 @@ _HIRC_BUILDER_NODES = {
     #CAkFeedbackBus: accepts audio from regular sounds + creates rumble
     #CAkFeedbackNode: played like audio (play action) and has source ID, but it's simply a rumble generator
     #CAkAttenuation
-    #CAkAudioDevice
     #CAkFxShareSet
     #CAkLFOModulator
     #CAkEnvelopeModulator

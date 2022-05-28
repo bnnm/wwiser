@@ -51,6 +51,9 @@ class CAkHircNode(object):
 
     #--------------------------------------------------------------------------
 
+    def _read_device(self, ntid):
+        return self._builder._get_bnode_link_device(ntid)
+
     def _read_bus(self, ntid):
         return self._builder._get_bnode_link_bus(ntid)
 

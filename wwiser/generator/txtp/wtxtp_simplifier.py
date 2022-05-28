@@ -73,7 +73,7 @@ class TxtpSimplifier(object):
         self._set_props(self._tree)
         self._set_times(self._tree)
         self._reorder_wem(self._tree)
-        self._find_loops(self._tree)
+        self._handle_loops(self._tree)
         self._tweak_first(self._tree)
         self._set_master_volume(self._tree)
 
@@ -142,7 +142,7 @@ class TxtpSimplifier(object):
 
         # find random with all options the same (ex. No Straight Roads)
         # TODO: not working properly, should detect times and limit cases (may misdetect loops with the
-        #  same .wem and different config), besides NSR doesn't work properly anyway
+        #  same .wem and different config), besides NoSR doesn't work properly anyway
         #if self._has_random_repeats(node):
         #    subnode = node.children[0] #use first only
         #    node.children = [subnode]
@@ -310,7 +310,8 @@ class TxtpSimplifier(object):
     def _set_props(self, node):
         # do 2 passes because sometimes when moving props down it stops when same prop exists right below,
         # but after all subnodes have been processes (and props were moved down) prop can be moved again
-        #todo improve (ex. Detroit  129941368 + (C05_Music_State=C05_OnNest))
+        #TODO improve: maybe get from parent? ex. get highest loop?
+        #  (ex. Detroit  129941368 + (C05_Music_State=C05_OnNest))
         self._set_props_move(node)
         self._set_props_move(node)
 
@@ -335,19 +336,19 @@ class TxtpSimplifier(object):
         node.single()
         subnode = node.children[0]
 
-        # move loop (not to sounds since loop is applied over finished track)
-        #todo maybe can apply on some sounds (ex. S1 l=0 > L2 --- = S1 --- > L2 l=0)
-        if subnode.is_group() and not node.self_loop_end:
-            is_noloop_subnode = subnode.loop is None or subnode.loop == 1
-            is_bothloop = node.loop == 0 and subnode.loop == 0
-            if is_noloop_subnode or is_bothloop:
+        is_loop_node = node.loop == 0 or node.loop and node.loop > 1
+        #is_loop_subnode = subnode.loop == 0 or subnode.loop and subnode.loop > 1
+        is_clip_subnode = subnode.sound and subnode.sound.clip
+
+        # move loops down to handle "trap loops" (lowest loop is what matters)
+        # except on clips, that loop the whole thing
+        if not node.self_loop_end and not is_clip_subnode:
+            if is_loop_node:
                 subnode.loop = node.loop
                 node.loop = None
 
-        # move delay (ok in sounds, ignore in clips)
-        is_noloop_node = node.loop is None or node.loop == 1
-        is_clip_subnode = subnode.sound and subnode.sound.clip #probably ok, but may mess-up transition calcs
-        if not subnode.delay and is_noloop_node and not is_clip_subnode:
+        # move delay (ok in sounds, ignore in clips --probably ok, but may mess-up transition calcs)
+        if not subnode.delay and not is_loop_node and not is_clip_subnode:
             subnode.delay = node.delay
             node.delay = None
 
@@ -484,16 +485,16 @@ class TxtpSimplifier(object):
 
     # handle some complex loop cases
     # (assumes groups have been simplifies when no children are present)
-    def _find_loops(self, node):
+    def _handle_loops(self, node):
         if  self.has_noloops():
             return
 
-        self._find_loops_internal(node)
+        self._handle_loops_node(node)
 
-    def _find_loops_internal(self, node):
+    def _handle_loops_node(self, node):
 
         for subnode in node.children:
-            self._find_loops(subnode)
+            self._handle_loops_node(subnode)
 
         #try bottom-to-top
 

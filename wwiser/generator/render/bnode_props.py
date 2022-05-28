@@ -1,6 +1,6 @@
 
 _WARN_PROPS = [
-    #"[FadeInCurve]", "[FadeOutCurve]", #seen in CAkState, used in StateChunks (ex. NSR)
+    #"[FadeInCurve]", "[FadeOutCurve]", #seen in CAkState, used in StateChunks (ex. NoSR)
     #"[TrimInTime]", "[TrimOutTime]", #seen in CAkState (ex. DMC5)
     "[FadeInTime]", "[FadeOutTime]",
     "[CrossfadeUpCurve]", "[CrossfadeDownCurve]", "[LoopCrossfadeDuration]",

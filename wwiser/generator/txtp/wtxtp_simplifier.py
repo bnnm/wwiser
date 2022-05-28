@@ -920,7 +920,7 @@ class TxtpSimplifier(object):
     # previous simplification detects self-loops and clones 2 segments, then this parts adjust segment times:
     # if entry=10, exit=100: segment1 = 0..10, segment2 = 10..100
     # since each segment may have N tracks, this applies directly to their config (body/padding/etc) values.
-    def _apply_transition_clip(self, node, trn_node, seg_node):
+    def _apply_transition_clip(self, snd_node, trn_node, seg_node):
         #if not seg_node:
         #    logging.info("generator: empty segment?")
         #    return
@@ -928,7 +928,7 @@ class TxtpSimplifier(object):
         #transition = trn_node.transition
         pconfig = seg_node.config
 
-        body = node.pad_begin + node.body_time - node.trim_begin - node.trim_end + node.pad_end
+        body = snd_node.pad_begin + snd_node.body_time - snd_node.trim_begin - snd_node.trim_end + snd_node.pad_end
         entry = pconfig.entry
         exit = pconfig.exit
 
@@ -954,51 +954,53 @@ class TxtpSimplifier(object):
             # If loop clip has envelopes, we can't alter it though (envelopes apply after trims, and can't change their start
             # as curve meaning would change), so simply trim the parent transition segment (that has loop, not moved down) to
             # remove initial audio including envelope. Must still clamp the exit though
-            if node.envelopelist:
-                trn_node.trim_begin = entry
-                #trn_node.loop = 0 #should loop
+            if snd_node.envelopelist:
+                # get best trim-able group (otherwise may have loop issues)
+                trim_node = self._get_transition_trim(trn_node)
+                trim_node.trim_begin = entry
                 time = 0
+                #trn_node.loop = 0 #should loop
             else:
                 time = entry
 
             remove = time
-            if remove > node.pad_begin:
-                remove = node.pad_begin
-            node.pad_begin -= remove
+            if remove > snd_node.pad_begin:
+                remove = snd_node.pad_begin
+            snd_node.pad_begin -= remove
             time -= remove
 
-            node.trim_begin += time
+            snd_node.trim_begin += time
 
 
         if body < exit:
             time = (exit - body)
-            node.pad_end += time
+            snd_node.pad_end += time
         else:
             time = (body - exit)
             removed = time
-            if removed > node.pad_end:
-                removed = node.pad_end
-            node.pad_end -= removed
+            if removed > snd_node.pad_end:
+                removed = snd_node.pad_end
+            snd_node.pad_end -= removed
 
             time -= removed
             removed = time
-            if removed > node.body_time:
-                removed = node.body_time
-            node.body_time -= removed
+            if removed > snd_node.body_time:
+                removed = snd_node.body_time
+            snd_node.body_time -= removed
 
             # in odd cases entry may fall in the padding, so body doesn't play
             # since vgmstream needs a body ATM and this code is just a hack,
             # make some fake, tiny body (would be fixed with an overlapped layout)
-            if not node.body_time:
+            if not snd_node.body_time:
                 threshold = 5.0 / 48000.0 * 1000.0 #5 samples
-                node.body_time = threshold
+                snd_node.body_time = threshold
                 #maybe should try adding to trim_end but not sure if works
 
             time -= removed
             removed = time
-            if removed > node.pad_begin:
-                removed = node.pad_begin
-            node.pad_begin -= removed
+            if removed > snd_node.pad_begin:
+                removed = snd_node.pad_begin
+            snd_node.pad_begin -= removed
 
             time -= removed
             if time:
@@ -1008,3 +1010,14 @@ class TxtpSimplifier(object):
         #print("**B b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))
 
         return
+
+    # find first non-ignorable node that is a group
+    def _get_transition_trim(self, node):
+        if not node.ignorable():
+            return node
+
+        subnode = node.children[0] #ignorables only have 1 child
+        if subnode.is_sound():
+            return node
+
+        return self._get_transition_trim(subnode)

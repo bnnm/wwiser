@@ -141,7 +141,7 @@ class NodeEnvelope(object):
 # - ch^(volume-start)~(volume-end)=(shape)@(time-pre)~(time-start)+(time-length)~(time-last) [complex volumes]
 class NodeEnvelopeList(object):
     def __init__(self, sound):
-        self.empty = False
+        self.empty = True
         self._envelopes = []
         self._build(sound)
 

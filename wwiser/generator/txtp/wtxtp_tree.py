@@ -66,13 +66,13 @@ class TxtpNode(object):
         self.delay = config.delay
 
         self.crossfaded = config.crossfaded
-        self.silenced = False
-        if self.volume and self.volume <= -96.0:
-            self.silenced = True
+        self.silenced = self.volume <= -96.0
 
         self.envelopelist = None
         if sound:
-            self.envelopelist = hnode_envelope.NodeEnvelopeList(sound)
+            el = hnode_envelope.NodeEnvelopeList(sound)
+            if not el.empty:
+                self.envelopelist = el
 
         # allowed to separate "loop not set" and "loop set but not looping"
         #if self.loop == 1:

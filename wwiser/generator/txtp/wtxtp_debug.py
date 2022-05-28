@@ -33,6 +33,7 @@ class TxtpDebug(object):
         if post:
             if tnode.loop is not None:       config1 += " lpn=%s" % (tnode.loop)
             if tnode.volume:                 config1 += " vol=%s" % (tnode.volume)
+            if tnode.envelopelist:           config1 += " (env)"
             if tnode.ignorable():            config1 += " [i]"
 
             if tnode.body_time:              config2 += ' bt={0:.5f}'.format(tnode.body_time)
@@ -46,6 +47,7 @@ class TxtpDebug(object):
             if tnode.config.delay:           config1 += " dly=%s" % (tnode.config.delay)
             if tnode.config.gain:          config1 += " vol=%s" % (tnode.config.gain)
             if tnode.transition:             config1 += " (trn)"
+            if tnode.envelopelist:           config1 += " (env)"
 
             if tnode.config.entry or tnode.config.exit:
                 dur = '{0:.5f}'.format(tnode.config.duration)

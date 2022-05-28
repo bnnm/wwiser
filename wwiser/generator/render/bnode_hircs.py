@@ -58,8 +58,12 @@ class CAkBus(CAkHircNode):
         nbusid = nbase.find1(name='OverrideBusId')
         self.bparent = self._read_bus(nbusid) #parent bus of this bus
 
-        #idDeviceShareset #needed to get if it's audio?
-        #uChannelConfig #use to guess is non-output bus?
+        # needed to get if it's audio?
+        # (internally CAkAudioDevice has InitialRTPC/StateChunk but doesn't seem possible in editor)
+        #idDeviceShareset
+
+        # use to guess is non-output bus?
+        #uChannelConfig
 
         self.props = self._make_props(nbase)
         #PositioningParams

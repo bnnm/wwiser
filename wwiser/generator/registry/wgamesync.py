@@ -174,7 +174,7 @@ class GamesyncParams(object):
         self._txtpcache = txtpcache
         self._manual = False
         self._fnv = wfnv.Fnv()
-        self._depth = 0 #infp
+        self._depth = 0 #info
 
     def is_empty(self):
         return self._empty
@@ -316,10 +316,12 @@ class GamesyncPaths(object):
         if self._params is not None:
             return self._params
 
+        # use registered info to build params
+        self._params = []
+
         if DEBUG_PRINT_TREE_BASE:
             self._debug_print_tree_base()
 
-        self._params = []
         self._include_path(self._root)
 
         if DEBUG_PRINT_TREE_COMBOS:

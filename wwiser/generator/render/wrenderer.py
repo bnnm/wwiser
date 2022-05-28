@@ -124,7 +124,7 @@ class Renderer(object):
         ws = self._ws
 
         #TODO simplify: set scpaths to reachable/unreachable modes (no need to check sccombo_hash unreachables)
-        ws.scpaths.filter(ws.gsparams, self._txtpcache.wwnames) #detect unreachables
+        ws.scpaths.filter(ws.gsparams) #detect unreachables
 
         sccombos = ws.get_sccombos() #found during process
         if not sccombos:

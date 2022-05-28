@@ -1,6 +1,7 @@
 import itertools
 from collections import OrderedDict
 from . import wparams
+from ... import wfnv
 
 
 # Sometimes (ex. Platinum games) set states control volumes, so musictracks must play or mute.
@@ -60,7 +61,8 @@ class StateChunkItem(object):
         # (but same volume), and "val" tuple would be seen as different due to config, in the "not in" checks
         # these are only used for combos, while config should be extracted from node's volume states
 
-    def init_base(self, group, value, wwnames):
+    #TODO improve name handling
+    def init_base(self, group, value, group_name=None, value_name=None, wwnames=None):
         self.group = group
         self.value = value
         # these params may come from external vars, try to get names from db
@@ -113,17 +115,22 @@ class StateChunkParams(object):
     def get_states(self):
         return self._elems.values()
 
+    def add_scparam(self, scitem):
+        self.add(scitem)
+
 # ---------------------------------------------------------
 
 # saves possible volume paths in a txtp
 class StateChunkPaths(object):
 
-    def __init__(self):
+    def __init__(self, wwnames=None):
         self._elems = OrderedDict()
         self._forced_path = False
         self._unreachables = False
         self._unreachables_only = False
-        pass
+        self._params = None
+        self._fnv = wfnv.Fnv()
+        self._wwnames = wwnames
 
     def is_empty(self):
         return len(self._elems) == 0
@@ -165,7 +172,11 @@ class StateChunkPaths(object):
 
 
     def combos(self):
-        self._paths = []
+        if self._params is not None:
+            return self._params
+
+        # use registered info to build params
+        self._params = []
 
         # short items by name if possible as it makes more consistently named .txtp
         # must order keys too since they same vars move around between tracks
@@ -183,9 +194,9 @@ class StateChunkPaths(object):
         for item in items:
             scparam = StateChunkParams()
             scparam.adds(item)
-            self._paths.append(scparam)
+            self._params.append(scparam)
 
-        return self._paths
+        return self._params
 
     def generate_default(self, sccombos):
         # generate a base .txtp with all songs in some cases
@@ -222,7 +233,7 @@ class StateChunkPaths(object):
 
         return True
 
-    def filter(self, gsparams, wwnames=None):
+    def filter(self, gsparams):
         #if self._unreachables_only: #needs to be re-filtered
         #    return
         if not gsparams or gsparams.is_empty():
@@ -263,7 +274,7 @@ class StateChunkPaths(object):
             scitems = self._elems[key]
 
             curr_scitem = StateChunkItem()
-            curr_scitem.init_base(gs_group, gs_value, wwnames) #todo improve name handling
+            curr_scitem.init_base(gs_group, gs_value, wwnames=self._wwnames)
 
             # check and add itself for better names (can't use not-in since we don't know volume)
             curr_exists = False
@@ -281,3 +292,35 @@ class StateChunkPaths(object):
 
             #if not items:
             #    self._elems.pop(key)
+
+    def add_params(self, params):
+        self._params = []
+        for combo in params.combos():
+            scparams = StateChunkParams()
+            for item in combo:
+                scitem = self._make_scitem(item)
+                if not scitem:
+                    continue
+                scparams.add_scparam(scitem)
+            self._params.append(scparams)
+
+    def _make_scitem(self, item):
+        key = item.key
+        val = item.val
+        key_name = None
+        val_name = None
+
+        if val == '-': #any?
+            return None
+
+        if not key.isnumeric():
+            #key_name = val
+            key = self._fnv.get_hash(key)
+        if not val.isnumeric():
+            #val_name = val
+            val = self._fnv.get_hash(val)
+
+        # don't pass current var names since may have different caps in wwnames?
+        scitem = StateChunkItem()
+        scitem.init_base(key, val, group_name=key_name, value_name=val_name, wwnames=self._wwnames)
+        return scitem

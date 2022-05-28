@@ -47,7 +47,7 @@ class WwiseState(object):
         self.scpaths = self._default_scpaths
         self.scparams = self._default_scparams
         if not self.scpaths:
-            self.scpaths = wstatechunks.StateChunkPaths()
+            self.scpaths = wstatechunks.StateChunkPaths(self._txtpcache.wwnames)
 
     def reset_gv(self):
         self.gvpaths = self._default_gvpaths
@@ -122,9 +122,19 @@ class WwiseState(object):
     def set_scdefaults(self, items):
         if items is None: #allow []
             return
-        pass
-        #self._default_sc = scparams
-        #self.scparams = scparams
+        params = wparams.Params(allow_st=True)
+        params.adds(items)
+
+        scpaths = wstatechunks.StateChunkPaths(self._txtpcache.wwnames)
+        scpaths.add_params(params)
+
+        sccombos = scpaths.combos()
+        if len(sccombos) == 1:
+            self._default_scpaths = None
+            self._default_scparams = sccombos[0]
+        elif len(sccombos) > 1:
+            self._default_scpaths = scpaths
+            self._default_scparams = None
 
     def set_gvdefaults(self, items):
         if items is None: #allow []

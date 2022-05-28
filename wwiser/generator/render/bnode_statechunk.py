@@ -78,10 +78,10 @@ class AkStateChunk(object):
                 #TODO filter repeats
                 self._states.append(bsi)
 
-    def get_bstate(self, group, value):
+    def get_bsi(self, group, value):
         for bsi in self._states:
             if bsi.group == group and bsi.value == value:
-                return bsi.bstate
+                return bsi
         return None
 
     def get_states(self):

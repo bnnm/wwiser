@@ -102,7 +102,7 @@ Most information in *wwiser* comes from studying Wwise SDKs and testing many gam
 Wwise uses logical "objects" of various types that reference other objects. Some info and useful terms can be found in their online help:
 *https://www.audiokinetic.com/library/edge/?source=Help&id=glossary*
 
-Wwise is also easy to install and play around with (if a bit buggy and crash-prone), and has extensive documentation:
+Wwise is also easy to install and play around with, and has extensive documentation:
 - *https://www.audiokinetic.com/library/edge/*
 - *https://www.audiokinetic.com/courses/wwise101/*
 
@@ -242,7 +242,7 @@ Watch out for filenames with:
 - `{s}`: has crossfading parts marked like `##fade`
 - `{m}`: uses multi-loops where multiple places set to `#@loop`
 - `{e}`: uses "external IDs" set by game at runtime so can't guess file, usually voices
-- `{!}`: missing audio that usually needs more .bnk or uses unsupported audio plugins
+- `{!}`: some kind of unplayable issues (missing/unsupported audio)
 - `{l=(lang)}`: when flag to handle languages is set, use when multiple songs/sfx per language need to coexist coexist in same dir
 
 *wwiser* adds those marks to tell you those files may need special care, and will be detailed below. Some optional settings also add extra marks to the name, too.
@@ -295,11 +295,9 @@ Main Wwise features missing are:
 - plugins: Wwise can alter output (including volume) from multiple bank parameters, not simulated either
 - special audio: songs with unusual features like midis/tone generator plugins can't play (too complex)
 - crossfades: Wwise games sometimes silence or crossfade files while playing the rest (configurable)
-- fade-in/outs: some audio parts should be faded but are ignored (to be fixed)
 
 Other limitations:
-- object's values changed in real time through events (like volume) aren't applied
-- object's values changed in real time through actor-mixers (a hierarchy or group of similar objects, like gunshots) aren't applied
+- object's values changed in real time through events (like volume) only apply certain cases (configurable)
 - actions like setting certain switch value before playing music inside an event are ignored (just autosets all values for that event)
 - multiple play actions with probability (ex. play A 100% of the time + play B 50% of the time) just play all actions
 
@@ -313,26 +311,18 @@ There is an option to make `.txtp` per "base" group. This works for simple, sing
 
 
 ### Crossfade mark {s}
-In some cases parts of the song silence or change volume based on a in-game variable. By default all plays at default volume (may play incorrectly all at once), but you can pass multiploe "gamevars" values, as `key=value`. For example `bgm_srank_param=0.0` would silence some beat layer, while `4.0` will start to add it, and `7.0` would peak.
+In some cases parts of the song silence or change volume based on a in-game variable (gamevar). By default all plays at default volume (may play incorrectly all at once), but you can pass multiple "gamevars" values, as `key=value`. For example `bgm_srank_param=0.0` would silence some beat layer, while `4.0` will start to add it, and `7.0` would peak. This is described later detail in the "passing variables" section.
 
-Min/max values and how values affect volumes is developer-defined per game (saved in Wwise's "RTPC" config) so there isn't a standard way to handle. Values are always numbers, but *wwiser* supports certain special values to simplify handling. Examples:
-- `health_points=30.0`: sets a gamevar to value (maybe lowers volume and add some low-pass filter)
-- `123456789=30.0`: same, but using a Wwise's short ID rather than text
-- `bgm_srank_param=min`: lowest possible value
-- `bgm_srank_param=min`: highest possible value
-- `bgm_srank_param=*`: game's default (needs loaded Init.bnk). Ignored if not found/loaded (same as not set).
-- `bgm_srank_param=-`: not set (realistically isn't possible in a game, but allowed in *wwiser*).
-- `health_points=10000000.0`: accepted but wrong values are clamped to min/max
-- `health_points=30.0,60.0,100.0`: makes 3 `.txtp` per different comma-separated value
-- `*=10.0`: any gamevar set to some value
-
-Inside the `.txtp` crossfade parts are marked with `##fade` near `.wem`, and RTPC info is down in the comment tree. You can also silence those by put `?` in front of `.wem`, or `#v 0` before `##fade`.
+Inside the `.txtp` crossfade parts are marked with `##fade` near `.wem`, and gamevar info is down in the comment tree. You can also silence those by put `?` in front of `.wem`, or `#v 0` before `##fade`.
 
 
-### State mark {s}
-In rare cases `{s}` means the volume is altered/silenced via states, which should be handled automatically by making one `.txtp` per state that changes volumes.
+### Statechunk mark {s}
+In rare cases `{s}` means the volume is altered/silenced via states, which should be handled automatically by making one `.txtp` per state that changes volumes, to a point.
 
 Sometimes default `.txtp` marked with `{s}` and without state applied is also meant to be playable. For example a game may define a base song that plays all, then silence some audio layer with one state. don't need to be touched. However other games may not need this and default  `.txtp` playing all at once makes no sense.  *wwiser* can't autodetect all invalid cases so just remove the offending `.txtp`.
+
+ *wwiser* skips some possible `{s}` combos that may be useful to make. Some games use tons of those states that end up altering audio in the same way.
+`bgm_cutscene`, `scene_intro`, `in_menu`, `bus_fader`, `bgm_layer` and so on all could apply silence on different *audio objects*, with end result often being the same (we may only want `bgm_layer=mid/low` alts). Check the "passing variables" section for tips to handle those cases.
 
 
 ### Multi-loops mark {m}
@@ -343,6 +333,8 @@ In Wwise multiple parts may loop  independently (like some short croak sfx + lon
 This indicates some kind of problem. Typically missing memory bank (try loading more banks first), or an unsupported Wwise feature. The later will play as silence (parts are marked as `?`) rather than failing, since sometimes it doesn't matter much.
 
 Unsupported features are usually programatically generated audio (such as a sine wave, a "whoosh" wind sfx, and so on), or Wwise midi (that is mostly silent and used for syncronization rather than sound).
+
+If the `.txtp` includes a huge number of sounds it may also be marked, as *vgmstream* currently has some max limits.
 
 
 ### External mark {e}
@@ -379,14 +371,73 @@ Somewhat related, inside *SoundbanksInfo.xml* you may find the original `.wem` n
 ### Passing volumes
 Because volumes in Wwise are a complex mix of external and internal settings, default generated volume may be a bit low. You can change it by setting the "master volume" option. For example `6.0dB` to double volume, or `50%` to halve it.
 
-Set `*` instead to auto-normalize volume (default). This will increase or decrease overall volume per file, trying to keep it as close as base volume. Or, set `0` to leave volumes as originally set in Wwise.
+Set `*` instead to auto-normalize volume (default). This will increase or decrease overall volume per file, trying to keep it as close as base volume. Or, set `0` to leave volumes as originally set in Wwise. Normalizing also helps to ignore dupe events that are the same but just change volume slightly (like `play_bgm (bgm=standard)`, `play_bgm (bgm=quiet)`), so disabling it may also get some more dupe events.
 
 
 ### Passing variables
-By default *wwise* makes all possible combinations of events and variables, but you can set them manually (mostly for testing). Format: `(state-key=value)` `[switch-key=value]`
+By default *wwiser* makes combinations of events and variables to get as many useful `.txtp` as possible. This simulates how a game would change Wwise's internal state to get various sounds.
 
-*keys* and *values* can be Wwise IDs, or original text (internally converted to ID). Objects that need variables will check the passed list to decide what to generate. Note that you need to include all needed key + values, or nothing may be created (Wwise objects may use a default value for a variable not found, but this isn't currently simulated). Value `-` means "any", and can be used in some objects.
+Because the tool can only guess so much, in some cases you need to pass internal state manually to improve output (mainly for txtp marked with `{s}`, see above), in the form of lists of `key=value`.
 
+#### Types
+There are three lists that can be modified, for each type of internal state:
+- gamesyncs: *state* and *switch* "paths" that change which song plays
+  - Default: tries all possible combinations (skips a few that are unlikely to happen)
+  - example: `(bgm_song=music_field) [bgm_vocal=off]` = plays field music without vocals
+- statechunks: *states* that apply properties (like different volumes per state)
+  - Default: tries combos for typical audio types (skips others that often silence the whole song, but a few may be useful)
+  - example: `(bgm_layer=low)` = silences one layer when set
+- gamevars: *game parameter* values that alter some part of the song (also usually volumes)
+  - Default: does nothing (hard to decide on useful combos)
+  - example: `{current_hp=30.0}` = lowers volume and a filter when HP is low
+
+Each game uses these differently, so there is no standard way to handle. Technically statechunks and gamesync's states are the same thing, but are kept separate here for flexibility.
+
+#### Format
+List format is: `(state-key=value) [switch-key=value] {gamevar-key=value}`, where `(..)`=state, `[..]`=switch, `{..}`=gamevar. You don't need to include `()` in the statechunk list or `{}` in the gamevar list though, it's just for consistency. Spaces are optional too (`(state=value)[switch=value]` is ok). "Default" is the behavior when nothing is passed.
+
+*keys* can be Wwise numbers (short IDs) or original text (internally converted to ID). *values* in states and switches work like that too, while gamevars need a decimal value (range depends on the gamevar). Example: `bgm=field` or `412724365=514358619` are the same.
+
+You can pass multiple lists by separating with a `/`, or separate values with `,` for a similar effect:
+- `(bgm_song=music_field) [bgm_vocal=off] / (bgm_song=music_field) [bgm_vocal=on]`: makes 2 txtp for field, with and without vocals
+- `(bgm_layer=low,mid)`: same as `(bgm_layer=low) / (bgm_layer=mid)`, makes 2 txtp for each layer type
+
+There are some special values:
+- `state/switch=-`: "any", can be used in some paths (gamesyncs only, in statechunk "any" has no meaning)
+- `gamevar=-`: default value if defined and loaded (usually in init.bnk), otherwise ignored
+- `gamevar=min/max`: auto sets min/max values
+- `*=(value)`: sets all gamevars to that (`{*=min}` to change all at once)
+- `gamevar=(huge number)`: auto clamped to min/max values
+
+#### Tips
+If you open any generated `.txtp` with a text editor, you can see some extra info at the bottom that tells you about possible variables:
+```
+123456789.wem #i
+
+# AUTOGENERATED WITH WWISER v20220416
+#
+# (full txtp name)
+# * gamesyncs: (used gamesyncs)
+# * statechunks: (used statechunks)
+# * gamevars: (used gamevas)
+#
+# PATH
+# (generated Wwise object following the gamesync path)
+#
+# STATECHUNKS
+# (list of possible statechunks)
+#
+# GAMEVARS
+# (list of possible gamevars)
+```
+Use that info as a base for your lists.
+
+When passing variables beware of:
+- passing incomplete gamesyncs paths may result in nothing playing (`[bgm_vocal=off]` only may not be enough)
+- repeated variables uses last one's value
+- vars that don't apply may be ignored (passing `{_dummy=1.0}` is ok but affects nothing)
+- passing many values with commas may result in lots of `.txtp` (`(bgm=a,b,c) (layer=e,f)` is multiplicative and creates 6 lists)
+- passing many lists may increase dupes (*wwiser* just tries to generate with each list set, that may make the same things)
 
 ### Passing filters
 By default *wwiser* generates all `.txtp` that are considered "usable". This mainly means events, prioritizing those with known names. You can use a list of "filters" to alter this, passing multiple `(filter) (filter) ...` to generate only certain *Wwise objects*.
@@ -419,7 +470,7 @@ Examples:
 
 Some tricks you can do with filters:
 - Testing: if you have a big `.txtp` with lots of groups, you can pass a single ID and output just the part you want.
-- Ignore sfx: maybe you have `common.bnk` with lots of sfx but a handful of jingles. Pass `jingle_*` (if named) or an event ID list to ignore sfx events, or pass `/play_sfx_*` to ignore SFX if you have names.
+- Ignore sfx: maybe you have `common.bnk` with lots of sfx but a handful of jingles. Pass `jingle_*` (if named) or an event ID list to only read those while ignoring other sfx events, or pass `/play_sfx_*` to ignore SFX directly (if you have names).
 - Load many banks: sometimes games separate and load `.bnk` in non-obvious ways. You could just load everything then filter by `music.bnk` to get music but ensure all needed banks are there (ignoring sfx or voice banks).
 - Skip layered sounds, like SFX noise pasted on top of music, using sub-node filters
 - Alter `.txtp` order: set *generate rest* and apply filters to force filtered names to generate first (alters detected dupes)

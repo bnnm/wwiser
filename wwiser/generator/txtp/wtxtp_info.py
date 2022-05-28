@@ -175,7 +175,7 @@ class TxtpInfo(object):
             if not value:
                 value = state.value
 
-            info = "{%s=%s}" % (name, value)
+            info = "(%s=%s)" % (name, value)
             if state.unreachable:
                 has_unreachables = True
             self._scnames += info

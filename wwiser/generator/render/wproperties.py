@@ -262,12 +262,12 @@ class PropertyCalculator(object):
             return
         # find currently set states (may be N)
         for state in ws.scparams.get_states():
-            bstate = bnode.statechunk.get_bstate(state.group, state.value)
-            if not bstate:
+            bsi = bnode.statechunk.get_bsi(state.group, state.value)
+            if not bsi or not bsi.bstate:
                 continue
 
             cfg.crossfaded = True
-            self._apply_props(bstate)
+            self._apply_props(bsi.bstate)
             self._txtp.info.statechunk(state)
 
     # -------------------------------------------------------------------------

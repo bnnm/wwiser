@@ -125,4 +125,4 @@ class TxtpCache(object):
             pass
 
         if volume and not self.volume_master and not auto:
-            logging.info("parser: ignored incorrect volume %s", volume)
+            logging.info("parser: ignored incorrect master volume %s", volume)

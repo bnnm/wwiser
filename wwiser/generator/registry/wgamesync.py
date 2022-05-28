@@ -169,7 +169,7 @@ def _get_info(txtpcache, id):
 class GamesyncParams(object):
 
     def __init__(self, txtpcache):
-        self._empty = True #public
+        self._empty = True
         self._elems = {}
         self._txtpcache = txtpcache
         self._manual = False
@@ -188,7 +188,7 @@ class GamesyncParams(object):
                 elems.append((type, name, value))
         return elems
 
-    # standard add
+    # internal registers
     def adds(self, gamesyncs):
         unreachables = False
         for gamesync in gamesyncs:
@@ -197,8 +197,6 @@ class GamesyncParams(object):
                 unreachables = True
         return unreachables
 
-
-    # include new variable
     def add(self, type, name, value):
         self._empty = False
 
@@ -267,6 +265,9 @@ class GamesyncParams(object):
         return value
 
     def add_gsparam(self, type, key, val):
+        self._empty = False
+        self._manual = True
+
         logging.debug("gamesync: add t=%s, k=%s, v=%s", type, key, val)
         if key is None or val is None:
             return
@@ -278,50 +279,6 @@ class GamesyncParams(object):
             val = self._fnv.get_hash(val)
         self.add(type, key, val)
 
-
-    def set_gsparams(self, gsparams):
-        self._empty = False #even if passed list is empty (to simulate "nothing set")
-        self._manual = True #manual params behave a bit differently
-
-        if not gsparams:
-            return
-
-        # split '(key=var)(key=var)', as output by wwiser
-        final_gsparams = []
-        for gsparam in gsparams:
-            replaces = {')(':'):(', '][': ']:[', ')[': '):[', '](': ']:('}
-            is_split = False
-            for repl_key, repl_val in replaces.items():
-                if repl_key in gsparam:
-                    gsparam = gsparam.replace(repl_key, repl_val)
-                    is_split = True
-
-            if is_split:
-                splits = gsparam.split(':')
-                final_gsparams += splits
-            else:
-                final_gsparams.append(gsparam)
-        gsparams = final_gsparams
-
-        pattern_st = re.compile(r"\((.+)=(.+)\)")
-        pattern_sw = re.compile(r"\[(.+)=(.+)\]")
-        for gsparam in gsparams:
-            match = pattern_st.match(gsparam)
-            if match:
-                key, val = match.groups()
-                self.add_gsparam(wparams.TYPE_STATE, key, val)
-
-            match = pattern_sw.match(gsparam)
-            if match:
-                key, val = match.groups()
-                self.add_gsparam(wparams.TYPE_SWITCH, key, val)
-
-        if DEBUG_PRINT_TREE_PARAMS:
-            logging.info("*** params")
-            logging.info("in: %s", gsparams)
-
-            logging.info("out: %s", self._elems)
-            logging.info("")
 
     def _get_info(self, id):
         return _get_info(self._txtpcache, id)
@@ -336,7 +293,7 @@ class GamesyncPaths(object):
         self._txtpcache = txtpcache
         self._root = _GamesyncNode(None, [])
         self._current = self._root
-        self._paths = None
+        self._params = None
 
     def is_empty(self):
         return self._empty
@@ -356,37 +313,45 @@ class GamesyncPaths(object):
         self._current = self._current.parent
 
     def combos(self):
-        if self._paths is not None:
-            return self._paths
+        if self._params is not None:
+            return self._params
 
         if DEBUG_PRINT_TREE_BASE:
             self._debug_print_tree_base()
 
-        self._paths = []
+        self._params = []
         self._include_path(self._root)
 
         if DEBUG_PRINT_TREE_COMBOS:
             self._debug_print_tree_combos()
 
-        return self._paths
+        return self._params
 
     def _include_path(self, node):
         if not node.children:
             # leaf node found, add all gamesyncs to path (in reverse to simplify)
-            path = GamesyncParams(self._txtpcache)
+            params = GamesyncParams(self._txtpcache)
 
             path_node = node
             while path_node:
-                path.adds(path_node.elems)
+                params.adds(path_node.elems)
                 path_node = path_node.parent
-                path._depth += 1
+                params._depth += 1
 
             if DEBUG_PRINT_TREE_MAKING:
                 logging.debug("GS path added")
-            self._paths.append(path)
+            self._params.append(params)
 
         for child in node.children:
             self._include_path(child)
+
+    def add_params(self, params):
+        self._params = []
+        for combo in params.combos():
+            gparams = GamesyncParams(self._txtpcache)
+            for item in combo:
+                gparams.add_gsparam(item.type, item.key, item.val)
+            self._params.append(gparams)
 
     # -----------------------------------------------------
 
@@ -403,10 +368,10 @@ class GamesyncPaths(object):
 
     def _debug_print_tree_combos(self):
         logging.info("*** combos")
-        for path in self._paths:
+        for path in self._params:
             elems = self._print_elems(path.get_elems())
             logging.info(elems)
-        logging.info(" >> (total %i)" % (len(self._paths)))
+        logging.info(" >> (total %i)" % (len(self._params)))
         logging.info("")
 
     def _debug_print_combos(self, node):

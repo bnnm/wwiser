@@ -67,19 +67,20 @@ class Cli(object):
         p.add_argument('-gm', '--txtp-move',            help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
         p.add_argument('-gv', '--txtp-volume',          help="Set master TXTP volume, in percent or decibels\nexamples: 2.0=200%%, 0.5=50%%, -6dB=50%%, 6dB=200, *=autoadjust%%\n(negative dB needs equals: -gv=-6dB)", default='*')
 
-        p = parser.add_argument_group('txtp parameter options')
-        p.add_argument('-gp', '--txtp-params',          help="Set TXTP gamesync parameters (default: auto)", metavar='PARAMS', nargs='*')
-        p.add_argument('-gg', '--txtp-gamevars',        help="Set TXTP game variables like RTPCs (default: auto)", metavar='GAMEVARS', nargs='*')
+        p = parser.add_argument_group('txtp Wwise state options')
+        p.add_argument('-gp', '--txtp-params',          help="Set TXTP gamesync list (default: auto)", metavar='ITEMS', nargs='*')
+        p.add_argument('-gs', '--txtp-statechunks',     help="Set TXTP statechunks list (default: auto)", metavar='ITEMS', nargs='*')
+        p.add_argument('-gg', '--txtp-gamevars',        help="Set TXTP game parameter list (default: auto)", metavar='ITEMS', nargs='*')
 
         p = parser.add_argument_group('txtp filtering options')
-        p.add_argument('-gf', '--txtp-filter',          help="Set TXTP targets name/id/classname/bnk (default: auto)", metavar='FILTERS', nargs='+')
+        p.add_argument('-gf', '--txtp-filter',          help="Set TXTP targets name/id/classname/bnk (default: auto)", metavar='ITEMS', nargs='+')
         p.add_argument('-gfr','--txtp-filter-rest',     help="Generate rest of files after filtering\n(allows prioritizing names in filter then creating\nrest, altering dupe order)", action='store_true')
         p.add_argument('-gfn','--txtp-filter-normal',   help="Skip normal files\n(allows writting unused only)", action='store_true')
         p.add_argument('-gfu','--txtp-filter-unused',   help="Skip unused files\n(for testing)", action='store_true')
         p.add_argument('-gd', '--txtp-dupes',           help="Generate TXTP duplicates\n(may create a lot of .txtp)", action='store_true')
         p.add_argument('-gde','--txtp-dupes-exact',     help="Only consider dupes TXTP that are exactly the same\n(may create .txtp that sound 99%% the same)", action='store_true')
         p.add_argument('-gbo','--txtp-bank-order',      help="Generate TXTP in bank order instead of names first\n(alters which .txtp are considered dupes)", action='store_true')
-        p.add_argument('-gr', '--txtp-renames',         help="Set TXTP renames in the form of text-in:text-out (default: auto)", metavar='RENAMES', nargs='+')
+        p.add_argument('-gr', '--txtp-renames',         help="Set TXTP renames in the form of text-in:text-out (default: auto)", metavar='ITEMS', nargs='+')
 
         p = parser.add_argument_group('txtp misc options')
         p.add_argument('-gnw','--txtp-name-wems',       help="Add all .wem names to .txtp name\n(may create too long filenames when many .wem are used)", action='store_true')
@@ -169,7 +170,7 @@ class Cli(object):
         args = self._parser.parse_args()
 
         # detect special filename to simplify config
-        if len(args.files) == 1 and args.files[0] in ['!wwconfig.txt', 'wwconfig.txt']:
+        if len(args.files) == 1 and 'wwconfig' in args.files[0]:
            args.config = args.files[0]
            args.files = []
 
@@ -284,7 +285,8 @@ class Cli(object):
             generator.set_filter_rest(args.txtp_filter_rest)
             generator.set_filter_normal(args.txtp_filter_normal)
             generator.set_filter_unused(args.txtp_filter_unused)
-            generator.set_gsparams(args.txtp_params)
+            generator.set_gamesyncs(args.txtp_params)
+            generator.set_statechunks(args.txtp_statechunks)
             generator.set_gamevars(args.txtp_gamevars)
             generator.set_dupes(args.txtp_dupes)
             generator.set_dupes_exact(args.txtp_dupes_exact)

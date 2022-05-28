@@ -22,8 +22,10 @@ class WwiseState(object):
         self.transitions = None # sub-objects when changing from one GS path to other
         self.stingers = None # sub-objects triggered with another plays
 
+        self._default_gspaths = None
         self._default_gsparams = None
-        self._default_sc = None
+        self._default_scpaths = None
+        self._default_scparams = None
         self._default_gvpaths = None
         self._default_gvparams = None
 
@@ -37,14 +39,17 @@ class WwiseState(object):
         self.transitions = wtransitions.Transitions()
         self.stingers = wstingers.Stingers()
 
-
     def reset_gs(self):
-        self.gspaths = wgamesync.GamesyncPaths(self._txtpcache)
+        self.gspaths = self._default_gspaths
         self.gsparams = self._default_gsparams
+        if not self.gspaths:
+            self.gspaths = wgamesync.GamesyncPaths(self._txtpcache)
 
     def reset_sc(self):
-        self.scpaths = wstatechunks.StateChunkPaths()
-        self.scparams = self._default_sc
+        self.scpaths = self._default_scpaths
+        self.scparams = self._default_scparams
+        if not self.scpaths:
+            self.scpaths = wstatechunks.StateChunkPaths()
 
     def reset_gv(self):
         self.gvpaths = self._default_gvpaths
@@ -52,8 +57,8 @@ class WwiseState(object):
 
     # ---
 
-    def has_gsset(self):
-        return self.gsparams is not None
+    def gs_registrable(self):
+        return self.gsparams is None
 
     def get_gscombos(self):
         if self.gsparams or self.gspaths.is_empty():
@@ -65,18 +70,10 @@ class WwiseState(object):
             return
         self.gsparams = gsparams
 
-    def set_gsdefaults(self, items):
-        if items is None: #allow []
-            return
-        gsparams = wgamesync.GamesyncParams(self._txtpcache)
-        gsparams.set_gsparams(items)
-
-        self._default_gsparams = gsparams
-
     # ---
 
-    def has_scset(self):
-        return self.scparams is not None
+    def sc_registrable(self):
+        return self.scparams is None
 
     def get_sccombos(self):
         if self.scparams or self.scpaths.is_empty():
@@ -86,13 +83,9 @@ class WwiseState(object):
     def set_sc(self, scparams):
         self.scparams = scparams
 
-    def set_scdefaults(self, scparams):
-        self._default_sc = scparams
-        self.scparams = scparams
-
     # ---
 
-    def has_gvset(self):
+    def gv_registrable(self):
         return self.gvparams is not None
 
     def get_gvcombos(self):
@@ -103,14 +96,44 @@ class WwiseState(object):
     def set_gv(self, gvparams):
         self.gvparams = gvparams
 
+    # ---
+
+    # Handle param defaults, that work mostly the same.
+    #
+    # Param list can be N combos of params, so make a default GS/SC/GV path handler, and pass the pre-parsed list
+    # that is converted to internal stuff. To simplify 
+    # If there is only one 1 path set it default to optimize calls (otherwise would try to get combos for 1 type).
+
+    def set_gsdefaults(self, items):
+        if items is None: #allow []
+            return
+        params = wparams.Params(allow_st=True, allow_sw=True)
+        params.adds(items)
+
+        gspaths = wgamesync.GamesyncPaths(self._txtpcache)
+        gspaths.add_params(params)
+
+        gscombos = gspaths.combos()
+        if len(gscombos) == 1:
+            self._default_gspaths = None
+            self._default_gsparams = gscombos[0]
+        elif len(gscombos) > 1:
+            self._default_gspaths = gspaths
+            self._default_gsparams = None
+
+    def set_scdefaults(self, items):
+        if items is None: #allow []
+            return
+        pass
+        #self._default_sc = scparams
+        #self.scparams = scparams
+
     def set_gvdefaults(self, items):
         if items is None: #allow []
             return
         params = wparams.Params(allow_gp=True)
         params.adds(items)
 
-        # May set multiple params at once, so we save this default/fixed gvpaths.
-        # If there is only one 1 path set it default to optimize calls (otherwise would try to get combos for 1 type)
         gvpaths = wgamevars.GamevarsPaths()
         gvpaths.add_params(params)
 

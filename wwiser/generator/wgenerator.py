@@ -68,8 +68,11 @@ class Generator(object):
             return
         self._move = move
 
-    def set_gsparams(self, items):
+    def set_gamesyncs(self, items):
         self._ws.set_gsdefaults(items)
+
+    def set_statechunks(self, items):
+        self._ws.set_scdefaults(items)
 
     def set_gamevars(self, items):
         self._ws.set_gvdefaults(items)

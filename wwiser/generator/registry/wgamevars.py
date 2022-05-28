@@ -26,10 +26,9 @@ class GamevarItem(object):
         # allowed special values
         self.is_min = val == 'min'
         self.is_max = val == 'max'
-        self.is_default = val == '*'
-        self.is_unset = val == '-'
+        self.is_default = val == '-'
 
-        if self.is_min or self.is_max or self.is_default or self.is_unset:
+        if self.is_min or self.is_max or self.is_default:
             pass #val = 0 #don't change to detect dupes
         else:
             try:
@@ -67,6 +66,13 @@ class GamevarsPaths(object):
         self._combos = []
         self._fnv = wfnv.Fnv()
 
+    # no registers needed
+
+    def combos(self):
+        return self._combos
+
+    # ---
+
     def add_params(self, params):
         for combo in params.combos():
             gparams = GamevarsParams()
@@ -93,7 +99,3 @@ class GamevarsPaths(object):
             return None
 
         return gitem
-
-
-    def combos(self):
-        return self._combos

@@ -547,7 +547,6 @@ class Names(object):
             if match:
                 # prev id + name still hanging around
                 if id and name:
-                    #print("add", id, name, objpath, path)
                     self._add_name(id, name, objpath=objpath, path=path)
 
                 id = name = objpath = path = None

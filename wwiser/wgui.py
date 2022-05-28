@@ -134,7 +134,13 @@ class Gui(object):
         box[2].grid(row=row, column=2, sticky="W")
         row += 1
 
-        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float-value ..' to set (affects crossfading txtp with {s}", width=75)
+        box = self._box('txtp_statechunks', frame, "Statechunks:", "List of 'state=value ...' to set (affects crossfading txtp)", width=75)
+        box[0].grid(row=row, column=0, sticky="E")
+        box[1].grid(row=row, column=1, sticky="W")
+        box[2].grid(row=row, column=2, sticky="W")
+        row += 1
+
+        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float-value ...' to set (affects crossfading txtp)", width=75)
         box[0].grid(row=row, column=0, sticky="E")
         box[1].grid(row=row, column=1, sticky="W")
         box[2].grid(row=row, column=2, sticky="W")
@@ -493,7 +499,8 @@ class Gui(object):
             generator.set_filter_rest( self._get_item('txtp_filter_rest') )
             generator.set_filter_normal( self._get_item('txtp_filter_normal') )
             generator.set_filter_unused( self._get_item('txtp_filter_unused') )
-            generator.set_gsparams( self._get_list('txtp_params') )
+            generator.set_gamesyncs( self._get_list('txtp_params') )
+            generator.set_statechunks( self._get_list('txtp_statechunks') )
             generator.set_gamevars( self._get_list('txtp_gamevars') )
             generator.set_bank_order( self._get_item('txtp_bank_order') )
             generator.set_renames( self._get_list('txtp_renames') )

@@ -156,7 +156,6 @@ class Params(object):
                     logging.info('parser: ignored incorrect param %s', elem)
 
         self._add_combos()
-        print(self._combos)
 
     def _add_combos(self):
         # make possible combos of current items

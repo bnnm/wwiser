@@ -430,8 +430,9 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
 
     def _render_clips(self, bnode, subtrack, txtp):
         if not subtrack:
-            # rarely may happen with default = no track = silence (NMH3)
-            elems = [bnode.silence]
+            # rarely may happen with default = no track = silence (NMH3, Tetris Effect)
+            sound = bnode.silence
+            elems = [sound]
             txtp.group_layer(elems, None)
             txtp.source_sound(sound, None)
             txtp.group_done(elems)

@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 class Stingers(object):
     def __init__(self):
-        self._items = {}
+        self._items = []
         self._done = OrderedDict()
 
 

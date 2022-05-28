@@ -50,6 +50,8 @@ class _TxtpField(object):
             return name1 < name2
         if name1:
             return True
+        if name2:
+            return False
         if value1 == value2:
             return None
         return value1 < value2

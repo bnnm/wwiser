@@ -152,7 +152,7 @@ class Gui(object):
         box[2].grid(row=row, column=2, sticky="W")
         row += 1
 
-        box = self._box('txtp_filter', frame, "Filter:", "List of allowed HIRCs ID/name/classnames/etc (use - to exclude)", width=75)
+        box = self._box('txtp_filter', frame, "Filter:", "List of allowed events/IDs/etc (use - to exclude)", width=75)
         box[0].grid(row=row, column=0, sticky="E")
         box[1].grid(row=row, column=1, sticky="W")
         box[2].grid(row=row, column=2, sticky="W")
@@ -170,6 +170,9 @@ class Gui(object):
 
         chk = self._chk('txtp_filter_unused', frame, "Skip unused files")
         chk.grid(row=row, column=3, columnspan=1, sticky="W")
+
+        chk = self._chk('txtp_statechunks_sd', frame, "Skip default statechunk")
+        chk.grid(row=row, column=4, columnspan=1, sticky="W")
 
         row += 1
 
@@ -243,8 +246,8 @@ class Gui(object):
         chk = self._chk('txtp_write_delays', frame, "Don't skip initial delay")
         chk.grid(row=row, column=0, sticky="W")
 
-        chk = self._chk('txtp_silence', frame, "Silence parts that crossfade by default")
-        chk.grid(row=row, column=1, sticky="W")
+        #chk = self._chk('txtp_x_silence', frame, "Silence parts that crossfade by default")
+        #chk.grid(row=row, column=1, sticky="W")
 
         row += 1
 
@@ -505,6 +508,8 @@ class Gui(object):
             generator.set_bank_order( self._get_item('txtp_bank_order') )
             generator.set_renames( self._get_list('txtp_renames') )
 
+            generator.set_statechunks_sd( self._get_item('txtp_statechunks_sd') )
+
             generator.set_wemdir( self._get_item('txtp_wemdir') )
             generator.set_master_volume( self._get_item('txtp_volume') )
             generator.set_lang( self._get_item('txtp_lang') )
@@ -520,7 +525,7 @@ class Gui(object):
             generator.set_random_multi( self._get_item('txtp_random_multi') )
             generator.set_random_force( self._get_item('txtp_random_force') )
             generator.set_write_delays( self._get_item('txtp_write_delays') )
-            generator.set_silence( self._get_item('txtp_silence') )
+            generator.set_x_silence( self._get_item('txtp_x_silence') )
 
             tags = wtags.Tags(banks, self.names)
             tags.set_make_event( self._get_item('tags_event') )

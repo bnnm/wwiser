@@ -149,7 +149,7 @@ class Renderer(object):
 
 
             # needs a base .txtp in some cases
-            if not make_unreachables and ws.scpaths.generate_default(sccombos):
+            if not self._txtpcache.statechunks_skip_default and not make_unreachables and ws.scpaths.generate_default(sccombos):
                 ws.set_sc(None)
                 ws.reset_gv()
 

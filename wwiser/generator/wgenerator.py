@@ -80,6 +80,9 @@ class Generator(object):
     def set_renames(self, items):
         self._txtpcache.renamer.add(items)
 
+    def set_statechunks_sd(self, flag):
+        self._txtpcache.statechunks_skip_default = flag
+
     #--------------------------------------------------------------------------
 
     def set_outdir(self, path):
@@ -131,8 +134,8 @@ class Generator(object):
     def set_write_delays(self, flag):
         self._txtpcache.write_delays = flag
 
-    def set_silence(self, flag):
-        self._txtpcache.silence = flag
+    def set_x_silence(self, flag):
+        self._txtpcache.x_silence_all = flag
 
     def set_tags(self, tags):
         self._txtpcache.tags = tags

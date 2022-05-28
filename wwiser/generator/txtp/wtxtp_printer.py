@@ -139,7 +139,7 @@ class TxtpPrinter(object):
             self.has_random_continuous = True
         if tnode.is_group_steps() and len(tnode.children) > 1:
             self.has_random_steps = True
-        if tnode.silenced or tnode.crossfaded:
+        if tnode.crossfaded or tnode.silenced:
             self.has_silences = True
 
 
@@ -173,7 +173,7 @@ class TxtpPrinter(object):
         volume = tnode.volume or 0
         if self._simpler and not tnode.crossfaded: #don't silence rtpc-modified vars
             volume = 0
-        if self._txtpcache.silence or tnode.silenced:
+        if self._txtpcache.x_silence_all:
             mods += '  #v 0'
         elif volume:
             mods += '  #v %sdB' % (volume)
@@ -333,7 +333,7 @@ class TxtpPrinter(object):
         volume = tnode.volume or 0
         if self._simpler and not tnode.crossfaded: #don't silence rtpc-modified vars
             volume = 0
-        if self._txtpcache.silence or tnode.silenced:
+        if self._txtpcache.x_silence_all or tnode.silenced:
             silence_line = True #set "?" below as it's a bit simpler to use
         if volume:
             mods += '  #v %sdB' % (volume)

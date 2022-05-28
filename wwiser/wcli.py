@@ -68,9 +68,10 @@ class Cli(object):
         p.add_argument('-gv', '--txtp-volume',          help="Set master TXTP volume, in percent or decibels\nexamples: 2.0=200%%, 0.5=50%%, -6dB=50%%, 6dB=200, *=autoadjust%%\n(negative dB needs equals: -gv=-6dB)", default='*')
 
         p = parser.add_argument_group('txtp Wwise state options')
-        p.add_argument('-gp', '--txtp-params',          help="Set TXTP gamesync list (default: auto)", metavar='ITEMS', nargs='*')
-        p.add_argument('-gs', '--txtp-statechunks',     help="Set TXTP statechunks list (default: auto)", metavar='ITEMS', nargs='*')
-        p.add_argument('-gg', '--txtp-gamevars',        help="Set TXTP game parameter list (default: auto)", metavar='ITEMS', nargs='*')
+        p.add_argument('-gp',   '--txtp-params',            help="Set TXTP gamesync list (default: auto)", metavar='ITEMS', nargs='*')
+        p.add_argument('-gs',   '--txtp-statechunks',       help="Set TXTP statechunks list (default: auto)", metavar='ITEMS', nargs='*')
+        p.add_argument('-gg',   '--txtp-gamevars',          help="Set TXTP game parameter list (default: auto)", metavar='ITEMS', nargs='*')
+        p.add_argument('-gssd', '--txtp-statechunks-sd',    help="Skip default statechunk (default: auto)", action='store_true')
 
         p = parser.add_argument_group('txtp filtering options')
         p.add_argument('-gf', '--txtp-filter',          help="Set TXTP targets name/id/classname/bnk (default: auto)", metavar='ITEMS', nargs='+')
@@ -287,6 +288,7 @@ class Cli(object):
             generator.set_filter_unused(args.txtp_filter_unused)
             generator.set_gamesyncs(args.txtp_params)
             generator.set_statechunks(args.txtp_statechunks)
+            generator.set_statechunks_sd(args.txtp_statechunks_sd)
             generator.set_gamevars(args.txtp_gamevars)
             generator.set_dupes(args.txtp_dupes)
             generator.set_dupes_exact(args.txtp_dupes_exact)
@@ -313,7 +315,7 @@ class Cli(object):
 
             generator.set_x_noloops(args.txtp_x_noloops)
             generator.set_x_nameid(args.txtp_x_nameid)
-            generator.set_silence(args.txtp_x_silence)
+            generator.set_x_silence(args.txtp_x_silence)
 
             generator.generate()
 

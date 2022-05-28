@@ -28,12 +28,13 @@ class TxtpCache(object):
         self.random_multi = False
         self.random_force = False
         self.write_delays = False
-        self.silence = False
         self.wwnames = None
+        self.statechunks_skip_default = False
 
         self.no_txtp = False
         self.x_noloops = False
         self.x_nameid = False
+        self.x_silence_all = False
 
         # process helpers (passed around)
         self.tags = None

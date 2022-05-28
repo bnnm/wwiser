@@ -223,8 +223,8 @@ class TxtpNamer(object):
 
         # extra flags
         if printer.has_silences:
-            if txtp.txtpcache.silence:
-                name += " {s-}" #"silence all"
+            if txtp.txtpcache.x_silence_all:
+                name += " {s-}"
             else:
                 name += " {s}"
         name += self._get_scparams()

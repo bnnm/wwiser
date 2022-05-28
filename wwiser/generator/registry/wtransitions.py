@@ -15,7 +15,7 @@ class Transitions(object):
     def add(self, rules):
         for btrn in rules.ntrns:
             
-            if btrn in self._done:
+            if btrn.tid in self._done:
                 continue
-            self._done[btrn] = True
+            self._done[btrn.tid] = True
             self._items.append(btrn)

@@ -9,6 +9,7 @@ DEBUG_PRINT_TREE_PARAMS = False
 DEBUG_PRINT_TREE_MAKING = False
 DEBUG_PRINT_TREE_TEXT = False
 DEBUG_DEPTH_MULT = 2
+DEBUG_ALLOW_DYNAMIC_PATHS = False
 
 
 # GAMESYNCS' STATE/SWITCH PATHS
@@ -188,6 +189,9 @@ class GamesyncParams(object):
                 elems.append((type, name, value))
         return elems
 
+    def key(self):
+        return frozenset(self.get_elems())
+
     # internal registers
     def adds(self, gamesyncs):
         unreachables = False
@@ -226,6 +230,7 @@ class GamesyncParams(object):
 
         if DEBUG_PRINT_TREE_MAKING:
             logging.debug("GS added: %s%s, %s, %s" % (' ' * self._depth * DEBUG_DEPTH_MULT, type, self._get_info(name), self._get_info(value)))
+
         self._elems[key].append(value)
 
         return unreachable
@@ -258,8 +263,9 @@ class GamesyncParams(object):
                     continue
                 value = tmp
 
-            #pop values to simulate dynamic changes, though shouldn't happen nor be needed
-            #value = values.pop()
+            # pop values to simulate dynamic changes, though shouldn't happen nor be needed
+            if DEBUG_ALLOW_DYNAMIC_PATHS:
+                value = values.pop()
 
         logging.debug("gamesync: get %s, %s, %s" % (type, self._get_info(name), self._get_info(value)))
         return value
@@ -294,6 +300,7 @@ class GamesyncPaths(object):
         self._root = _GamesyncNode(None, [])
         self._current = self._root
         self._params = None
+        self._params_done = {}
 
     def is_empty(self):
         return self._empty
@@ -342,7 +349,12 @@ class GamesyncPaths(object):
 
             if DEBUG_PRINT_TREE_MAKING:
                 logging.debug("GS path added")
-            self._params.append(params)
+
+            # some paths are layers with repeated flags, ignore
+            params_key = params.key()
+            if params_key not in self._params_done:
+                self._params_done[params_key] = True
+                self._params.append(params)
 
         for child in node.children:
             self._include_path(child)

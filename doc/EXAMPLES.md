@@ -481,16 +481,23 @@ event > play > ...
 ```
 ```
 [831639979] SB_20_SeaGoddess_BGM_01.bnk
-    event > ... > segment > track [6ch]
-                          > track [2ch + plugin + bus]
+    event > ... > segment > track [6ch + bgm_bus]
+                            - 977579965 > 2514777396 (20_BGM)
+                          > track [2ch + vo_bus w/ plugin]
+                            - 347493992 > 1807401735 (20_Vo)
                 ...
-                > segment > track [6ch]
-                          > track [2ch + plugin + bus]
+                > segment > track [6ch + bgm_bus]
+                          > track [2ch + vo_bus w/ plugin]
+
+1807401735 (20_Vo)
+- FX 1021545014 [Wwise Gain (Custom)]
+  > fFullbandGain = -96.30000305175781
+  > fLFEGain = -96.30000305175781
 ```
-- uses wmid mixed with .wem (drums)
-- uses multiple 2ch vocals that use a peak meter FX plugin, and are re-routed to another bus with no channels defined
+- uses wmid mixed with .wem (used to sync audio and visuals)
+- uses multiple 2ch vocals that use a peak meter + gain FX plugin to silence
   - presumably only used to read peak values and aren't output
-  - extra vocals set volume
+  - vo_bus then calls bgm_bus
 
 ## Detroit: Become Human (PC)
 
@@ -702,3 +709,13 @@ bus hierarchy:
 - has volume states with custom buses to silence action/exploration layers
   - when BGM_Layer=mid, bus "low" is silent
   - when BGM_Layer=low, bus "mid" is silent
+- some intro + loop have slightly -1db volume intro, but seems to keep volume consistent (different wems)
+  - `BGM_Initialize (BGM_Stage=bt_2legs) (BGM_Bt_2legs=bt_2legs_1)`
+  - `BGM_Initialize (BGM_Stage=bt_jena_1)`
+- some use several curves to lower volume parts in some tracks
+  - `BGM_Initialize (BGM_Stage=ot_emergency)`
+
+## Yooka-Laylee and the Impossible Lair
+- has BusVolume states with custom buses to silence regular/8bit layers
+  - when MUS_8BIT=DISABLED, bus "MUSIC_8BIT" is silent
+  - when MUS_8BIT=ENABLED, bus "MUSIC_2D" is silent

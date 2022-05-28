@@ -99,10 +99,14 @@ class TxtpInfo(object):
             if not self._has_source(gs_idx):
                 continue
 
-            if current.gstext_long:
-                self._gsnames_long += " " + current.gstext_long
-            if current.gstext_short:
-                self._gsnames_short += " " + current.gstext_short
+            # only include if unique, as layered paths repeat nodes/names
+            # (works when GSs are enclosed in ()/[])
+            gs_l = current.gstext_long
+            gs_s = current.gstext_short
+            if gs_l and gs_l not in self._gsnames_long:
+                self._gsnames_long += " " + gs_l
+            if gs_s and gs_s not in self._gsnames_short:
+                self._gsnames_short += " " + gs_s
 
     def _has_source(self, gs_idx):
         current = self._ninfo[gs_idx]
@@ -117,37 +121,10 @@ class TxtpInfo(object):
 
         return False
 
-    # Gamevars (RTPC ID+values) are only interesting when used, and usage may depend on current set GVs
-    # and if any node or its parent uses them. So instead of finding them in the tree, useds GVs are registered.
+    # Gamevars/statechunks are only interesting when used, and usage may depend on current set values.
+    # and if any node or its parent uses them. So instead of finding them in the tree, useds SCs/GVs are registered.
 
-    # register gamesync for current node, but only once since one gamevar may apply to many nodes
-    def gamevar(self, ngvname, value):
-        self.gamevars([(ngvname, value)])
-
-    def gamevars(self, gamevars):
-        for gamevar in gamevars:
-            gvname = gamevar[0].value()
-            if gvname in self._gvdone:
-                continue
-            self._gvdone.add(gvname)
-            self._gvitems.append(gamevar)
-
-    def get_gvnames(self):
-        if not self._gvnames_init:
-            self._load_gvnames()
-        return self._gvnames
-
-    def _load_gvnames(self):
-        self._gvnames_init = True
-        for ngvname, value in self._gvitems:
-            name = ngvname.get_attrs().get('hashname')
-            if not name:
-                name = ngvname.value()
-
-            info = "{%s=%s}" % (name, value)
-            self._gvnames += info
-
-    # statechunks, same as gamevars (register when used)
+    # register for current node, but only once since one may apply to many nodes
     def statechunk(self, state):
         self.statechunks([(state)])
 
@@ -183,6 +160,33 @@ class TxtpInfo(object):
         # extra mark
         if has_unreachables:
             self._scnames = '~' + self._scnames
+
+    # same, register when used
+    def gamevar(self, ngvname, value):
+        self.gamevars([(ngvname, value)])
+
+    def gamevars(self, gamevars):
+        for gamevar in gamevars:
+            gvname = gamevar[0].value()
+            if gvname in self._gvdone:
+                continue
+            self._gvdone.add(gvname)
+            self._gvitems.append(gamevar)
+
+    def get_gvnames(self):
+        if not self._gvnames_init:
+            self._load_gvnames()
+        return self._gvnames
+
+    def _load_gvnames(self):
+        self._gvnames_init = True
+        for ngvname, value in self._gvitems:
+            name = ngvname.get_attrs().get('hashname')
+            if not name:
+                name = ngvname.value()
+
+            info = "{%s=%s}" % (name, value)
+            self._gvnames += info
 
     #----------------------------------------------------------------------------------
 

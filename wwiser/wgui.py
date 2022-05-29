@@ -1,13 +1,177 @@
 import os, logging, threading, platform
 import tkinter as tk
 from tkinter import ttk, font, filedialog, scrolledtext, messagebox
-from tkinter import TOP, BOTTOM, LEFT, RIGHT, BOTH, END, X, Y, NORMAL, DISABLED, EXTENDED
+#import zlib,base64
 
 from . import wversion, wlogs
 from .names import wnames
 from .parser import wparser
 from .viewer import wdumper, wview
 from .generator import wgenerator, wtags
+
+
+class GuiStyle(ttk.Style):
+    def __init__(self, master):
+        super(GuiStyle, self).__init__(master)
+
+        master.geometry('1000x900')
+
+        # this loads a .tcl theme, easier to handle, but hard to get out from .pyz
+        #root.tk.call("source", "theme.tcl")
+        #root.tk.call("set_theme", "light")
+
+        # packing values, for external use
+        self.pads_frame_top = {'padx':0, 'pady':0, 'ipadx':0, 'ipady':0}
+        self.pads_frame = {'padx':10, 'pady':0, 'ipadx':15, 'ipady':15}
+        self.pads_frame_bottom = {'padx':10, 'pady':(0, 10), 'ipadx':15, 'ipady':15}
+        self.pads_frame_buttons = {'padx':0, 'pady':0, 'ipadx':0, 'ipady':0}
+        self.pads_button = {'padx':(0, 8), 'pady':5, 'ipadx':1, 'ipady':1}
+        self.pads_options_grid = {'padx':10, 'pady':5, 'ipadx':1, 'ipady':1}
+        self.pads_panel_scrollbar = {'padx':(5,0)}
+        self.pads_labeltext = {'padx':0, 'pady':(0, 5), 'ipadx':5, 'ipady':5}
+
+        # overwrite system default (windows/linux/max style) with a simple one
+        # some widgets like TButton aren't configurable otherwise
+        self.theme_use('default') #others: alt, winnative, clam, classic, default, vista, xpnative
+
+        #print(tk.Button().keys())
+
+        font_main = self._get_font(('Segoe UI','Helvetica','Arial'))
+        size_lbl_info = 10
+
+        top_font = self._get_font(('Fixedsys', 'Consolas', 'Monospace', 'Fixedsys'))
+
+        color_back = '#2f3136'
+        color_text = '#F0F0F0'
+        color_high = '#f1c40f'
+        color_bt_b = '#F4F4F4'
+        color_bt_f = '#333333'
+        color_bm_b = '#00A2DD'
+        color_bm_f = '#F0F0F0'
+        color_lbl_info = '#999999'
+        color_list = '#40444b'
+
+        #TODO: see official defs in https://docs.python.org/3/library/tkinter.ttk.html
+        # ttk styles, passed as **kw, so same as configure(val_key:val_val)
+        styles = {
+            #others: TPanedwindow TRadiobutton TScrollbar TSeparator
+            '.': {
+                'font': (font_main, 12),
+            },
+            'TFrame': {
+                'background': color_back,
+            },
+            'Buttons.TFrame': {
+            },
+            'TLabelframe': {
+                'background': color_back, 'padding':(5,2)
+            },
+            'TLabelframe.Label': {
+                'background': color_back, 'foreground': color_text,
+            },
+            'TButton': {
+                'background': color_bt_b, 'foreground': color_bt_f, 'padding': 3, 'highlightthickness':0, 'borderwidth':0,
+            },
+            'Main.TButton': {
+                'background': color_bm_b, 'foreground': color_bm_f,
+            },
+            'TCheckbutton': {
+                'background': color_back, 'foreground': color_text, 'font': (font_main, 11), 'padding': (5,1), #'indicatorcolor':'red', 
+            },
+            'TLabel': {
+                'background': color_back, 'foreground': color_text,
+            },
+            'Top.TLabel': {
+                'foreground': color_high, 'font': (top_font, 28), 'weight':'bold', 'underline':0, 
+            },
+            'Header.TLabel': {
+                'foreground': "#00AEEE", 'font': (font_main, 13),
+            },
+            'Info.TLabel': {
+                'foreground': color_lbl_info,  'font': (font_main, 10), 'padding': 3,
+            },
+            'TEntry': {
+                'fieldbackground': '#50545b', 'foreground': color_text, 'padding': 3, 'font': (font_main, 11),
+            },
+        }
+
+        for key in styles.keys():
+            vals = styles[key]
+            if vals:
+                self.configure(key, **vals)
+
+        # special props
+        self.map('TButton', background=[('active', color_high)])
+        self.map('TCheckbutton', background=[('active', color_back)], indicatorcolor=[('selected', color_high),  ('pressed', color_high)])
+
+        # tk-only styles
+        # https://www.tcl.tk/man/tcl8.7/TkCmd/index.html
+        master.configure(background=color_back)
+        self.theme_canvas = {'background':'white', 'borderwidth':0, 'highlightthickness':0}
+        self.theme_scrolledtext = {'background': color_list, 'foreground': color_text, 'borderwidth':0, 'highlightthickness':0}
+        self.theme_listbox = {'background': color_list, 'foreground': color_text, 'borderwidth':0, 'highlightthickness':0, 'activestyle': 'none'}
+
+
+    # different SOs have a bunch of fonts so try first that works
+    def _get_font(self, fonts):
+        families = font.families()
+
+        for font_test in fonts:
+            if font_test in families:
+                return font_test
+        return 'Default' #ignored probably
+
+
+# Frames can't have scrollbars, so the only way to make one is to put in other
+# component that has them, in this case a canvas with scrollbar, and make a fake window.
+# Due to its hackish nature, other components need to be attached to panel.frame.
+class ScrollablePanel(ttk.Frame):
+    def __init__(self, frame, style, *args, **kwargs):
+        super(ScrollablePanel, self).__init__(frame, *args, **kwargs)
+
+        canvas = tk.Canvas(self, **style.theme_canvas)
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        frame = ttk.Frame(canvas)
+
+        frame.bind("<Configure>", self._on_configure_frame)
+        canvas.bind('<Configure>', self._on_configure_canvas)
+
+        canvas.bind('<Enter>', self._on_enter)
+        canvas.bind('<Leave>', self._on_leave)
+        scrollbar.bind('<Enter>', self._on_enter)
+        scrollbar.bind('<Leave>', self._on_leave)
+
+        window = canvas.create_window((0, 0), window=frame, anchor=tk.NW)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y, **style.pads_panel_scrollbar)
+        #frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True) #doesn't scroll, see on_configure_canvas
+
+        self.canvas = canvas
+        self.frame = frame
+        self.window = window
+
+    def _on_configure_frame(self, event):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def _on_configure_canvas(self, event):
+        # expand frame to canvas
+        if self.frame.winfo_reqwidth() != self.canvas.winfo_width():
+            self.canvas.itemconfigure(self.window, width=self.canvas.winfo_width())
+
+    def _on_enter(self, event):
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_leave(self, event):
+        self.canvas.unbind_all("<MouseWheel>")
+
+    def _on_mousewheel(self, event):
+        factor = 120 #on mac this should be 1?
+
+        pos = -1 * (event.delta // factor)
+        self.canvas.yview_scroll(pos, "units")
+
 
 
 class Gui(object):
@@ -39,282 +203,279 @@ class Gui(object):
 
     def _setup_window(self):
 
-        #----------------------------------------------------------------------
-        # base
-
         root = tk.Tk()
-        root.geometry('900x900')
         #root.resizable(width=False,height=False)
+
+        #icon = zlib.decompress(base64.b64decode('eJxjYGAEQgEBBiDJwZDBy''sAgxsDAoAHEQCEGBQaIOAg4sDIgACMUj4JRMApGwQgF/ykEAFXxQRc='))
         #root.iconbitmap(wloader.Loader.get_resource('resources/wwiser.ico'))
+        #root.iconbitmap(icon)
 
-        #style = ttk.Style(root)
-        #style.theme_use('default')
-        #root.tk.call("source", "theme.tcl")
-        #root.tk.call("set_theme", "light")
-
-        title = "WWISER"
+        title = "wwiser"
         if wversion.WWISER_VERSION:
             title += " " + wversion.WWISER_VERSION
         root.title(title)
 
-        self._top(root, "WWISER GUI").pack(side=TOP)
-
         # state
         self.root = root
 
-        #----------------------------------------------------------------------
-        # banks
+        self.style = GuiStyle(root) #custom ttk.Style(root)
 
-        frame = ttk.Frame(root)
-        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
+        self._setup_top()
+        self._setup_banks()
+        self._setup_options()
+        self._setup_log()
 
-        self._lbl(frame, "Banks:").pack(side=TOP, fill=BOTH)
 
-        lst = tk.Listbox(frame, selectmode=EXTENDED, height=20)
-        scr = tk.Scrollbar(lst, orient="vertical")
+    def _setup_top(self):
+        tframe = ttk.Frame(self.root)
+        tframe.pack(side=tk.TOP, fill=tk.BOTH, expand=False, **self.style.pads_frame_top)
+
+        self._top(tframe, "wwiser").pack(side=tk.TOP, anchor=tk.N)
+
+
+    def _setup_banks(self):
+        frame = ttk.Frame(self.root)
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_frame)
+
+        # header
+        self._hdr(frame, "BANKS").pack(side=tk.TOP, anchor=tk.NW)
+
+        # bank list
+        lst = tk.Listbox(frame, selectmode=tk.EXTENDED, height=1, **self.style.theme_listbox)
+        scr = ttk.Scrollbar(lst, orient=tk.VERTICAL)
         scr.config(command=lst.yview)
         lst.config(yscrollcommand=scr.set)
 
-        lst.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
-        scr.pack(side=RIGHT, fill=Y)
+        lst.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        scr.pack(side=tk.RIGHT, fill=tk.Y)
         self.list_box = lst
 
-        self._btn(frame, "Load...", self._load_banks).pack(side=LEFT)
-        self._chk('bnk_isdir', frame, "Load dir").pack(side=LEFT)
-        self._btn(frame, "Unload", self._unload_banks).pack(side=LEFT)
-        self._btn(frame, "Dump", self._dump_banks).pack(side=LEFT)
-        self._chk('ignore_version', frame, "Ignore version check").pack(side=RIGHT)
+        # button groups
+        gframe = ttk.Frame(frame)
+        gframe.pack(side=tk.TOP, fill=tk.BOTH)
+
+        bframe = ttk.Frame(gframe, style='Buttons.TFrame')
+        bframe.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self._btn(bframe, "Load banks...", self._load_banks_files, main=True).pack(side=tk.LEFT, **self.style.pads_button)
+        self._btn(bframe, "Load dir...", self._load_banks_dir).pack(side=tk.LEFT, **self.style.pads_button)
+        #self._chk('bnk_isdir', frame, "Load dir").pack(side=LEFT)
+        self._load_dir = False
+
+        bframe = ttk.Frame(gframe, style='Buttons.TFrame')
+        bframe.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self._btn(bframe, "Generate TXTP", self._generate_txtp, main=True).pack(side=tk.LEFT, **self.style.pads_button)
+        self._btn(bframe, "View bank contents", self._start_viewer).pack(side=tk.LEFT, **self.style.pads_button)
+        self._btn(bframe, "Dump bank", self._dump_banks).pack(side=tk.LEFT, **self.style.pads_button)
+        #self._btn(bframe, "Stop", self._stop_viewer).pack(side=LEFT, **self.style.pads_button)
+        #box = self._box('viewer_port', frame, "Port:", None, width=6)
+        #box[0].pack(side=LEFT)
+        #box[1].pack(side=LEFT)
+
+        bframe = ttk.Frame(gframe, style='Buttons.TFrame')
+        bframe.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self._chk('ignore_version', bframe, "Ignore version check").pack(side=tk.RIGHT)
+        self._btn(bframe, "Unload bank", self._unload_banks).pack(side=tk.RIGHT, **self.style.pads_button)
+
+
+    def _setup_options(self):
+        #self._sep(root).pack(side=tk.TOP, fill=X, pady=10)
+
+        frame = ttk.Frame(self.root)
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_frame)
+
+        self._hdr(frame, "TXTP GENERATOR OPTIONS").pack(side=tk.TOP, anchor=tk.NW)
+
+        spanel = ScrollablePanel(frame, self.style)
+        spanel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         #----------------------------------------------------------------------
-        # viewer
 
-        self._sep(root).pack(side=TOP, fill=X, pady=10)
+        cframe = ttk.Frame(spanel.frame)
+        cframe.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        frame = ttk.Frame(root)
-        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
+        frame = ttk.Labelframe(cframe, text='Base')
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_labeltext)
+        frame.grid_columnconfigure(0, minsize=80) #weight 2 = x2 of others
+        row = 0
 
-        self._lbl(frame, "Viewer (web browser tool):").pack(side=LEFT)
-
-        self._btn(frame, "Start", self._start_viewer).pack(side=LEFT)
-        self._btn(frame, "Stop", self._stop_viewer).pack(side=LEFT)
-
-        box = self._box('viewer_port', frame, "Port:", None, width=6)
-        box[0].pack(side=LEFT)
-        box[1].pack(side=LEFT)
-
-        #----------------------------------------------------------------------
-        # txtp
-
-        self._sep(root).pack(side=TOP, fill=X, pady=10)
-
-        frame = ttk.Frame(root)
-        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
-        frame.grid_columnconfigure(2, minsize=50)
-
-        lbl = self._lbl(frame, "TXTP generator:")
-        lbl.grid(row=0, column=0)
-
-        btn = self._btn(frame, "Generate", self._generate_txtp)
-        btn.grid(row=0, column=1)
-
-        box = self._box('txtp_wemdir', frame, "Wem dir:", "Dir where .txtp expects .wem", width=20)
+        box = self._box('txtp_wemdir', frame, "Wem subdir:", "Subdir where .txtp expects .wem", width=20)
         self._fields['txtp_wemdir'].set('wem/')
-        box[0].grid(row=0, column=3, sticky="E")
-        box[1].grid(row=0, column=4, sticky="WE")
-        box[2].grid(row=0, column=5, sticky="W")
+        box[0].grid(row=row, column=0, sticky=tk.E)
+        box[1].grid(row=row, column=1, sticky=tk.W)
+        box[2].grid(row=row, column=2, sticky=tk.W)
 
-
-        frame = ttk.Frame(root)
-        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
-        row = 0
-
-        box = self._box('txtp_params', frame, "Params:", "List of '(state=value) [switch=value] ...' to force (instead of all)", width=75)
-        box[0].grid(row=row, column=0, sticky="E")
-        box[1].grid(row=row, column=1, sticky="W")
-        box[2].grid(row=row, column=2, sticky="W")
-        row += 1
-
-        box = self._box('txtp_statechunks', frame, "Statechunks:", "List of 'state=value ...' to set (affects crossfading txtp)", width=75)
-        box[0].grid(row=row, column=0, sticky="E")
-        box[1].grid(row=row, column=1, sticky="W")
-        box[2].grid(row=row, column=2, sticky="W")
-        row += 1
-
-        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float-value ...' to set (affects crossfading txtp)", width=75)
-        box[0].grid(row=row, column=0, sticky="E")
-        box[1].grid(row=row, column=1, sticky="W")
-        box[2].grid(row=row, column=2, sticky="W")
-        row += 1
-
-        box = self._box('txtp_renames', frame, "Renames:", "List of 'text-in:text-out ...' parts to rename in .txtp", width=75)
-        box[0].grid(row=row, column=0, sticky="E")
-        box[1].grid(row=row, column=1, sticky="W")
-        box[2].grid(row=row, column=2, sticky="W")
-        row += 1
-
-        box = self._box('txtp_filter', frame, "Filter:", "List of allowed events/IDs/etc (use - to exclude)", width=75)
-        box[0].grid(row=row, column=0, sticky="E")
-        box[1].grid(row=row, column=1, sticky="W")
-        box[2].grid(row=row, column=2, sticky="W")
-        row += 1
-
-        frame = ttk.Frame(root)
-        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
-        row = 0
-
-        chk = self._chk('txtp_filter_rest', frame, "Generate rest of files after filtering (use to prioritize some names over other dupes)")
-        chk.grid(row=row, column=1, columnspan=1, sticky="W")
-
-        chk = self._chk('txtp_filter_normal', frame, "Skip normal files")
-        chk.grid(row=row, column=2, columnspan=1, sticky="W")
-
-        chk = self._chk('txtp_filter_unused', frame, "Skip unused files")
-        chk.grid(row=row, column=3, columnspan=1, sticky="W")
-
-        chk = self._chk('txtp_statechunks_sd', frame, "Skip default statechunk")
-        chk.grid(row=row, column=4, columnspan=1, sticky="W")
+        chk = self._chk('txtp_move', frame, "Move referenced .wem to subdir")
+        chk.grid(row=row, column=3, sticky=tk.W, columnspan=2)
 
         row += 1
 
-        chk = self._chk('txtp_bank_order', frame, "Generate TXTP in bank order instead of names first (alters which txtp are considered dupes)")
-        chk.grid(row=row, column=1, columnspan=3, sticky="W")
-        row += 1
+        # may be useful but 'unset' has special meaning, while an empty box may confuse users
+        # box = self._box('txtp_outdir', frame, "TXTP subdir:", "Subdir where .txtp goes", width=20)
+        # self._fields['txtp_outdir'].set('txtp/')
+        # box[0].grid(row=row, column=0, sticky=tk.E)
+        # box[1].grid(row=row, column=1, sticky=tk.W)
+        # box[2].grid(row=row, column=2, sticky=tk.W)
 
-        frame = ttk.Frame(root)
-        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
-        row = 0
+        # row += 1
 
-        box = self._box('txtp_volume', frame, "Volume:", "Set master TXTP volume (2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%, *=autoadjust)", width=10)
-        box[0].grid(row=row, column=0, sticky="E")
-        box[1].grid(row=row, column=1, sticky="W")
-        box[2].grid(row=row, column=2, sticky="W")
+        box = self._box('txtp_volume', frame, "Volume:", "Master output volume (*=auto, 2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%)", width=10)
+        box[0].grid(row=row, column=0, sticky=tk.E)
+        box[1].grid(row=row, column=1, sticky=tk.W)
+        box[2].grid(row=row, column=2, sticky=tk.W)
         row += 1
 
         self._fields['txtp_volume'].set('*')
 
-        frame = ttk.Frame(root)
-        frame.pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
 
+        frame = ttk.Labelframe(cframe, text='State')
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_labeltext)
+        frame.grid_columnconfigure(0, minsize=80) #weight 2 = x2 of others
         row = 0
 
-        chk = self._chk('txtp_move', frame, "Move .wem referenced in banks to wem subdir")
-        chk.grid(row=row, column=0, sticky="W")
-
-        chk = self._chk('txtp_lang', frame, "Mark .txtp and set .wem subdir per language")
-        chk.grid(row=row, column=1, sticky="W")
-
+        box = self._box('txtp_params', frame, "Params:", "List of '(state=value) [switch=value] ...' to force (instead of all)", width=80)
+        box[0].grid(row=row, column=0, sticky=tk.E)
+        box[1].grid(row=row, column=1, sticky=tk.W)
+        box[2].grid(row=row, column=2, sticky=tk.W)
         row += 1
 
-        chk = self._chk('txtp_bnkskip', frame, "Treat internal (in .bnk) .wem as if external")
-        chk.grid(row=row, column=0, sticky="W")
-
-        chk = self._chk('txtp_bnkmark', frame, "Mark .txtp that use internal .bnk (for reference)")
-        chk.grid(row=row, column=1, sticky="W")
-
+        box = self._box('txtp_statechunks', frame, "Statechunks:", "List of 'state=value ...' to set (affects crossfading .txtp)", width=80)
+        box[0].grid(row=row, column=0, sticky=tk.E)
+        box[1].grid(row=row, column=1, sticky=tk.W)
+        box[2].grid(row=row, column=2, sticky=tk.W)
         row += 1
 
-        chk = self._chk('txtp_name_wems', frame, "Add all .wem names to .txtp filename (if found)")
-        chk.grid(row=row, column=0, sticky="W")
-
-        chk = self._chk('txtp_name_vars', frame, "Add ignored variables to .txtp filename")
-        chk.grid(row=row, column=1, sticky="W")
-
-        chk = self._chk('txtp_alt_exts', frame, "Use TXTP alt extensions (.logg/lwav)")
-        chk.grid(row=row, column=2, sticky="W")
-
+        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float-value ...' to set (affects crossfading .txtp)", width=80)
+        box[0].grid(row=row, column=0, sticky=tk.E)
+        box[1].grid(row=row, column=1, sticky=tk.W)
+        box[2].grid(row=row, column=2, sticky=tk.W)
         row += 1
+
+        box = self._box('txtp_renames', frame, "Renames:", "List of 'text-in:text-out ...' parts to rename in .txtp", width=80)
+        box[0].grid(row=row, column=0, sticky=tk.E)
+        box[1].grid(row=row, column=1, sticky=tk.W)
+        box[2].grid(row=row, column=2, sticky=tk.W)
+        row += 1
+
+        box = self._box('txtp_filter', frame, "Filter:", "List of allowed events/IDs/etc (use - to exclude)", width=80)
+        box[0].grid(row=row, column=0, sticky=tk.E)
+        box[1].grid(row=row, column=1, sticky=tk.W)
+        box[2].grid(row=row, column=2, sticky=tk.W)
+        row += 1
+
+        frame = ttk.Labelframe(cframe, text="Filters")
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_labeltext)
+        row = 0
 
         chk = self._chk('txtp_unused', frame, "Generate unused audio (when log complains)")
-        chk.grid(row=row, column=0, sticky="W")
+        chk.grid(row=row, column=0, columnspan=3, sticky=tk.W)
 
-        chk = self._chk('txtp_dupes', frame, "Allow TXTP dupes (WARNING: may create a lot)")
-        chk.grid(row=row, column=1, sticky="W")
+        chk = self._chk('txtp_statechunks_sd', frame, "Skip default statechunk")
+        chk.grid(row=row, column=3, columnspan=2, sticky=tk.W)
 
         row += 1
 
+        chk = self._chk('txtp_dupes', frame, "Allow TXTP dupes (WARNING: may create a lot)")
+        chk.grid(row=row, column=0, columnspan=3, sticky=tk.W)
+
+        chk = self._chk('txtp_filter_normal', frame, "Skip normal files")
+        chk.grid(row=row, column=3, columnspan=2, sticky=tk.W)
+
+        row += 1
+
+        chk = self._chk('txtp_filter_rest', frame, "Generate rest of files after filtering (prioritizes names)")
+        chk.grid(row=row, column=0, columnspan=3, sticky=tk.W)
+
+        chk = self._chk('txtp_filter_unused', frame, "Skip unused files")
+        chk.grid(row=row, column=3, columnspan=2, sticky=tk.W)
+
+        #chk = self._chk('txtp_bank_order', frame, "Generate TXTP in bank order instead of names first (alters which txtp are considered dupes)")
+        #chk.grid(row=row, column=0, columnspan=4, sticky=tk.W)
+
+        row += 1
+
+        frame = ttk.Labelframe(cframe, text="Multi")
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_labeltext)
+
         chk = self._chk('txtp_random_all', frame, "Make multiple .txtp per base 'random' group")
-        chk.grid(row=row, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky=tk.W)
 
         chk = self._chk('txtp_random_multi', frame, "Force multiloops to be selectable like a 'random'")
-        chk.grid(row=row, column=1, sticky="W")
+        chk.grid(row=row, column=1, sticky=tk.W)
+
+        row += 1
 
         chk = self._chk('txtp_random_force', frame, "Force base groups to be selectable like a 'random'")
-        chk.grid(row=row, column=2, sticky="W")
+        chk.grid(row=row, column=0, sticky=tk.W)
+
+
+        frame = ttk.Labelframe(cframe, text="Misc")
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_labeltext)
+        row = 0
+
+        chk = self._chk('txtp_lang', frame, "Mark .txtp and set .wem subdir per language")
+        chk.grid(row=row, column=0, sticky=tk.W)
+
+        chk = self._chk('txtp_bnkmark', frame, "Mark .txtp that use internal .bnk (reference)")
+        chk.grid(row=row, column=1, sticky=tk.W)
+
+        chk = self._chk('txtp_name_wems', frame, "Add .wem names to .txtp filename (if found)")
+        chk.grid(row=row, column=2, sticky=tk.W)
+
+        row += 1
+
+        chk = self._chk('txtp_alt_exts', frame, "Use TXTP alt extensions (.logg/lwav)")
+        chk.grid(row=row, column=0, sticky=tk.W)
+
+        chk = self._chk('txtp_bnkskip', frame, "Treat internal (in .bnk) .wem as if external")
+        chk.grid(row=row, column=1, sticky=tk.W)
+
+        chk = self._chk('txtp_name_vars', frame, "Add ignored variables to .txtp filename")
+        chk.grid(row=row, column=2, sticky=tk.W)
 
         row += 1
 
         chk = self._chk('txtp_write_delays', frame, "Don't skip initial delay")
-        chk.grid(row=row, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky=tk.W)
 
-        #chk = self._chk('txtp_x_silence', frame, "Silence parts that crossfade by default")
-        #chk.grid(row=row, column=1, sticky="W")
+        chk = self._chk('txtp_x_silence', frame, "Silence parts that crossfade by default")
+        chk.grid(row=row, column=1, sticky=tk.W)
 
         row += 1
 
+        frame = ttk.Labelframe(cframe, text="Tags")
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_labeltext)
+        row = 0
+
         chk = self._chk('tags_event', frame, "Use shorter .txtp names and put full names in !tags.m3u")
-        chk.grid(row=row, column=0, sticky="W")
+        chk.grid(row=row, column=0, sticky=tk.W)
 
         chk = self._chk('tags_wem', frame, "Make !tags.m3u for .wem in folder")
-        chk.grid(row=row, column=1, sticky="W")
-
-        #----------------------------------------------------------------------
-        # log
-
-        self._sep(root).pack(side=TOP, fill=X, pady=10)
-
-        frame = ttk.Frame(root)
-        frame.pack(side=BOTTOM, fill=BOTH, expand=True, padx=5, pady=5)
+        chk.grid(row=row, column=1, sticky=tk.W)
 
 
-        #frame.bind("<ButtonPress-1>", self._start_resize)
-        #frame.bind("<ButtonRelease-1>", self._stop_resize)
-        #frame.bind("<Motion>", self._resize_frame) #B1-Motion
-        #self._resize = False
-        #self._cursor = ''
-        #frame.configure(relief=GROOVE)
-        #frame.configure(borderwidth="10")
+    #----------------------------------------------------------------------
 
-        log = self._log(frame, "Log:")
-        log[0].pack(side=TOP, fill=BOTH)
-        log[1].pack(side=TOP, fill=BOTH, expand=True, padx=5, pady=5)
-        self.txt_log = log[1]
+    def _setup_log(self):
+        self._sep(self.root).pack(side=tk.TOP, fill=tk.X, pady=5)
 
-        self._btn(frame, "Clear Log", self._clear_log).pack(side=LEFT)
-        self._chk('log', frame, "Write info to wwiser log (has extra messages)", self._change_log).pack(side=LEFT)
-        self._btn(frame, "Exit", self._exit).pack(side=RIGHT)
+        frame = ttk.Frame(self.root)
+        frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, **self.style.pads_frame_bottom)
+
+        self._hdr(frame, "LOG").pack(side=tk.TOP, anchor=tk.NW)
+
+        log = scrolledtext.ScrolledText(frame, width=40, height=1, **self.style.theme_scrolledtext)
+        log.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        log.config(state=tk.DISABLED)
+        self.txt_log = log
+
+        self._btn(frame, "Clear Log", self._clear_log).pack(side=tk.LEFT)
+        self._chk('log', frame, "Write info to wwiser.log (has extra messages)", self._change_log).pack(side=tk.LEFT)
+        self._btn(frame, "Exit", self._exit).pack(side=tk.RIGHT)
 
         return
 
-    #def _start_resize(self, event):
-    #    frame = event.widget
-    #    self._resize = True
-    #    self._base_h = frame.winfo_height()
-    #    self._base_y = event.y
-    #    print("h", self._base_h, "y", self._base_y)
-
-    #def _stop_resize(self, event):
-    #    self._resize = False
-
-    #def _resize_frame(self, event):
-    #    frame = event.widget
-    #    if self._resize:
-    #        # y = 0 from frame top, <0 when moving up, >0 when moving down
-    #        #if event.y > self._base_y:
-    #        #    final_w = event.y - self._base_y # down
-    #        #else:
-    #        #    final_w = event.y + self._base_y # up
-    #        final_w = self._base_h + event.y + self._base_y
-    #        print("y", event.y,  "base", self._base_y, "w", final_w)
-    #        if final_w < 100:
-    #            final_w = 100
-    #        frame.config(height=final_w)
-    #    #else:
-    #    #    cursor = 'size' if self._check_resize_mode(event.x, event.y) else ''
-    #    #    if cursor != self._cursor:
-    #    #        frame.config(cursor=cursor)
-    #    #        self._cursor = cursor
-
     #--------------------------------------------------------------------------
+    # ELEMS
 
     def _box(self, field, frame, text, info, width=50, type=None):
         lbl = ttk.Label(frame, text=text)
@@ -327,30 +488,30 @@ class Gui(object):
 
         ent = ttk.Entry(frame, textvariable=var, width=width)
         if info:
-            inf = ttk.Label(frame, text=info)
+            inf = ttk.Label(frame, text=info, style='Info.TLabel')
         else:
             inf = None
         self._fields[field] = var
         return (lbl, ent, inf)
 
     def _top(self, frame, text):
-        fnt = font.Font(size=16, weight='bold', underline=0)
-        lbl = ttk.Label(frame, text=text, font=fnt)
+        lbl = ttk.Label(frame, text=text, style="Top.TLabel")
         return lbl
 
-    def _btn(self, frame, text, command):
-        btn = ttk.Button(frame, text=text, command=command)
-        return btn
-
-    def _log(self, frame, text):
-        lbl = ttk.Label(frame, text=text)
-        txt = scrolledtext.ScrolledText(frame, width=40, height=10)
-        txt.config(state=DISABLED)
-        return lbl, txt
+    def _hdr(self, frame, text):
+        lbl = ttk.Label(frame, text=text, style='Header.TLabel')
+        return lbl
 
     def _lbl(self, frame, text):
         lbl = ttk.Label(frame, text=text)
         return lbl
+
+    def _btn(self, frame, text, command, main=False):
+        style = None
+        if main:
+            style = 'Main.TButton'
+        btn = ttk.Button(frame, text=text, command=command, style=style)
+        return btn
 
     def _sep(self, frame):
         sep = ttk.Separator(frame)
@@ -369,6 +530,14 @@ class Gui(object):
 
     #--------------------------------------------------------------------------
 
+    def _load_banks_files(self):
+        self._load_dir = False
+        self._load_banks()
+
+    def _load_banks_dir(self):
+        self._load_dir = True
+        self._load_banks()
+
     def _load_banks(self):
         if self._thread_banks and self._thread_banks.is_alive():
             logging.info("gui: parser still working (may be slow, be patient)")
@@ -380,7 +549,7 @@ class Gui(object):
         #current_dir = os.path.dirname(os.path.realpath(__file__)) #less useful
         current_dir = os.getcwd()
 
-        is_dir = self._fields['bnk_isdir'].get()
+        is_dir = self._load_dir
         if is_dir:
             dirname = filedialog.askdirectory(parent=self.root, initialdir=current_dir)
             if not dirname:
@@ -400,7 +569,7 @@ class Gui(object):
         self.parser.set_ignore_version( self._fields['ignore_version'].get() )
         loaded_filenames = self.parser.parse_banks(filenames)
         for filename in loaded_filenames:
-            self.list_box.insert(END, filename)
+            self.list_box.insert(tk.END, filename)
 
         banks = self.parser.get_banks()
         names = self.names
@@ -413,9 +582,14 @@ class Gui(object):
             messagebox.showerror('Error', 'Select one or more banks')
             return
 
+        indexes = list(indexes)
+        indexes.sort()
         for index in indexes:
             bank = self.list_box.get(index)
             self.parser.unload_bank(bank)
+
+        indexes.reverse() #in reverse order b/c indexes disappear
+        for index in indexes:
             self.list_box.delete(index)
 
     #--------------------------------------------------------------------------
@@ -438,17 +612,26 @@ class Gui(object):
         else:
             default_name = 'banks.xml'
 
-        outpath = filedialog.asksaveasfilename(initialfile=default_name, filetypes = (("XML file","*.xml"),("TXT file","*.txt")))
+        filetypes = (("XML file",".xml"),("XML file (complete)",".xmlc"),("TXT file",".txt"))
+        outpath = filedialog.asksaveasfilename(initialfile=default_name, defaultextension="*.*", filetypes=filetypes)
         if not outpath:
             return
+        print(outpath)
 
-        dump_name, dump_type = os.path.splitext(outpath)
-        dump_type = dump_type.lower()[1:]
-        if dump_type not in ['xml', 'txt']:
+        dump_type = None
+        dump_types = (
+            (".xml", 'xsl_s'),
+            (".xmlc", 'xsl'),
+            (".txt", 'txt'),
+        )
+        for ext, type in dump_types:
+            if outpath.endswith(ext):
+                dump_type = type
+        if not dump_type:
             messagebox.showerror('Error', 'Unknown output format')
             return
-        if dump_type == 'xml':
-            dump_type = 'xsl_s'
+
+        dump_name, _ = os.path.splitext(outpath)
 
         dumper = wdumper.DumpPrinter(self.parser.get_banks(), dump_type, dump_name)
         dumper.dump()
@@ -456,10 +639,17 @@ class Gui(object):
     #--------------------------------------------------------------------------
 
     def _start_viewer(self):
-        try:
-            port = int(self._fields['viewer_port'].get())
-        except ValueError:
-            port = None
+        # viewer can work without nothing loaded but probably it's easier to understand
+        banks = self.parser.get_banks()
+        if not banks:
+            messagebox.showerror('Error', 'Load one or more banks')
+            return
+
+        port = None
+        #try:
+        #    port = int(self._fields['viewer_port'].get())
+        #except ValueError:
+        #    port = None
 
         try:
             self.viewer.start(port, blocking=False)
@@ -505,12 +695,13 @@ class Gui(object):
             generator.set_gamesyncs( self._get_list('txtp_params') )
             generator.set_statechunks( self._get_list('txtp_statechunks') )
             generator.set_gamevars( self._get_list('txtp_gamevars') )
-            generator.set_bank_order( self._get_item('txtp_bank_order') )
+            #generator.set_bank_order( self._get_item('txtp_bank_order') )
             generator.set_renames( self._get_list('txtp_renames') )
 
             generator.set_statechunks_sd( self._get_item('txtp_statechunks_sd') )
 
             generator.set_wemdir( self._get_item('txtp_wemdir') )
+            #generator.set_outdir( self._get_item('txtp_outdir') )
             generator.set_master_volume( self._get_item('txtp_volume') )
             generator.set_lang( self._get_item('txtp_lang') )
             generator.set_move( self._get_item('txtp_move') )
@@ -537,19 +728,17 @@ class Gui(object):
             # extra
             tags.make()
 
-        except Exception:
+        except Exception as e:
             logging.error("gui: generator stopped on error")
+            logging.error(e)
             #raise
 
     #--------------------------------------------------------------------------
 
     def _clear_log(self):
-        self.txt_log.config(state=NORMAL)
-        self.txt_log.delete(1.0, END)
-        self.txt_log.config(state=DISABLED)
-        #self.txt_log_main.config(state=NORMAL)
-        #self.txt_log_main.delete(1.0, END)
-        #self.txt_log_main.config(state=DISABLED)
+        self.txt_log.config(state=tk.NORMAL)
+        self.txt_log.delete(1.0, tk.END)
+        self.txt_log.config(state=tk.DISABLED)
 
     def _change_log(self):
         if  self._get_item('log'):

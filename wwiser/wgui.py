@@ -29,6 +29,7 @@ class GuiStyle(ttk.Style):
         self.pads_options_grid = {'padx':10, 'pady':5, 'ipadx':1, 'ipady':1}
         self.pads_panel_scrollbar = {'padx':(5,0)}
         self.pads_labeltext = {'padx':0, 'pady':(0, 5), 'ipadx':5, 'ipady':5}
+        self.pads_log = {'padx':0, 'pady':(0, 10), 'ipadx':0, 'ipady':0}
 
         # overwrite system default (windows/linux/max style) with a simple one
         # some widgets like TButton aren't configurable otherwise
@@ -465,7 +466,7 @@ class Gui(object):
         self._hdr(frame, "LOG").pack(side=tk.TOP, anchor=tk.NW)
 
         log = scrolledtext.ScrolledText(frame, width=40, height=1, **self.style.theme_scrolledtext)
-        log.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        log.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_log)
         log.config(state=tk.DISABLED)
         self.txt_log = log
 

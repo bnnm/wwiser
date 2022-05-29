@@ -1,3 +1,4 @@
+import logging
 from ..txtp import hnode_misc, wtxtp_fields
 
 from .bnode_base import CAkHircNode
@@ -94,7 +95,8 @@ class CAkAudioDevice(CAkHircNode):
 
             # only used in latest versions (no known games) and this just means there is no
             # output (txtp config could be marked 'silenced'), not sure when would be used though.
-            self._barf("No_Output CAkAudioDevice, report")
+            #self._barf("No_Output CAkAudioDevice, report")
+            logging.info("WARNING: No_Output CAkAudioDevice found (report)")
 
         # Internally has InitialRTPC/StateChunk/PluginPropertyValue/FXList but doesn't
         # seem possible in editor, just that internally works like an FX plugin.

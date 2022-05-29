@@ -319,10 +319,9 @@ Inside the `.txtp` crossfade parts are marked with `##fade` near `.wem`, and gam
 ### Statechunk mark {s}
 In rare cases `{s}` means the volume is altered/silenced via states, which should be handled automatically by making one `.txtp` per state that changes volumes, to a point.
 
-Sometimes default `.txtp` marked with `{s}` and without state applied is also meant to be playable. For example a game may define a base song that plays all, then silence some audio layer with one state. don't need to be touched. However other games may not need this and default  `.txtp` playing all at once makes no sense.  *wwiser* can't autodetect all invalid cases so just remove the offending `.txtp`.
+Sometimes default `.txtp` marked with `{s}` and without state applied is also meant to be playable. For example a game may define a base song that plays all, then silence some audio layer with one state don't need to be touched. However other games may not need this and default  `.txtp` playing all at once makes no sense. *wwiser* can't autodetect all invalid cases so you can pass a flag to skip those defaults (or just remove the offending `.txtp`).
 
- *wwiser* skips some possible `{s}` combos that may be useful to make. Some games use tons of those states that end up altering audio in the same way.
-`bgm_cutscene`, `scene_intro`, `in_menu`, `bus_fader`, `bgm_layer` and so on all could apply silence on different *audio objects*, with end result often being the same (we may only want `bgm_layer=mid/low` alts). Check the "passing variables" section for tips to handle those cases.
+ *wwiser* doesn't mark certain possible `{s}` combos that may be useful to make. Some games use tons of those states that end up altering audio in the same way: `bgm_cutscene`, `scene_intro`, `in_menu`, `bus_fader`, `bgm_layer` and so on all could apply silence on different *audio objects*, with end result often being the same. `bgm_layer=mid/low` variations could be useful to generate in this case, but it's hard to autodetect it. Check the "passing variables" section for tips to handle these cases.
 
 
 ### Multi-loops mark {m}

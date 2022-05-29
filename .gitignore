@@ -13,3 +13,5 @@ bin
 
 # extra for tests
 wwnames.db3
+wwiser.log
+wwnames*

@@ -52,7 +52,7 @@ function Viewer() {
             if (on_error) {
                 on_error();
             } else {
-                alert("Server error")
+                alert("Viewer stopped (restart wwiser's viewer)")
             }
         }
     }

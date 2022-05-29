@@ -54,7 +54,7 @@ class Cli(object):
 
         p = parser.add_argument_group('list options')
         p.add_argument('-sd', '--save-db',              help="Save/update wwnames.db3 with hashnames used in fields\n(needs dump set, or save-all)", action='store_true')
-        p.add_argument('-sl', '--save-lst',             help="Save .txt with hashnames actually used in fields\n(needs dump set)", action='store_true')
+        p.add_argument('-sl', '--save-lst',             help="Clean wwnames.txt and include missing hashnames\n(needs dump set)", action='store_true')
         p.add_argument('-sm', '--save-missing',         help="Include in saved list of missing IDs\n(IDs that should have hashnames but weren't found)", action='store_true')
         p.add_argument('-sc', '--save-companion',       help="Include in saved list companion names \n(loaded from companion XML/TXT/H, for a full list)", action='store_true')
         p.add_argument('-sa', '--save-all',             help="Include all loaded names, rather than only used names", action='store_true')
@@ -326,7 +326,7 @@ class Cli(object):
         if args.dump_type == wdumper.TYPE_NONE and (args.save_lst or args.save_db):
             logging.info("dump set to none, may not save all names")
         if args.save_lst:
-            names.save_lst(name=dump_name, save_all=args.save_all, save_companion=args.save_companion, save_missing=args.save_missing)
+            names.save_lst(basename=dump_name, save_all=args.save_all, save_companion=args.save_companion, save_missing=args.save_missing)
         if args.save_db:
             names.save_db(save_all=args.save_all, save_companion=args.save_companion)
         names.close() #in case DB was open

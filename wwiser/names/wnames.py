@@ -737,13 +737,15 @@ class Names(object):
 
     # saves loaded hashnames to .txt
     # (useful to check names when loading generic db/lst of names)
-    def save_lst(self, name=None, save_all=False, save_companion=False, save_missing=False):
-        if not name:
-            name = 'banks'
+    def save_lst(self, basename=None, path=None, save_all=False, save_companion=False, save_missing=False):
+        if not basename:
+            basename = 'banks'
         else:
-            name = os.path.basename(name)
+            basename = os.path.basename(basename)
         time = datetime.today().strftime('%Y%m%d%H%M%S')
-        outname = 'wwnames-%s-%s.txt' % (name, time)
+        outname = 'wwnames-%s-%s.txt' % (basename, time)
+        if path:
+            outname = os.path.join(path, outname)
 
         logging.info("names: saving %s" % (outname))
         with open(outname, 'w', encoding='utf-8') as outfile:

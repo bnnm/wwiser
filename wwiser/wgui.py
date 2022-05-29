@@ -101,7 +101,7 @@ class GuiStyle(ttk.Style):
                 self.configure(key, **vals)
 
         # special props
-        self.map('TButton', background=[('active', color_high)])
+        self.map('TButton', background=[('active', color_high)], foreground=[('active', color_bt_f)])
         self.map('TCheckbutton', background=[('active', color_back)], indicatorcolor=[('selected', color_high),  ('pressed', color_high)])
 
         # tk-only styles
@@ -192,6 +192,7 @@ class Gui(object):
 
         self._thread_banks = None
         self._thread_dump = None
+        self._thread_wwnames = None
         self._thread_txtp = None
 
         title = 'wwiser'
@@ -469,7 +470,11 @@ class Gui(object):
         self.txt_log = log
 
         self._btn(frame, "Clear Log", self._clear_log).pack(side=tk.LEFT)
-        self._chk('log', frame, "Write info to wwiser.log (has extra messages)", self._change_log).pack(side=tk.LEFT)
+        self._chk('log', frame, "Write wwiser.log (has extra info)", self._change_log).pack(side=tk.LEFT)
+
+        self._btn(frame, "Redump clean wwnames.txt", self._dump_wwnames).pack(side=tk.LEFT)
+        self._chk('ww_missing', frame, "Also include missing IDs").pack(side=tk.LEFT)
+
         self._btn(frame, "Exit", self._exit).pack(side=tk.RIGHT)
 
         return
@@ -594,23 +599,35 @@ class Gui(object):
 
     #--------------------------------------------------------------------------
 
-    def _dump_banks(self):
-        if self._thread_dump and self._thread_dump.is_alive():
-            logging.info("gui: dumper still working (may be slow, be patient)")
-            return
-        self._thread_dump = threading.Thread(target = self._dump_banks_start)
-        self._thread_dump.start()
-
-    def _dump_banks_start(self):
+    def _get_dump_infoname(self):
         filenames = self.parser.get_filenames()
         if not filenames:
             messagebox.showerror('Error', 'Load one or more banks')
-            return
+            return None
 
+        base_path = os.path.dirname(filenames[0])
         if len(filenames) == 1:
-            default_name = os.path.basename(filenames[0]) + '.xml'
+            base_name = os.path.basename(filenames[0])
         else:
-            default_name = 'banks.xml'
+            base_name = 'banks'
+        return (base_path, base_name)
+
+    def _dump_call(self, thread, target):
+        if thread and thread.is_alive():
+            logging.info("gui: dumper still working (may be slow, be patient)")
+            return
+        thread = threading.Thread(target=target)
+        thread.start()
+
+    def _dump_banks(self):
+        self._dump_call(self._thread_dump, self._dump_banks_start)
+
+    def _dump_banks_start(self):
+        infoname = self._get_dump_infoname()
+        if not infoname:
+            return
+        _, base_name = infoname
+        default_name = base_name + '.xml'
 
         filetypes = (("XML file",".xml"),("XML file (complete)",".xmlc"),("TXT file",".txt"))
         outpath = filedialog.asksaveasfilename(initialfile=default_name, defaultextension="*.*", filetypes=filetypes)
@@ -620,10 +637,11 @@ class Gui(object):
 
         dump_type = None
         dump_types = (
-            (".xml", 'xsl_s'),
-            (".xmlc", 'xsl'),
-            (".txt", 'txt'),
+            (".xml", wdumper.TYPE_XSL_SMALLER),
+            (".xmlc", wdumper.TYPE_XSL),
+            (".txt", wdumper.TYPE_TXT),
         )
+        
         for ext, type in dump_types:
             if outpath.endswith(ext):
                 dump_type = type
@@ -635,6 +653,25 @@ class Gui(object):
 
         dumper = wdumper.DumpPrinter(self.parser.get_banks(), dump_type, dump_name)
         dumper.dump()
+
+    def _dump_wwnames(self):
+        self._dump_call(self._thread_wwnames, self._dump_wwnames_start)
+
+    def _dump_wwnames_start(self):
+        infoname = self._get_dump_infoname()
+        if not infoname:
+            return
+        base_path, base_name = infoname
+        dump_name = base_name
+        dump_type = wdumper.TYPE_EMPTY
+
+        # force read everything first with a special type (to get every possible name)
+        dumper = wdumper.DumpPrinter(self.parser.get_banks(), dump_type, dump_name)
+        dumper.dump()
+
+        # save new wwnames.txt
+        save_missing = self._get_item('ww_missing')
+        self.names.save_lst(basename=dump_name, path=base_path, save_all=False, save_companion=False, save_missing=save_missing)
 
     #--------------------------------------------------------------------------
 

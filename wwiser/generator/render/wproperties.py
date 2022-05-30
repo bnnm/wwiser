@@ -101,6 +101,8 @@ _CLAMP_VOLUME = (-200.0, 200.0) # db
 _CLAMP_DELAY = (0 * 1000.0,  3200 * 1000.0) # seconds to ms
 #_CLAMP_FILTER = (0, 100) # percent (for HPF/LPF)
 
+_DEBUG_SIMPLER_PROPS = False # calculate like old wwiser versions (enables some of those flags)
+
 class PropertyCalculator(object):
     def __init__(self, ws, bnode, txtp):
         self._ws = ws
@@ -113,11 +115,8 @@ class PropertyCalculator(object):
         self._is_base = None #process flag
         self._include_bus = False #process flag
 
-        self._simple = False # calculate like old wwiser versions (enables some of those flags)
-
-
     def get_properties(self):
-        if self._simple:
+        if _DEBUG_SIMPLER_PROPS:
             self._audible = True
 
         # get output bus, if possible
@@ -142,7 +141,7 @@ class PropertyCalculator(object):
     # -------------------------------------------------------------------------
 
     def _find_bus(self):
-        if self._simple:
+        if _DEBUG_SIMPLER_PROPS:
             return
         # only audible nodes use buses
         if not self._audible:
@@ -195,7 +194,7 @@ class PropertyCalculator(object):
         self._apply_rtpclist(bnode)
 
         # repeat with parent nodes to simulate prop inheritance (non-playable nodes don't inherit directly)
-        if self._audible and not self._simple:
+        if self._audible and not _DEBUG_SIMPLER_PROPS:
             self._calculate(bnode.bparent)
 
     # -------------------------------------------------------------------------

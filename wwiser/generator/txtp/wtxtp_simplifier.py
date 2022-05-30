@@ -3,7 +3,7 @@ from . import wtxtp_tree, wtxtp_debug
 
 _DEBUG_PRINT_TREE_PRE = False
 _DEBUG_PRINT_TREE_POST = False
-
+_DEBUG_SIMPLER_PROPS = False #see wproperties
 
 # Takes the TXTP pre-built tree and readjusts it to create a final usable tree.
 # Uses txtp "groups" to handle multi layer/sequences/etc
@@ -641,72 +641,23 @@ class TxtpSimplifier(object):
             # no actual volume
             return
 
-        if self.volume_master < 0:
-            # negative volumes are applied per source
-            self._set_master_volume_negative(node)
+        # to improve mixing and minimize clipping (due to vgmstream's PCM16):
+        # - negative volumes are applied per source
+        # - positive volumes are applied in the first group that has volumes, or sound leafs otherwise
+        is_bottom = self.volume_master < 0
+
+        if self.volume_master_auto and not _DEBUG_SIMPLER_PROPS:
+            is_bottom = True #all props should be leafs
+
+        if is_bottom:
+            self._apply_master_volume_bottom(node)
             self.volume_master = 0 #always consumed
         else:
-            # positive volumes are applied in the first group that has volumes, or sound leafs otherwise
-            self._set_master_volume_positive(node)
-            # consumed manually
+            self._apply_master_volume_top(node)
+            # manually consumed in method
             return
 
-    # Autocalculate master volume
-    #
-    # Tries to find a volume that would increase or lower towards 0db at once.
-    # Because groups and sounds can mix high/low volumes, tries to detect final output dB from
-    # all groups/nodes (from lower to higher).
-    # Should be used at the end when most volumes are simplified.
-    #
-    # L2 a (0) > b.wem (+4)
-    #          \ c.wem (-1)
-    # steps:
-    # - b:+4 vs c:-1 = bc:+4 (selects highest output)
-    # - a:+0 + bc:+4 = +4 (adds output from children)
-    # > result: auto output -4
-    #
-    # S2 a (-10)  > L2 b (-5)   > c.wem (+4)
-    #             |             > d.wem (-1)
-    #             |
-    #             \ L2 e (0)    > f.wem (+1)
-    #                           > S3 g (+1)  > h.wem (-2)
-    #                                        | i.wem (+0)
-    #                                        \ j.wem (-4)
-    # steps:
-    # - cd:+4
-    # - b:-5 + cd:+4 = b:-1
-    # - hij:+0
-    # - g:+1 vs hij:+0 = g:+1
-    # - f:+1 vs g:+1 = f:+1
-    # - e:+0 + f:+1 = e:+1
-    # - b:-1 vs e+1 = b:+0
-    # - a:-10 + b:+0 = a:-10
-    # > result: auto output +10
-
-    def _set_master_volume_auto(self, node):
-        if not self.volume_master_auto:
-            return
-
-        output = self._get_output_volume(node)
-        self.volume_master = -output
-        self._printer.volume_auto = -output
-        return
-
-    def _get_output_volume(self, node):
-        
-        output_max = None
-        for subnode in node.children:
-            output_sub = self._get_output_volume(subnode)
-            if output_max is None or output_max < output_sub :
-                output_max = output_sub
-
-        output_self = node.volume or 0.0
-        if output_max is not None:
-            output_self += output_max
-
-        return output_self
-
-    def _set_master_volume_negative(self, node):
+    def _apply_master_volume_bottom(self, node):
         if node.is_sound():
             node_volume = node.volume or 0.0
             node_volume += self.volume_master
@@ -714,12 +665,11 @@ class TxtpSimplifier(object):
             node.clamp_volume()
 
         for subnode in node.children:
-            self._set_master_volume_negative(subnode)
+            self._apply_master_volume_bottom(subnode)
 
         return
 
-    def _set_master_volume_positive(self, node):
-
+    def _apply_master_volume_top(self, node):
         basenode = self._get_first_child(node)
         if not basenode:
             return
@@ -753,6 +703,64 @@ class TxtpSimplifier(object):
             self.volume_master = 0
 
         return
+
+    # Autocalculate master volume
+    #
+    # Tries to find a volume that would increase or lower towards 0db at once.
+    # Because groups and sounds can mix high/low volumes, tries to detect final output dB from
+    # all groups/nodes (from lower to higher).
+    # Should be used at the end when most volumes are simplified.
+
+    def _set_master_volume_auto(self, node):
+        if not self.volume_master_auto:
+            return
+
+        output = self._get_output_volume(node)
+        self.volume_master = -output
+        self._printer.volume_auto = -output
+        return
+
+    # Max output calculations work like this:
+    #
+    # L2 a (0) > b.wem (+4)
+    #          \ c.wem (-1)
+    # steps:
+    # - b:+4 vs c:-1 = bc:+4 (selects highest output)
+    # - a:+0 + bc:+4 = +4 (adds output from children)
+    # > result: auto output -4
+    #
+    # S2 a (-10)  > L2 b (-5)   > c.wem (+4)
+    #             |             > d.wem (-1)
+    #             |
+    #             \ L2 e (0)    > f.wem (+1)
+    #                           > S3 g (+1)  > h.wem (-2)
+    #                                        | i.wem (+0)
+    #                                        \ j.wem (-4)
+    # steps:
+    # - cd:+4
+    # - b:-5 + cd:+4 = b:-1
+    # - hij:+0
+    # - g:+1 vs hij:+0 = g:+1
+    # - f:+1 vs g:+1 = f:+1
+    # - e:+0 + f:+1 = e:+1
+    # - b:-1 vs e+1 = b:+0
+    # - a:-10 + b:+0 = a:-10
+    # > result: auto output +10
+
+    def _get_output_volume(self, node):
+        
+        output_max = None
+        for subnode in node.children:
+            output_sub = self._get_output_volume(subnode)
+            if output_max is None or output_max < output_sub :
+                output_max = output_sub
+
+        output_self = node.volume or 0.0
+        if output_max is not None:
+            output_self += output_max
+
+        #TODO: may need to ignore silence sources
+        return output_self
 
     #--------------------------------------------------------------------------
 

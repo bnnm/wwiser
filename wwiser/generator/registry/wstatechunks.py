@@ -317,9 +317,14 @@ class StateChunkPaths(object):
         if not key.isnumeric():
             #key_name = val
             key = self._fnv.get_hash(key)
+        else:
+            key = int(key)
+
         if not val.isnumeric():
             #val_name = val
             val = self._fnv.get_hash(val)
+        else:
+            val = int(val)
 
         # don't pass current var names since may have different caps in wwnames?
         scitem = StateChunkItem()

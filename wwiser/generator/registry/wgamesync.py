@@ -277,12 +277,19 @@ class GamesyncParams(object):
         logging.debug("gamesync: add t=%s, k=%s, v=%s", type, key, val)
         if key is None or val is None:
             return
+
         if not key.isnumeric():
             key = self._fnv.get_hash(key)
+        else:
+            key = int(key)
+
         if val == '-': #any
             val = '0'
         if not val.isnumeric():
             val = self._fnv.get_hash(val)
+        else:
+            val = int(val)
+
         self.add(type, key, val)
 
 

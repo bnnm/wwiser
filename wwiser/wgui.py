@@ -14,7 +14,7 @@ class GuiStyle(ttk.Style):
     def __init__(self, master):
         super(GuiStyle, self).__init__(master)
 
-        master.geometry('1000x900')
+        master.geometry('980x800')
 
         # this loads a .tcl theme, easier to handle, but hard to get out from .pyz
         #root.tk.call("source", "theme.tcl")
@@ -38,8 +38,6 @@ class GuiStyle(ttk.Style):
         #print(tk.Button().keys())
 
         font_main = self._get_font(('Segoe UI','Helvetica','Arial'))
-        size_lbl_info = 10
-
         top_font = self._get_font(('Fixedsys', 'Consolas', 'Monospace', 'Fixedsys'))
 
         color_back = '#2f3136'
@@ -57,7 +55,7 @@ class GuiStyle(ttk.Style):
         styles = {
             #others: TPanedwindow TRadiobutton TScrollbar TSeparator
             '.': {
-                'font': (font_main, 12),
+                'font': (font_main, 11),
             },
             'TFrame': {
                 'background': color_back,
@@ -83,10 +81,10 @@ class GuiStyle(ttk.Style):
                 'background': color_back, 'foreground': color_text,
             },
             'Top.TLabel': {
-                'foreground': color_high, 'font': (top_font, 28), 'weight':'bold', 'underline':0, 
+                'foreground': color_high, 'font': (top_font, 26), 'weight':'bold', 'underline':0, 
             },
             'Header.TLabel': {
-                'foreground': "#00AEEE", 'font': (font_main, 13),
+                'foreground': "#00AEEE", 'font': (font_main, 11),
             },
             'Info.TLabel': {
                 'foreground': color_lbl_info,  'font': (font_main, 10), 'padding': 3,
@@ -237,7 +235,7 @@ class Gui(object):
 
     def _setup_banks(self):
         frame = ttk.Frame(self.root)
-        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_frame)
+        frame.pack(side=tk.TOP, fill=tk.BOTH, expand=False, **self.style.pads_frame)
 
         # header
         self._hdr(frame, "BANKS").pack(side=tk.TOP, anchor=tk.NW)
@@ -334,19 +332,19 @@ class Gui(object):
         frame.grid_columnconfigure(0, minsize=80) #weight 2 = x2 of others
         row = 0
 
-        box = self._box('txtp_params', frame, "Params:", "List of '(state=value) [switch=value] ...' to force (instead of all)", width=80)
+        box = self._box('txtp_params', frame, "Params:", "List of '(state=value) [switch=value] ...' to force (default: all)", width=80)
         box[0].grid(row=row, column=0, sticky=tk.E)
         box[1].grid(row=row, column=1, sticky=tk.W)
         box[2].grid(row=row, column=2, sticky=tk.W)
         row += 1
 
-        box = self._box('txtp_statechunks', frame, "Statechunks:", "List of 'state=value ...' to set (affects crossfading .txtp)", width=80)
+        box = self._box('txtp_statechunks', frame, "Statechunks:", "List of 'state=value ...' to set (for crossfading .txtp)", width=80)
         box[0].grid(row=row, column=0, sticky=tk.E)
         box[1].grid(row=row, column=1, sticky=tk.W)
         box[2].grid(row=row, column=2, sticky=tk.W)
         row += 1
 
-        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float-value ...' to set (affects crossfading .txtp)", width=80)
+        box = self._box('txtp_gamevars', frame, "Gamevars:", "List of 'name=float-value ...' to set (for crossfading .txtp)", width=80)
         box[0].grid(row=row, column=0, sticky=tk.E)
         box[1].grid(row=row, column=1, sticky=tk.W)
         box[2].grid(row=row, column=2, sticky=tk.W)
@@ -461,7 +459,7 @@ class Gui(object):
         self._sep(self.root).pack(side=tk.TOP, fill=tk.X, pady=5)
 
         frame = ttk.Frame(self.root)
-        frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, **self.style.pads_frame_bottom)
+        frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, **self.style.pads_frame_bottom) #set true to add extra size
 
         self._hdr(frame, "LOG").pack(side=tk.TOP, anchor=tk.NW)
 

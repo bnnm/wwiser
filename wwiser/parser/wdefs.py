@@ -56,6 +56,7 @@ bank_versions = [
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
     136, #0x88 Wwise 2019.2-B? *[Total War Saga: Troy (PC)-update]
     140, #0x8c Wwise 2021.1     (none known)
+   #144, #0x90 Wwise 2022.1-B1  (none known)
 ]
 
 # Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions?
@@ -417,13 +418,24 @@ AkCurveScaling_072 = wfmt.FormatterLUT({
 })
 AkCurveScaling = None
 
-#112>=
-AkRtpcType = wfmt.FormatterLUT({
+#112>= 140<=
+AkRtpcType_140 = wfmt.FormatterLUT({
   0x0: "GameParameter",
   0x1: "MIDIParameter",
   0x2: "Modulator",
   #0x8: "MaxNum",
 })
+#144>= ("AkGameSyncType", same field name)
+AkRtpcType_144 = wfmt.FormatterLUT({
+  0x0: "GameParameter",
+  0x1: "MIDIParameter",
+  0x2: "Switch",
+  0x3: "State",
+  0x4: "Modulator",
+  0x5: "Count",
+  #0x8: "MaxNum",
+})
+AkRtpcType = None
 
 #048>=
 AkCurveInterpolation = wfmt.FormatterLUT({
@@ -751,13 +763,13 @@ AkPropID_128 = wfmt.FormatterLUT({
   0x47: "PositioningTypeBlend", #132>=
   0x48: "ReflectionBusVolume", #135>=
   0x49: "PAN_UD", #140>=
-  #AkPropID_NUM = max
+  #0x4A: AkPropID_NUM
 })
 AkPropID = None
 
 #046>= 088<=
 AkBank__AKBKSourceType_088 = wfmt.FormatterLUT({
-    0x00: "Data/bnk",
+    0x00: "Data/bnk", #just "Data" but added "bnk" for clarity
     0x01: "Streaming",
     0x02: "PrefetchStreaming",
       -1: "NotInitialized",
@@ -951,9 +963,9 @@ AkActionType_062 = wfmt.FormatterLUT({
   0x0D04: "ResetBusVolume_ALL",
   0x0D08: "ResetBusVolume_AE",
   0x2103: "PlayEvent",
-  0x1511: "StopEvent",
-  0x1611: "PauseEvent",
-  0x1711: "ResumeEvent",
+  0x1511: "StopEvent", #not in 144>=
+  0x1611: "PauseEvent", #not in 144>=
+  0x1711: "ResumeEvent", #not in 144>=
   0x1820: "Duck",
   0x1D00: "Trigger",
   0x1D01: "Trigger_O",
@@ -974,6 +986,10 @@ AkActionType_062 = wfmt.FormatterLUT({
   0x1F02: "Release",
   0x1F03: "Release_O",
   0x2303: "PlayEventUnknown_O?", #v136 Troy, points to regular events
+  0x3102: "SetFX_M", #144>=
+  0x3202: "ResetSetFX_M", #144>=
+  0x3204: "ResetSetFX_ALL", #144>=
+  0x4000: "NoOp", #144>=
 }, zeropad=4)
 AkActionType = None
 
@@ -1105,6 +1121,8 @@ AkRtpcAccum_128 = wfmt.FormatterLUT({
   0x2: "Additive",
   0x3: "Multiply",
   0x4: "Boolean",
+  0x5: "Maximum",
+  0x6: "Filter",
   #0x8: "MaxNum",
 })
 AkRtpcAccum = None
@@ -1571,9 +1589,9 @@ AkRTPC_ParameterID_135 = wfmt.FormatterLUT({
   0x5: "BusVolume",
   0x6: "InitialDelay",
   0x7: "MakeUpGain",
-  0x8: "Deprecated_FeedbackVolume",
-  0x9: "Deprecated_FeedbackLowpass",
-  0xA: "Deprecated_FeedbackPitch",
+  0x8: "Deprecated_FeedbackVolume", #140~~ Deprecated_RTPC_FeedbackVolume
+  0x9: "Deprecated_FeedbackLowpass", #140~~ Deprecated_RTPC_FeedbackLowpass
+  0xA: "Deprecated_FeedbackPitch", ##140~~ Deprecated_RTPC_FeedbackPitch
   0xB: "MidiTransposition",
   0xC: "MidiVelocityOffset",
   0xD: "PlaybackSpeed",
@@ -1744,6 +1762,21 @@ AkLoopValue = wfmt.FormatterLUT({
 #  0x4: "StepNewSound",
 #})
 
+
+# seems related to "auto-defined soundbanks"
+#144>=
+AkBankTypeEnum = wfmt.FormatterLUT({
+  0x00: "User",
+  0x1E: "Event",
+  0x1F: "Bus",
+})
+
+#144>=
+AkFilterBehavior = wfmt.FormatterLUT({
+  0x0: "Additive",
+  0x1: "Maximum",
+})
+
 # #############################################################################
 # PLUGIN ENUMS (prefixed since they are proce to collisions)
 
@@ -1902,6 +1935,12 @@ def setup(version):
         AkCurveScaling = AkCurveScaling_065
     else:
         AkCurveScaling = AkCurveScaling_072
+
+    global AkRtpcType
+    if   version <= 140:
+        AkRtpcType = AkRtpcType_140
+    else:
+        AkRtpcType = AkRtpcType_144
 
     global AkRTPC_ParameterID
     if   version <= 45:

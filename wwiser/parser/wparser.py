@@ -529,12 +529,15 @@ def CAkParameterNodeBase__ReadFeedbackInfo(obj, cls):
 def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
     #CAkParameterNodeBase::SetInitialRTPC #113<=
     #SetInitialRTPC<CAkParameterNodeBase>
+    #AK::RTPC::ReadRtpcCurves<CAkParameterNodeBase> #144>=
     obj = obj.node('InitialRTPC')
 
     if cls.version <= 36: #36=UFC
         obj.u32('ulNumRTPC')
-    else: #38=KOF12
+    elif cls.version <= 140: #38=KOF12
         obj.u16('ulNumRTPC')
+    else: #
+        obj.u16('uNumCurves')
 
     for elem in obj.list('pRTPCMgr', 'RTPC', obj.lastval):
         if   cls.version <= 36: #36=UFC
@@ -579,23 +582,28 @@ def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
 def SetInitialRTPC_CAkBus_(obj, cls):
     #CAkParameterNodeBase::SetInitialRTPC #113<=
     #SetInitialRTPC<CAkBus>
+    #AK::RTPC::ReadRtpcCurves<CAkBus> #144>=
     SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
     return
 def SetInitialRTPC_CAkLayer_(obj, cls):
     #CAkLayer::SetInitialRTPC #113<=
     #SetInitialRTPC<CAkLayer>
+    #AK::RTPC::ReadRtpcCurves<CAkLayer> #144>=
     SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
     return
 def SetInitialRTPC_CAkAttenuation_(obj, cls):
     #SetInitialRTPC<CAkAttenuation>
+    #AK::RTPC::ReadRtpcCurves<CAkAttenuation> #144>=
     SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
     return
 def SetInitialRTPC_CAkFxBase_(obj, cls):
     #SetInitialRTPC<CAkFxBase>
+    #AK::RTPC::ReadRtpcCurves<CAkFxBase> #144>=
     SetInitialRTPC_CAkParameterNodeBase_(obj, cls)
     return
 def SetInitialRTPC_CAkModulator_(obj, cls):
     #SetInitialRTPC<CAkModulator>
+    #AK::RTPC::ReadRtpcCurves<CAkModulator> #144>=
     SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=True)
     return
 
@@ -1056,13 +1064,13 @@ def CAkActionResume__SetActionSpecificParams(obj, cls):
 
 #046>=
 def CAkActionSetAkProp__SetActionSpecificParams(obj, cls):
-    #CAkActionSetAkProp::SetActionSpecificParams #0x72>=
-    #CAkActionSetGameParameter::SetActionSpecificParams #062<=
     #CAkActionSetPitch::SetActionSpecificParams #056<=
     #CAkActionSetVolume::SetActionSpecificParams #056<=
     #CAkActionSetLFE::SetActionSpecificParams #056<=
     #CAkActionSetLPF::SetActionSpecificParams #056<=
-    #in v056 there is one ::SetActionSpecificParams per subtype but are all the same
+    # *in v056 there is one ::SetActionSpecificParams per subtype but are all the same
+    #CAkActionSetGameParameter::SetActionSpecificParams #062<=
+    #CAkActionSetAkProp::SetActionSpecificParams #072>=
     obj = obj.node('AkPropActionSpecificParams')
 
     if cls.version <= 56:
@@ -1175,6 +1183,10 @@ def CAkActionPlay__SetActionParams(obj, cls):
         obj.tid('fileID').fnv(wdefs.fnv_com) #same as bankID
     else:
         obj.tid('bankID').fnv(wdefs.fnv_com)
+
+    if cls.version >= 144:
+        obj.U32('bankType').fmt(wdefs.AkActionType)
+
     return
 
 #113>=
@@ -2564,8 +2576,10 @@ def CAkAttenuation__SetInitialValues(obj, cls):
         num_curves = 4
     elif cls.version <= 89:
         num_curves = 5
-    else:
+    elif cls.version <= 140:
         num_curves = 7
+    else:
+        num_curves = 19
 
     for i in range(num_curves):
         obj.s8i('curveToUse[%i]' % i) #read as u8 but set to s8
@@ -3044,9 +3058,14 @@ def CAkBankMgr__ProcessBankHeader(obj):
         obj.U32('bFeedbackInBank') #bFeedbackSupported
         #in later versions seems 16b=feedback + 16b=?, but this is how it's read/checked
         root.set_feedback(obj.lastval & 1) #not (obj.lastval ^ 1)
+    elif version <= 134:
+        obj.U32('uAltValues') \
+            .bit('bUnused', obj.lastval, 0, 0xFFFF) \
+            .bit('bDeviceAllocated', obj.lastval, 16, 0xFFFF)
     else:
-        obj.u16('bUnused') #old feedback?
-        obj.u16('bDeviceAllocated')
+        obj.U32('uAltValues') \
+            .bit('uAlignment', obj.lastval, 0, 0xFFFF) \
+            .bit('bDeviceAllocated', obj.lastval, 16, 0xFFFF)
 
     if   version <= 76:
         project_id = 0
@@ -3054,13 +3073,21 @@ def CAkBankMgr__ProcessBankHeader(obj):
         obj.u32('dwProjectID')
         project_id = obj.lastval
 
+    if version <= 140:
+        pass
+    else:
+        obj.u32('dwSoundBankType').fmt(wdefs.AkBankTypeEnum)
+        obj.gap('abyBankHash', 0x10) # u8[16] array
+
     # rest is skipped (not defined/padded), may be used for DATA alignment to sector size
-    if version <= 26:
+    if   version <= 26:
         gap_size = chunk_size - 0x1c
     elif version <= 76:
         gap_size = chunk_size - 0x10
-    else:
+    elif version <= 140:
         gap_size = chunk_size - 0x14
+    else:
+        gap_size = chunk_size - 0x14 - 0x04 - 0x10
     if gap_size > 0:
         obj.gap('padding', gap_size)
 
@@ -3237,6 +3264,11 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     obj.set_name('GlobalSettingsChunk')
 
     version = get_version(obj)
+
+    if version <= 140:
+        pass
+    else:
+        obj.U16('uFilterBehavior').fmt(wdefs.AkFilterBehavior)
 
     obj.f32('fVolumeThreshold')
 
@@ -3478,6 +3510,7 @@ def parse_chunk_akbk(obj):
     return
 
 def parse_chunk(obj):
+    #CAkBankMgr::LoadBank
     try:
         obj.four('dwTag').fmt(wdefs.chunk_type)
         tag = obj.lastval

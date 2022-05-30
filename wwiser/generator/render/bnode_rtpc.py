@@ -11,6 +11,23 @@ import math
 
 _GRAPH_NEW_SCALING = 72 #>=
 
+# values for latest versions
+_ACCUM_NONE = 0 #not set (probably)
+_ACCUM_EXCLUSIVE = 1 #initial delay
+_ACCUM_ADDITIVE = 2 #volumes, most others
+_ACCUM_MULTIPLY = 3 #playback speed
+_ACCUM_BOOLEAN = 4 #bypass FX flag
+_ACCUM_MAXIMUM = 5 #biggest?
+_ACCUM_FILTER = 6 #?
+
+# normalize types since they change a bit between versions
+_ACCUM_OLD = {
+    0: _ACCUM_EXCLUSIVE,
+    1: _ACCUM_ADDITIVE,
+    2: _ACCUM_MULTIPLY,
+}
+
+
 
 # Represents a graph point.
 # Each point is discrete yet connected to next point via easing function
@@ -295,25 +312,23 @@ class AkRtpc(object):
         # other props: "LFE", "LPF", "HPF", etc
 
     def _parse_accum(self, naccum):
-        self._accum_exc = False
-        self._accum_add = False
-        self._accum_mul = False
-        self._accum_bln = False
+        self._accum = None
+        version = naccum.get_root().get_version()
 
         if not naccum: #older:  fixed per property
-            self._accum_add = self.is_volume or self.is_busvolume or self.is_outputbusvolume or self.is_makeupgain or self.is_pitch
-            self._accum_mul = self.is_playbackspeed
-            self._accum_exc = self.is_delay
+            if self.is_volume or self.is_busvolume or self.is_outputbusvolume or self.is_makeupgain or self.is_pitch:
+                self._accum = _ACCUM_ADDITIVE
+            elif self.is_playbackspeed:
+                self._accum = _ACCUM_MULTIPLY
+            elif self.is_delay:
+                self._accum = _ACCUM_EXCLUSIVE
+            else:
+                self._accum = _ACCUM_NONE
             return
-
-        valuefmt = naccum.get_attrs().get('valuefmt')
-        if '[None]' in valuefmt: #not seen
-            raise ValueError("unknown rtpc None")
-
-        self._accum_exc = '[Exclusive]' in valuefmt #initial delay
-        self._accum_add = '[Additive]' in valuefmt #volumes, most others
-        self._accum_mul = '[Multiply]' in valuefmt #playback speed
-        self._accum_bln = '[Boolean]' in valuefmt #bypass FX flag
+        
+        self._accum = naccum.value()
+        if version <= 125:
+            self._accum = _ACCUM_OLD[self._accum]
 
     def is_usable(self, apply_bus):
         if apply_bus and (self.is_busvolume or self.is_outputbusvolume):
@@ -335,14 +350,22 @@ class AkRtpc(object):
         if current_value is None:
             current_value = 0
 
-        if self._accum_exc == 0: #exclusive (RTPC has priority)
+        if self._accum == _ACCUM_EXCLUSIVE: #RTPC has priority, not part of accum
             return y
-        if self._accum_add == 1: #additive
+        if self._accum == _ACCUM_ADDITIVE:
             return y + current_value
-        if self._accum_mul == 2: #multiply
+        if self._accum == _ACCUM_MULTIPLY:
             return y * current_value
-        if self._accum_bln == 4: #boolean
-            return y or current_value #???
+        if self._accum == _ACCUM_MAXIMUM:
+            if current_value > y:
+                return current_value
+            else:
+                return y
+        #if self._accum == _ACCUM_BOOLEAN:
+        #    return y or current_value #???
+        #if self._accum == _ACCUM_FILTER:
+        #    return y or current_value #???
+
         raise ValueError("unknown accum")
 
     def _set_minmax(self):

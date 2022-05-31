@@ -949,6 +949,7 @@ def CAkState__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__ReadState(obj):
     #CAkBankMgr::ReadState
+    #CAkBankMgr::StdBankRead<CAkState,CAkState> #144>= (but also has leftover CAkBankMgr::ReadState)
     cls = wcls.CAkState__Create(obj)
     obj.set_name(cls.name)
 
@@ -1338,6 +1339,7 @@ def CAkEvent__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__ReadEvent(obj):
     #CAkBankMgr::ReadEvent
+    #CAkBankMgr::StdBankRead<CAkEvent,CAkEvent> #144>= (but also has leftover CAkBankMgr::ReadEvent)
     cls = wcls.CAkEvent__Create(obj)
     obj.set_name(cls.name)
 

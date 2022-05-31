@@ -17,7 +17,7 @@ _ACCUM_EXCLUSIVE = 1 #initial delay
 _ACCUM_ADDITIVE = 2 #volumes, most others
 _ACCUM_MULTIPLY = 3 #playback speed
 _ACCUM_BOOLEAN = 4 #bypass FX flag
-_ACCUM_MAXIMUM = 5 #biggest?
+_ACCUM_MAXIMUM = 5 #biggest
 _ACCUM_FILTER = 6 #?
 
 # normalize types since they change a bit between versions
@@ -211,7 +211,7 @@ class _AkGraph(object):
         min = -96.300003
         if v <= min:
             return min
-        
+
         if v > 0.0:
             v = (96.3 - v) / 96.3
             return -self._realTodB(v)
@@ -313,9 +313,8 @@ class AkRtpc(object):
 
     def _parse_accum(self, naccum):
         self._accum = None
-        version = naccum.get_root().get_version()
 
-        if not naccum: #older:  fixed per property
+        if not naccum: #older: fixed per property
             if self.is_volume or self.is_busvolume or self.is_outputbusvolume or self.is_makeupgain or self.is_pitch:
                 self._accum = _ACCUM_ADDITIVE
             elif self.is_playbackspeed:
@@ -325,7 +324,8 @@ class AkRtpc(object):
             else:
                 self._accum = _ACCUM_NONE
             return
-        
+
+        version = naccum.get_root().get_version()
         self._accum = naccum.value()
         if version <= 125:
             self._accum = _ACCUM_OLD[self._accum]

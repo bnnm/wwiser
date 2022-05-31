@@ -208,6 +208,8 @@ class Renderer(object):
                 txtp.set_btransition(btransition)
                 txtp.write()
 
+        # transition (stingers too probably) segments may also not exist (seen in Detroit)
+
     #-------------------------------------
 
     def _begin_txtp(self, txtp, node):

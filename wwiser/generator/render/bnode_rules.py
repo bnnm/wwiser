@@ -92,8 +92,8 @@ class AkMusicTransitionObject(object):
 
 class AkTransitionRule(object):
     def __init__(self, node):
-        self.src_id = None
-        self.dst_id = None
+        self.src_ids = []
+        self.dst_ids = []
         self.rsrcs = []
         self.rdsts = []
         self.rtrn = None
@@ -102,9 +102,16 @@ class AkTransitionRule(object):
 
     def _build(self, node):
         # id=object, -1=any, 0=nothing
-        self.src_id = node.find1(name='srcID').value()
-        self.dst_id = node.find1(name='dstID').value()
-        
+
+        # v088+ allows N but not sure how it's used, editor only sets one by one (seen in Detroit)
+        nsrc_ids = node.finds(name='srcID')
+        for nsrc_id in nsrc_ids:
+            self.src_ids.append(nsrc_id.value())
+
+        ndst_ids = node.finds(name='dstID')
+        for ndst_id in ndst_ids:
+            self.dst_ids.append(ndst_id.value())
+
         nrsrcs = node.finds(name='AkMusicTransSrcRule')
         for nrsrc in nrsrcs:
             rsrc = AkMusicTransSrcRule(nrsrc)

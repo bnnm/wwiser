@@ -92,6 +92,8 @@ class Txtp(object):
     # Sometimes there are multiple small variations with the same .txtp tree, in those cases 
     # we don't need to re-render and just create multiple sub-txtp with different settings here.
     def write(self):
+        if not self._troot: #empty txtp (in rare cases)
+            return
         printer = wtxtp_printer.TxtpPrinter(self, self._troot)
         printer.prepare() #simplify tree
 

@@ -144,6 +144,9 @@ class TxtpInfo(object):
     def _load_scnames(self):
         self._scnames_init = True
         has_unreachables = False
+
+        self._sort_scnames()
+
         for state in self._scitems:
             name = state.group_name
             if not name:
@@ -160,6 +163,15 @@ class TxtpInfo(object):
         # extra mark
         if has_unreachables:
             self._scnames = '~' + self._scnames
+
+    def _sort_scnames(self):
+        # sort items by name if possible as it makes more consistently named SCs (where order
+        # doesn't matter). Uses tuples to avoid comparing str vs int, using '~' to force Nones
+        # go last. Unreachables also go last, and uses lowercase names just in case.
+        self._scitems.sort(key=lambda x: ( \
+            not x.unreachable, \
+            str(x.group_name or '~').lower(), x.group, str(x.value_name or '~').lower(), x.value \
+        ))
 
     # same, register when used
     def gamevar(self, ngvname, value):

@@ -178,18 +178,9 @@ class StateChunkPaths(object):
         # use registered info to build params
         self._params = []
 
-        # short items by name if possible as it makes more consistently named .txtp
-        # must order keys too since they same vars move around between tracks
-        # Uses tuples to avoid comparing str vs int), using '~' to force Nones go last
-        # If item is marked as unreachable, must go after all reachables
-        elems = []
-        for values in self._elems.values():
-            values.sort(key=lambda x: (not x.unreachable, x.value_name or '~', x.value))
-            elems.append(values)
+        elems = self._elems.values()
 
-        elems.sort(key=lambda x: (not x[0].unreachable, x[0].group_name or '~', x[0].group))
-
-        # combos of existing variables
+        # combos of existing variables (order doesn't matter here)
         items = itertools.product(*elems)
         for item in items:
             scparam = StateChunkParams()

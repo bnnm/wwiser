@@ -251,11 +251,13 @@ Watch out for filenames with:
 ### Log and warnings
 The log will output some stuff that you may need to manually tweak. Most notably are WARNINGs about missing objects.
 
-Typically, there is a bank per section (such as, *BGM*, *SFX* and so on), and you can load only one of those. But sometimes games split and load multiple banks per area. For example one bank may contain common events, other with area objects (non-event) and finally a media bank (memory `.wem`). If you try to generate with only the area bank you may get nothing and a WARNING. You must load `.bnk` that contain *events*. However if only the common bank is loaded without the area objets or the media bank, you may get a few `.txtp` but also an error about missing objects, meaning it couldn't generate other `.txtp` that should be there (since needed info is in other banks).
+You may get `find+load banks with events?`. Most likely the `.bnk` you loaded doesn't have events, so *wwiser* can't make `txtp`. You need to find and load other banks, that could be inside some bigfile (like `.pck` or maybe compressed engine files). If you did load some bgm-sounding bank, that may not be enough.
 
-You need to load all related banks at once then generate to ensure everything works correctly, as *wwiser* can't guess how the game loads banks (this is managed in-game). If all fails just load every bank, but that usually means tons of txtp (there are filtering options, explained below).
+Typically, there is a bank per section (such as, *BGM.bnk*, *SFX.bnk* and so on), and that's enough. But sometimes games split and load multiple banks per area. For example one bank may contain common events, other with area objects (non-event) and finally a media bank (memory `.wem`). If you try to generate with only the area bank you may get nothing and a WARNING. However if only the common bank is loaded without the area objets or the media bank, you may get a few `.txtp` but also an error about missing objects.
 
-Sometimes after loading everything you may still get WARNINGs about missing audio. First, make sure you *really* have every bank, as some games put them inside other game files and must be extracted first. Then, sometimes there is no way to fix those errors and can be ignored, since `.bnk` may simply contain garbage (Wwise does little clean-up when creating `.bnk`, for some reason), though *wwiser* tries minimize those missing errors.
+You need to load all related banks at once then generate to ensure everything works correctly, as *wwiser* can't guess how the game loads banks (this is managed in-game). If all fails just load every bank, but that usually means tons of `.txtp` (there are filtering options, explained below).
+
+Sometimes after loading everything you may still get WARNINGs about missing audio. First, make sure you *really* have every bank, as some games hide them inside compressed files. Then, sometimes there is no way to fix those errors and can be ignored, since a `.bnk` may simply contain garbage (Wwise does little clean-up when creating it, for some reason), though *wwiser* tries minimize those missing errors.
 
 
 ### Unused audio

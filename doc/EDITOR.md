@@ -520,7 +520,8 @@ Info gathered from the editor, to help understanding model and overall behavior.
   - any children of this object (like musicswitch > musicsegment) inherits parent's bus (`OverrideBusId=0`)
   - editor can check "override parent" and set another bus
     - by default it autoselect "Master Audio Bus" when checked, regarless of parent
-  - if a top-most object has a 
+- in latest version buses can be of different types, depending on when/how buffers are mixed
+  
 
 
 
@@ -695,5 +696,18 @@ sound > (volumes) > bus > bus > ... > bus > output
 ## Effects
 - objects may set custom, complex plugin FX
   - like echo, pitch shift, etc
+- saved into `NodeInitialFxParams/BusInitialFxParams` > `pFXChunk` > `FXChunk`
 - by default inherits parent unless set to override
-- there is a limit  (since they are more complex?)
+  - if override, check one, then uncheck override, overriden effect isn't saved into bnk
+- there is a limit of 4 per object (since they are more complex?)
+- can be "rendered" to pre-bake the effect into the .wem
+  - FXChunk exists with `bIsRendered=1`, but no fxID set
+- can be bypassed with a flag (`bitsFXBypass`: 00001=first, 00010=2nd, .... 10000 = all)
+  - flag can be controlled via RTPCs
+  - if disabled via overriden just plays base audio (doesn't inherit parent or anything)
+- can set statechunks/rtpcs, but only on their vars
+  - internally become common flags: Wwise Gain's "full band gain" is "volume", and "LFE gain" is "LFE"
+- can define a "share set" that is common config, or use default "custom" that is for that object
+  - custom = CAkFxCustom (has guidname)
+  - shared = CAkFxShareSet (has hashname), sets bIsShareSet flag
+  - internally work the same and have same fields

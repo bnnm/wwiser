@@ -9,6 +9,7 @@ Low priority TODOs
 - clean bitflags in parser (some change between versions)
 - make as list: uNumSrc, srcID/etc, Children, etc
 - v36<= eTransitionMode/_bIsUsingWeight etc recheck
+- akprops per version have a "max", and after it other props are "custom" per game: define of custom prop start
 
 ## model
 - 'var' type may go over omax, should adjust max loops
@@ -129,3 +130,7 @@ Low priority TODOs
     bgm01.adx #jo 25s P / 2s 0s  #ji 5s P / 2s 0s
     bgm02.adx
 ```
+- jumps ideas2:
+  - print entry/exit as is like `#j 10.0 50.0` (entry/exit)
+  - define rules like wwise (#@rule 1 to bgm01.adx play exit, play entry, fade in, fade out), transition
+  - by default if no rules: play entry, play exit

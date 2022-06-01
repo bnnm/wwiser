@@ -11,7 +11,8 @@ class Stats(object):
         self.internals = 0
         self.names = 0
 
-        self._txtp_hashes = {}
+        self._txtp_hashes = {} #hash
+        self._namenode_hashes = {}
         self._name_hashes = {}
         self._banks = {}
 
@@ -35,14 +36,32 @@ class Stats(object):
             self.streams += 1
         return True
 
-    def register_name(self, name):
+    def unregister_dupe(self, texthash):
+        if texthash in self._txtp_hashes:
+            self.duplicates -= 1
+        return
+
+    def register_namenode(self, name, node):
         hashname = hash(name)
+        hashnode = hash(node) #ok since different bank + cak object = different python hash
+        key = (hashname, hashnode)
 
         self.names += 1
-        if hashname in self._name_hashes:
+        if key in self._namenode_hashes:
             return False
 
-        self._name_hashes[hashname] = True
+        self._namenode_hashes[key] = True
+        return True
+
+    def register_namebase(self, name):
+        # same as the above but without node/bank, to detect when it needs to rename
+        hashname = hash(name)
+        key = (hashname)
+
+        if key in self._name_hashes:
+            return False
+
+        self._name_hashes[key] = True
         return True
 
     def current_name_count(self):

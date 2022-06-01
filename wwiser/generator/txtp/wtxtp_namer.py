@@ -43,8 +43,7 @@ class TxtpNamer(object):
     def clean_name(self, name):
         txtp = self.txtp
 
-        # same name but different txtp, rarely happens when banks repeat events ids that are actually different
-        if not txtp.txtpcache.stats.register_name(name):
+        if not txtp.txtpcache.stats.register_namebase(name):
             logging.debug("txtp: renaming to '%s'", name)
             name += '#%03i' % (txtp.txtpcache.stats.current_name_count())
 
@@ -103,7 +102,7 @@ class TxtpNamer(object):
         return outname
 
     # gets final txtp name, full version (without .txtp)
-    def get_longname(self, printer, is_new=True):
+    def get_longname(self, printer):
         txtp = self.txtp
         node = self.node #named based on default node, usually an event
 
@@ -265,10 +264,6 @@ class TxtpNamer(object):
         if printer.has_unsupported or printer.has_many_sounds():
             name += " {!}"
 
-        if not is_new: #dupe
-            #if is_not_exact_dupe:
-            #    name += " {D}"
-            name += " {d}"
         #if printer.has_others:
         #    name += " {o}"
         #if printer.has_self_loops:
@@ -277,6 +272,13 @@ class TxtpNamer(object):
             name += " {debug}"
 
         #name += ".txtp"
+
+        return name
+
+    def get_dupename(self, name):
+        #if is_not_exact_dupe:
+        #    name += " {D}"
+        name += " {d}"
 
         return name
 

@@ -58,6 +58,7 @@ class Txtp(object):
         self._current = None
 
         # for info
+        self._node = None
         self._namer = wtxtp_namer.TxtpNamer(self)
         return
 
@@ -68,6 +69,7 @@ class Txtp(object):
         self._current = self._troot
 
         # for names
+        self._node = node
         ntid = node.find1(type='sid')
         self._namer.node = node
         self._namer.ntid = ntid
@@ -157,12 +159,28 @@ class Txtp(object):
             text_simpler = printer.generate(simpler=True)
             texthash = hash(text_simpler)
 
-        # get name and check hash
-        is_new = self.txtpcache.stats.register_txtp(texthash, printer)
-        name = self._namer.get_longname(printer, is_new)
-        if not is_new and not self.txtpcache.dupes:
-            logging.debug("txtp: ignore '%s' (repeat of %s)", name, texthash)
+        # final name (sans dupe mark)
+        name = self._namer.get_longname(printer)
+
+        # dupe check
+        is_newtxtp = self.txtpcache.stats.register_txtp(texthash, printer)
+
+        # Same name but different base node/bank is considered a "new name". Rarely happens when banks repeat events ids
+        # that are actually different (name fixed in clean_name to avoid overwritting). It may also happen when passing
+        # variable combos that repeat paths (base name) but same base bank/node (= useless "fake dupe".
+        is_newname = self.txtpcache.stats.register_namenode(name, self._node)
+
+        if not is_newtxtp and not is_newname: # fake dupe
+            self.txtpcache.stats.unregister_dupe(texthash)
+            return
+
+        if not is_newtxtp and not self.txtpcache.dupes: #regular dupe
+            if is_newname:
+                logging.debug("txtp: ignore '%s' (repeat of %s)", name, texthash)
             return False
+        
+        if not is_newtxtp: # dupe mark
+            name = self._namer.get_dupename(name)
 
         # get final name, that may be changed/shorter depending on config
         longname = name + '.txtp'  #save full name in case it's cut to print in info

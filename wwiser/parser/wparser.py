@@ -915,7 +915,7 @@ def CAkEffectSlots__SetInitialValues(obj, cls):
             elem.u8i('uFXIndex')
             elem.tid('fxID') #.fnv(wdefs.fnv_sfx)
             elem.U8x('bIsShareSet')
-            elem.U8x('_bIsRendered') #unused
+            elem.U8x('_bIsRendered') #unused (effects can't render)
     return
 
 #******************************************************************************
@@ -1615,7 +1615,7 @@ def CAkBus__SetInitialFxParams(obj, cls):
 
             else:
                 elem.U8x('bIsShareSet') #!=0, bIsRendered is earlier versions
-                elem.U8x('_bIsRendered') #unused
+                elem.U8x('_bIsRendered') #unused (buses can't render effects)
 
 
             if   cls.version <= 46:

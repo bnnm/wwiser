@@ -60,8 +60,8 @@ class CAkBus(CAkHircNode):
         nbusid = nbase.find1(name='OverrideBusId')
         self.bparent = self._read_bus(nbusid) #parent bus of this bus
 
-        # needed to check audio output? (only on later versions)
-        ndeviceid = nbase.find1(name='OverrideBusId')
+        # needed to check audio output? (only on later versions and if a parent bus)
+        ndeviceid = nbase.find1(name='idDeviceShareset')
         self.bdevice = self._read_device(ndeviceid)
 
         # use to guess is non-output bus? (usually not set)
@@ -85,9 +85,9 @@ class CAkAudioDevice(CAkHircNode):
         self.silent = False
 
     def _build(self, node):
-        nbase = node.find1(name='AudioDeviceInitialValues')
-        nfxbase = nbase.find1(name='FxBaseInitialValues')
-        nfxid = nfxbase.find1(name='fxID')
+        #nbase = node.find1(name='AudioDeviceInitialValues') #only in 140>=
+        nbase = node.find1(name='FxBaseInitialValues')
+        nfxid = nbase.find1(name='fxID')
 
         fxid = nfxid.value()
         if fxid == 0x00B50007: #No Output

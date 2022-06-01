@@ -356,7 +356,7 @@ class Gui(object):
         box[2].grid(row=row, column=2, sticky=tk.W)
         row += 1
 
-        box = self._box('txtp_filter', frame, "Filter:", "List of allowed events/IDs/etc (use - to exclude)", width=80)
+        box = self._box('txtp_filter', frame, "Filter:", "List of allowed events/IDs/bnk/etc (use - to exclude)", width=80)
         box[0].grid(row=row, column=0, sticky=tk.E)
         box[1].grid(row=row, column=1, sticky=tk.W)
         box[2].grid(row=row, column=2, sticky=tk.W)

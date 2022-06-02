@@ -6,6 +6,7 @@ _FIELD_TYPE_KEYVAL = 2
 _FIELD_TYPE_KEYMINMAX = 3
 _FIELD_TYPE_RTPC = 4
 _FIELD_TYPE_SC = 5
+_FIELD_TYPE_RULES = 6
 
 
 class _TxtpField(object):
@@ -81,13 +82,6 @@ class TxtpFields(object):
         field = _TxtpField(type, items)
         self._fields.append(field)
 
-    def _add2(self, key, testkey):
-        done = (key[0], ) + testkey
-        if done in self._done:
-            return
-        self._done[done] = True
-        self._fields.append(key)
-
     def prop(self, nkey):
         if nkey:
             self._add(_FIELD_TYPE_PROP, (nkey))
@@ -119,6 +113,10 @@ class TxtpFields(object):
     def rtpc(self, nrtpc, nparam, values_x, values_y):
         if nrtpc and nparam:
             self._add(_FIELD_TYPE_RTPC, (nrtpc, nparam, values_x, values_y), (nrtpc.value(), nparam.value(), values_x, values_y))
+
+    def rules(self, rules):
+        if rules:
+            self._add(_FIELD_TYPE_RULES, (rules))
 
     def sort(self):
         self._fields.sort()
@@ -154,11 +152,14 @@ class TxtpFields(object):
             type = field.type
             items = field.items
 
-            if   type == _FIELD_TYPE_PROP:
+            if type == _FIELD_TYPE_PROP:
                 nfield = items
                 key, val =  self._prop_info(nfield)
 
-            elif type == _FIELD_TYPE_KEYVAL:
+                lines.append("* %s: %s" % (key, val))
+                continue
+
+            if type == _FIELD_TYPE_KEYVAL:
                 nkey, nval = items
 
                 key = self._prop_name(nkey)
@@ -179,7 +180,10 @@ class TxtpFields(object):
                 if not val:
                     val = vattrs.get('value')
 
-            elif type == _FIELD_TYPE_KEYMINMAX:
+                lines.append("* %s: %s" % (key, val))
+                continue
+
+            if type == _FIELD_TYPE_KEYMINMAX:
                 nkey, nmin, nmax = items
                 kattrs = nkey.get_attrs()
                 minattrs = nmin.get_attrs()
@@ -188,7 +192,10 @@ class TxtpFields(object):
                 key = "%s %s" % (kattrs.get('name'), kattrs.get('valuefmt', kattrs.get('value')))
                 val = "(%s, %s)" % (minattrs.get('valuefmt', minattrs.get('value')), maxattrs.get('valuefmt', maxattrs.get('value')))
 
-            elif type == _FIELD_TYPE_SC:
+                lines.append("* %s: %s" % (key, val))
+                continue
+
+            if type == _FIELD_TYPE_SC:
                 nkey, nval, props = items
                 kattrs = nkey.get_attrs() #nstategroupid
                 vattrs = nval.get_attrs() #nstatevalueid
@@ -220,8 +227,10 @@ class TxtpFields(object):
                 val = "(%s=%s)" % (kvalue, vvalue)
                 if info:
                     val += " <%s>" % (info) #looks a bit strange though
+                lines.append("- %s: %s" % (key, val))
+                continue
 
-            elif   type == _FIELD_TYPE_RTPC:
+            if type == _FIELD_TYPE_RTPC:
                 nfield, nparam, values_x, values_y = items
                 attrs = nfield.get_attrs()
 
@@ -244,9 +253,68 @@ class TxtpFields(object):
                     #pkey, pval = self._prop_info(nparam)
                     #val += " <%s>" % (pkey, pval)
 
-            else:
-                raise ValueError("bad field")
+                lines.append("- %s: %s" % (key, val))
+                continue
 
-            lines.append("* %s: %s" % (key, val))
+            if type == _FIELD_TYPE_RULES:
+                brules = items
+                for brule in brules.get_rules():
+                    #> 123 to 123: no-pre (*) no-post
+                    #> none to any: pre post (1000s 
+
+                    key = self._rules_ids(brule.src_ids) + " to " + self._rules_ids(brule.dst_ids)
+                    val = self._rules_jump(brule.rsrc, True) + " ~ " + self._rules_jump(brule.rdst, False)
+                    if brule.rtrn and brule.rtrn.tid:
+                        val += ' (trn %s)' % (brule.rtrn.tid)
+                    lines.append("> %s: %s" % (key, val))
+                continue
+            
+            raise ValueError("bad field")
+
 
         return lines
+
+
+    def _rules_ids(self, ids):
+        text = ''
+        for id in ids:
+            key = id
+            if key == 0:
+                key = 'none'
+            elif key == -1:
+                key = 'any'
+            text += "%s," % (key)
+
+        text = text[0:-1]
+        return text
+
+    def _rules_jump(self, btr, is_pre):
+        plays = { #pre/post, play/not
+            (True, True): 'pre',
+            (False, True): 'post',
+            (True, False): 'no-pre',
+            (False, False): 'no-post',
+        }
+        types = { #pre-post, type #currently only playlist transitions, that should only use default markers
+            (True, 7): 'exit',
+            (False, 0): 'entry',
+        }
+        #curves = { #abridged
+        #    (True, 4): '/',
+        #    (False, 4): '\\',
+        #    (True, 9): '_',
+        #    (False, 9): '_',
+        #}
+
+        fade = ''
+        if btr.fade.time != 0 or btr.fade.offset != 0: #should be on if any exists
+            #curve = curves.get(btr.fade.curve, curves_def)
+            fade = ' (fade %s at %s)' % (btr.fade.time, btr.fade.offset)
+
+        play = plays.get((is_pre, btr.play))
+        type = types.get((is_pre, btr.type), '???')
+
+        text = "%s %s" % (play, type)
+        if fade:
+            text += fade
+        return text

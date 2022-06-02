@@ -456,6 +456,8 @@ class CAkMusicRanSeqCntr(CAkParameterNode):
         self.rules = self._make_transition_rules(node, False)
         self.stingerlist = self._make_stingerlist(node)
 
+        self.fields.rules(self.rules)
+
         #playlists are "groups" that include 'leaf' objects or other groups
         # ex. item: playlist (sequence)
         #       item: segment A

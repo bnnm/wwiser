@@ -8,59 +8,55 @@
 class AkFade(object):
     def __init__(self, node):
         self.time = 0
-        self.curve = None
         self.offset = 0
+        self.curve = None
 
         self._build(node)
 
     def _build(self, node):
         self.time = node.find1(name='transitionTime').value()
-        self.curve = node.find1(name='eFadeCurve').value()
         self.offset = node.find1(name='iFadeOffset').value()
+        self.curve = node.find1(name='eFadeCurve').value()
 
 
 class AkMusicTransSrcRule(object):
     def __init__(self, node):
         self.fade = None
         self.type = None
-        self.post = False
-        self.link_id = None
-        self.link_cue = None
+        self.play = False #post exit
         self._build(node)
 
     def _build(self, node):
         self.fade = AkFade(node)
         self.type = node.find1(name='eSyncType').value()
-        self.post = node.find1(name='bPlayPostExit').value() != 0
+        self.play = node.find1(name='bPlayPostExit').value() != 0
 
-        ncue = node.find(name='uCueFilterHash')
-        if ncue:
-            self.cue = ncue.value()
+        #ncue = node.find(name='uCueFilterHash')
+        #if ncue:
+        #    self.cue = ncue.value()
 
 
 class AkMusicTransDstRule(object):
     def __init__(self, node):
         self.fade = None
         self.type = None
-        self.post = False
-        self.link_id = None
-        self.link_cue = None
+        self.play = False #pre extry
         self._build(node)
 
     def _build(self, node):
         self.fade = AkFade(node)
         self.type = node.find1(name='eEntryType').value()
-        self.post = node.find1(name='bPlayPreEntry').value() != 0
+        self.play = node.find1(name='bPlayPreEntry').value() != 0
 
         # varies with version
         #uMarkerID
         #uCueFilterHash
-        ncue = node.find(name='uCueFilterHash')
-        if ncue:
-            self.link_cue = ncue.value()
-        nmrk = node.find(name='uMarkerID')
-        if nmrk:
-            self.link_id = nmrk.value()
+        #ncue = node.find(name='uCueFilterHash')
+        #if ncue:
+        #    self.link_cue = ncue.value()
+        #nmrk = node.find(name='uMarkerID')
+        #if nmrk:
+        #    self.link_id = nmrk.value()
 
         #uJumpToID
         #eJumpToType
@@ -94,8 +90,8 @@ class AkTransitionRule(object):
     def __init__(self, node):
         self.src_ids = []
         self.dst_ids = []
-        self.rsrcs = []
-        self.rdsts = []
+        self.rsrc = None
+        self.rdst = None
         self.rtrn = None
 
         self._build(node)
@@ -112,15 +108,11 @@ class AkTransitionRule(object):
         for ndst_id in ndst_ids:
             self.dst_ids.append(ndst_id.value())
 
-        nrsrcs = node.finds(name='AkMusicTransSrcRule')
-        for nrsrc in nrsrcs:
-            rsrc = AkMusicTransSrcRule(nrsrc)
-            self.rdsts.append(rsrc)
+        nrsrc = node.find(name='AkMusicTransSrcRule')
+        self.rsrc = AkMusicTransSrcRule(nrsrc)
 
-        nrdsts = node.finds(name='AkMusicTransDstRule')
-        for nrdst in nrdsts:
-            rdst = AkMusicTransDstRule(nrdst)
-            self.rdsts.append(rdst)
+        nrdst = node.find(name='AkMusicTransDstRule')
+        self.rdst = AkMusicTransDstRule(nrdst)
 
         # older versions use bIsTransObjectEnabled to signal use, but segmentID is 0 if false anyway
         nrtrn = node.find(name='AkMusicTransitionObject')
@@ -147,3 +139,6 @@ class AkTransitionRules(object):
         #TODO implement (detect -1/0 too)
         #for ...
         return None
+
+    def get_rules(self):
+        return self._rules

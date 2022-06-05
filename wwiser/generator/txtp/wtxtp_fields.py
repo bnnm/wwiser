@@ -7,6 +7,7 @@ _FIELD_TYPE_KEYMINMAX = 3
 _FIELD_TYPE_RTPC = 4
 _FIELD_TYPE_SC = 5
 _FIELD_TYPE_RULES = 6
+_FIELD_TYPE_AM = 7
 
 
 class _TxtpField(object):
@@ -117,6 +118,10 @@ class TxtpFields(object):
     def rules(self, rules):
         if rules:
             self._add(_FIELD_TYPE_RULES, (rules))
+
+    def automations(self, automationlist):
+        if automationlist and not automationlist.empty:
+            self._add(_FIELD_TYPE_AM, (automationlist))
 
     def sort(self):
         self._fields.sort()
@@ -268,9 +273,16 @@ class TxtpFields(object):
                         val += ' (trn %s)' % (brule.rtrn.tid)
                     lines.append("> %s: %s" % (key, val))
                 continue
-            
-            raise ValueError("bad field")
 
+            if type == _FIELD_TYPE_AM:
+                automationlist = items
+                key = len(automationlist.nclipams)
+
+                lines.append("# automations: %s" % (key))
+                continue
+
+
+            raise ValueError("bad field")
 
         return lines
 
@@ -290,10 +302,10 @@ class TxtpFields(object):
 
     def _rules_jump(self, btr, is_pre):
         plays = { #pre/post, play/not
-            (True, True): 'pre',
-            (False, True): 'post',
-            (True, False): 'no-pre',
-            (False, False): 'no-post',
+            (True, True): 'post',
+            (False, True): 'pre',
+            (True, False): 'no post',
+            (False, False): 'no pre',
         }
         types = { #pre-post, type #currently only playlist transitions, that should only use default markers
             (True, 7): 'exit',
@@ -306,15 +318,15 @@ class TxtpFields(object):
         #    (False, 9): '_',
         #}
 
+        play = plays.get((is_pre, btr.play))
+        type = types.get((is_pre, btr.type), '???')
+        text = "%s-%s" % (play, type)
+
         fade = ''
         if btr.fade.time != 0 or btr.fade.offset != 0: #should be on if any exists
             #curve = curves.get(btr.fade.curve, curves_def)
             fade = ' (fade %s at %s)' % (btr.fade.time, btr.fade.offset)
 
-        play = plays.get((is_pre, btr.play))
-        type = types.get((is_pre, btr.type), '???')
-
-        text = "%s %s" % (play, type)
         if fade:
             text += fade
         return text

@@ -189,18 +189,19 @@ Info gathered from the editor, to help understanding model and overall behavior.
 - adds objects to playlist, but not used until added to a "group"
   - objects may be segments/playlists/switches?
   - AkMusicRanSeq saves the segments in children list, but aren't in the playlist
-- plays a list of objects inside a group
+- plays a list of objects inside a group (only segments)
+  - there is a special "event track" that technically plays anything, but it's handled differently
 - defines groups with modes that change when track is played
   - sequence continuous: plays all objects in sequence, on loop/next call restarts
   - sequence step: plays one object from first, on loop/next call plays next object
   - random continuous: plays all objects randomly, on loop/next call restarts
   - random step: plays one object at random, on loop/next call plays another object
   - loop above means set on playlist/group level (loop on children level "traps" the sequence)
-- groups may have objects or other groups (with objects), at any position
+- groups may have segments or other groups (with objects), at any position
 - random types have weight (probability to play), from 0.001 to 100% (default 50)
 - random types can use "standard"=allows repeats, or "shuffle"= doesn't
 - random types can set "avoid repeat N" to affect which objects are picked on loops/next play
-- each "group" has N objects
+- each "group" has N segments
 - group and objects have loop settings (1=once/none, 0=infinite, N=loops)
   - loop meaning varies per mode
 - combining all object stems + loops created a whole song
@@ -225,7 +226,12 @@ Info gathered from the editor, to help understanding model and overall behavior.
     - loop group=2, A=1, B=1, C=1 (standard): plays B, next time OR looping plays A
     - loop group=6, A=1, B=1, C=1 (standard): plays A, A, C, A, C, C
     - loop group=6, A=1, B=1, C=1 (shuffle):  plays B, A, C, (shuffle done), C, A, B
-
+- segment/tracks with playevents are handled like a newly layered bgm outside current playlist
+  - loop group=-, A=1 (event), B=1: plays A (layers some event), on exit cue plays B
+    - if event is looped it keeps playing in the background regardless of playlist (even after playlist ends)
+  - loop group=-, A=2 (event), B=1: plays A (layers some event), plays A (layers some event again), plays B
+    - 2 layers going on at the same time, plus the main playlist continues normally
+  - track's playevent can't be an event that has a track with playevent (no self/circular refs)
 
 ## music switch container
 - sets group+variable(s) to select one object depending

@@ -46,7 +46,7 @@ class TxtpNode(object):
         self.parent = parent
         self.config = config #NodeConfig
         self.sound = sound #NodeSound
-        self.transition = None #NodeTransition
+        self.transition = None #segment must apply markers
 
         self.type = TYPE_GROUP_ROOT
         if sound:
@@ -103,7 +103,7 @@ class TxtpNode(object):
 
     def single(self, transition=None):
         self.type = TYPE_GROUP_SINGLE
-        if (transition): #don't overwrite just in case
+        if transition: #don't overwrite just in case
             self.transition = transition
         return self
 

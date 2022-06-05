@@ -45,7 +45,7 @@ class TxtpDebug(object):
         else:
             if tnode.config.loop is not None: config1 += " lpn=%s" % (tnode.config.loop)
             if tnode.config.delay:           config1 += " dly=%s" % (tnode.config.delay)
-            if tnode.config.gain:          config1 += " vol=%s" % (tnode.config.gain)
+            if tnode.config.gain:            config1 += " vol=%s" % (tnode.config.gain)
             if tnode.transition:             config1 += " (trn)"
             if tnode.envelopelist:           config1 += " (env)"
 

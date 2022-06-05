@@ -20,7 +20,7 @@ _DEBUG_SIMPLER_PROPS = False #see wproperties
 #                                 * duration: 120s                  * trims: 8..150 (after 100s just repeats)
 #                                 * markers: 2s/82s [relative to segment]
 #
-# Could written like:
+# Could be written like:
 #   #sequence of 2
 #     #sequence of 1
 #       1.wem       #b 8.0
@@ -68,6 +68,19 @@ class TxtpSimplifier(object):
             wtxtp_debug.TxtpDebug().print(self._tree, False)
 
         #TODO join some of these to minimize loops
+
+        # SIMPLIFICATIONS:
+        # To get a cleaner and simulate certain Wwise behaviors we simplify the node tree a bit:
+        # - remove groups/sounds that play nothing
+        # - detect if needs a "fake entry" (where a looping mranseq needs 0..entry + entry..loop)
+        # - move down props, in some cases join them (as long as prop meaning doesn't change)
+        # - calc time values to txtp meanings
+        #   - simulate transitions by clamping some parts to entry..exit
+        # - detect and try to fix "trap loops"
+        # - ignore groups that don't do anything after the above simplifications
+        # - other tweaks
+
+
         self._clean_tree(self._tree)
         self._make_self_loops(self._tree)
         self._set_props(self._tree)
@@ -246,14 +259,14 @@ class TxtpSimplifier(object):
             return False
 
         node_subitem = node_item.children[0] #item: get subitem
-        if not node_subitem.transition: #subitem: has transition
+        if not node_subitem.transition: #subitem: must apply markers/transition
             return False
 
         if len(node_subitem.children) != 1: #subitem: loops to itself
             return False
 
-        item_loops = node_item.loop == 0
-        subitem_loops = node_subitem.loop == 0
+        item_loops = node_item.loop is not None and node_item.loop != 1
+        subitem_loops = node_subitem.loop is not None and node_subitem.loop != 1
         if not item_loops and not subitem_loops: #item+subitem: one must loop (both also ok due to trap loops)
             return False
 
@@ -272,11 +285,15 @@ class TxtpSimplifier(object):
         node_item.sequence_continuous()
         new_subitem = self._make_copy(node_item, node_subitem)
 
+        new_subitem.self_loop_end = True #mark transition node (clone entry..exit)
+        new_subitem.loop = node_item.loop # mark loop node (clone)
+        if node_item.loop is None or node_item.loop == 1:
+            new_subitem.loop = node_subitem.loop
+
         node_item.loop = None
         node_subitem.loop = None
         node_subitem.self_loop = True #mark transition node (original 0..entry)
         new_subitem.self_loop_end = True #mark transition node (clone entry..exit)
-        new_subitem.loop = 0 #mark loop node (clone)
 
         return True
 
@@ -293,9 +310,8 @@ class TxtpSimplifier(object):
         new_node.type = node.type
         new_node.transition = new_transition
 
-        #TODO
         # when cloning nodes that have envelopes, list is automatically generated and unique,
-        # but when applying entry/exit must also fix start values
+        # but when applying entry/exit must also fix start values (done later)
 
         new_parent.append(new_node)
 
@@ -407,6 +423,8 @@ class TxtpSimplifier(object):
         for subnode in node.children:
             self._set_times(subnode)
 
+        # buttom to top (once the above times are correct)
+
         if node.config.duration:
             self._set_duration(node, node)
 
@@ -429,7 +447,7 @@ class TxtpSimplifier(object):
     def _set_transition(self, node, trn_node, seg_node):
         if node != trn_node and node.transition:
             #logging.info("txtp: transition inside transition")
-            #this is possible in stuff like: switch (trn_node) > mranseq (node)
+            #this is possible in stuff like: switch (trn_node) > mranseq (node), or mranseq > track-playevent > mranseq
             return
 
         is_segment = node.config.duration is not None #(node.config.exit or node.config.entry)
@@ -937,7 +955,6 @@ class TxtpSimplifier(object):
         #    logging.info("generator: empty segment?")
         #    return
 
-        #transition = trn_node.transition
         pconfig = seg_node.config
 
         body = snd_node.pad_begin + snd_node.body_time - snd_node.trim_begin - snd_node.trim_end + snd_node.pad_end
@@ -967,7 +984,7 @@ class TxtpSimplifier(object):
             # as curve meaning would change), so simply trim the parent transition segment (that has loop, not moved down) to
             # remove initial audio including envelope. Must still clamp the exit though
             if snd_node.envelopelist:
-                # get best trim-able group (otherwise may have loop issues)
+                # get best trim-able group (otherwise may have loop issues, including itself)
                 trim_node = self._get_transition_trim(trn_node)
                 trim_node.trim_begin = entry
                 time = 0

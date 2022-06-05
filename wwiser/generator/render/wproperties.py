@@ -56,13 +56,8 @@ from ..txtp import hnode_misc
 #
 # Resulting properties are clamped to valid min/max, depending on type.
 # Some properties have special meanings and are applied at different points (for example
-# there are "VoiceVolume", "MakeUpGain", "OutputBusVolume", "BusVolume", etc) but ultimately
-# are added the final value.
-#
-# Generally bus volumes aren't too important since final volume can be autonormalized, but in
-# rare cases buses are used to fix certain .wem volumes and may contain useful statechunks
-# (seen in Astral Chain wems with  "low" "mid" buses + silence states). If init.bnk is
-# loaded those are applied, otherwise volumes aren't correct.
+# there are "Volume", "MakeUpGain", "OutputBusVolume", "BusVolume", etc) but ultimately
+# are added the final value (in simpler cases, see below).
 #
 # Also buses are only used in "audible" objects, while parent's buses are just to be inherited
 # and don't pass properties to regular objects:
@@ -71,8 +66,42 @@ from ..txtp import hnode_misc
 # In the first case, aksound uses bus1's props, but in the second bus1 is ignored completely
 # (if bus1 has -96db, aksound will be silent in the first case, not in the second).
 #
-# Could cache some relative properties on build (default+parents) and parent's state/rptc lists
-# to minimize loops, still needs to check most.
+# Generally bus volumes aren't too important since final volume can be autonormalized, but in
+# rare cases buses are used to fix certain .wem volumes and may contain useful statechunks
+# (seen in Astral Chain wems with  "low" "mid" buses + silence states). If init.bnk is loaded
+# those are applied.
+#
+# While the above is the basic usage of buses, they actually come in two forms:
+# - non-mixing: properties are passed down to the objects
+# - mixing: does processing then applies (some) properties
+#   - BusVolume/OutputBusVolume are post applied, Volume/MakeUpGain are still passed down
+# A bus becomes "mixing" when does anything that would alter the audio buffers: aux/hdr bus, has effects (even
+# if bypassed), has positioning, changes channels (down/upmixing), RTPC on BusVolume/OutputBusVolume/LPF/HPF, etc.
+# Buses on top (master) are also mixing, since they make final output.
+#
+# Basically Wwise tries to pass "voices" (individual .wem buffers) around and applying props at once and mixing as
+# late as possible, then creating a "main mix" or final N.Nch buffer, before # sending to the endpoint (platform's
+# audio out). But if a bus modifies audio signal, can't add certain props or meaning changes:
+# - doing -2db, then -2db == doing -4db once (so it's faster done once)
+# - doing -2db, eq+reverb, -2db != doing -4db, eq+reverb
+#
+# Example:
+#   123.wem: +1db VoiceVolume
+#       stage_bus: { +2db BusVolume, +3 OutputBusVolume }               (non-mixing)
+#           bgm_bus: {effect=reverb, +4db VoiceVolume, +5db BusVolume}  (mixing due to effect)
+#              main_bus: { +6db VoiceVolume, +7db BusVolume}             (non-mixing)
+#                  master_bus: {+8db BusVolume}                         (mixing due to master)
+#   * apply voice volumes: 1+4+6=11 and 2+3 (*any* VoiceVolumes in chain, and bus props until next mixing bus)
+#   * apply effect + bus volumes: 5 and 7 (bus props until next mixing bus)
+#   * apply bus volumes: 8 + final output (N.N audio), total 36db
+#
+# Latest Wwise versions also separate mixing buses into 3 subtypes depending on if the bus mixes voices or applies
+# effects over individual wem, though some effects are ignored ("peak limiter" is unrealiable per wem or reverb
+# would be slow).
+#
+# The calculations below treat all buses as non-mixing (adds all props once), since we can't apply effects, though
+# results should be reasonably close.
+
 
 # relative props are only added when node is an actual sound output object
 _HIRC_AUDIBLE = {

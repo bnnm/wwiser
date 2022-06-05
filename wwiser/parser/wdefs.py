@@ -361,8 +361,8 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00071033: "iZotope Trash Box Modeler", #
   0x00091033: "iZotope Trash Multiband Distortion", #
 
-  0x006F0403: "Platinum MatrixSurroundMk2", #PgMatrixSurroundMk2
-  0x006E0403: "Platinum LoudnessMeter", #PgLoudnessMeter
+  0x006E0403: "Platinum MatrixSurroundMk2", #PgMatrixSurroundMk2
+  0x006F0403: "Platinum LoudnessMeter", #PgLoudnessMeter
   0x00710403: "Platinum SpectrumViewer", #PgSpectrumViewer
   0x00720403: "Platinum EffectCollection", #PgEffectCollection
   0x00730403: "Platinum MeterWithFilter", #PgMeterWithFilter

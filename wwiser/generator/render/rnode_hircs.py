@@ -440,8 +440,11 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
         txtp.group_layer(subtrack, None)
         for clip in subtrack:
             if clip.neid and clip.neid.value():
-                # When a neid (eventi id) is set clip will be a full event, and since
+                # When a neid (event id) is set clip will be a full event, and since
                 # it uses FPA to set when to start that clip, we can simulate it by using delay.
+                #
+                # In Wwise this event becomes separate/layered audio (may loop forever), so this isn't too
+                # realistic but can't easily simulate that with .txtp, but for simple uses may work ok.
                 econfig = hnode_misc.NodeConfig()
                 econfig.delay = clip.sound.fpa
 

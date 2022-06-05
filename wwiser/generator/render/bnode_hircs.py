@@ -653,6 +653,7 @@ class CAkMusicTrack(CAkParameterNode):
             #self.gvalue_index[None] = (None, 0) #None to force "don't play any subtrack"
 
         self.fields.props([ntype, ncount])
+        self.fields.automations(self.automationlist)
         return
 
     def _build_silence(self):

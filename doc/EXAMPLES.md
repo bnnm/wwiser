@@ -480,7 +480,7 @@ event > play > ...
                           > track [vorbis]
 ```
 ```
-[831639979] SB_20_SeaGoddess_BGM_01.bnk
+[831639979] SB_20_SeaGoddess_BGM_01.bnk (Phase=P_01)
     event > ... > segment > track [6ch + bgm_bus]
                             - 977579965 > 2514777396 (20_BGM)
                           > track [2ch + vo_bus w/ plugin]

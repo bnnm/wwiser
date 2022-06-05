@@ -35,6 +35,7 @@ class TxtpCache(object):
         self.x_noloops = False
         self.x_nameid = False
         self.x_silence_all = False
+        self.x_include_fx = False
 
         # process helpers (passed around)
         self.tags = None

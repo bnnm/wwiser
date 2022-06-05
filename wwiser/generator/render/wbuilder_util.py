@@ -34,6 +34,7 @@ _HIRC_BUILDER_NODES = {
     # others
     'CAkState': CAkState,
     'CAkFxCustom': CAkFxCustom,
+    'CAkFxShareSet': CAkFxShareSet,
     'CAkBus': CAkBus,
     'CAkAudioDevice': CAkAudioDevice,
 
@@ -110,7 +111,7 @@ IDTYPE_AUDIO = 'au'
 # master-mixer (usually a hashname)
 IDTYPE_BUS = 'bu'
 # share sets > effects
-IDTYPE_EFFECT = 'ef'
+IDTYPE_SHARESET = 'ef'
 # from tests
 IDTYPE_AUDIODEVICE = 'ad'
 
@@ -125,7 +126,7 @@ _IDTYPE_HIRCS = {
     'CAkAuxBus': IDTYPE_BUS,
     'CAkFeedbackBus': IDTYPE_BUS, #untested
 
-    'CAkFxShareSet': IDTYPE_EFFECT,
+    'CAkFxShareSet': IDTYPE_SHARESET,
 
     'CAkAudioDevice': IDTYPE_AUDIODEVICE,
 

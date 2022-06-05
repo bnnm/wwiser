@@ -103,6 +103,7 @@ class Cli(object):
 
         p = parser.add_argument_group('extra options')
         p.add_argument('-gxs', '--txtp-x-silence',     help="Silence by default parts that crossfade", action='store_true')
+        p.add_argument('-gxif','--txtp-x-include-fx',  help="Apply FX volumes", action='store_true')
         p.add_argument('-gxnl','--txtp-x-noloops',     help="Extra: don't loop sounds", action='store_true')
         p.add_argument('-gxni','--txtp-x-nameid',      help="Extra: add ID to generic names", action='store_true')
         p.add_argument('-x','--tests',                 help="Extra: debug", action='store_true')
@@ -316,6 +317,7 @@ class Cli(object):
             generator.set_x_noloops(args.txtp_x_noloops)
             generator.set_x_nameid(args.txtp_x_nameid)
             generator.set_x_silence(args.txtp_x_silence)
+            generator.set_x_include_fx(args.txtp_x_include_fx)
 
             generator.generate()
 

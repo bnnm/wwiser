@@ -137,6 +137,9 @@ class Generator(object):
     def set_x_silence(self, flag):
         self._txtpcache.x_silence_all = flag
 
+    def set_x_include_fx(self, flag):
+        self._txtpcache.x_include_fx = flag
+
     def set_tags(self, tags):
         self._txtpcache.tags = tags
         tags.set_txtpcache(self._txtpcache)

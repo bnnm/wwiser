@@ -1,4 +1,4 @@
-from . import bnode_automation, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk
+from . import bnode_automation, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk, bnode_fxs
 from ..txtp import wtxtp_fields
 
 
@@ -25,6 +25,7 @@ class CAkHircNode(object):
         self.statechunk = None
         self.rtpclist = None
         self.stingerlist = None
+        self.fxlist = None
 
         self.bbus = None
         self.bparent = None
@@ -117,6 +118,12 @@ class CAkHircNode(object):
             return None
         return tree
 
+    def _make_fxlist(self, node):
+        fxlist = bnode_fxs.AkFxChunkList(node, self._builder)
+        if not fxlist.init:
+            return None
+        return fxlist
+
     def _make_automationlist(self, node):
          return bnode_automation.AkClipAutomationList(node)
 
@@ -125,6 +132,15 @@ class CAkHircNode(object):
 
     def _make_source(self, nbnksrc):
         source = bnode_source.AkBankSourceData(nbnksrc, self.sid)
+
+        # sources may be:
+        # - standard .wem
+        # - Wwise Audio Input (audio capturing)
+        # - Wwise Silence
+        # - Wwise Sine (configurable secs, simple sine)
+        # - Wwise Synth One (infinite duration, kind of midi-controlled sine?)
+        # - Wwise Tone Generator (~1sec,  selectable tone like sine, triangle, noise, etc)
+        # - Wwise External Source (handled separately)
 
         if source.is_plugin_silence:
             if source.plugin_size:

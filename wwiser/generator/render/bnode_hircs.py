@@ -37,16 +37,21 @@ class CAkFxCustom(CAkHircNode):
     def _build(self, node):
         nbase = node.find1(name='FxBaseInitialValues')
 
-        # probably not useful:
-        # InitialRTPC
-        # StateChunk
-
         # save config (used for sources)
         nfxid = nbase.find1(name='fxID')
         plugin_id = nfxid.value()
-
         self.fx = self._make_sfx(node, plugin_id)
+
+        self.statechunk = self._make_statechunk(nbase)
+        self.rtpclist = self._make_rtpclist(nbase)
+
         return
+
+# same as the above but common config (reused unlike CAkFxCustom)
+class CAkFxShareSet(CAkFxCustom):
+    def __init__(self):
+        super(CAkFxShareSet, self).__init__()
+
 
 # output config
 class CAkBus(CAkHircNode):
@@ -71,8 +76,10 @@ class CAkBus(CAkHircNode):
         #PositioningParams
 
         self.statechunk = self._make_statechunk(nbase)
-        
         self.rtpclist = self._make_rtpclist(nbase)
+
+        ninitfx = nbase.find1(name='BusInitialFxParams')
+        self.fxlist = self._make_fxlist(ninitfx)
 
         return
 
@@ -241,6 +248,9 @@ class CAkParameterNode(CAkHircNode):
         #InitialRTPC, note that exists outside NodeBaseParams
         ninitrtpc = nbase.find1(name='InitialRTPC')
         self.rtpclist = self._make_rtpclist(ninitrtpc)
+
+        ninitfx = nbase.find1(name='NodeInitialFxParams')
+        self.fxlist = self._make_fxlist(ninitfx)
 
 
     def _build_audionode(self, node):

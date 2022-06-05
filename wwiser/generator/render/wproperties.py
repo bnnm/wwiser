@@ -144,6 +144,8 @@ class PropertyCalculator(object):
         self._is_base = None #process flag
         self._include_bus = False #process flag
 
+        self._include_fx = txtp.txtpcache.x_include_fx
+
     def get_properties(self):
         if _DEBUG_SIMPLER_PROPS:
             self._audible = True
@@ -254,6 +256,24 @@ class PropertyCalculator(object):
             if self._include_bus:
                 cfg.gain += props.busvolume
                 cfg.gain += props.outputbusvolume
+
+            # fake a bit FX to include Wwise Gain (effects render a bit different but should be ok for typical usage)
+            # (may be on bus or node level)
+            if self._include_fx:
+                fxlist = self._get_fxlist(bnode)
+                if fxlist:
+                    gain = fxlist.get_gain()
+                    cfg.gain += gain
+                    #TODO handle statechunks/rtpcs in the fxgain
+
+    def _get_fxlist(self, bnode):
+        if not bnode:
+            return None
+        
+        if bnode.fxlist:
+            return bnode.fxlist
+        
+        return self._get_fxlist(bnode.bparent)
 
     # -------------------------------------------------------------------------
 

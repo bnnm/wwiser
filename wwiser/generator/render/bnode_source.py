@@ -148,6 +148,7 @@ _LANGUAGE_SHORTNAMES = {
 }
 
 _PLUGIN_SILENCE = 0x00650002
+_PLUGIN_GAIN = 0x008B0003
 
 _PLUGIN_IGNORABLE = set([
     0x01950002,
@@ -329,6 +330,8 @@ class CAkFx(object):
     def __init__(self, node, plugin_id):
         self.duration = 1.0 * 1000.0 #default?
         self.plugin_id = plugin_id
+        self.gain = 0
+        self.lfe = 0
         self._build(node)
 
     def _build(self, node):
@@ -339,7 +342,15 @@ class CAkFx(object):
         # fxID (may exist in AkFXCustom, or external in older versions)
         # uSize
         # Ak*FXParams
-        if self.plugin_id == _PLUGIN_SILENCE: #silence
+
+        if self.plugin_id == _PLUGIN_SILENCE:
             nparams = node.find1(name='AkFXSrcSilenceParams')
             ndur = nparams.find(name='fDuration')
             self.duration = ndur.value()  * 1000.0 #to ms for consistency
+
+        if self.plugin_id == _PLUGIN_GAIN:
+            nparams = node.find1(name='AkGainFXParams')
+            ngain = nparams.find(name='fFullbandGain')
+            nlfe = nparams.find(name='fLFEGain')
+            self.gain = ngain.value()
+            self.lfe = nlfe.value()

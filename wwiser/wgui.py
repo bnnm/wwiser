@@ -440,6 +440,9 @@ class Gui(object):
         chk = self._chk('txtp_x_silence', frame, "Silence parts that crossfade by default")
         chk.grid(row=row, column=1, sticky=tk.W)
 
+        chk = self._chk('txtp_x_include_fx', frame, "Apply FX volumes")
+        chk.grid(row=row, column=2, sticky=tk.W)
+
         row += 1
 
         frame = ttk.Labelframe(cframe, text="Tags")
@@ -753,6 +756,7 @@ class Gui(object):
             generator.set_random_force( self._get_item('txtp_random_force') )
             generator.set_write_delays( self._get_item('txtp_write_delays') )
             generator.set_x_silence( self._get_item('txtp_x_silence') )
+            generator.set_x_include_fx( self._get_item('txtp_x_include_fx') )
 
             tags = wtags.Tags(banks, self.names)
             tags.set_make_event( self._get_item('tags_event') )

@@ -106,6 +106,9 @@ Low priority TODOs
 - prop calculator: could cache simple properties (default+parents)
 - prop calculator: profile slowness when reading params
   - preload load parent bus my default? (rather than looking for it every time)
+- improve wwise gain effect (Tetris Effect, DMC5)
+  - check bypass effects flag
+  - apply rtpcs on the sfx + base node bypasses
 
 # txtp transitions
 - nodetransition: get actual transition from rule, pass to tnode

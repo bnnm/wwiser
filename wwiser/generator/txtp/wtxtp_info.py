@@ -192,6 +192,9 @@ class TxtpInfo(object):
 
     def _load_gvnames(self):
         self._gvnames_init = True
+
+        self._sort_gvnames()
+
         for ngvname, value in self._gvitems:
             name = ngvname.get_attrs().get('hashname')
             if not name:
@@ -199,6 +202,14 @@ class TxtpInfo(object):
 
             info = "{%s=%s}" % (name, value)
             self._gvnames += info
+
+    def _sort_gvnames(self):
+        # sort items, see sort_scnames
+
+        self._gvitems.sort(key=lambda gamevar: ( \
+            str(gamevar[0].get_attrs().get('hashname') or '~').lower(), gamevar[0].value(), \
+            gamevar[1] \
+        ))
 
     #----------------------------------------------------------------------------------
 

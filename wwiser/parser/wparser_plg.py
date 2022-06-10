@@ -491,8 +491,11 @@ def parse_chunk_default(obj, size, params_name):
     obj.gap(params_name, size)
     return
 
-def parse_plugin_params(obj, plugin_id, size_name, params_name):
-    if not plugin_id or plugin_id < 0:
+def parse_plugin_params(obj, plugin_id, size_name, params_name, always=False):
+    if not plugin_id:
+        return
+    # early versions have -1 (nothing) but do have empty size/params
+    if plugin_id < 0 and not always:
         return
 
     # rather than version we check size, since plugins may be updated separatedly,

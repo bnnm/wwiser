@@ -331,17 +331,20 @@ def CAkParameterNode__SetInitialFxParams(obj, cls):
                 elem.u8i('uFXIndex')
 
             elem.tid('fxID') #.fnv(wdefs.fnv_sfx) #tid in 113=Doom16
+            plugin_id = elem.lastval
 
             if   cls.version <= 26:
                 elem.U8x('unknown')
                 elem.U8x('unknown')
-                elem.U32('ulSize')
-                elem.gap('pDataBloc', elem.lastval)
+                wplg.parse_plugin_params(elem, plugin_id, 'ulSize', 'pDataBloc', always=True)
+                #elem.U32('ulSize')
+                #elem.gap('pDataBloc', elem.lastval)
 
             elif cls.version <= 48:
                 elem.U8x('bIsRendered')
-                elem.U32('ulPresetSize')
-                elem.gap('pDataBloc', elem.lastval)
+                wplg.parse_plugin_params(elem, plugin_id, 'ulPresetSize', 'pDataBloc', always=True)
+                #elem.U32('ulPresetSize')
+                #elem.gap('pDataBloc', elem.lastval)
 
             else:
                 elem.U8x('bIsShareSet')
@@ -1598,6 +1601,13 @@ def CAkBus__SetInitialFxParams(obj, cls):
         for elem in obj.list('pFXChunk', 'FXChunk', count):
             if   cls.version <= 26:
                 parse_plugin(elem, name='fxID') #obj.U32('fxID')
+                plugin_id = elem.lastval
+
+            elif cls.version <= 48:
+                elem.u8i('uFXIndex')
+                parse_plugin(elem, name='fxID') #obj.U32('fxID')
+                plugin_id = elem.lastval
+
             else:
                 elem.u8i('uFXIndex')
                 elem.tid('fxID') #.fnv(wdefs.fnv_sfx) #tid in 113=Doom16
@@ -1605,13 +1615,15 @@ def CAkBus__SetInitialFxParams(obj, cls):
             if   cls.version <= 26:
                 elem.U8x('unknown')
                 elem.U8x('unknown')
-                elem.U32('ulSize')
-                elem.gap('pDataBloc', elem.lastval)
+                wplg.parse_plugin_params(elem, plugin_id, 'ulSize', 'pDataBloc', always=True)
+                #elem.U32('ulSize')
+                #elem.gap('pDataBloc', elem.lastval)
 
             elif cls.version <= 48:
                 elem.U8x('_bIsRendered') #unused
-                elem.U32('ulSize')
-                elem.gap('pDataBloc', elem.lastval)
+                wplg.parse_plugin_params(elem, plugin_id, 'ulSize', 'pDataBloc', always=True)
+                #elem.U32('ulSize')
+                #elem.gap('pDataBloc', elem.lastval)
 
             else:
                 elem.U8x('bIsShareSet') #!=0, bIsRendered is earlier versions

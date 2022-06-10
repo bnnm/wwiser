@@ -14,9 +14,19 @@ class AkFade(object):
         self._build(node)
 
     def _build(self, node):
-        self.time = node.find1(name='transitionTime').value()
-        self.offset = node.find1(name='iFadeOffset').value()
-        self.curve = node.find1(name='eFadeCurve').value()
+        # some early versions have garbage in some cases
+        if not node:
+            return
+        ntt = node.find1(name='transitionTime')
+        nfo = node.find1(name='iFadeOffset')
+        nfc = node.find1(name='eFadeCurve')
+
+        if ntt:
+            self.time = ntt.value()
+        if nfo:
+            self.offset = nfo.value()
+        if nfc:
+            self.curve = nfc.value()
 
 
 class AkMusicTransSrcRule(object):

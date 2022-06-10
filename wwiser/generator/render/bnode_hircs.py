@@ -314,20 +314,16 @@ class CAkRanSeqCntr(CAkParameterNode):
         self.avoidrepeat = navoidrepeat.value()
 
         nloop = node.find(name='sLoopCount')  #1=once, 0=infinite, >1=N times
-        nloopmin = node.find(name='sLoopModMin') #random loop modifiers (loop -min +max)
-        nloopmax = node.find(name='sLoopModMax')
+        nloopmin = node.find(name='sLoopModMin') #v72> random loop modifiers (loop -min +max)
+        nloopmax = node.find(name='sLoopModMax') #v72>
 
         # loop ignored by Wwise but sometimes set, simplify
         if nloop.value() == 0 and not self.continuous:
             pass
         else:
-            loopmin = None
-            loopmax = None
-            if nloopmin: #v72>
-                loopmin = nloopmin.value()
-            if nloopmax: #v72>
-                loopmax = nloopmax.value()
-            self.props.set_loop(nloop.value(), loopmin, loopmax)
+            self.props.set_loop(nloop, nloopmin, nloopmax)
+
+            self.fields.prop(nloop)
 
 
         #eTransitionMode: defines a transition type between objects (ex. "delay" + fTransitionTime)
@@ -400,8 +396,7 @@ class CAkSound(CAkParameterNode):
         if nloop: #older
             nloopmin = node.find(name='LoopMod.min')
             nloopmax = node.find(name='LoopMod.max')
-
-            self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
+            self.props.set_loop(nloop, nloopmin, nloopmax)
 
             self.fields.prop(nloop)
 
@@ -590,9 +585,10 @@ class CAkMusicTrack(CAkParameterNode):
         if nloop: #older
             nloopmin = node.find(name='LoopMod.min')
             nloopmax = node.find(name='LoopMod.max')
-            self.props.set_loop(nloop.value(), nloopmin.value(), nloopmax.value())
+            self.props.set_loop(nloop, nloopmin, nloopmax)
 
             self.fields.prop(nloop)
+
 
         # loops in MusicTracks are meaningless, ignore to avoid confusing the parser
         self.props.disable_loop()

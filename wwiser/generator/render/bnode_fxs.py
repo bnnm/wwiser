@@ -4,25 +4,35 @@ class AkFxChunk(object):
     def __init__(self, nfx):
         self.index = None
         self.nid = None
+        self.is_inline = False
         self.is_shareset = False
         self.is_rendered = False
         self.bfx = None
         self._build(nfx)
 
     def _build(self, nfx):
-        self.index = nfx.find(name='uFXIndex').value()
-        self.nid = nfx.find(name='fxID')
-        self.is_shareset = nfx.find(name='bIsShareSet').value()
-
+        nindex = nfx.find(name='uFXIndex') #not in older versions
+        nid = nfx.find(name='fxID') #plugin ID in older versions
+        nshareset = nfx.find(name='bIsShareSet') #not in older versions (inline plugins)
         nrendered = nfx.find(name='bIsRendered') #_bIsRendered in bus, never set
+
+        if nindex:
+            self.index = nindex.value()
+        self.is_inline = nshareset is None
+
+        if not self.is_inline:
+            self.nid = nid
+            self.is_shareset = nshareset.value()
+
         if nrendered:
             self.is_rendered = nrendered.value()
+        #TODO load inline
 
 
 class AkFxChunkList(object):
     def __init__(self, node, builder):
         self.init = False
-        self._fxcs = [None] * 4 #exact max
+        self._fxcs = [] #exact max is 4
         self._flags = 0
         self._build(node, builder)
 
@@ -55,7 +65,12 @@ class AkFxChunkList(object):
                 continue
 
             fxc.bfx = bfx
-            self._fxcs[fxc.index] = fxc
+            if fxc.index is None:
+                self._fxcs.append(fxc)
+            else:
+                if not self._fxcs:
+                    self._fxcs = [None] * 4
+                self._fxcs[fxc.index] = fxc
 
     def get_gain(self):
         #TODO: read flags

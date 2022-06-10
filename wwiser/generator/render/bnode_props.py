@@ -78,7 +78,7 @@ class CAkProps(object):
         self.fields_std = [] # key-val
         self.fields_rng = [] # key-min/max
         # behavior props
-        self.fields_bfld = self.fields_fld
+        self.fields_bfld = []
         self.fields_bstd = []
         self.fields_brng = []
 
@@ -258,13 +258,15 @@ class CAkProps(object):
             nmin = nbase.find(name=keymin)
             nmax = nbase.find(name=keymax)
 
-            self.fields_fld.extend([nprop, nmin, nmax])
-
             keyname = "[%s]" % (_OLD_TRANSLATION_PROPS.get(keybase, keybase)) #transform in some cases
             pval = nprop.value()
             mval = (nmin.value(), nmax.value())
             self._add_prop(self._props, keyname, pval)
             self._add_prop(self._ranges, keyname, mval)
+
+            self.fields_fld.extend([nprop, nmin, nmax])
+            if not _FIELD_BEHAVIOR_PROPS or keyname in _FIELD_BEHAVIOR_PROPS:
+                self.fields_fld.extend([nprop, nmin, nmax])
 
 
     def _add_prop(self, items, keyname, val):
@@ -275,14 +277,21 @@ class CAkProps(object):
             raise ValueError("repeated prop " + keyname)
         items[keyname] = val
 
-    # external in some cases, unifies handling
-    def set_loop(self, value, min=None, max=None):
-        key = '[Loop]'
-        self._props[key] = value
-        if min is not None and max is not None:
-            self._ranges[key] = (min, max)
+    # external in some old cases, unifies handling
+    def set_loop(self, nloop, nmin=None, nmax=None):
+        keyname = '[Loop]'
+        self._props[keyname] = nloop.value()
+        if nmin and nmax:
+            min = nmin.value()
+            max = nmax.value()
+            self._ranges[keyname] = (min, max)
 
-        self.loop = self._prop(key, default=None)
+        self.loop = self._prop(keyname, default=None)
+
+        # externally prop fields are pre-loaded before this call, but anyway
+        self.fields_fld.extend([nloop, nmin, nmax])
+        if not _FIELD_BEHAVIOR_PROPS or keyname in _FIELD_BEHAVIOR_PROPS:
+            self.fields_fld.extend([nloop, nmin, nmax])
         return
 
     # messes up calculations in some cases

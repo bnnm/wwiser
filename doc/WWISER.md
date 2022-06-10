@@ -274,6 +274,10 @@ Each `.txtp` calls one or several audio files, in `.wem` and `.bnk`. Make sure a
 
 The output log (see above) tells you when you need to move `.bnk` or `.wem`, plus there is an option to automatically move `.wem` to output dir.
 
+#### Missing media and features
+Sometimes the .txtp is generated, but marked with a `{!}`. See below *Missing mark {!}* for an explanation on possible causes.
+
+
 #### Limit file names
 If the `.txtp` names are a bit too long, try moving them to a shorter dir. Windows has a path length limit, so extremely long paths (`C:\(folder)\(folder with a long name)\(more long folders)\(long name).txtp`) will fail.
 
@@ -351,11 +355,13 @@ In Wwise multiple parts may loop  independently (like some short croak sfx + lon
 
 
 ### Missing mark {!}
-This indicates some kind of problem. Typically missing memory bank (try loading more banks first), or an unsupported Wwise feature. The later will play as silence (parts are marked as `?`) rather than failing, since sometimes it doesn't matter much.
+This indicates some kind of problem. Typically missing memory bank (try loading more banks first), or an unsupported Wwise feature.
 
-Unsupported features are usually programatically generated audio (such as a sine wave, a "whoosh" wind sfx, and so on), or Wwise midi (that is mostly silent and used for syncronization rather than sound).
+Missing memory bank means the needed `.wem` are inside a bank, but you haven't loaded such bank. *wwiser* can detect this but doesn't know which bank would have those thems. Simply find and load those missing banks and the `{!}` should disappear.
 
-If the `.txtp` includes a huge number of sounds it may also be marked, as *vgmstream* currently has some max limits.
+Unsupported features are usually programatically generated audio (such as a sine wave, a "whoosh" wind sfx, and so on), or Wwise midi (that is mostly silent and used for syncronization rather than sound). Those will play as silence (parts are marked as `?`) rather than failing, since often it doesn't matter much.
+
+If the `.txtp` includes a huge number of sounds it may also be marked, as *vgmstream* currently has some max limits. Open the `.txtp` with a text editor, and if you see a long list of `.wem` this may be the culprit. This needs to be fixed in *vgmstream*, but is currently a bit complex to do so. You can also edit the `.txtp` so it doesn't reach those limits (see vgmstream's TXTP docs, but basically you need to comment a bunch of wems and tweak groups' totals).
 
 
 ### External mark {e}

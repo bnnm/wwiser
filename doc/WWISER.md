@@ -216,6 +216,7 @@ TXTP is a simple text file, so you can open it and see how audio is configured. 
 
 Simply load all banks and generation will make a bunch of `.txtp` files that are playable by *vgmstream*. It's recommended to load `init.bnk` (sometimes `1355168291.bnk`) to improve volume output in some cases.
 
+
 ### Basic output
 By default it will try to create `.txtp` for all "usable" cases (mainly *events* with audio). If an event uses *variables* (meaning game gets to choose sounds) it'll try to make one `.txtp` per value combo. Pay attention to the log, as it prints about important, non obvious details you may need to tweak (detailed later).
 
@@ -258,6 +259,25 @@ Typically, there is a bank per section (such as, *BGM.bnk*, *SFX.bnk* and so on)
 You need to load all related banks at once then generate to ensure everything works correctly, as *wwiser* can't guess how the game loads banks (this is managed in-game). If all fails just load every bank, but that usually means tons of `.txtp` (there are filtering options, explained below).
 
 Sometimes after loading everything you may still get WARNINGs about missing audio. First, make sure you *really* have every bank, as some games hide them inside compressed files. Then, sometimes there is no way to fix those errors and can be ignored, since a `.bnk` may simply contain garbage (Wwise does little clean-up when creating it, for some reason), though *wwiser* tries minimize those missing errors.
+
+
+### TXTP errors
+Sometimes when you try to open the files just won't play. *wwiser* is reasonably accurate, but typical issues are:
+
+#### Install *vgmstream*
+TXTP is a custom format tailored for *vgmstream* (a library that plays video-game music), and is a simple(-ish) text file that tells it how to play music. This means you need some form of *vgmstream* (CLI converter, *foobar2000/winamp/audacious/etc* plugin, and so on) installed.
+
+You also need a recent version of *vgmstream*, as sometimes *wwiser*'s `.txtp` output may depend on latest features. Get *vgmstream* here: https://vgmstream.org/downloads/
+
+#### Move wem and bnk
+Each `.txtp` calls one or several audio files, in `.wem` and `.bnk`. Make sure all needed files are in the output dir, by default `txtp/wem` (can be configured). You can open the `.txtp` file in a text editor and see what `.wem/bnk` are being used.
+
+The output log (see above) tells you when you need to move `.bnk` or `.wem`, plus there is an option to automatically move `.wem` to output dir.
+
+#### Limit file names
+If the `.txtp` names are a bit too long, try moving them to a shorter dir. Windows has a path length limit, so extremely long paths (`C:\(folder)\(folder with a long name)\(more long folders)\(long name).txtp`) will fail.
+
+*wwiser* tries to truncate files names that look too long (based on output folder), but there is also an option to make shorter names too.
 
 
 ### Unused audio

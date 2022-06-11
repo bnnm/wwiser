@@ -51,6 +51,7 @@ class RN_CAkDialogueEvent(RN_CAkHircNode):
                 if not unreachable:
                     self._render_next(ntid, txtp)
                 ws.gspaths.done()
+            ws.gspaths.sort()
             return
 
         # find if current gamesync combo matches one of the paths
@@ -229,6 +230,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
                     if not unreachable:
                         self._render_next(ntid, txtp)
                     ws.gspaths.done()
+                ws.gspaths.sort()
                 return
 
             # find if current gamesync combo matches one of the paths
@@ -429,6 +431,8 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
     def _render_clips(self, bnode, subtrack, txtp):
         if not subtrack:
             # rarely may happen with default = no track = silence (NMH3, Tetris Effect)
+            # or if uDefaultSwitch = 0 meanings no group selected (can't select subtrack),
+            # silence does play (from tests)
             sound = bnode.silence
             elems = [sound]
             txtp.group_layer(elems, None)

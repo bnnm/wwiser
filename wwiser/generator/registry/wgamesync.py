@@ -142,7 +142,8 @@ DEBUG_ALLOW_DYNAMIC_PATHS = False
 # ---------------------------------------------------------
 
 class _GamesyncNode(object):
-    def __init__(self, parent, gamesyncs):
+    def __init__(self, parent, gamesyncs, txtpcache):
+        self._wwnames = txtpcache.wwnames
         self.parent = parent
         self.elems = gamesyncs #a list for nodes with multiple gamesyncs at once
         self.children = []
@@ -150,14 +151,53 @@ class _GamesyncNode(object):
     def append(self, node):
         self.children.append(node)
 
+    def __lt__(self, other):
+        # sorting gamesyncs:
+        # - 'other' should have the same number of elems (compares between nodes of the same parent)
+        # - groups are fixed, so order is as found
+        # - types/groups also shouldn't vary between self/other (same parent), so only needs to check values
+        # - values must be ordered but 0 (any) goes first (improves dupes in most cases)
+        #   - may be useful to give weight to some items (to force "any" go last)
+
+        # should't happen but...
+        len1 = len(self.elems)
+        len2 = len(other.elems)
+        if len1 != len2:
+            return len1 < len2
+
+        # elems can be a list of N
+        items1 = []
+        items2 = []
+        for i, (elem1, elem2) in enumerate(zip(self.elems, other.elems)):
+            nvalue1 = self._hn(elem1[2])
+            nvalue2 = self._hn(elem2[2])
+
+            items1.append((i, nvalue1))
+            items2.append((i, nvalue2))
+
+        return items1 < items2
+
+    def _hn(self, id):
+        # 0 goes first
+        if id == 0:
+            return "!%s" % (id)
+
+        # hashname or ~ to force numbers after letters
+        row = self._wwnames.get_namerow(id)
+        if row and row.hashname:
+            return row.hashname
+        else:
+            return "~%s" % (id)
+
 # ---------------------------------------------------------
 
 def _get_info(txtpcache, id):
     try:
-        if not DEBUG_PRINT_TREE_TEXT or not txtpcache.wwnames:
+        if not txtpcache.wwnames:
             return id
     except AttributeError:
         return id
+
     row = txtpcache.wwnames.get_namerow(id)
     if row and row.hashname:
         #return "%s=%s" % (row.hashname, id)
@@ -245,7 +285,8 @@ class GamesyncParams(object):
             # and other paths won't find their variables set (combos get too complex when mixing multi-paths)
             # ex. multiple play actions in event, or multiple switch-type tracks in a segment
             # May happen when generating certain paths too?
-            logging.debug("generator: expected gamesync (%s, %s) not set" % (wparams.TYPE_NAMES[type], self._get_info(name)))
+            if DEBUG_PRINT_TREE_TEXT:
+                logging.debug("generator: expected gamesync (%s, %s) not set" % (wparams.TYPE_NAMES[type], self._get_info(name)))
             self._txtpcache.stats.multitrack += 1
             return None
 
@@ -267,7 +308,8 @@ class GamesyncParams(object):
             if DEBUG_ALLOW_DYNAMIC_PATHS:
                 value = values.pop()
 
-        logging.debug("gamesync: get %s, %s, %s" % (type, self._get_info(name), self._get_info(value)))
+        if DEBUG_PRINT_TREE_TEXT:
+            logging.debug("gamesync: get %s, %s, %s" % (type, self._get_info(name), self._get_info(value)))
         return value
 
     def add_gsparam(self, type, key, val):
@@ -304,7 +346,7 @@ class GamesyncPaths(object):
     def __init__(self, txtpcache):
         self._empty = True
         self._txtpcache = txtpcache
-        self._root = _GamesyncNode(None, [])
+        self._root = _GamesyncNode(None, [], self._txtpcache)
         self._current = self._root
         self._params = None
         self._params_done = {}
@@ -315,7 +357,7 @@ class GamesyncPaths(object):
     # register path
     def adds(self, gamesyncs):
         self._empty = False
-        node = _GamesyncNode(self._current, gamesyncs)
+        node = _GamesyncNode(self._current, gamesyncs, self._txtpcache)
         self._current.append(node)
         self._current = node
 
@@ -325,6 +367,22 @@ class GamesyncPaths(object):
     # current path is done
     def done(self):
         self._current = self._current.parent
+
+    # After registering all possible paths in a step, in some cases (mainly AkTree) we want to sort values
+    # by name or otherwise names get a bit strange (m_11 1889767167 > m_01 1906544720). Groups are always
+    # in order (as selected).
+    # - CAkSwitchCntr: ordered (SwitchList)
+    # - CAkMusicTrack: ordered (TrackSwitchAssoc)
+    # - CAkMusicSwitchCntr (old): ordered?
+    # - CAkMusicSwitchCntr (new): unordered (AkTree)
+    # - CAkDialogueEvent (old): ordered?
+    # - CAkDialogueEvent (new): unordered (AkTree)
+    def sort(self):
+        if not self._txtpcache.wwnames:
+            return
+
+        # uses GamesyncNode __lt__
+        self._current.children.sort()
 
     def combos(self):
         if self._params is not None:

@@ -67,7 +67,23 @@ Low priority TODOs
 - add get_info() in model that converts tid to hashname and common props
 - prioritice variable order for Spiderman: Web of Shadows
   - some kind of weight system?
-  - doesn't seem useful to order by wwnames since different events may order differently
+  - doesn't seem useful to order by wwnames (ex. a flag) since different events may order differently
+  - pass something with txtpcache
+    - some kind of filter or per-event flag?
+```
+# S:WoS has:
+mx_sym_boss 
+mx_sym_boss (music_intensity=low) << dupe of the above, should prioritice over "any"
+mx_sym_boss (music_intensity=high)
+mx_sym_boss (music_intensity=mid)
+
+# but most games need (ex. DMC5)
+play_bgm (var=-)
+play_bgm (var=blah1) < dupe
+play_bgm (var=blah2) < dupe
+play_bgm (var=blah3) < dupe
+```
+
 - layers of blend RTPCs (hard to understand and not very used)
 - some way to set GS/SC/GV lists + defaults (auto generated list)
   - `* / (bgm_layer=on,off)` = one pass with auto vars, other exact vars [Astral Chain]

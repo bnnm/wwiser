@@ -233,8 +233,8 @@ class Txtp(object):
             return
         return self._group_add(config).layer()
 
-    def group_single(self, config, transition=None):
-        return self._group_add(config).single(transition)
+    def group_single(self, config):
+        return self._group_add(config).single()
 
     def group_done(self, elems=None):
         if elems is not None and not elems: #to avoid unbalanced tree if added group has 0 elems

@@ -14,6 +14,8 @@ class NodeConfig(object):
         self.crossfaded = False #RPTC/state controlled silence
 
         #markers
+        self.playevent = False
+        self.rules = None
         self.duration = None
         self.entry = None
         self.exit = None
@@ -32,17 +34,3 @@ class NodeSound(object):
         self.fbt = 0  #mods beginning (>0=trim, <0=add begin repeat)
         self.fet = 0  #mods end (<0=trim, >0=add end repeat)
         self.fsd = 0  #original file duration (for calcs)
-
-# hack to simulate transitions
-class NodeTransition(object):
-    def __init__(self):
-        self.play_before = False
-        self.play_after = False
-        self.entry_type = 0
-        self.exit_type = 0
-        self.fadein_type = None
-        self.fadein_time = 0
-        self.fadeout_type = None
-        self.fadeout_time = 0
-        self.fadein_pos = 0
-        self.fadeout_pos = 0

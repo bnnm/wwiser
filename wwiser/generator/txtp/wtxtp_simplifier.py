@@ -1,9 +1,9 @@
 import logging, math, copy
-from . import wtxtp_tree, wtxtp_debug
+from . import wtxtp_tree, wtxtp_debug, hnode_misc
 
 _DEBUG_PRINT_TREE_PRE = False
 _DEBUG_PRINT_TREE_POST = False
-_DEBUG_SIMPLER_PROPS = False #see wproperties
+
 
 # Takes the TXTP pre-built tree and readjusts it to create a final usable tree.
 # Uses txtp "groups" to handle multi layer/sequences/etc
@@ -36,15 +36,20 @@ _DEBUG_SIMPLER_PROPS = False #see wproperties
 #   1.wem   #r 10.0 #b 90.0             # r8.0 + r8.0 = r10.0, b82.0 + r8.0
 # loop_state_segment = 2
 #
-# A musicranseq is just a playlist defining segments (like: A, B, C), but segment play time depends
-# on "transitions". Transitions are set between 2 segments (like A-to-B), and decide A's final exit
-# point/time and B's entry point/time (usually exit/entry) markers, plus if audio after exit/before
-# entry may play. If music loops (like A,A,B,C) is would defines both A-to-A and A-to-B (see EDITOR.md).
-# So A (100s segment) may set exit at 90s into B's 10s
-#
-# When making TXTP, segments' final play time is calculated first, then adjusted depending on entry
-# points given in transitions objects. Audio before/after entry may overlap in Wwise but currently
-# it's ignored.
+# Wwise objects rougly become like this:
+# - event/play action: layers (can play N actions)
+# - sound: simple wem
+# - layer: layers
+# - switch/mswitch: simple path
+# - msegment > mtracks: layered tracks
+#   - segment has a duration, so play time is clamped (extended or shortened)
+#   - track may call an event
+# - ranseq/mranseq: item groups of msegment, as a sequence or randoms (not layers)
+#   - parent mranseq may have regular config/props
+#   - each item may have looping config
+#   - segments in playlist also needs to be clamped to entry/exit in some cases
+# Simplifier is tasked to tweak those it can (ex. an event with a single action doesn't need layers)
+
 
 class TxtpSimplifier(object):
     def __init__(self, printer, txtp, tree):
@@ -58,14 +63,13 @@ class TxtpSimplifier(object):
 
         # flags
         self._sound_count = 0
-        self._transition_count = 0
         self._loop_groups = 0
         self._loop_sounds = 0
 
     # simplifies tree to simulate some Wwise features with TXTP
     def modify(self):
         if _DEBUG_PRINT_TREE_PRE:
-            wtxtp_debug.TxtpDebug().print(self._tree, False)
+            wtxtp_debug.TxtpDebug().print(self._tree, True, False)
 
         #TODO join some of these to minimize loops
 
@@ -76,22 +80,23 @@ class TxtpSimplifier(object):
         # - move down props, in some cases join them (as long as prop meaning doesn't change)
         # - calc time values to txtp meanings
         #   - simulate transitions by clamping some parts to entry..exit
+        # - simulate playlist transitions (after removing "trap loops" would improve results a bit but also gets tripped by loop anchors)
         # - detect and try to fix "trap loops"
         # - ignore groups that don't do anything after the above simplifications
         # - other tweaks
 
-
         self._clean_tree(self._tree)
-        self._make_self_loops(self._tree)
+        self._make_fakeentry(self._tree)
         self._set_props(self._tree)
         self._set_times(self._tree)
         self._reorder_wem(self._tree)
+        self._set_playlist(self._tree)
         self._handle_loops(self._tree)
         self._tweak_first(self._tree)
         self._set_master_volume(self._tree)
 
         if _DEBUG_PRINT_TREE_POST:
-            wtxtp_debug.TxtpDebug().print(self._tree, True)
+            wtxtp_debug.TxtpDebug().print(self._tree, False, True)
 
 
     def get_sounds_count(self):
@@ -105,9 +110,6 @@ class TxtpSimplifier(object):
 
     def set_multiloops(self):
         self._printer.has_multiloops = True
-
-    def set_self_loops(self):
-        self._printer.has_self_loops = True
 
     #--------------------------------------------------------------------------
 
@@ -153,13 +155,6 @@ class TxtpSimplifier(object):
             if is_empty or is_nosound:
                 self._kill_node(node)
 
-        # find random with all options the same (ex. No Straight Roads)
-        # TODO: not working properly, should detect times and limit cases (may misdetect loops with the
-        #  same .wem and different config), besides NoSR doesn't work properly anyway
-        #if self._has_random_repeats(node):
-        #    subnode = node.children[0] #use first only
-        #    node.children = [subnode]
-
         # set externals flag
         if node.is_sound() and node.sound.source and node.sound.source.plugin_external:
             self._printer.has_externals = True
@@ -171,54 +166,9 @@ class TxtpSimplifier(object):
     def _kill_node(self, node):
         node.parent.children.remove(node)
 
-    #def _has_random_repeats(self, node):
-    #    if node.is_group_steps() or len(node.children) <= 1:
-    #        return False
-    #
-    #    prev_id = None
-    #    for subnode in node.children:
-    #        id = self._tree_get_id(subnode)
-    #        if not id:
-    #            return False
-    #        if prev_id is None:
-    #            prev_id = id
-    #        elif prev_id != id:
-    #            return False
-    #
-    #    return True
-    
-    # parent's infinite loops can be removed in favor of children (since wwise loops innermost object)
-    # to make txtp loop calcs a bit simpler, ex.
-    # - S2 (l=0) > N1 (l=0) > ..
-    # - S2 (l=0) > N1       > ..
-    #            \ N1 (l=0) > ..
-    # - S2 (l=0) > S2       > N1       > ..
-    #                       \ N1 (l=0) > ..
-    # - L2 (l=0) > N1 (l=0)
-    #            \ N1 (l=0)
-    def _has_iloops(self, node):
-        if node.loop == 0:
-            return True
-
-        for subnode in node.children:
-            if self._has_iloops(subnode):
-                return True
-        return False
-
-    def _tree_get_id(self, node):
-        if node.is_sound():
-            if not node.sound.source:
-                return None # handle plugins/silences?
-            return node.sound.source.tid
-
-        # may handle only simple groups
-        if len(node.children) != 1:
-            return None
-        return self._tree_get_id(node.children[0])
-
     #--------------------------------------------------------------------------
 
-    # Hack for objects that loops to itself like: mranseq (loop=0) > item [transitions] > segment
+    # Hack for objects that loops to itself like: mranseq (loop=0) > ... > segment
     # There are 2 transitions used: "nothing to segment start" and "segment to segment",
     # so we need a segment that plays "play_before" and loop that doesn't (since overlapped
     # transitions don't work ATM). Though in most cases this loop is very small.
@@ -228,95 +178,127 @@ class TxtpSimplifier(object):
     # We have 0.0..3.0 (intro) + 3.0..100.0 (body) parts, could be simulated this like:
     # - loop point on segment level: #I 3.0 100.0
     #   - simpler but harder to handle with loop anchors (that loop whole segments)
-    # - force 2 tracks: 0.. 3.0 + 3.0..100.0
-    #   - more flexible but harder to adjust automations and other config
-    # For now we use the later
+    # - force 2 tracks: 0.. 3.0 (fake entry) + 3.0..100.0 (original)
+    #   - more flexible but harder to create
+    # For now we use the later since it simulates Wwise better and doesn't need to fiddle with vgmstream.
+    # "fake-entry" is a clone segment that must play first (only matters when "nothing is playing"),
+    # so it's put in the top-most looping group.
+    def _make_fakeentry(self, node):
 
-    def _make_self_loops(self, node):
+        # find base playlist node
+        if node.config.rules: #is playlist
+            self._make_fakeentry_find_segment(node, node)
+            return #stop
 
-        if self._make_self_loop(node):
-            pass #?
+        # can't have an inner playlist
+        if node.config.duration or node.sound:
+            return
 
+        # Keep looking for playlists. Usually a .txtp only has one, but N are possible with layered playactions.
+        # Playlist-within-playlist is also possible with a mtrack > playevent, but no need to apply on those
         for subnode in node.children:
-            self._make_self_loops(subnode)
+            self._make_fakeentry(subnode)
 
         return
 
-    def _make_self_loop(self, node_item):
-        # typical tree is:
-        #    SC1 lpn=0              [playlist item]
-        #     N1 lpn=1 (trn)        [playlist subitem]
-        #      L1                   [music segment]
-        #       (dur=5000.00000, ent=2000.00000, exi=4000.00000)
-        #       N1 vol=1.0          [music track]
-        #        L1                 [music subtracks]
-        #         snd 722952693     [music subclip]
-        #          (fsd=54856.10417, fpa=1000.00000, fbt=0.00000, fet=-50856.10417)
-        # We want to detect the playlist parent and clone all below SC1
-        # SC1 may also not loop if N1 loops, same result (seen in Astral Chain)
+    # SCn                       [playlist]
+    #    SC1 lpn=0              [playlist item]
+    #     N1 lpn=1 (trn)        [playlist item]
+    #      L1                   [music segment]
+    #       (duration=5000.00000, entry=2000.00000, exit=4000.00000)
+    #       N1 vol=1.0          [music track]
+    #        L1                 [music subtracks]
+    #         snd 722952693     [music subclip]
+    #          (fsd=54856.10417, fpa=1000.00000, fbt=0.00000, fet=-50856.10417)
+    #   (other playlist items)
+    #     (other segments)
+    # We want to detect first segment and first parent that loops (within playlist), then make a new fake
+    # entry segment. Between playlist and first item there may be N non-looping subitems.
+    # Some cases are ignored (no loops, segment is part of random = can't quite be simulated)
+    # Typical cases:
+    #
+    #  (simple loop)                    |  (only last 'trap' loop matters)  |  (looped with N loops)
+    #  G             >  G               |  G             >  G               |  G            >  G
+    #    G (L=0)          seg'          |    G (L=0)          G (L=0)       |    G (L=2)         seg'
+    #      seg            G (L=0)       |      G (L=0)          seg'        |      seg           G (L=2)
+    #                       seg         |        seg            G (L=0)     |                      seg
+    #                                   |                         seg       |  
+    #  (items in between)               |  (multi-loops)
+    #  G             >  G               |  G             >  G
+    #    G (L=1)          G (L=1)       |    G (L=0)          seg'
+    #      G (L=0)          seg'        |      G (L=0)        G (L=2)
+    #        G (L=1)        G (L=0)     |        seg            G (L=2)
+    #          seg            G (L=1)   |                         seg
+    #                           seg     |
+    #
 
-        if len(node_item.children) != 1: #item: loops to itself (with N music segment there is no loop)
+    # keep looking for a segment, but only first (entry segment is only on very first segment of a playlist)
+    def _make_fakeentry_find_segment(self, node, node_pls):
+
+        # randoms/steps with N items that contain the first segment don't quite behave like
+        # predictable loops (any segment could be the starting one)
+        # layered tracks/clips is also ok
+        is_valid_sequence = node.is_group_sequence_continuous() or node.is_group_sequence_step() and node.loops()
+        is_valid_layer = node.is_group_layers()
+        if len(node.children) != 1 and not is_valid_sequence and not is_valid_layer:
+            return
+
+        # found first segment
+        if node.config.duration:
+            # must have a min length of entry (not 0.0, 0.0001, etc)
+            threshold = 1 / 48000.0
+            if node.config.entry <= threshold:
+                return
+            
+            valid = self._make_fakeentry_has_loops(node)
+            if valid:
+                # fake entry is possible, where top-most node will become a container of 2:
+                # - segment (clone): 0..entry (no loop)
+                # - subitem (original): entry..exit (loops)
+
+                node_parent = node_pls
+                node_parent.sequence_continuous()
+                # clone needs to clone the whole subtree, since values need to be modified
+                clone_seg = self._make_fakeentry_clone(node_parent, node)
+                clone_seg.fake_entry = True #mark transition node (original 0..entry)
+            
+            return
+
+        if node.children:
+            subnode = node.children[0]
+            self._make_fakeentry_find_segment(subnode, node_pls)
+
+    # find if segment can be considered for a fake entry
+    def _make_fakeentry_has_loops(self, node):
+
+        # reached top of playlist with no loops, can't make fake entry
+        if node.config.rules: #is playlist
             return False
 
-        node_subitem = node_item.children[0] #item: get subitem
-        if not node_subitem.transition: #subitem: must apply markers/transition
-            return False
+        # found looping subnode (lowest ok due to trap loops)
+        if node.loops():
+            return True
 
-        if len(node_subitem.children) != 1: #subitem: loops to itself
-            return False
+        return self._make_fakeentry_has_loops(node.parent)
 
-        item_loops = node_item.loop is not None and node_item.loop != 1
-        subitem_loops = node_subitem.loop is not None and node_subitem.loop != 1
-        if not item_loops and not subitem_loops: #item+subitem: one must loop (both also ok due to trap loops)
-            return False
-
-        node_segment = node_subitem.children[0] #subitem: get segment
-        if not node_segment.config.duration or node_segment.config.entry == 0: #segment: has defined info
-            return False
-
-        threshold = 1 / 48000.0
-        if node_segment.config.entry <= threshold: #segment: min lenght of entry (otherwise no point)
-            return False
-
-        # self loop is possible, where node_item will become a container of 2:
-        # - node_subitem (original): 0..entry (no loop)
-        # - new_subitem (clone): entry..exit (loops)
-        # Clone needs to clone the whole subtree, since values need to be modified
-        node_item.sequence_continuous()
-        new_subitem = self._make_copy(node_item, node_subitem)
-
-        new_subitem.self_loop_end = True #mark transition node (clone entry..exit)
-        new_subitem.loop = node_item.loop # mark loop node (clone)
-        if node_item.loop is None or node_item.loop == 1:
-            new_subitem.loop = node_subitem.loop
-
-        node_item.loop = None
-        node_subitem.loop = None
-        node_subitem.self_loop = True #mark transition node (original 0..entry)
-        new_subitem.self_loop_end = True #mark transition node (clone entry..exit)
-
-        return True
-
-    def _make_copy(self, new_parent, node):
+    def _make_fakeentry_clone(self, new_parent, node):
         # semi-shallow copy (since some nodes have parser nodes that shouldn't be copied)
 
-        #todo maybe implement __copy__
+        # maybe implement __copy__?
         new_config = copy.copy(node.config)
         new_sound = copy.copy(node.sound)
-        new_transition = copy.copy(node.transition)
 
         #new_node = copy.copy(node) #don't clone to avoid props? (recheck)
         new_node = wtxtp_tree.TxtpNode(new_parent, sound=new_sound, config=new_config)
         new_node.type = node.type
-        new_node.transition = new_transition
 
         # when cloning nodes that have envelopes, list is automatically generated and unique,
         # but when applying entry/exit must also fix start values (done later)
 
-        new_parent.append(new_node)
+        new_parent.insert_base(new_node) #insert fake entry first
 
         for subnode in node.children:
-            self._make_copy(new_node, subnode)
+            self._make_fakeentry_clone(new_node, subnode)
 
         return new_node
 
@@ -358,7 +340,7 @@ class TxtpSimplifier(object):
 
         # move loops down to handle "trap loops" (lowest loop is what matters)
         # except on clips, that loop the whole thing
-        if not node.self_loop_end and not is_clip_subnode:
+        if not is_clip_subnode:
             if is_loop_node:
                 subnode.loop = node.loop
                 node.loop = None
@@ -386,6 +368,12 @@ class TxtpSimplifier(object):
         if not subnode.silenced:
             subnode.silenced = node.silenced
             node.silenced = None
+
+        if not subnode.fake_entry:
+            subnode.fake_entry = node.fake_entry
+            # leave fake segment flag (for easier detection)
+            if not node.config.duration:
+                node.fake_entry = None
 
     def _set_props_config(self, node):
         for subnode in node.children:
@@ -423,13 +411,10 @@ class TxtpSimplifier(object):
         for subnode in node.children:
             self._set_times(subnode)
 
-        # buttom to top (once the above times are correct)
+        # bottom to top (once the above times are correct)
 
         if node.config.duration:
             self._set_duration(node, node)
-
-        if node.transition:
-            self._set_transition(node, node, None)
 
         return
 
@@ -443,27 +428,6 @@ class TxtpSimplifier(object):
 
         for subnode in node.children:
             self._set_duration(subnode, seg_node)
-
-    def _set_transition(self, node, trn_node, seg_node):
-        if node != trn_node and node.transition:
-            #logging.info("txtp: transition inside transition")
-            #this is possible in stuff like: switch (trn_node) > mranseq (node), or mranseq > track-playevent > mranseq
-            return
-
-        is_segment = node.config.duration is not None #(node.config.exit or node.config.entry)
-        if is_segment and seg_node:
-            logging.info("txtp: double segment")
-            return
-
-        if is_segment:
-            seg_node = node
-            self._transition_count += 1
-
-        if node.sound and node.sound.clip:
-            self._apply_transition_clip(node, trn_node, seg_node)
-
-        for subnode in node.children:
-            self._set_transition(subnode, trn_node, seg_node)
 
     #--------------------------------------------------------------------------
 
@@ -498,6 +462,17 @@ class TxtpSimplifier(object):
         for id, subnode in ids:
             node.children.append(subnode)
         return
+
+    def _tree_get_id(self, node):
+        if node.is_sound():
+            if not node.sound.source:
+                return None # handle plugins/silences?
+            return node.sound.source.tid
+
+        # may handle only simple groups
+        if len(node.children) != 1:
+            return None
+        return self._tree_get_id(node.children[0])
 
     #--------------------------------------------------------------------------
 
@@ -574,11 +549,237 @@ class TxtpSimplifier(object):
                     if (i < len(node.children) or loop_ends > 0):
                         loop_ends += 1 #last segment is only marked if there are other segments with loop end first
                         child.loop_end = True
-                    # todo maybe only if node is first usable node
+                    #TODO maybe only if node is first usable node
                     node.loop = None #remove parent loop to simulate trapping
                     node.loop_killed = True
 
         return
+
+    # parent's infinite loops can be removed in favor of children (since wwise loops innermost object)
+    # to make txtp loop calcs a bit simpler, ex.
+    # - S2 (l=0) > N1 (l=0) > ..
+    # - S2 (l=0) > N1       > ..
+    #            \ N1 (l=0) > ..
+    # - S2 (l=0) > S2       > N1       > ..
+    #                       \ N1 (l=0) > ..
+    # - L2 (l=0) > N1 (l=0)
+    #            \ N1 (l=0)
+    def _has_iloops(self, node):
+        if node.loop == 0:
+            return True
+
+        for subnode in node.children:
+            if self._has_iloops(subnode):
+                return True
+        return False
+
+    #--------------------------------------------------------------------------
+
+    # Handle common entry/exit cases. Technically could read node_playlist's rules and decide when to
+    # apply pre-entry/post-exist, but almost all txtp are fine with a fake entry/exit clamp. Examples:
+    # G (L=1)                          G (L=1)
+    #   seg       > play all             seg'      > start-entry (fake entry)
+    #                                    G (L=0)
+    #                                      seg     > entry-exit
+    # G (L=0)
+    #   seg       > entry-exit         G (L=1)
+    #   seg       > entry-exit           seg       > start..entry..exit
+    #                                    seg       > entry-exit
+    #                                    seg       > entry..exit..end
+    #
+    # (ignores start..entry/exit..end in some hard to detect cases)
+
+    def _set_playlist(self, node):
+
+        if node.is_sound():
+            return
+        if node.config.duration:
+            return
+
+        if node.config.rules:
+            self._set_playlist_times(node)
+            return #could try on playevents but unlikely
+
+        for subnode in node.children:
+            self._set_playlist(subnode)
+
+        return
+
+
+    def _set_playlist_times(self, node_playlist):
+        segments = []
+
+        # needs a list of segments and info to prepare some calculations
+        self._set_playlist_get_segments(node_playlist, segments)
+
+        # clamp depending on cases
+        # - loops: start..entry (first segment in some cases), entry..exit (all others)
+        # - no loops: start..entry..exit (first), entry..exit (mid), entry..exit..end (last)
+        for index, item in enumerate(segments):
+            seg_node, items, trims_node, simple_groups = item
+
+            # group to use if clips have automations, but in some cases can be ignored
+            use_group = trims_node is not None
+
+            # decide clamp points
+            if seg_node.fake_entry: #or items[0].fake_entry
+                # start..entry
+                clamp_begin = 0
+                clamp_end = seg_node.config.entry
+                use_group = False
+
+            else:
+                # start..entry, entry..exit, exit..end (these may combine)
+                clamp_begin = seg_node.config.entry
+                clamp_end = seg_node.config.exit
+
+                # extend begin/end if segment isn't part of a loop in some cases
+                if index == 0 and simple_groups:
+                    clamp_begin = 0
+                    use_group = False
+
+                if index + 1 == len(segments) and simple_groups:
+                    clamp_end = seg_node.config.duration
+
+            if use_group:
+                elems = [trims_node] # special "trimmable" group when trims can't be applied directly
+            else:
+                elems = items # in rare cases items may be groups (playevents)
+
+            # apply on items
+            for elem_node in elems:
+                if elem_node.is_sound():
+                    # regular segments apply trim directly to clips, that may be layered (cleaner)
+                    self._apply_transition_clip(elem_node, clamp_begin, clamp_end)
+                else:
+                    # in some cases (like automations) must apply to a non-sound node
+                    self._apply_transition_segment(elem_node, clamp_begin, clamp_end)
+
+        return
+
+    def _set_playlist_get_segments(self, node, segments):
+
+        if node.config.duration: #is segment
+            has_automations = False
+            has_loop_anchors = False
+
+            # get all clips (usually applies clamps on them)
+            items = []
+            self._set_playlist_get_clips(node, items)
+            for clip in items:
+                if clip.is_sound():
+                    if clip.sound.automations:
+                        has_automations = True
+                    if clip.loop_anchor:
+                        has_loop_anchors = True
+
+            # empty segment should have been killed before
+            if len(items) == 0:
+                raise ValueError("No clips in segment")
+
+            # check if things loop
+            base_node = items[0].parent #in case clip has the loop flag
+            if has_loop_anchors:
+                simple_groups = False
+            else:
+                simple_groups = self._set_playlist_has_simplegroups(base_node)
+
+            threshold = 1 / 48000.0
+            has_entry = node.config.entry > threshold
+
+            is_fake = node.fake_entry #or items[0].fake_entry
+
+            trims_node = None
+            # With automations trim must be applied over clips (envelope curves don't make sense otherwise)
+            # find closest "suitable group" to apply trims, but can't be a loop node (wouldn't trim per loop
+            # but once). Due to loop simplifications, loop is often in the lowest group near clip, so in some
+            # cases we make a new group in between to be trimmed.
+            if has_automations and has_entry and not is_fake:
+                # find best usable group that can be used to apply trims
+                trims_node = self._set_playlist_get_automation_group(node, None)
+                if not trims_node:
+                    # no non-ignorable groups, apply trim on segment
+                    trims_node = node
+                elif trims_node.loops():
+                    # can't trim on loop groups so make a custom group in between
+                    trims_node = self._set_playlist_make_trims_node(trims_node)
+                else:
+                    # valid non-ignorable node found to use
+                    pass
+
+            item = (node, items, trims_node, simple_groups)
+            segments.append(item)
+            return
+
+        for subnode in node.children:
+            self._set_playlist_get_segments(subnode, segments)
+
+        return
+
+    def _set_playlist_get_automation_group(self, node, best_node):
+        # find lowest loop (due to trap loops) or non-ignorable node without N children
+
+        if node.sound:
+            return best_node
+
+        if not node.ignorable():
+            best_node = node
+
+        if len(node.children) > 1:
+            return best_node
+
+        subnode = node.children[0]
+        return self._set_playlist_get_automation_group(subnode, best_node)
+
+    # From a base node (looping one) make a sub-node. Typical configs:
+    # N1 L=0 >> N1 L=0        | S2 L=0 >> N1 L=0         | L2 L=0 >> N1 L=0
+    #   clip      N1' (trims) |   clip      S2' (trims)  |   clip     L2' (trims)
+    #               clip      |   clip        clip       |   clip       clip
+    #                                           clip     |              clip
+    def _set_playlist_make_trims_node(self, node):
+        config = hnode_misc.NodeConfig()
+        group_node = wtxtp_tree.TxtpNode(node, config)
+        group_node.type = node.type
+        node.single()
+
+        # swap children
+        group_node.children = node.children
+        node.children = [group_node]
+
+        # fix parents
+        for subnode in group_node.children:
+            subnode.parent = group_node
+
+        return group_node
+
+    def _set_playlist_get_clips(self, node, clips):
+        if node.sound:
+            clips.append(node)
+            return
+
+        # stop on "playevent" (clip that is a whole event)
+        if node.config.playevent:
+            clips.append(node)
+            return
+
+        for subnode in node.children:
+            self._set_playlist_get_clips(subnode, clips)
+
+        return
+
+    # find if node has only parent that are "simple" (loops or randoms affect entry/exit decisions)
+    def _set_playlist_has_simplegroups(self, low_node):
+        if low_node.config.rules: #reached playlist top
+            return True
+
+        if not low_node.is_sound():
+            if low_node.loops():
+                return False
+
+            if low_node.is_group_sequence_step() or low_node.is_group_random():
+                return False
+
+        return self._set_playlist_has_simplegroups(low_node.parent)
 
     #--------------------------------------------------------------------------
 
@@ -653,7 +854,9 @@ class TxtpSimplifier(object):
     # While increasing volume is applied to outmost group ()
     def _set_master_volume(self, node):
 
-        self._set_master_volume_auto(node)
+        if self.volume_master_auto:
+            self._set_master_volume_auto(node)
+            return
 
         if not self.volume_master or self.volume_master == 0:
             # no actual volume
@@ -662,12 +865,7 @@ class TxtpSimplifier(object):
         # to improve mixing and minimize clipping (due to vgmstream's PCM16):
         # - negative volumes are applied per source
         # - positive volumes are applied in the first group that has volumes, or sound leafs otherwise
-        is_bottom = self.volume_master < 0
-
-        if self.volume_master_auto and not _DEBUG_SIMPLER_PROPS:
-            is_bottom = True #all props should be leafs
-
-        if is_bottom:
+        if self.volume_master < 0: #is bottom
             self._apply_master_volume_bottom(node)
             self.volume_master = 0 #always consumed
         else:
@@ -734,8 +932,10 @@ class TxtpSimplifier(object):
             return
 
         output = self._get_output_volume(node)
-        self.volume_master = -output
-        self._printer.volume_auto = -output
+        auto_volume = -output
+        self._printer.volume_auto = auto_volume
+
+        self._apply_auto_volume(node, auto_volume)
         return
 
     # Max output calculations work like this:
@@ -754,23 +954,24 @@ class TxtpSimplifier(object):
     #                           > S3 g (+1)  > h.wem (-2)
     #                                        | i.wem (+0)
     #                                        \ j.wem (-4)
-    # steps:
-    # - cd:+4
-    # - b:-5 + cd:+4 = b:-1
-    # - hij:+0
-    # - g:+1 vs hij:+0 = g:+1
-    # - f:+1 vs g:+1 = f:+1
-    # - e:+0 + f:+1 = e:+1
-    # - b:-1 vs e+1 = b:+0
-    # - a:-10 + b:+0 = a:-10
-    # > result: auto output +10
+    # steps (bottom to top):
+    #     * cd:+4 (+4 vs -1 = +4)
+    #   * b:-5 + cd:+4 = b:-1
+    #       * hij:+0 (-2 vs +0 vs -4 = +0)
+    #     * g:+1 + hij:+0 = g:+1
+    #     * f:+1 vs g:+1 = f:+1
+    #   * e:+0 + f:+1 = e:+1
+    #   * b:-1 vs e+1 = e:+1
+    # * a:-10 + e:+1 = a:-9
+    # > result: auto output +9
 
     def _get_output_volume(self, node):
-        
+
+        # no distinction between layered or segment since they play in the "same lane" = max volume is N
         output_max = None
         for subnode in node.children:
             output_sub = self._get_output_volume(subnode)
-            if output_max is None or output_max < output_sub :
+            if output_max is None or output_max < output_sub:
                 output_max = output_sub
 
         output_self = node.volume or 0.0
@@ -779,6 +980,84 @@ class TxtpSimplifier(object):
 
         #TODO: may need to ignore silence sources
         return output_self
+
+    # auto-volumes can be applied near original item because we know they should reasonably cancel 
+    # volumes, so if group has no volumes cancel "spills down"
+    #
+    # L2 a (0) > b.wem (-2)    > auto = -3
+    #          | c.wem (+3)    *  bcd = +3
+    #          \ d.wem (-4)    *  a + bcd = +3
+    #
+    # - a:+0 > spill -3
+    #   - b:-5, c:-3, d=-7
+    #
+    # S2 a (1)                    > auto = -4
+    #     L2 b (3) > d.wem (-2)   * de = -2
+    #              \ e.wem (-4)   * b + de = +1
+    #     L2 c (0) > f.wem (+0)   * fgh = +3
+    #              | g.wem (+3)   * c + fgh = +3
+    #              \ H.wem (+2)   * bc = +3
+    #                             * a + bd = +4
+    # - a:+1 > cancel with -1, spill -3
+    #   - b:+3 > cancel with -3, no spill left
+    #   - c:+0 > spill -3
+    #     - f:-3, g:+0, h:-1, can't spill anymore
+    #
+    #   S2 a (0) > S1 b (-3) > d.wem (+4)  > auto = -1
+    #            |                         * b + d = +1
+    #            \ S1 c (+0) > e.wem (+0)  * b vs c = +1
+    #
+    # - a:+0 > spill -1 (applies to both b and c)
+    #   - b:-4 > no spill left
+    #   - c:0 > spill -1
+    #     - e:-1 > (apply since we can't spill anymore)
+
+    def _apply_auto_volume(self, node, auto_volume):
+
+        # cancel volume if has non-0 volume or can't spill (no more children)
+        node_volume = node.volume or 0
+        if not node.children: #leaf
+            # full apply
+            node_volume += auto_volume
+            auto_volume = 0
+            node.volume = node_volume
+
+        elif node_volume:
+            # partial apply (consume as much as possible)
+            # - node -3 vs auto -1 > add -1, rest +0
+            # - node -3 vs auto +1 > add +1, rest +0
+            # - node +3 vs auto -1 > add -1, rest +0
+            # - node +3 vs auto +1 > add +1, rest +0
+            # - node +1 vs auto -1 > add -1, rest +0
+            # - node -1 vs auto +1 > add +1, rest +0
+            #
+            # - node +1 vs auto -3 > add -1, rest -2
+            # - node +1 vs auto +3 > add +3, rest +0 (possible?)
+            # - node -1 vs auto +3 > add +1, rest +2
+            # - node -1 vs auto -3 > add -3, rest +0 (possible?)
+
+            if abs(node_volume) >= abs(auto_volume):
+                add = auto_volume
+                rest = 0
+            else:
+                # simplify?
+                if node_volume > 0 and auto_volume < 0 or node_volume < 0 and auto_volume > 0:
+                    add = -node_volume
+                else:
+                    add = auto_volume
+                rest = auto_volume - add
+
+            node_volume += add
+            auto_volume = rest
+            node.volume = node_volume
+
+        # nothing to spill
+        if auto_volume == 0:
+            return
+
+        # spill on each children equally
+        for subnode in node.children:
+            self._apply_auto_volume(subnode, auto_volume)
 
     #--------------------------------------------------------------------------
 
@@ -945,67 +1224,28 @@ class TxtpSimplifier(object):
             node.body_time = node.pad_end
             node.pad_end = 0
 
-    # apply musicranseq transition config/times between segments (ex. 100s segment may play from 10..90s)
-    # wwise allows to overlap entry/exit audio but it's not simulated ATM
-    # previous simplification detects self-loops and clones 2 segments, then this parts adjust segment times:
-    # if entry=10, exit=100: segment1 = 0..10, segment2 = 10..100
-    # since each segment may have N tracks, this applies directly to their config (body/padding/etc) values.
-    def _apply_transition_clip(self, snd_node, trn_node, seg_node):
-        #if not seg_node:
-        #    logging.info("generator: empty segment?")
-        #    return
+    # Apply musicranseq transition config/times between segments (ex. 100s segment may play from 10..90s)
+    def _apply_transition_clip(self, snd_node, clamp_begin, clamp_end):
 
-        pconfig = seg_node.config
-
+        # original
         body = snd_node.pad_begin + snd_node.body_time - snd_node.trim_begin - snd_node.trim_end + snd_node.pad_end
-        entry = pconfig.entry
-        exit = pconfig.exit
 
-
-        #since we don't simulate pre-entry, just play it if it's first segment
-        play_before = self._transition_count == 1 #TODO handle properly
-        #print("transition: entry=%s, exit=%s, before=%s" % (entry, exit, play_before))
- 
-        #print("**A b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))
-
-        # hack for self-looping files: 
-        if play_before and trn_node.self_loop:
-            # settings for 0..entry
-            entry = 0
-            exit = pconfig.entry
-            self.set_self_loops()
-
-        if not play_before:
-            # settings for entry..exit
-
-            # When doing self-loops, we have intro + loop (transition > segment > clip), and to optimize total groups we
-            # clamp the clips to entry-exit and ignore the segment. Clip is clamped to entry (trim_begin) + exit (body_time).
-            # If loop clip has envelopes, we can't alter it though (envelopes apply after trims, and can't change their start
-            # as curve meaning would change), so simply trim the parent transition segment (that has loop, not moved down) to
-            # remove initial audio including envelope. Must still clamp the exit though
-            if snd_node.envelopelist:
-                # get best trim-able group (otherwise may have loop issues, including itself)
-                trim_node = self._get_transition_trim(trn_node)
-                trim_node.trim_begin = entry
-                time = 0
-                #trn_node.loop = 0 #should loop
-            else:
-                time = entry
-
+        # apply begin
+        if clamp_begin:
+            time = clamp_begin
             remove = time
             if remove > snd_node.pad_begin:
                 remove = snd_node.pad_begin
             snd_node.pad_begin -= remove
             time -= remove
-
             snd_node.trim_begin += time
 
-
-        if body < exit:
-            time = (exit - body)
+        # apply end
+        if body < clamp_end:
+            time = (clamp_end - body)
             snd_node.pad_end += time
-        else:
-            time = (body - exit)
+        elif clamp_end:
+            time = (body - clamp_end)
             removed = time
             if removed > snd_node.pad_end:
                 removed = snd_node.pad_end
@@ -1035,18 +1275,18 @@ class TxtpSimplifier(object):
             if time:
                 raise ValueError("non-trimmed transition %s" % (time))
 
-        #body = node.pad_begin + node.body_time - node.trim_begin - node.trim_end + node.pad_end
-        #print("**B b=%s\n pb=%s\n bt=%s\n tb=%s\n te=%s\n pe=%s" % (body, node.pad_begin, node.body_time, node.trim_begin, node.trim_end, node.pad_end))
-
         return
 
-    # find first non-ignorable node that is a group
-    def _get_transition_trim(self, node):
-        if not node.ignorable():
-            return node
+    # when clamping to entry/exit, normally we apply it directly to clips (cleaner). But if a clip has
+    # envelopes we can't since txtp envelopes apply after trims, (can't change envelope start as curve
+    # meaning would change too). Instead clamp the closest parent to remove initial audio including envelope.
+    def _apply_transition_segment(self, item_node, clamp_begin, clamp_end):
 
-        subnode = node.children[0] #ignorables only have 1 child
-        if subnode.is_sound():
-            return node
+        # just in case
+        if item_node.trim_begin or item_node.body_time:
+            raise ValueError("clamped segment with trim=%s, body=%s" % (item_node.trim_begin, item_node.body_time))
 
-        return self._get_transition_trim(subnode)
+        # apply settings
+        
+        item_node.trim_begin = clamp_begin
+        item_node.body_time = clamp_end #- clamp_begin not needed, trim eats it

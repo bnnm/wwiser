@@ -278,6 +278,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
 
     def _render_txtp(self, bnode, txtp):
         config = self._calculate_config(bnode, txtp)
+        config.rules = bnode.rules
 
         self._register_transitions(bnode.rules)
         self._register_stingers(bnode.stingerlist)
@@ -300,9 +301,7 @@ class RN_CAkMusicRanSeqCntr(RN_CAkHircNode):
             txtp.info.next(item.nitem, item.fields)
             #leaf node uses -1 in newer versions, sid in older (ex. Enslaved)
             if type == -1 or item.ntid:
-                transition = hnode_misc.NodeTransition() #just a flag for now
-
-                txtp.group_single(iconfig, transition=transition)
+                txtp.group_single(iconfig)
                 self._render_next(item.ntid, txtp)
                 txtp.group_done()
             else:
@@ -447,6 +446,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
                 # realistic but can't easily simulate that with .txtp, but for simple uses may work ok.
                 econfig = hnode_misc.NodeConfig()
                 econfig.delay = clip.sound.fpa
+                econfig.playevent = True
 
                 txtp.group_single(econfig)
                 self._render_next_event(clip.neid, txtp)

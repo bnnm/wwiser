@@ -111,10 +111,7 @@ Low priority TODOs
   - apply rtpcs on the sfx + base node bypasses
 
 # txtp transitions
-- nodetransition: get actual transition from rule, pass to tnode
-- transitions can be on musictrack level (check why)
 - on make_txtp read correct transitions depending on src<>dst
-  - fix transitions being applied to single elements
 - write jumps (beta, format to be determined)
 - problem: each .wem potentially has N rules
   - from nothing to wem (when starting to play, usually plays entry)

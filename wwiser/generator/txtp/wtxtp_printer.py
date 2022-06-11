@@ -54,7 +54,6 @@ class TxtpPrinter(object):
         self.has_random_continuous = False
         self.has_random_steps = False   # some parts contain randoms
         self.has_silences = False       # may use silences to change/crossfade songs
-        self.has_self_loops = False     # hack for smoother looping
         self.has_streams = False        # stream .wem
         self.has_internals = False      # internal .wem (inside .bnk)
         self.has_externals = False      # special "external sources"
@@ -185,7 +184,10 @@ class TxtpPrinter(object):
         # add config
         if not self._simpler:
             mods += self._get_ms(' #p', tnode.pad_begin) #for delays
-        mods += self._get_ms(' #r', tnode.trim_begin) #for entry in self-loops
+
+        #for special start..entry clamp
+        mods += self._get_ms(' #B', tnode.body_time)
+        mods += self._get_ms(' #r', tnode.trim_begin)
 
         # add envelopes
         envs_mods, envs_info = self._get_envelopes(tnode)
@@ -207,12 +209,13 @@ class TxtpPrinter(object):
             info += '  ##loop'
             if tnode.loop_end:
                 info += ' #loop-end'
-        if tnode.self_loop_end:
-            info += '  ##self-loop'
 
         if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'
             self.has_others = True
+
+        if tnode.fake_entry:
+            info += '  ##fake-entry'
 
         # final result
         pad = self._get_padding() #padded for clarity
@@ -354,11 +357,12 @@ class TxtpPrinter(object):
             info += '  ##loop'
             if tnode.loop_end:
                 info += ' #loop-end'
-        if tnode.self_loop_end:
-            info += '  ##self-loop'
 
         if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'
+
+        if tnode.fake_entry:
+            info += '  ##fake-entry'
 
         if silence_line:
             line = "?" + line
@@ -388,7 +392,6 @@ class TxtpPrinter(object):
                 shape = envelope.shape
                 time_st = self._get_sec(envelope.time1)
                 time_ed = self._get_sec(envelope.time2)
-                #TODO: seems to reapply on loops (time becomes 0 again)
                 env = ' #m0^%s~%s=%s@-1~%s+%s~-1' %  (vol_st, vol_ed, shape, time_st, time_ed)
                 envs += env
 
@@ -439,8 +442,7 @@ class TxtpPrinter(object):
         else:
             mods += ' #i' #just in case
 
-        #clips don't have delay and don't need it removed when _simpler is set
-
+        # clips don't have delay and don't need it removed when _simpler is set
         mods += self._get_ms(' #p', tnode.pad_begin)
         if loops: #forces disabling fades, that get in the way when playing separate music tracks
             mods += self._get_ms(' #B', tnode.body_time)
@@ -462,7 +464,7 @@ class TxtpPrinter(object):
             value_str = '{0:.10f}'.format(value_sec)
             if not float(value_str): # truncated result may be 0.000000
                 return ''
-        #todo ignore trims that end up being 0 samples (value * second = sample)
+        #TODO ignore trims that end up being 0 samples (value * second = sample)
 
         return value_str
 

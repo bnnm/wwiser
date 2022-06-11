@@ -9,22 +9,23 @@ class TxtpDebug(object):
     #--------------------------------------------------------------------------
 
     # simplifies tree to simulate some Wwise features with TXTP
-    def print(self, tree, post):
-        if not post:
+    def print(self, tree, pre, post):
+        if pre and not post:
             logging.info("*** tree pre:")
-            self._mdepth = 0
-            self._print_tree(tree, False)
-            logging.info("")
-
-        if post:
+        if not pre and post:
             logging.info("*** tree post:")
-            self._mdepth = 0
-            self._print_tree(tree, True)
-            logging.info("")
+        if pre and post:
+            logging.info("*** tree:")
+
+        self._mdepth = 0
+        self._print_tree(tree, pre, post)
+
+        logging.info("")
+
         return
 
 
-    def _print_tree(self, tnode, post):
+    def _print_tree(self, tnode, pre, post):
         line1 = ''
         line2 = ''
         config1 = ''
@@ -34,6 +35,7 @@ class TxtpDebug(object):
             if tnode.loop is not None:       config1 += " lpn=%s" % (tnode.loop)
             if tnode.volume:                 config1 += " vol=%s" % (tnode.volume)
             if tnode.envelopelist:           config1 += " (env)"
+            if tnode.fake_entry:             config1 += " (fke)"
             if tnode.ignorable():            config1 += " [i]"
 
             if tnode.body_time:              config2 += ' bt={0:.5f}'.format(tnode.body_time)
@@ -42,18 +44,19 @@ class TxtpDebug(object):
             if tnode.trim_end:               config2 += ' te={0:.5f}'.format(tnode.trim_end)
             if tnode.pad_end:                config2 += ' pb={0:.5f}'.format(tnode.pad_end)
 
-        else:
-            if tnode.config.loop is not None: config1 += " lpn=%s" % (tnode.config.loop)
+        if pre:
+            if tnode.config.loop is not None: config1 += " lpc=%s" % (tnode.config.loop)
             if tnode.config.delay:           config1 += " dly=%s" % (tnode.config.delay)
-            if tnode.config.gain:            config1 += " vol=%s" % (tnode.config.gain)
-            if tnode.transition:             config1 += " (trn)"
-            if tnode.envelopelist:           config1 += " (env)"
+            if tnode.config.gain:            config1 += " cgn=%s" % (tnode.config.gain)
+            if tnode.config.playevent:       config1 += " (pev)"
+            if tnode.config.rules:           config1 += " (rules)"
+           #if tnode.envelopelist:           config1 += " (env)"
 
             if tnode.config.entry or tnode.config.exit:
                 dur = '{0:.5f}'.format(tnode.config.duration)
                 ent = '{0:.5f}'.format(tnode.config.entry)
                 exi = '{0:.5f}'.format(tnode.config.exit)
-                config2 += " (dur=%s, ent=%s, exi=%s)" % (dur, ent, exi)
+                config2 += " (dur=%s, entry=%s, exit=%s)" % (dur, ent, exi)
 
             if tnode.sound and tnode.sound.clip:
                 fsd = '{0:.5f}'.format(tnode.sound.fsd)
@@ -81,5 +84,5 @@ class TxtpDebug(object):
 
         self._mdepth += 1
         for subtnode in tnode.children:
-            self._print_tree(subtnode, post)
+            self._print_tree(subtnode, pre, post)
         self._mdepth -= 1

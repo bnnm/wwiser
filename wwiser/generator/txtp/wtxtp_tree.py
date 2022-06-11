@@ -46,7 +46,6 @@ class TxtpNode(object):
         self.parent = parent
         self.config = config #NodeConfig
         self.sound = sound #NodeSound
-        self.transition = None #segment must apply markers
 
         self.type = TYPE_GROUP_ROOT
         if sound:
@@ -85,8 +84,7 @@ class TxtpNode(object):
         if sound and sound.clip:
             self.loop = None
 
-        self.self_loop = False
-        self.self_loop_end = False
+        self.fake_entry = False
         self.force_selectable = False
 
 
@@ -98,13 +96,14 @@ class TxtpNode(object):
         elif self.volume < -_VOLUME_DB_MAX:
             self.volume = -_VOLUME_DB_MAX
 
-    def append(self, tnode):
+    def insert_base(self, tnode):
+        self.children.insert(0, tnode)
+
+    def append(self, tnode): #TODO remove?
         self.children.append(tnode)
 
-    def single(self, transition=None):
+    def single(self):
         self.type = TYPE_GROUP_SINGLE
-        if transition: #don't overwrite just in case
-            self.transition = transition
         return self
 
     def sequence_continuous(self):
@@ -153,6 +152,9 @@ class TxtpNode(object):
     def is_group_sequence_continuous(self):
         return self.type in TYPE_GROUP_SEQUENCE_CONTINUOUS
 
+    def is_group_random(self):
+        return self.is_group_random_step() or self.is_group_random_continuous()
+
     def is_group_random_step(self):
         return self.type in TYPE_GROUP_RANDOM_STEP
 
@@ -160,6 +162,9 @@ class TxtpNode(object):
         return self.type in TYPE_GROUP_RANDOM_CONTINUOUS
 
     #--------------------------------------------------------------------------
+
+    def loops(self):
+        return self.loop is not None and self.loop != 1
 
     # nodes that don't contribute to final .txtp so they don't need to be written
     # also loads some values

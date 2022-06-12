@@ -278,7 +278,7 @@ class Txtp(object):
         #gs_used_s = self.info.get_gsnames(False)
         gs_used_l = self.info.get_gsnames(True)
         if gs_used_l: #gs_used_s != gs_used_l:
-            info += '# * gamesyncs: %s\n' % (gs_used_l)
+            info += '# * gamesyncs: %s\n' % (gs_used_l.strip())
 
         sc_used = self.info.get_scnames()
         if sc_used:

@@ -65,7 +65,8 @@ class TxtpNode(object):
         self.delay = config.delay
 
         self.crossfaded = config.crossfaded
-        self.silenced = self.volume <= -96.0
+        self.silenced = config.silenced
+        self.silenced_default = config.silenced_default
 
         self.envelopelist = None
         if sound:

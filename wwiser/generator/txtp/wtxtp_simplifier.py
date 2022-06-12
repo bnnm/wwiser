@@ -369,6 +369,10 @@ class TxtpSimplifier(object):
             subnode.silenced = node.silenced
             node.silenced = None
 
+        if not subnode.silenced_default:
+            subnode.silenced_default = node.silenced_default
+            node.silenced_default = None
+
         if not subnode.fake_entry:
             subnode.fake_entry = node.fake_entry
             # leave fake segment flag (for easier detection)

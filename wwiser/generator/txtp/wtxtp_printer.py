@@ -59,7 +59,6 @@ class TxtpPrinter(object):
         self.has_externals = False      # special "external sources"
         self.has_unsupported = False    # missing audio/unsupported plugins
         self.has_multiloops = False     # multiple layers have infinite loops
-        self.has_others = False         # misc marks
         self.has_debug = False          # special mark for testing
 
         self.selectable_count = 0       # number of selectable (in the first node only), for flags below
@@ -86,6 +85,8 @@ class TxtpPrinter(object):
     def has_many_sounds(self):
         return self._simplifier.get_sounds_count() > _SOUNDS_LIMIT
 
+    def ignore_silenced(self, tnode):
+        return self._simplifier.get_sounds_count() == 1 and tnode.silenced_default
 
     #--------------------------------------------------------------------------
 
@@ -212,7 +213,6 @@ class TxtpPrinter(object):
 
         if tnode.crossfaded or tnode.silenced:
             info += '  ##fade'
-            self.has_others = True
 
         if tnode.fake_entry:
             info += '  ##fake-entry'
@@ -326,6 +326,9 @@ class TxtpPrinter(object):
 
         line += name
 
+        # in rare cases there is a single silenced wem, detect and don't silence (DMC5's play_m22_dojo)
+        ignore_silenced = self.ignore_silenced(tnode)
+
         # add config
         if sound.clip: #CAkMusicTrack's clip
             mods += self._get_clip(sound, tnode)
@@ -336,10 +339,13 @@ class TxtpPrinter(object):
         volume = tnode.volume or 0
         if self._simpler and not tnode.crossfaded: #don't silence rtpc-modified vars
             volume = 0
-        if self._txtpcache.x_silence_all or tnode.silenced:
+        if self._txtpcache.x_silence_all or tnode.silenced and not ignore_silenced:
             silence_line = True #set "?" below as it's a bit simpler to use
         if volume:
-            mods += '  #v %sdB' % (volume)
+            if ignore_silenced: # with auto-volume on this volume gets removed, but anyway:
+                info += '  ##v %sdB' % (volume)
+            else:
+                mods += '  #v %sdB' % (volume)
 
         # add anchors
         if tnode.loop_anchor:

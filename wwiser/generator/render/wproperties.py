@@ -144,6 +144,8 @@ class PropertyCalculator(object):
         self._is_base = None #process flag
         self._include_bus = False #process flag
 
+        self._uses_vars = False #if applies statechunk/gamevars
+
         self._include_fx = txtp.txtpcache.x_include_fx
 
     def get_properties(self):
@@ -166,6 +168,11 @@ class PropertyCalculator(object):
 
         # props are clamped in Wwise to certain min/max
         self._clamp()
+
+        # special flag
+        if not self._uses_vars and self._config.gain <= -96.0:
+            self._config.silenced_default = True
+        self._config.silenced = self._config.gain <= -96.0
 
         return self._config
 
@@ -315,6 +322,7 @@ class PropertyCalculator(object):
                 continue
 
             cfg.crossfaded = True
+            self._uses_vars = True
             self._apply_props(bsi.bstate)
             self._txtp.info.statechunk(state)
 
@@ -379,6 +387,7 @@ class PropertyCalculator(object):
 
         if value_x is None: #not found or not set
             return
+        self._uses_vars = True
 
         value_y = brtpc.get(value_x)
 

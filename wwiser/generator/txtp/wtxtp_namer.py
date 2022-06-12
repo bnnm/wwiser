@@ -264,10 +264,6 @@ class TxtpNamer(object):
         if printer.has_unsupported or printer.has_many_sounds():
             name += " {!}"
 
-        #if printer.has_others:
-        #    name += " {o}"
-        #if printer.has_self_loops:
-        #    name += " {selfloop}"
         if printer.has_debug:
             name += " {debug}"
 

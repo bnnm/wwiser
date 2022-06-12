@@ -11,9 +11,11 @@ class NodeConfig(object):
         self.gain = 0 #combination of all wwise's volume stuff (though technically still volume)
         self.delay = 0
 
-        self.crossfaded = False #RPTC/state controlled silence
+        # marks
+        self.crossfaded = False #RTPC/statechunks controlled silence
+        self.silenced = False #low volume 
+        self.silenced_default = False #default silence (without applying RTPC/statechunks)
 
-        #markers
         self.playevent = False
         self.rules = None
         self.duration = None

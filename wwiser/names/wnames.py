@@ -2,6 +2,7 @@ import logging, re, os, os.path, sys
 from datetime import datetime
 
 from .. import wfnv
+from ..parser import wdefs
 from .wsqlite import SqliteHandler
 from .wnamerow import NameRow
 
@@ -39,16 +40,23 @@ class Names(object):
         self._loaded_banknames = {}
         self._missing = {}
         self._fnv = wfnv.Fnv()
+        # flags
         self._disable_fuzzy = False
+        self._classify = False
 
 
     def set_gamename(self, gamename):
         self._gamename = gamename #path
 
-    def _mark_used(self, row):
+    def _mark_used(self, row, hashtype):
         #if row.hashname_used:
         #    return
         row.hashname_used = True
+
+        if self._classify and hashtype:
+            if not row.types:
+                row.types = set()
+            row.types.add(hashtype)
 
         # log this first time it's marked as used
         if not row.multiple_marked and row.hashnames:
@@ -70,7 +78,7 @@ class Names(object):
         if row:
             # in case of guidnames don't mark but allow row
             if not (row.hashname and no_hash):
-                self._mark_used(row)
+                self._mark_used(row, hashtype)
             return row
 
         # hashnames not allowed
@@ -87,7 +95,7 @@ class Names(object):
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_fz.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
-                self._mark_used(row)
+                self._mark_used(row, hashtype)
                 return row
 
         if not self._db:
@@ -99,7 +107,7 @@ class Names(object):
         if row_db:
             row = self._add_name(id, row_db.hashname, source=NameRow.NAME_SOURCE_EXTRA, exhash=True)
             if row:
-                self._mark_used(row)
+                self._mark_used(row, hashtype)
                 return row
 
         # on db with a close ID
@@ -110,7 +118,7 @@ class Names(object):
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_df.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA, exhash=True)
             if row:
-                self._mark_used(row)
+                self._mark_used(row, hashtype)
                 return row
 
         # groups missing ids by types (uninteresting ids like AkSound don't pass type)
@@ -614,6 +622,8 @@ class Names(object):
                 # special flag for complete wwnames that need no fuzzies
                 if line.startswith('#@nofuzzy'):
                     self._disable_fuzzy = True
+                if line.startswith('#@classify'):
+                    self._classify = True
                 continue
 
             match = pattern_1.match(line)
@@ -748,43 +758,85 @@ class Names(object):
             outname = os.path.join(path, outname)
 
         logging.info("names: saving %s" % (outname))
+
+        types_lines = {}
+        default_lines = []
+
+        lines = default_lines
+        if self._disable_fuzzy:
+            lines.append('#@nofuzzy')
+        if self._classify:
+            lines.append('#@classify')
+
+        names = self._names.values()
+        for row in names:
+            #save hashnames only, as they can be safely shared between games
+            if not row.hashname:
+                continue
+            #save used names only, unless set to save all
+            if not save_all and not row.hashname_used:
+                continue
+            #save names not in xml/h/etc only, unless set to save extra
+            if row.source != NameRow.NAME_SOURCE_EXTRA and not save_companion:
+                continue
+
+            if self._classify:
+                types = row.types or set(wdefs.fnv_unk)
+                for type in types:
+                    #print(type)
+                    sublines = types_lines.get(type)
+                    if not sublines:
+                        sublines = []
+                        types_lines[type] = sublines
+                    self.save_lst_name(row, sublines)
+            else:
+                self.save_lst_name(row, lines)
+
+        # when this flag is set, lines are saved for each type above and classified 
+        # into sections (helps a bit to detect bogus names)
+        if self._classify:
+            lines = default_lines #restore
+            for type in wdefs.fnv_order:
+                if type not in types_lines:
+                    continue
+                sublines = types_lines[type]
+                sublines.sort(key=str.lower)
+
+                lines.append('')
+                lines.append('#== %s NAMES' % (type.upper()))
+                for subline in sublines:
+                    lines.append(subline)
+
+        # write IDs that don't should have hashnames but don't
+        if save_missing:
+            for type in wdefs.fnv_order:
+                if type not in self._missing:
+                    continue
+
+                lines.append('')
+                lines.append('### MISSING %s NAMES' % (type.upper()))
+                ids = self._missing[type]
+                for id in ids:
+                    lines.append('# %s' % (id))
+
         with open(outname, 'w', encoding='utf-8') as outfile:
-            if self._disable_fuzzy:
-                outfile.write('#@nofuzzy\n')
+            outfile.write('\n'.join(lines))
 
-            names = self._names.values()
-            for row in names:
-                #save hashnames only, as they can be safely shared between games
-                if not row.hashname:
-                    continue
-                #save used names only, unless set to save all
-                if not save_all and not row.hashname_used:
-                    continue
-                #save names not in xml/h/etc only, unless set to save extra
-                if row.source != NameRow.NAME_SOURCE_EXTRA and not save_companion:
-                    continue
+    def save_lst_name(self, row, lines):
+        #logging.debug("names: using '%s'", row.hashname)
+        extended = ''
+        if row.extended:
+            extended = ' = 0' #allow names with special chars
+        lines.append('%s%s' % (row.hashname, extended))
 
-                #logging.debug("names: using '%s'", row.hashname)
-                extended = ''
-                if row.extended:
-                    extended = ' = 0' #allow names with special chars
-                outfile.write('%s%s\n' % (row.hashname, extended))
+        # log alts too (list should be cleaned up manually)
+        for hashname in row.hashnames:
+            if extended:
+                lines.append('#alt')
+                lines.append('%s%s' % (row.hashname, extended))
+            else:
+                lines.append('%s #alt' % (hashname))
 
-                # log alts too (list should be cleaned up manually)
-                for hashname in row.hashnames:
-                    if extended:
-                        outfile.write('#alt\n')
-                        outfile.write('%s%s\n' % (row.hashname, extended))
-                    else:
-                        outfile.write('%s #alt\n' % (hashname))
-
-            # write IDs that don't should have hashnames but don't
-            if save_missing:
-                for type in sorted(self._missing.keys()):
-                    outfile.write('\n### MISSING %s NAMES\n' % (type.upper()))
-                    ids = self._missing[type]
-                    for id in ids:
-                        outfile.write('# %s\n' % (id))
 
     # saves loaded hashnames to DB
     def save_db(self, save_all=False, save_companion=False):

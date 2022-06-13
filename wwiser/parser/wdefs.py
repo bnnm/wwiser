@@ -111,6 +111,10 @@ fnv_trg = 'trigger'
 fnv_evt = 'event'
 fnv_var = 'variable' #switches/states names
 fnv_val = 'value' #switches/states values
+fnv_unk = '???'
+fnv_order = [
+  fnv_com, fnv_evt, fnv_bus, fnv_sfx, fnv_gme, fnv_var, fnv_val, fnv_unk
+]
 
 chunk_type = wfmt.FormatterLUT({
   b'AKBK': "Audiokinetic Bank",

@@ -45,7 +45,7 @@ class TxtpNamer(object):
 
         if not txtp.txtpcache.stats.register_namebase(name):
             logging.debug("txtp: renaming to '%s'", name)
-            name += '#%03i' % (txtp.txtpcache.stats.current_name_count())
+            name += '#dupe#%03i' % (txtp.txtpcache.stats.current_name_count())
 
         # shouldn't happen but just in case
         for rpl in ['*','?',':','<','>','|']: #'\\','/'

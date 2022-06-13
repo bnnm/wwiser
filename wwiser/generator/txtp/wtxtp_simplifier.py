@@ -147,13 +147,16 @@ class TxtpSimplifier(object):
         # kill group nodes that don't have children since they mess up some calcs
         if node.is_group() and node.parent:
             is_empty = len(node.children) == 0
-
-            # kill segments that don't play (would generate empty silence),
-            # seen in Doom Eternal (no duration) and mass effect 2 (duration but no exit)
-            is_nosound = node.config.duration == 0 or node.config.exit == 0
-
-            if is_empty or is_nosound:
+            if is_empty:
                 self._kill_node(node)
+
+            # Kill segments that don't play (would generate empty silence), seen in Doom Eternal (no duration)
+            # and mass effect 2 (duration but no exit). But only do it in playlists, to allow Detroit's
+            # Play_A04_Ingame_Music (A04_Music_States=Good_Connor_Elevator_Fight_Outro)
+            is_nosound = node.config.duration == 0
+            is_noexit = node.config.exit == 0
+            if is_nosound or is_noexit and self.is_playlist(node):
+                    self._kill_node(node)
 
         # set externals flag
         if node.is_sound() and node.sound.source and node.sound.source.plugin_external:
@@ -165,6 +168,13 @@ class TxtpSimplifier(object):
 
     def _kill_node(self, node):
         node.parent.children.remove(node)
+    
+    def is_playlist(self, node):
+        if not node:
+            return False
+        if node.config.rules:
+            return True
+        return self.is_playlist(node.parent)
 
     #--------------------------------------------------------------------------
 
@@ -259,7 +269,7 @@ class TxtpSimplifier(object):
                 node_parent = node_pls
                 node_parent.sequence_continuous()
                 # clone needs to clone the whole subtree, since values need to be modified
-                clone_seg = self._make_fakeentry_clone(node_parent, node)
+                clone_seg = self._make_fakeentry_clone(node_parent, node, first=True)
                 clone_seg.fake_entry = True #mark transition node (original 0..entry)
             
             return
@@ -281,7 +291,7 @@ class TxtpSimplifier(object):
 
         return self._make_fakeentry_has_loops(node.parent)
 
-    def _make_fakeentry_clone(self, new_parent, node):
+    def _make_fakeentry_clone(self, new_parent, node, first=False):
         # semi-shallow copy (since some nodes have parser nodes that shouldn't be copied)
 
         # maybe implement __copy__?
@@ -295,7 +305,12 @@ class TxtpSimplifier(object):
         # when cloning nodes that have envelopes, list is automatically generated and unique,
         # but when applying entry/exit must also fix start values (done later)
 
-        new_parent.insert_base(new_node) #insert fake entry first
+        # when adding to parent, "base" fake entry goes first (intro>loop), while rest of clones
+        # go in order (otherwise order becomes a bit off with layered tracks)
+        if first:
+            new_parent.insert_base(new_node) #insert fake entry first
+        else:
+            new_parent.append(new_node) #regular node otherwise
 
         for subnode in node.children:
             self._make_fakeentry_clone(new_node, subnode)

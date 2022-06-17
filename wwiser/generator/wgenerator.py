@@ -1,6 +1,7 @@
 import logging
 from . import wfilter, wmover, wtxtp_cache, wreport
 from .render import wbuilder, wrenderer, wstate, wglobalsettings
+from ..parser import wdefs
 
 
 
@@ -181,8 +182,13 @@ class Generator(object):
         # register nodes first since banks can point to each other
         for bank in self._banks:
             root = bank.get_root()
+            version = root.get_version()
             bank_id = root.get_id()
             bankname = bank.get_root().get_filename()
+
+            if version in wdefs.partial_versions:
+                logging.warning("generator: WARNING, ignored unsupported bank version %s (can't make .txtp)", version)
+                continue
 
             self._builder.add_loaded_bank(bank_id, bankname)
 

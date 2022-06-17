@@ -5,7 +5,7 @@ Low priority TODOs
 - fix todo-s 
 
 ## parser
-- support Shadowrun, Too Human
+- support Shadowrun, Too Human txtp
 - clean bitflags in parser (some change between versions)
 - make as list: uNumSrc, srcID/etc, Children, etc
 - v36<= eTransitionMode/_bIsUsingWeight etc recheck

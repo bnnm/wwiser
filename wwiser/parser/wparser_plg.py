@@ -3,6 +3,9 @@ from . import wdefs
 #******************************************************************************
 # HIRC: PLUGINS
 
+def get_version(obj):
+    root = obj.get_root()
+    return root.get_version()
 
 #AkSineTone (v056>=?)
 def CAkFxSrcSineParams__SetParamsBlock(obj, size):
@@ -59,6 +62,7 @@ def CAkToneGenParams__SetParamsBlock(obj, size):
 def CAkParameterEQFXParams__SetParamsBlock(obj, size):
     #CAkParameterEQFXParams::SetParamsBlock
     obj = obj.node('AkParameterEQFXParams') #m_Params
+    version = get_version(obj)
 
     count = 3
     for elem in obj.list('Band', 'EQModuleParams', count):
@@ -68,7 +72,11 @@ def CAkParameterEQFXParams__SetParamsBlock(obj, size):
         elem.f32('fQFactor')
         elem.U8x('bOnOff')
     obj.f32('fOutputLevel')
-    obj.U8x('bProcessLFE')
+
+    if version <= 26:
+        pass
+    else:
+        obj.U8x('bProcessLFE')
     return
 
 
@@ -115,19 +123,30 @@ def CAkFDNReverbFXParams__SetParamsBlock(obj, size):
     #CAkFDNReverbFXParams::SetParamsBlock
     obj = obj.node('AkFDNReverbFXParams')
 
+    version = get_version(obj)
+
     #RTPC: AkFDNReverbRTPCParams
     #NonRTPC: AkFDNReverbNonRTPCParams
     obj.f32('RTPC.fReverbTime')
     obj.f32('RTPC.fHFRatio')
-    obj.u32('NonRTPC.uNumberOfDelays')
-    delays = obj.lastval
+    if version <= 26:
+        obj.u32('unknown')
+        delays = 0
+    else:
+        obj.u32('NonRTPC.uNumberOfDelays')
+        delays = obj.lastval
 
     obj.f32('RTPC.fDryLevel') #dB
     obj.f32('RTPC.fWetLevel') #dB
     obj.f32('NonRTPC.fPreDelay') #dB
     obj.U8x('NonRTPC.uProcessLFE')
-    obj.U32('NonRTPC.uDelayLengthsMode').fmt(wdefs.CAkFDNReverbFX__AkDelayLengthsMode)
-    delay_mode = obj.lastval
+    if version <= 26:
+        obj.u32('unknown')
+        obj.u32('unknown')
+        delay_mode = 0
+    else:
+        obj.U32('NonRTPC.uDelayLengthsMode').fmt(wdefs.CAkFDNReverbFX__AkDelayLengthsMode)
+        delay_mode = obj.lastval
 
     if delay_mode == 1 and delays:
         for _i in range(delays):
@@ -459,6 +478,11 @@ def CREVFxSrcModelPlayerParams__SetParamsBlock(obj, size):
 
 # #############################################################################
 
+plugin_dispatch_skip_26 = {
+    0x00730003 #not all fields have same meaning, too few examples to fix
+}
+
+
 plugin_dispatch = {
     0x00640002: CAkFxSrcSineParams__SetParamsBlock,
     0x00650002: CAkFxSrcSilenceParams__SetParamsBlock,
@@ -513,6 +537,11 @@ def parse_plugin_params(obj, plugin_id, size_name, params_name, always=False):
     #obj = obj.node('AkPluginParam')
     #obj.omax(size) #only works in a subobj, meh
 
+    version = get_version(obj)
+    #if version <= 26 and plugin_id in plugin_dispatch_skip_26:
+    #    dispatch = None
+    #else:
+    
     dispatch = plugin_dispatch.get(plugin_id)
     if dispatch:
         dispatch(obj, size)

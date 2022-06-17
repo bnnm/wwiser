@@ -85,9 +85,9 @@ meant to show bank data and generate TXTP. But feel free to use info here to mak
 other programs.
 
 Almost all `.bnk` versions should work, except the first two, used in *Shadowrun (X360)*
-and *Too Human (X360)*. Report if you get errors or incorrect behavior. All fields
-should be correctly identified and named, save a few bit flags in some versions and
-some lesser objects like plugins.
+(unsupported) and *Too Human (X360)* (mostly supported but can't make .txtp). Report if
+you get errors or incorrect behavior. All fields should be correctly identified and named,
+save a few bit flags in some versions and some lesser objects like plugins.
 
 
 ## LEGAL STUFF

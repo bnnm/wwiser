@@ -318,6 +318,13 @@ def CAkAction__Create(obj, actionType):
         CAkActionPlayEventUnknown: (wparser.CAkActionPlay__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
     }
 
+    if   cls.version == 26:
+        CAkAction_dispatch.update({
+            # extends from CAkActionSetLFE (062 from CAkActionSetAkProp and 053 from CAkAction)
+            CAkActionSetVolume: (wparser.CAkActionSetValue__SetActionParams, wparser.CAkActionSetAkProp__SetActionSpecificParams),
+        })
+
+
     if   cls.version == 56:
         CAkAction_dispatch.update({
             # extends from CAkActionSetLFE (062 from CAkActionSetAkProp and 053 from CAkAction)

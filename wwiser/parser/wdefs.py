@@ -17,12 +17,12 @@ from . import wfmt
 # - 06.2: XMA2
 # - 06.3: Blends
 # - 07.1: Interactive music
-# - 07.2: Dynamic dialogue, plugins
+# - 07.2: Dynamic dialogue, plugins [KK2 has DialogueEvent in code, string table]
 # - 07.4: removed string table, SoundBanksInfo.xml instead of .info
 bank_versions = [
     #--, #0x-- Wwise 2016.1~3  *
     #14, #0x0E Wwise 2007.1/2? *[Shadowrun (X360)]
-    #26, #0x1A Wwise 2007.3?   *[Too Human (X360), KetnetKick 2 (PC)]
+     26, #0x1A Wwise 2007.3?   *[Too Human (X360), KetnetKick 2 (PC)]
      29, #0x1D Wwise 2007.4?   *[Army of Two: The 40th Day (PS3)-test banks]
      34, #0x22 Wwise 2008.1?   *[Spider-Man: Web of Shadows (X360), The Lord of the Rings: Conquest (PC), Halo Wars (X360)]
      35, #0x23 Wwise 2008.2?   *[Jungle Speed (Wii), Punch Out!! (Wii)]
@@ -58,6 +58,11 @@ bank_versions = [
     140, #0x8c Wwise 2021.1     [Disney Speedstorm (PC)]
    #144, #0x90 Wwise 2022.1-B1  (none known)
 ]
+
+# no txtp support, even if forced
+partial_versions = {
+  14, 26
+}
 
 # Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions?
 # (all have special custom fields, that don't exist for regular versions).

@@ -3,7 +3,7 @@
 # helper containing a single name
 
 class NameRow(object):
-    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'multiple_marked', 'source', 'extended', 'types']
+    __slots__ = ['id', 'name', 'type', 'hashname', 'hashnames', 'guidname', 'guidnames', 'objpath', 'path', 'hashname_used', 'multiple_marked', 'source', 'extended', 'hashtypes']
 
     NAME_SOURCE_COMPANION = 0 #XML/TXT/H
     NAME_SOURCE_EXTRA = 1 #LST/DB
@@ -21,7 +21,7 @@ class NameRow(object):
         self.multiple_marked = False
         self.source = None
         self.extended = False
-        self.types = None
+        self.hashtypes = None
 
     def _exists(self, name, list):
         if name.lower() in (listname.lower() for listname in list):

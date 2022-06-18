@@ -29,6 +29,7 @@ class Names(object):
     ONREPEAT_INCLUDE = 1
     ONREPEAT_IGNORE = 2
     ONREPEAT_BEST = 3
+    EMPTY_BANKTYPE = ''
 
 
     def __init__(self):
@@ -37,26 +38,44 @@ class Names(object):
         self._names = {}
         self._names_fuzzy = {}
         self._db = None
-        self._loaded_banknames = {}
+        self._loaded_wwnames = {}
+        self._loaded_banknames = set()
         self._missing = {}
         self._fnv = wfnv.Fnv()
         # flags
         self._disable_fuzzy = False
         self._classify = False
+        self._classify_bank = False
 
 
     def set_gamename(self, gamename):
         self._gamename = gamename #path
 
-    def _mark_used(self, row, hashtype):
+    def _mark_used(self, row, hashtype, node):
         #if row.hashname_used:
         #    return
         row.hashname_used = True
 
         if self._classify and hashtype:
-            if not row.types:
-                row.types = set()
-            row.types.add(hashtype)
+            if not row.hashtypes:
+                row.hashtypes = set()
+            
+            # even if marked sometimes 
+            if self._classify_bank:
+                # should only happen when reading GV/SC/GS params, ignore
+                if not node:
+                    return
+
+                bank = node.get_root().get_filename()
+                # put all bnk together
+                if hashtype in wdefs.fnv_order_join:
+                    bank = self.EMPTY_BANKTYPE
+            else:
+                bank = self.EMPTY_BANKTYPE
+
+            key = (hashtype, bank)
+            row.hashtypes.add(key)
+            self._loaded_banknames.add(bank)
 
         # log this first time it's marked as used
         if not row.multiple_marked and row.hashnames:
@@ -66,8 +85,39 @@ class Names(object):
             logging.info("names: alt hashnames (using old), old=%s vs new=%s" % (old, new))
             row.multiple_marked = True
 
+    def _mark_unused(self, id, hashtype, node):
 
-    def get_namerow(self, id, hashtype=None):
+        if self._classify_bank:
+            # should only happen when reading GV/SC/GS params, ignore
+            if not node:
+                return
+
+            bank = node.get_root().get_filename()
+            # put all bnk together
+            if hashtype in wdefs.fnv_order_join:
+                bank = self.EMPTY_BANKTYPE
+        else:
+            bank = self.EMPTY_BANKTYPE
+
+        banks = self._missing.get(hashtype)
+        if not banks:
+            banks = {}
+            self._missing[hashtype] = banks
+
+        ids = banks.get(bank)
+        if not ids:
+            ids = {}
+            banks[bank] = ids
+
+        ids[id] = True
+
+    def _unmark_unused(self, id):
+        for hashtype in self._missing.keys():
+            for bank in self._missing[hashtype].keys():
+                if id in self._missing[hashtype][bank]:
+                    del self._missing[hashtype][bank][id]
+
+    def get_namerow(self, id, hashtype=None, node=None):
         if not id or id == -1: #including id=0, that is used as "none"
             return None
         id = int(id)
@@ -78,7 +128,7 @@ class Names(object):
         if row:
             # in case of guidnames don't mark but allow row
             if not (row.hashname and no_hash):
-                self._mark_used(row, hashtype)
+                self._mark_used(row, hashtype, node)
             return row
 
         # hashnames not allowed
@@ -95,7 +145,7 @@ class Names(object):
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_fz.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA)
             if row:
-                self._mark_used(row, hashtype)
+                self._mark_used(row, hashtype, node)
                 return row
 
         if not self._db:
@@ -107,7 +157,7 @@ class Names(object):
         if row_db:
             row = self._add_name(id, row_db.hashname, source=NameRow.NAME_SOURCE_EXTRA, exhash=True)
             if row:
-                self._mark_used(row, hashtype)
+                self._mark_used(row, hashtype, node)
                 return row
 
         # on db with a close ID
@@ -118,14 +168,13 @@ class Names(object):
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_df.hashname)
             row = self._add_name(id, hashname_uf, source=NameRow.NAME_SOURCE_EXTRA, exhash=True)
             if row:
-                self._mark_used(row, hashtype)
+                self._mark_used(row, hashtype, node)
                 return row
 
-        # groups missing ids by types (uninteresting ids like AkSound don't pass type)
+
+        # groups missing ids (uninteresting ids like AkSound don't pass type)
         if hashtype:
-            if hashtype not in self._missing:
-                self._missing[hashtype] = {}
-            self._missing[hashtype][id] = True
+            self._mark_unused(id, hashtype, node)
 
         return None
 
@@ -204,9 +253,7 @@ class Names(object):
 
         # in case it was registered
         if is_hashname:
-            for hashtype in self._missing:
-                if id in self._missing[hashtype]:
-                    del self._missing[hashtype][id]
+            self._unmark_unused(id)
 
         return row
 
@@ -280,7 +327,7 @@ class Names(object):
         if reverse_encoding:
             encodings.reverse()
         try:
-            if filename in self._loaded_banknames:
+            if filename in self._loaded_wwnames:
                 #logging.debug("names: ignoring already loaded file " + filename)
                 return
 
@@ -307,7 +354,7 @@ class Names(object):
         except Exception as e:
             logging.error("names: error reading name file " + filename, e)
         # save even on error to avoid re-reading the same wrong file
-        self._loaded_banknames[filename] = True
+        self._loaded_wwnames[filename] = True
 
 
     # Wwise_IDs.h ('header file')
@@ -624,6 +671,8 @@ class Names(object):
                     self._disable_fuzzy = True
                 if line.startswith('#@classify'):
                     self._classify = True
+                if line.startswith('#@classify-bank'): #implicit: sets the above
+                    self._classify_bank = True
                 continue
 
             match = pattern_1.match(line)
@@ -759,13 +808,15 @@ class Names(object):
 
         logging.info("names: saving %s" % (outname))
 
-        types_lines = {}
+        hashtypes_lines = {}
         default_lines = []
 
         lines = default_lines
         if self._disable_fuzzy:
             lines.append('#@nofuzzy')
-        if self._classify:
+        if self._classify_bank:
+            lines.append('#@classify-bank')
+        elif self._classify:
             lines.append('#@classify')
 
         names = self._names.values()
@@ -781,48 +832,131 @@ class Names(object):
                 continue
 
             if self._classify:
-                types = row.types or set(wdefs.fnv_unk)
-                for type in types:
-                    #print(type)
-                    sublines = types_lines.get(type)
+                hashtypes = row.hashtypes
+                if not hashtypes:
+                    hashtypes = set()
+                    hashtypes.add((wdefs.fnv_no, self.EMPTY_BANKTYPE))
+
+                for hashtype, bank in hashtypes:
+                     
+                    banks_lines = hashtypes_lines.get(hashtype)
+                    if not banks_lines:
+                        banks_lines = {}
+                        hashtypes_lines[hashtype] = banks_lines
+
+                    sublines = banks_lines.get(bank)
                     if not sublines:
                         sublines = []
-                        types_lines[type] = sublines
-                    self.save_lst_name(row, sublines)
+                        banks_lines[bank] = sublines
+
+                    self._save_lst_name(row, sublines)
             else:
-                self.save_lst_name(row, lines)
+                self._save_lst_name(row, lines)
 
         # when this flag is set, lines are saved for each type above and classified 
         # into sections (helps a bit to detect bogus names)
         if self._classify:
             lines = default_lines #restore
-            for type in wdefs.fnv_order:
-                if type not in types_lines:
-                    continue
-                sublines = types_lines[type]
-                sublines.sort(key=str.lower)
 
-                lines.append('')
-                lines.append('#== %s NAMES' % (type.upper()))
-                for subline in sublines:
-                    lines.append(subline)
+            # may print like: bank > hashtypes (banks_first=True), or hashtypes > banks
+            banks_first = True
+            if banks_first:
+                for bank in sorted(self._loaded_banknames):
+                    for hashtype in wdefs.fnv_order:
+                        self._include_lines(save_missing, lines, hashtypes_lines, hashtype, bank)
+            else:
+                for hashtype in wdefs.fnv_order:
+                    for bank in sorted(self._loaded_banknames):
+                        self._include_lines(save_missing, lines, hashtypes_lines, hashtype, bank)
+
+            lines.append('')
 
         # write IDs that don't should have hashnames but don't
         if save_missing:
-            for type in wdefs.fnv_order:
-                if type not in self._missing:
-                    continue
+            self._include_missing_all(lines)
 
-                lines.append('')
-                lines.append('### MISSING %s NAMES' % (type.upper()))
-                ids = self._missing[type]
-                for id in ids:
-                    lines.append('# %s' % (id))
+        #     for hashtype in wdefs.fnv_order:
+        #         if hashtype not in self._missing:
+        #             continue
+        #         banks = self._missing[hashtype]
+        #         for bank in banks:
+        #             ids = banks[bank]
+        #             if not ids:
+        #                 continue
+
+        #             lines.append('')
+        #             if bank:
+        #                 lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), bank))
+        #             else:
+        #                 lines.append('### MISSING %s NAMES' % (hashtype.upper()))
+
+        #             for id in ids:
+        #                 lines.append('# %s' % (id))
 
         with open(outname, 'w', encoding='utf-8') as outfile:
             outfile.write('\n'.join(lines))
 
-    def save_lst_name(self, row, lines):
+    def _include_lines(self, save_missing, lines, types_lines, hashtype, bank):
+        if hashtype not in types_lines:
+            return
+        banks = types_lines[hashtype]
+
+        if bank not in banks:
+            banks_missing = self._missing.get(hashtype)
+            if not banks_missing or bank not in banks_missing:
+                return
+
+        sublines = banks.get(bank)
+        if not sublines and not save_missing:
+            return
+
+        lines.append('')
+        if bank:
+            lines.append('### %s NAMES (%s)' % (hashtype.upper(), bank))
+        else:
+            lines.append('### %s NAMES' % (hashtype.upper()))
+
+        if sublines:
+            sublines.sort(key=str.lower)
+            for subline in sublines:
+                lines.append(subline)
+
+        # include missing ids at bank level (otherwise at the end)
+        if save_missing:
+            self._include_missing(lines, hashtype, bank)
+
+
+    def _include_missing(self, lines, hashtype, bank, header=False):
+        banks = self._missing.get(hashtype)
+        if not banks:
+            return
+        ids = banks.get(bank)
+        if not ids:
+            return
+
+        if header:
+            lines.append('')
+            if bank:
+                lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), bank))
+            else:
+                lines.append('### MISSING %s NAMES' % (hashtype.upper()))
+
+        for id in ids:
+            lines.append('# %s' % (id))
+        
+        # remove so it doesn't get saved twice
+        banks[bank] = {}
+
+    def _include_missing_all(self, lines):
+        for hashtype in wdefs.fnv_order:
+            if hashtype not in self._missing:
+                continue
+            banks = self._missing[hashtype]
+            for bank in banks:
+                self._include_missing(lines, hashtype, bank, header=True)
+
+
+    def _save_lst_name(self, row, lines):
         #logging.debug("names: using '%s'", row.hashname)
         extended = ''
         if row.extended:

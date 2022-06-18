@@ -1226,9 +1226,9 @@ def CAkActionPlay__SetActionParams(obj, cls):
     if   cls.version <= 26:
         pass
     elif cls.version <= 126:
-        obj.tid('fileID').fnv(wdefs.fnv_com) #same as bankID
+        obj.tid('fileID').fnv(wdefs.fnv_bnk) #same as bankID
     else:
-        obj.tid('bankID').fnv(wdefs.fnv_com)
+        obj.tid('bankID').fnv(wdefs.fnv_bnk)
 
     if cls.version >= 144:
         obj.U32('bankType').fmt(wdefs.AkActionType)
@@ -3130,14 +3130,14 @@ def CAkBankMgr__ProcessBankHeader(obj):
             obj.U32('dwBankGeneratorVersion')
         else:
             obj.u32('dwBankGeneratorVersion')
-        obj.sid('dwSoundBankID').fnv(wdefs.fnv_com)
+        obj.sid('dwSoundBankID').fnv(wdefs.fnv_bnk)
         # needed to make txtp with mixed banks
         root.set_id(obj.lastval)
 
     if version <= 122:
         obj.u32('dwLanguageID').fmt(wdefs.language_id)
     else:
-        obj.sid('dwLanguageID').fnv(wdefs.fnv_com) #hashed lang string
+        obj.sid('dwLanguageID').fnv(wdefs.fnv_lng) #hashed lang string
 
     if version <= 26:
         obj.u64('timestamp?')
@@ -3220,28 +3220,28 @@ def parse_data_old(objp, chunk_size):
 
     # mix of index + data
 
-    obj = objp.node('Index')
-    obj.u32('entries')
-    entries = obj.lastval
+    obj = objp.node('MediaIndex')
+    obj.u32('uNumMedias')
+    count = obj.lastval
     obj.U32('unknown') # null / optional header size?
-    obj.U32('entriesSize')
-    obj.U32('padding') # after entries before data
+    obj.U32('uMediasSize')
+    obj.U32('uPaddingSize') # after entries before data
     padding = obj.lastval
 
-    obj.U32('chunkSize')
+    obj.U32('uChunkSize')
     obj.U32('unknown')
-    obj.U32('dataOffset')
-    obj.U32('dataSize')
+    obj.U32('uDataOffset')
+    obj.U32('uDataSize')
 
     chunk_size -= 0x20
 
-    for elem in obj.list('pEntries', 'Entry', entries):
+    for elem in obj.list('pLoadedMedia', 'MediaHeader', count):
         elem.u32('unknown') #always -1
         elem.U32('unknown') #always 0
         elem.u32('trackID?') #number (usually entry number) or -1
         elem.U32('unknown') #5 or -1?
-        elem.U32('offset') #stream offset (from DATA) or -1 if none
-        elem.U32('size') #stream size or 0 if none
+        elem.U32('uOffset') #stream offset (from DATA) or -1 if none
+        elem.U32('uSize') #stream size or 0 if none
 
         chunk_size -= 0x18
 
@@ -3426,7 +3426,7 @@ def CAkBankMgr__ProcessStringMappingChunk(obj):
     obj.U32('uiType').fmt(wdefs.AKBKStringType)
     obj.U32('uiSize')
     for elem in obj.list('BankIDToFileName', 'AKBKHashHeader', obj.lastval):
-        elem.tid('bankID').fnv(wdefs.fnv_com)
+        elem.tid('bankID').fnv(wdefs.fnv_bnk)
         elem.u8i('stringsize')
         elem.str('FileName', elem.lastval)
         if elem.lastval:

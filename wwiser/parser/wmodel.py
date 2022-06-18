@@ -637,7 +637,7 @@ class NodeField(NodeElement):
 
         names = self.get_root()._names
         if names:
-            row = names.get_namerow(self.__value, hashtype=self.__hashtype)
+            row = names.get_namerow(self.__value, hashtype=self.__hashtype, node=self)
             if row:
                 self.__row = row
         return self.__row

@@ -108,17 +108,21 @@ fmt_ch = wfmt.FormatterChannelConfig()
 
 # hash types
 fnv_no = 'none' #special value, no hashname allowed
-fnv_com = 'bank/common'
-fnv_gme = 'rtpc/game-variable'
+fnv_bnk = 'bank'
+fnv_lng = 'language'
+fnv_evt = 'event'
 fnv_bus = 'bus'
 fnv_sfx = 'sfx'
 fnv_trg = 'trigger'
-fnv_evt = 'event'
+fnv_gme = 'rtpc/game-variable'
 fnv_var = 'variable' #switches/states names
 fnv_val = 'value' #switches/states values
 fnv_unk = '???'
 fnv_order = [
-  fnv_com, fnv_evt, fnv_bus, fnv_sfx, fnv_gme, fnv_var, fnv_val, fnv_unk
+  fnv_bnk, fnv_lng, fnv_evt, fnv_bus, fnv_sfx, fnv_trg, fnv_gme, fnv_var, fnv_val, fnv_unk
+]
+fnv_order_join = [
+  fnv_bnk, fnv_lng, fnv_bus
 ]
 
 chunk_type = wfmt.FormatterLUT({

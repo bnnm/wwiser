@@ -139,9 +139,10 @@ class CAkDialogueEvent(CAkHircNode):
     def _build(self, node):
         nbase = node.find1(name='DialogueEventInitialValues')
 
-        self.props = self._make_props(nbase) # not sure how useful these are
-
-        self.props.barf_loop()
+        # not sure how useful these are, don't exist in early versions either
+        self.props = self._make_props(nbase)
+        if self.props:
+            self.props.barf_loop()
 
         self.tree = self._make_tree(node)
         return

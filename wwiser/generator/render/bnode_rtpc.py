@@ -27,6 +27,10 @@ _ACCUM_OLD = {
     2: _ACCUM_MULTIPLY,
 }
 
+# original seems to be 96.300003 at points but that affects some calcs that inlined 96.3
+# (on edge cases may crash due to invalid math)
+_VOLUME_MAX = 96.3
+_VOLUME_MIN = -96.3
 
 
 # Represents a graph point.
@@ -205,18 +209,18 @@ class _AkGraph(object):
         if v == 0.0:
             return v
 
-        max = +96.300003
+        max = _VOLUME_MAX
         if v >= max:
             return max
-        min = -96.300003
+        min = _VOLUME_MIN
         if v <= min:
             return min
 
         if v > 0.0:
-            v = (96.3 - v) / 96.3
+            v = (max - v) / max
             return -self._realTodB(v)
         else:
-            v = (v + 96.3) / 96.3
+            v = (v + max) / max
             return +self._realTodB(v)
 
     def _linearToFrequency_20_20000(self, v):
@@ -246,7 +250,7 @@ class _AkGraph(object):
         #    db = -db
 
         if v == -1.0:
-            db = -96.3
+            db = _VOLUME_MIN
         else:
             db = math.log10(v + 1.0) * 20.0 #~FastLinTodB + ~FastLog10?
         return db

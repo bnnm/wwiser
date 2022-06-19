@@ -167,6 +167,9 @@ class TxtpNode(object):
     def loops(self):
         return self.loop is not None and self.loop != 1
 
+    def loops_inf(self):
+        return self.loop is not None and self.loop == 0
+
     # nodes that don't contribute to final .txtp so they don't need to be written
     # also loads some values
     def ignorable(self, skiploop=False, simpler=False):

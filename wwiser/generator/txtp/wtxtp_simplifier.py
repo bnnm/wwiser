@@ -213,7 +213,7 @@ class TxtpSimplifier(object):
 
     # SCn                       [playlist]
     #    SC1 lpn=0              [playlist item]
-    #     N1 lpn=1 (trn)        [playlist item]
+    #     N1 lpn=1              [playlist item]
     #      L1                   [music segment]
     #       (duration=5000.00000, entry=2000.00000, exit=4000.00000)
     #       N1 vol=1.0          [music track]
@@ -242,7 +242,7 @@ class TxtpSimplifier(object):
     #                           seg     |
     #
 
-    # keep looking for a segment, but only first (entry segment is only on very first segment of a playlist)
+    # keep looking for a segment, but only first (entry segment is added to first good group of a playlist)
     def _make_fakeentry_find_segment(self, node, node_pls):
 
         # randoms/steps with N items that contain the first segment don't quite behave like
@@ -260,13 +260,15 @@ class TxtpSimplifier(object):
             if node.config.entry <= threshold:
                 return
             
-            valid = self._make_fakeentry_has_loops(node)
+            valid = self._make_fakeentry_has_upper_loops(node)
             if valid:
                 # fake entry is possible, where top-most node will become a container of 2:
                 # - segment (clone): 0..entry (no loop)
                 # - subitem (original): entry..exit (loops)
 
-                node_parent = node_pls
+                node_parent = self._make_fakeentry_get_container(node_pls)
+                if not node_parent: 
+                    node_parent = node_pls
                 node_parent.sequence_continuous()
                 # clone needs to clone the whole subtree, since values need to be modified
                 clone_seg = self._make_fakeentry_clone(node_parent, node, first=True)
@@ -279,7 +281,7 @@ class TxtpSimplifier(object):
             self._make_fakeentry_find_segment(subnode, node_pls)
 
     # find if segment can be considered for a fake entry
-    def _make_fakeentry_has_loops(self, node):
+    def _make_fakeentry_has_upper_loops(self, node):
 
         # reached top of playlist with no loops, can't make fake entry
         if node.config.rules: #is playlist
@@ -289,7 +291,61 @@ class TxtpSimplifier(object):
         if node.loops():
             return True
 
-        return self._make_fakeentry_has_loops(node.parent)
+        return self._make_fakeentry_has_upper_loops(node.parent)
+
+    # get best node to add the entry segment. In most cases playlist node is ok 
+    # but loses some looping due trap loops:
+    #  N1 > SC2 L=0 > N1 L=1  >>>  SC2 > N1 (fake)         >>>  N1 > SC3 L=0 > N1 L=1 (fake)
+    #               > N1 L=0           > SC2 L=1 > N1 L=1                    > N1 L=1
+    #                                            > N1 L=0                    > N1 L=0
+    #   (original)                 (bad)                        (good)
+    # * should put it in SC2 rather than first node or can't loop due to double group
+
+    def _make_fakeentry_get_container(self, node):
+
+        # can't add fakeentry here
+        if node.is_group_layers() or node.config.duration or len(node.children) == 0:
+            return None
+
+        # probably only makes sense like this
+        is_valid_group = (node.is_group_single() 
+            or node.is_group_sequence_continuous()
+            #or node.is_group_sequence_step() and node.loops() #unsure
+            or node.is_group_sequence_step() and len(node.children) == 1
+        )
+        if not is_valid_group:
+            return None
+
+        # probably can't do anything
+        if node.loops() and not node.loops_inf():
+            return None
+
+        # usable container, but only if has sub-loops in some children (otherwise defaults to playlist):
+        if node.loops_inf() or len(node.children) > 1:
+            for subnode in node.children:
+                if self._make_fakeentry_has_lower_loops(subnode):
+                    return node
+            return None
+
+        if len(node.children) > 1:
+            return None
+        subnode = node.children[0]
+        return self._make_fakeentry_get_container(subnode)
+
+    def _make_fakeentry_has_lower_loops(self, node):
+
+        # reached usable bottom
+        if node.is_group_layers() or node.config.duration:
+            return False
+
+        if node.loops():
+            return node.loops_inf()
+
+        for subnode in node.children:
+            if self._make_fakeentry_has_lower_loops(subnode):
+                return True
+
+        return False
 
     def _make_fakeentry_clone(self, new_parent, node, first=False):
         # semi-shallow copy (since some nodes have parser nodes that shouldn't be copied)

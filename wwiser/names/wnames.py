@@ -327,7 +327,8 @@ class Names(object):
         if reverse_encoding:
             encodings.reverse()
         try:
-            if filename in self._loaded_wwnames:
+            testpath = os.path.realpath(filename) #for relative paths
+            if testpath in self._loaded_wwnames:
                 #logging.debug("names: ignoring already loaded file " + filename)
                 return
 
@@ -354,7 +355,7 @@ class Names(object):
         except Exception as e:
             logging.error("names: error reading name file " + filename, e)
         # save even on error to avoid re-reading the same wrong file
-        self._loaded_wwnames[filename] = True
+        self._loaded_wwnames[testpath] = True
 
 
     # Wwise_IDs.h ('header file')

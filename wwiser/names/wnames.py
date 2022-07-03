@@ -46,7 +46,7 @@ class Names(object):
         self._disable_fuzzy = False
         self._classify = False
         self._classify_bank = False
-
+        self._hashtypes_missing = None # print only certain hashtypes
 
     def set_gamename(self, gamename):
         self._gamename = gamename #path
@@ -674,6 +674,9 @@ class Names(object):
                     self._classify = True
                 if line.startswith('#@classify-bank'): #implicit: sets the above
                     self._classify_bank = True
+                if line.startswith('#@hashtypes-missing'):
+                    line = line.replace('#@hashtypes-missing', '')
+                    self._hashtypes_missing = [item.lower().strip() for item in line.split()]
                 continue
 
             match = pattern_1.match(line)
@@ -819,6 +822,8 @@ class Names(object):
             lines.append('#@classify-bank')
         elif self._classify:
             lines.append('#@classify')
+        elif self._hashtypes_missing:
+            lines.append('#@hashtypes-missing ' + ' '.join(self._hashtypes_missing))
 
         names = self._names.values()
         for row in names:
@@ -928,6 +933,9 @@ class Names(object):
 
 
     def _include_missing(self, lines, hashtype, bank, header=False):
+        if self._hashtypes_missing and hashtype not in self._hashtypes_missing:
+            return
+
         banks = self._missing.get(hashtype)
         if not banks:
             return

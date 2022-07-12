@@ -72,6 +72,7 @@ class Cli(object):
         p.add_argument('-gs',   '--txtp-statechunks',       help="Set TXTP statechunks list (default: auto)", metavar='ITEMS', nargs='*')
         p.add_argument('-gg',   '--txtp-gamevars',          help="Set TXTP game parameter list (default: auto)", metavar='ITEMS', nargs='*')
         p.add_argument('-gssd', '--txtp-statechunks-sd',    help="Skip default statechunk (default: auto)", action='store_true')
+        p.add_argument('-gssu', '--txtp-statechunks-su',    help="Skip unreachable statechunks (default: auto)", action='store_true')
 
         p = parser.add_argument_group('txtp filtering options')
         p.add_argument('-gf', '--txtp-filter',          help="List of allowed event/id/classname/bnk/etc", metavar='ITEMS', nargs='+')
@@ -290,6 +291,7 @@ class Cli(object):
             generator.set_gamesyncs(args.txtp_params)
             generator.set_statechunks(args.txtp_statechunks)
             generator.set_statechunks_sd(args.txtp_statechunks_sd)
+            generator.set_statechunks_su(args.txtp_statechunks_su)
             generator.set_gamevars(args.txtp_gamevars)
             generator.set_dupes(args.txtp_dupes)
             generator.set_dupes_exact(args.txtp_dupes_exact)

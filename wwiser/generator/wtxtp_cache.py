@@ -30,6 +30,7 @@ class TxtpCache(object):
         self.write_delays = False
         self.wwnames = None
         self.statechunks_skip_default = False
+        self.statechunks_skip_unreachables = False
 
         self.no_txtp = False
         self.x_noloops = False

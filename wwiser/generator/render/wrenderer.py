@@ -106,16 +106,16 @@ class Renderer(object):
                     unreachables.append(gscombo)
 
 
+            if not self._txtpcache.statechunks_skip_unreachables:
+                for gscombo in unreachables:
+                    ws.set_gs(gscombo)
+                    ws.reset_sc()
+                    ws.reset_gv()
 
-            for gscombo in unreachables:
-                ws.set_gs(gscombo)
-                ws.reset_sc()
-                ws.reset_gv()
+                    txtp = wtxtp.Txtp(self._txtpcache)
+                    self._begin_txtp(txtp, node)
 
-                txtp = wtxtp.Txtp(self._txtpcache)
-                self._begin_txtp(txtp, node)
-
-                self._render_sc(node, txtp, make_unreachables=True)
+                    self._render_sc(node, txtp, make_unreachables=True)
 
 
 
@@ -158,6 +158,7 @@ class Renderer(object):
                 self._begin_txtp(txtp, node)
 
                 self._render_gv(node, txtp)
+                txtp.scparams_make_default = False
 
 
     # handle combinations of gamevars: "play_bgm (bgm=m01) {s}=(bgm_layer=hi) {bgm_rank=2.0}"

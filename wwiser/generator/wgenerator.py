@@ -84,6 +84,9 @@ class Generator(object):
     def set_statechunks_sd(self, flag):
         self._txtpcache.statechunks_skip_default = flag
 
+    def set_statechunks_su(self, flag):
+        self._txtpcache.statechunks_skip_unreachables = flag
+
     #--------------------------------------------------------------------------
 
     def set_outdir(self, path):

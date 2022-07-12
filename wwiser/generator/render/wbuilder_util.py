@@ -36,6 +36,7 @@ _HIRC_BUILDER_NODES = {
     'CAkFxCustom': CAkFxCustom,
     'CAkFxShareSet': CAkFxShareSet,
     'CAkBus': CAkBus,
+    'CAkAuxBus': CAkAuxBus,
     'CAkAudioDevice': CAkAudioDevice,
 
     #not useful

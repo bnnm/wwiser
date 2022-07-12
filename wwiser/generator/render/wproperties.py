@@ -129,6 +129,7 @@ _CLAMP_LOOPS = (0, 32767) # number
 _CLAMP_VOLUME = (-200.0, 200.0) # db
 _CLAMP_DELAY = (0 * 1000.0,  3200 * 1000.0) # seconds to ms
 #_CLAMP_FILTER = (0, 100) # percent (for HPF/LPF)
+_VOLUME_SILENT = -96.0
 
 _DEBUG_SIMPLER_PROPS = False # calculate like old wwiser versions (enables some of those flags)
 
@@ -194,9 +195,31 @@ class PropertyCalculator(object):
         if not bnode:
             return None
         if bnode.bbus:
-            return bnode.bbus
+            #TODO improve: should select between object bus or current aux bus when doing calculate
+            # need to use aux bus in rare cases. In Elden Ring:
+            # - bgm field/battle musictrack variations go to a field bus
+            # - field bus uses BusVolume -96db, but defines 2 FieldBattleAux/FieldNormalAux aux buses
+            # - both have regular volume and parent is also field's parent
+            # So to avoid silent files due to bus volume, detect if we should use aux bus
+            if self.is_bus_usable(bnode.bbus):
+                return bnode.bbus
+
+            if not bnode.bbus.auxlist:
+                return None
+
+            bauxs = bnode.bbus.auxlist.get_bauxs()
+
+            for baux in bauxs:
+                # maybe should check best aux based on rtpc/statechunk props but for now just pick first
+                if self.is_bus_usable(baux):
+                    return baux
+            return None
+
+            
         return self._get_bus(bnode.bparent)
 
+    def is_bus_usable(self, bbus):
+        return bbus.props.busvolume > _VOLUME_SILENT and bbus.props.outputbusvolume > _VOLUME_SILENT
 
     def _clamp(self):
         cfg = self._config

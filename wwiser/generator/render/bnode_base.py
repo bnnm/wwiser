@@ -1,4 +1,4 @@
-from . import bnode_automation, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk, bnode_fxs
+from . import bnode_automation, bnode_props, bnode_rtpc, bnode_rules, bnode_source, bnode_tree, bnode_stinger, bnode_statechunk, bnode_fxs, bnode_auxs
 from ..txtp import wtxtp_fields
 
 
@@ -123,6 +123,12 @@ class CAkHircNode(object):
         if not fxlist.init:
             return None
         return fxlist
+
+    def _make_auxlist(self, node, bparent):
+        auxlist = bnode_auxs.AkAuxList(node, bparent, self)
+        if not auxlist.init:
+            return None
+        return auxlist
 
     def _make_automationlist(self, node):
          return bnode_automation.AkClipAutomationList(node)

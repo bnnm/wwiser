@@ -527,8 +527,8 @@ Info gathered from the editor, to help understanding model and overall behavior.
   - editor can check "override parent" and set another bus
     - by default it autoselect "Master Audio Bus" when checked, regarless of parent
 - in latest version buses can be of different types, depending on when/how buffers are mixed
-  
-
+- aux buses can be defined per object (up to 4) and override parent (has a flag) 
+  - if object has no parent override flag is not set
 
 
 

@@ -58,6 +58,7 @@ class CAkBus(CAkHircNode):
     def __init__(self):
         super(CAkBus, self).__init__()
         self.bdevice = None
+        self.auxlist = None
 
     def _build(self, node):
         nbase = node.find1(name='BusInitialValues')
@@ -81,9 +82,17 @@ class CAkBus(CAkHircNode):
         ninitfx = nbase.find1(name='BusInitialFxParams')
         self.fxlist = self._make_fxlist(ninitfx)
 
+        # auxs aren't normally needed but in some cases devs do strange stuff with bus volumes
+        nauxs = nbase.find1(name='AuxParams')
+        self.auxlist = self._make_auxlist(nauxs, self.bparent)
+
         return
 
-#CAkAuxBus is the same but only used in AuxParams
+class CAkAuxBus(CAkBus):
+    def __init__(self):
+        super(CAkAuxBus, self).__init__()
+
+    #  same but only used in AuxParams
 
 
 class CAkAudioDevice(CAkHircNode):

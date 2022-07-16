@@ -4,8 +4,8 @@ class FileReader(object):
 
     def __init__(self, file):
         self.file = file
-        self.offset = 0
         self.be = False
+        self._xorpad = None
 
         file.seek(0, os.SEEK_END)
         self.size = file.tell()
@@ -23,6 +23,9 @@ class FileReader(object):
         if offset is not None:
             self.file.seek(offset, os.SEEK_SET)
         elem = self.file.read(size)
+        if self._xorpad:
+            elem = self.__unxor(elem, size)
+
         self._check(elem, size)
 
         return struct.unpack(type, elem)[0]
@@ -49,6 +52,22 @@ class FileReader(object):
         self._check(elem, size)
 
         elem = bytes(elem) #force
+        return elem
+
+    def __unxor(self, elem, size):
+        offset = self.current() - size
+        xorpad_len = len(self._xorpad)
+        if offset >= xorpad_len:
+            return elem
+
+        max = offset + size
+        if max > xorpad_len:
+            max = xorpad_len
+
+        elem = bytearray(elem)
+        for i in range(offset, max):
+            xor = self._xorpad[i]
+            elem[i - offset] ^= xor
         return elem
 
     def d64le(self, offset = None):
@@ -204,6 +223,9 @@ class FileReader(object):
 
     def get_filename(self):
         return os.path.basename(self.file.name)
+
+    def set_xorpad(self, xorpad):
+        self._xorpad = xorpad
 
 class ReaderError(Exception):
     def __init__(self, msg):

@@ -3735,10 +3735,26 @@ class Parser(object):
             _unknown = r.u32()
             version = r.u32() #actual version in very early banks
 
-        # extrange variations
+        # strange variations
         if version in wdefs.bank_custom_versions:
             version = wdefs.bank_custom_versions[version]
             root.set_custom(True)
+
+        # in rare cases header is slightly encrypted with 32b values x4, in the game's init code [LIMBO demo, World of Tanks]
+        # simulate with a xorpad file (must start with 32b 0, 32b0 then 32b x4 with xors in bank's endianness)
+        if version & 0x0FFFF000:
+            path = r.get_path()
+            if path:
+                path += '/'
+            path += 'xorpad.bin'
+            try:
+                with open(path, 'rb') as f:
+                    xorpad = f.read()
+            except:
+                raise wmodel.VersionError("encrypted bank version (needs xorpad.bin)", -1)
+            r.set_xorpad(xorpad)
+            r.skip(-4)
+            version = r.u32() #re-read unxor'd
 
         root.set_version(version)
         if not self._ignore_version and version not in wdefs.bank_versions:

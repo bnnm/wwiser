@@ -153,6 +153,7 @@ class _GamesyncNode(object):
 
     def __lt__(self, other):
         # sorting gamesyncs:
+        # - items are names or ids adapted to be sorted (see _sortvalue)
         # - 'other' should have the same number of elems (compares between nodes of the same parent)
         # - groups are fixed, so order is as found
         # - types/groups also shouldn't vary between self/other (same parent), so only needs to check values
@@ -169,25 +170,40 @@ class _GamesyncNode(object):
         items1 = []
         items2 = []
         for i, (elem1, elem2) in enumerate(zip(self.elems, other.elems)):
-            nvalue1 = self._hn(elem1[2])
-            nvalue2 = self._hn(elem2[2])
+            nvalue1 = self._sortvalue(elem1[1], elem1[2])
+            nvalue2 = self._sortvalue(elem2[1], elem2[2])
 
             items1.append((i, nvalue1))
             items2.append((i, nvalue2))
 
         return items1 < items2
 
-    def _hn(self, id):
+    def _sortvalue(self, g_id, v_id):
         # 0 goes first
-        if id == 0:
-            return "!%s" % (id)
+        #if v_id == 0:
+        #    weight = 0
+        #    return "%s-%s" % (weight, v_id)
+
 
         # hashname or ~ to force numbers after letters
-        row = self._wwnames.get_namerow(id)
-        if row and row.hashname:
-            return row.hashname
+        g_name = None
+        g_row = self._wwnames.get_namerow(g_id)
+        if g_row and g_row.hashname:
+            g_name = g_row.hashname
+
+        v_name = None
+        if v_id == 0:
+            v_name = '-'
         else:
-            return "~%s" % (id)
+            v_row = self._wwnames.get_namerow(v_id)
+            if v_row and v_row.hashname:
+                v_name = v_row.hashname
+
+        if v_name:
+            weight = self._wwnames.get_weight(g_name, v_name)
+            return "%s-%s" % (weight, v_name)
+        else:
+            return "~%s" % (v_id)
 
 # ---------------------------------------------------------
 
@@ -377,8 +393,11 @@ class GamesyncPaths(object):
     # - CAkMusicSwitchCntr (new): unordered (AkTree)
     # - CAkDialogueEvent (old): ordered?
     # - CAkDialogueEvent (new): unordered (AkTree)
-    def sort(self):
+    def sort(self, presorted=False):
         if not self._txtpcache.wwnames:
+            return
+        # by default uses pre-sorted order, unless forced
+        if presorted and not self._txtpcache.wwnames.sort_always():
             return
 
         # uses GamesyncNode __lt__

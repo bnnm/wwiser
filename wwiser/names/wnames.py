@@ -5,6 +5,7 @@ from .. import wfnv
 from ..parser import wdefs
 from .wsqlite import SqliteHandler
 from .wnamerow import NameRow
+from . import wnconfig
 
 
 # Parses various companion files with names and saves results, later used to assign names to bank's
@@ -43,10 +44,7 @@ class Names(object):
         self._missing = {}
         self._fnv = wfnv.Fnv()
         # flags
-        self._disable_fuzzy = False
-        self._classify = False
-        self._classify_bank = False
-        self._hashtypes_missing = None # print only certain hashtypes
+        self._cfg = wnconfig.Config()
 
     def set_gamename(self, gamename):
         self._gamename = gamename #path
@@ -56,12 +54,12 @@ class Names(object):
         #    return
         row.hashname_used = True
 
-        if self._classify and hashtype:
+        if self._cfg.classify and hashtype:
             if not row.hashtypes:
                 row.hashtypes = set()
             
             # even if marked sometimes 
-            if self._classify_bank:
+            if self._cfg.classify_bank:
                 # should only happen when reading GV/SC/GS params, ignore
                 if not node:
                     return
@@ -87,7 +85,7 @@ class Names(object):
 
     def _mark_unused(self, id, hashtype, node):
 
-        if self._classify_bank:
+        if self._cfg.classify_bank:
             # should only happen when reading GV/SC/GS params, ignore
             if not node:
                 return
@@ -138,7 +136,7 @@ class Names(object):
 
         # on list with a close ID
         row_fz = None
-        if not self._disable_fuzzy:
+        if not self._cfg.disable_fuzzy:
             id_fz = id & 0xFFFFFF00
             row_fz = self._names_fuzzy.get(id_fz)
         if row_fz and row_fz.hashname:
@@ -162,7 +160,7 @@ class Names(object):
 
         # on db with a close ID
         row_df = None
-        if not self._disable_fuzzy:
+        if not self._cfg.disable_fuzzy:
             row_df = self._db.select_by_id_fuzzy(id)
         if row_df and row_df.hashname:
             hashname_uf = self._fnv.unfuzzy_hashname(id, row_df.hashname)
@@ -667,16 +665,8 @@ class Names(object):
             if not line:
                 continue
             if line[0] == '#':
-                # special flag for complete wwnames that need no fuzzies
-                if line.startswith('#@nofuzzy'):
-                    self._disable_fuzzy = True
-                if line.startswith('#@classify'):
-                    self._classify = True
-                if line.startswith('#@classify-bank'): #implicit: sets the above
-                    self._classify_bank = True
-                if line.startswith('#@hashtypes-missing'):
-                    line = line.replace('#@hashtypes-missing', '')
-                    self._hashtypes_missing = [item.lower().strip() for item in line.split()]
+                if line.startswith('#@'): # special flags
+                    self._cfg.add_config(line)
                 continue
 
             match = pattern_1.match(line)
@@ -816,14 +806,7 @@ class Names(object):
         default_lines = []
 
         lines = default_lines
-        if self._disable_fuzzy:
-            lines.append('#@nofuzzy')
-        if self._classify_bank:
-            lines.append('#@classify-bank')
-        elif self._classify:
-            lines.append('#@classify')
-        elif self._hashtypes_missing:
-            lines.append('#@hashtypes-missing ' + ' '.join(self._hashtypes_missing))
+        self._cfg.add_lines(lines)
 
         names = self._names.values()
         for row in names:
@@ -837,7 +820,7 @@ class Names(object):
             if row.source != NameRow.NAME_SOURCE_EXTRA and not save_companion:
                 continue
 
-            if self._classify:
+            if self._cfg.classify:
                 hashtypes = row.hashtypes
                 if not hashtypes:
                     hashtypes = set()
@@ -861,7 +844,7 @@ class Names(object):
 
         # when this flag is set, lines are saved for each type above and classified 
         # into sections (helps a bit to detect bogus names)
-        if self._classify:
+        if self._cfg.classify:
             lines = default_lines #restore
 
             # may print like: bank > hashtypes (banks_first=True), or hashtypes > banks
@@ -933,7 +916,7 @@ class Names(object):
 
 
     def _include_missing(self, lines, hashtype, bank, header=False):
-        if self._hashtypes_missing and hashtype not in self._hashtypes_missing:
+        if self._cfg.skip_hastype(hashtype):
             return
 
         banks = self._missing.get(hashtype)
@@ -1012,3 +995,9 @@ class Names(object):
             filename = basename
 
         return filename
+
+    def get_weight(self, groupname, valuename):
+        return self._cfg.get_weight(groupname, valuename)
+
+    def sort_always(self):
+        return self._cfg.sort_always

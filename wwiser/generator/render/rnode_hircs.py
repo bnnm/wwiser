@@ -134,6 +134,7 @@ class RN_CAkSwitchCntr(RN_CAkHircNode):
                     for ntid in ntids:
                         self._render_next(ntid, txtp)
                 ws.gspaths.done()
+            ws.gspaths.sort(True)
             return
 
         #get current gamesync
@@ -256,6 +257,7 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
                     if not unreachable:
                         self._render_next(ntid, txtp)
                     ws.gspaths.done()
+                ws.gspaths.sort(True)
                 return
 
             # get current gamesync
@@ -402,6 +404,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
                     ws.gspaths.add(gtype, gname, gvalue)
                     #no subnodes
                     ws.gspaths.done()
+                ws.gspaths.sort(True)
                 return
 
             # get current gamesync

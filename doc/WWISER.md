@@ -195,10 +195,10 @@ They'll be automatically used if found in the bank dir (except *wwnames.db3*, th
 A few games may use **SoundbankInfo.json**, **(bankname).xml** and **(bankname).json** (also handled here). The editor optionally can generate those, but are less common.
 
 
-## REVERSING NAMES
-You can make a name list and put it in `wwnames.txt` and *wwiser* will use it, as long as those names are really used. For example the word `init` becomes ID *1355168291*, and when *wwiser* finds that ID it will show `init` nearby.
+## NAME LIST AND REVERSING NAMES
+When a game doesn't have companion `.xml` with names, you can make a name list and put it in `wwnames.txt` and *wwiser* will use it, as long as those names are really used. For example, include the word `init` in `wwnames.txt`, and when *wwiser* finds ID *1355168291* (that corresponds to that ID) it will show `init` nearby.
 
-Guessing random names isn't very useful, so instead sometimes it's possible to extract and create a list of strings from (decompressed) game files and executables, with software like `strings2.exe` or IDA. This often gets you most usable names even if companion files like *SoundbankInfo.xml* don't exist, or even if they do exist but some names are missing (particularly useful to get game variables).
+Guessing which names are actually used isn't easy, so instead sometimes it's possible to extract and create a list of strings from (decompressed) game files and executables, with software like `strings2.exe` or IDA. This often gets you many usable names even if companion files like *SoundbankInfo.xml* don't exist, or even if they do exist but some names are missing (particularly useful to get game variables).
 
 You may need to clean up the generated list (ex. `field_bgmi` instead of `field_bgm`). *wwiser* does some processing to the list to increase chances of finding good names though (for example `name="bgm01"` will become `name` and `bgm01`), and invalid names are automatically ignored.
 
@@ -207,6 +207,68 @@ You can also create names from related words, like you may find `play_bgm01` and
 Watch out for false positives though, since Wwise name hashing is very collision-prone. `init` becomes ID *1355168291*, but `hez2vro` also does.
 
 See https://github.com/bnnm/wwiser-utils for a guide and utils to help with reversing names.
+
+### Name flags
+You can add some special flags to `wwnames.txt` that alter some minor behaviors (not quite full program options). Just write the following text lines inside (flags aren't stable and may change without warning though).
+
+#### `#@nofuzzy`
+Disables "fuzzy matching". By default *wwiser* tries to match derived names, like `play_bgm01` may try to use `play_bgm02`. In rare cases (mainly when there are a lot of IDs/names) it may derive names that don't make much sense, like `play_bgm0g`, so this flag disables this fuzzy derivation.
+
+#### `#@classify-bank`
+When generating a clean list (`wwiser *.bnk -sl -sm`) names are written as loaded then missing names. This option writes names and IDs grouped by bank, which makes it easier to check for wrong names target missing IDs, but lists are bigger and names repeated per bank.
+
+#### `#@hashtypes-missing <types>`
+When generating a clean list (`wwiser *.bnk -sl -sm`) all missing IDS are printed under `### MISSING (type) NAMES` headers. This option limits missing types to those in the list (mainly to target and reverse certain IDs in `words.py` companion helper script)
+
+#### `#@sort-always`
+For events that change depending of parameters (`play_bgm (music=m01)`, `play_bgm (music=m02)`, etc) *wwiser* sorts the variables so `.txtp` with names come first. However some objects are pre-sorted in bnk. This flags also sorts pre-sorted names, that may result in better names.
+
+#### `#@sort-weight (param) (weight)`
+Sorting variables (see above) is done alphabetically, and "any" (`var=-`) goes first. This flag alters how sorting is done by giving `value` in `key=value` params weight (default weight is 100). Examples:
+```
+    group=value 10           # exact match
+    group*=value* 20         # partial match
+    group=- 999              # by default "any" has highest
+    value 20                 # same as *=value
+    * 300                    # change default weight
+```
+
+This is mainly for some games where changing order results in better `.txtp` names
+
+** Spider-Man: Web of Shadows **
+By default "-" (any) is given highest priority since most games repeat txtp (`var=-`, `var=bgm1`, `var=bgm2` may output the same). In WoS, default makes output a bit hard to follow.
+``` 
+mx_sym_boss                        << (music_intensity=-), not written in txtp name
+mx_sym_boss (music_intensity=low)  << dupe of the above, skipped
+mx_sym_boss (music_intensity=high)
+mx_sym_boss (music_intensity=mid)
+```
+
+We can lower `(music_intensity=-)` priority like this:
+```
+#@sort-always
+#@sort-weight - 999
+```
+
+Now should generate like:
+```
+mx_sym_boss (music_intensity=low)
+mx_sym_boss (music_intensity=high)
+mx_sym_boss (music_intensity=mid)
+mx_sym_boss                        << dupe of low
+```
+
+
+** Elden Ring **
+By default it generates a bunch of txtp with `FieldBoss_Lvxx` names first, then some more readable `MidBoss_(name)` names later, that are considered dupes. This reorders names a bit to prioritize MidBoss names:
+```
+#@sort-weight MidBoss* 10
+#@sort-weight MultiHostile* 15
+#@sort-weight FieldStrong* 20
+#@sort-weight FieldBoss* 20
+#@sort-weight c* 25
+#@sort-weight * 100
+```
 
 
 ## TXTP GENERATION

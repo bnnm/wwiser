@@ -494,8 +494,11 @@ class TxtpSimplifier(object):
         return
 
     def _set_duration(self, node, seg_node):
+        if node.config.playevent:
+            return
+
         if node != seg_node and node.config.duration:
-            logging.info("txtp: found duration inside duration")
+            logging.info("txtp: found duration inside duration") #should only happen with playevents
             return
 
         if node.sound and node.sound.clip:

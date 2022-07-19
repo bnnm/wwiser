@@ -219,6 +219,8 @@ class PropertyCalculator(object):
         return self._get_bus(bnode.bparent)
 
     def is_bus_usable(self, bbus):
+        if not bbus or not bbus.props:
+            return
         return bbus.props.busvolume > _VOLUME_SILENT and bbus.props.outputbusvolume > _VOLUME_SILENT
 
     def _clamp(self):

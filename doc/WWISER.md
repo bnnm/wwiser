@@ -322,6 +322,8 @@ You need to load all related banks at once then generate to ensure everything wo
 
 Sometimes after loading everything you may still get WARNINGs about missing audio. First, make sure you *really* have every bank, as some games hide them inside compressed files. Then, sometimes there is no way to fix those errors and can be ignored, since a `.bnk` may simply contain garbage (Wwise does little clean-up when creating it, for some reason), though *wwiser* tries minimize those missing errors.
 
+#### Missing memory audio
+A special case is Unreal Engine 4's Wwise plugin. Often Wwise games load bnks in RAM with `.wem` inside ("memory audio", instead of loose `.wem` that are streamed audio). *wwiser* could warn about this *missing memory audio* if not found. However, recent versions of UE4+Wwise have a special "Event-Based Packaging" that creates many small .bnk with (usually) a single event, and instead puts memory/streamed/prefetch `.wem` audio in `.uasset` files. This case can't be fully detected, so those `.wem` should be extracted and used like regular `.wem`.
 
 ### TXTP errors
 Sometimes when you try to open the files just won't play. *wwiser* is reasonably accurate, but typical issues are:

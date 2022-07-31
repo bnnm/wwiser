@@ -296,7 +296,8 @@ class TxtpPrinter(object):
         elif sound.source.internal and not self._txtpcache.bnkskip:
             # internal/memory stream
             bankname = sound.nsrc.get_root().get_filename()
-            media = self._txtpcache.mediaindex.get_media_index(bankname, sound.source.tid)
+            mdi = self._txtpcache.mediaindex
+            media = mdi.get_media_index(bankname, sound.source.tid)
             extension = sound.source.extension
             if self._txtpcache.alt_exts:
                 extension = sound.source.extension_alt
@@ -305,12 +306,20 @@ class TxtpPrinter(object):
                 bankname, index = media
                 name += "%s #s%s" % (bankname, index + 1)
                 info += "  ##%s.%s" % (sound.source.tid, extension) #to check source in info tree
-                if sound.source.plugin_wmid:
-                    info += " ##unsupported wmid"
+            elif sound.source.internal_ebp:
+                # memory audio in UE4 may be in a RAM .uasset, but .bnk has no way to known this so allow as loose .wem
+                name = name + "%s.%s" % (sound.source.tid, extension)
+                info += "  ##memory"
+                mdi.set_ebp(True)
             else:
+                # old memory audio must be in a bnk
                 name = "?" + name + "%s.%s" % (sound.source.tid, extension)
                 info += "  ##other bnk?"
                 self.has_unsupported = True
+
+            if sound.source.plugin_wmid:
+                info += " ##unsupported wmid"
+
             self.has_internals = True
             self._txtpcache.stats.register_bank(bankname)
 

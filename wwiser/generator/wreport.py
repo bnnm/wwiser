@@ -19,7 +19,10 @@ class Report(object):
 
         if mdi.get_missing_media():
             missing = len(mdi.get_missing_media())
-            logging.info("generator: WARNING! missing %s memory audio (load more banks?)", missing)
+            if mdi.get_ebp():
+                logging.info("generator: NOTICE! %s memory audio (extract .wem or load banks)", missing)
+            else:
+                logging.info("generator: WARNING! missing %s memory audio (load more banks?)", missing)
 
         # probably same as missing audio nodes
         #if reb.get_missing_nodes_loaded():

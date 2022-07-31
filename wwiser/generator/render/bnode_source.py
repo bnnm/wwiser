@@ -19,6 +19,14 @@ _CODEC_EXTENSIONS_OLD = {
  #0x0F: "---", #ANALYSISFILE
 }
 
+# Newer UE4 WW plugin allows "event-based packaging", that is, having a single .bnk with one event and
+# memory/prefetch/streamed wem in .uassets/ubulks. Plugin handles this transparently so user only defines
+# events and doesn't need to create/manage bnks manually (plugin also allows 1 bnk with N events).
+# Memory/prefetch/streams audio is still marked as such, but since flags are in the .uasset we don't know here
+# which is which (all look like loose .wem). Incidentally bank's hashname seems to be SB_<guid> (except Init.bnk).
+_MEMORY_ASSET_NEW = 135 #>=
+
+
 _LANGUAGE_IDS = {
     0x00: "SFX",
     0x01: "Arabic",
@@ -185,6 +193,8 @@ class AkBankSourceData(object):
 
         #0=bnk (always), 1/2=prefetch<>stream (varies with version)
         self.internal = (self.nstreamtype.value() == 0)
+        # no actual detection, just to indicate may be ignored
+        self.internal_ebp = self.internal and self.version and self.version >= _MEMORY_ASSET_NEW 
 
         # plugin info
         nsize = self.nsrc.find(name='uSize')

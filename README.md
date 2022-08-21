@@ -32,8 +32,7 @@ artificial ways to add reversed names (`wwnames.txt` and `wwnames.db3`).
 Be aware that depending on the bank size loading may be slow, memory usage high,
 dump output big, and *txtp* generation slow.
 
-*wwiser* requires *Python* installed (tested with *python3*, recent *python2*
-versions will probably/partially work). The viewer also needs a modern-ish browser.
+*wwiser* requires *Python 3* installed. The viewer also needs a modern-ish browser.
 
 Extra info:
 - *doc/WWISER.md*: detailed Wwise info and usage explanations

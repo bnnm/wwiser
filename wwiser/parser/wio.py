@@ -17,7 +17,7 @@ class FileReader(object):
 
     def _check(self, elem, size):
         if not elem or len(elem) != size:
-            raise ReaderError("can't read requested bytes (corrupted file?)")
+            raise ReaderError("can't read requested 0x%x bytes at 0x%x" % (size, self.current()))
 
     def __read(self, offset, type, size):
         if offset is not None:
@@ -184,7 +184,7 @@ class FileReader(object):
         self.skip(bytes)
         offset_after = self.current()
         if offset_before + bytes != offset_after or offset_after > self.size:
-            raise ReaderError("can't skip requested bytes (corrupted file?)")
+            raise ReaderError("can't skip requested 0x%x bytes at 0x%x" % (bytes, self.current()))
 
     def seek(self, offset):
         self.file.seek(offset, os.SEEK_SET)

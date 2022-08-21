@@ -3079,25 +3079,32 @@ def CAkBankMgr__ProcessHircChunk(obj):
 
     hirc_dispatch = get_hirc_dispatch(obj)
 
-    obj.u32('NumReleasableHircItem')
-    for elem in obj.list('listLoadedItem', 'AkListLoadedItem', obj.lastval):
+    count = 0
+    try:
+        obj.u32('NumReleasableHircItem')
+        for elem in obj.list('listLoadedItem', 'AkListLoadedItem', obj.lastval):
 
-        #AkBank::AKBKSubHircSection
-        if version <= 48:
-            elem.U32('eHircType').fmt(wdefs.AkBank__AKBKHircType)
-        else:
-            elem.U8x('eHircType').fmt(wdefs.AkBank__AKBKHircType)
-        hirc_type = elem.lastval
-        elem.U32('dwSectionSize').omax()
+            #AkBank::AKBKSubHircSection
+            if version <= 48:
+                elem.U32('eHircType').fmt(wdefs.AkBank__AKBKHircType)
+            else:
+                elem.U8x('eHircType').fmt(wdefs.AkBank__AKBKHircType)
+            hirc_type = elem.lastval
+            elem.U32('dwSectionSize').omax()
 
-        #Section.eHircType switch
-        try:
-            dispatch = hirc_dispatch.get(hirc_type, parse_hirc_default)
-            dispatch(elem)
-        except wmodel.ParseError as e:
-            elem.add_error(str(e))
+            #Section.eHircType switch
+            try:
+                dispatch = hirc_dispatch.get(hirc_type, parse_hirc_default)
+                dispatch(elem)
+            except wmodel.ParseError as e:
+                elem.add_error(str(e))
 
-        elem.consume()
+            elem.consume()
+            count += 1
+
+    except wio.ReaderError as e:
+        raise wio.ReaderError('failed parsing HIRC item %s' %  (count)) #from e ##chain
+
     return
 
 
@@ -3690,8 +3697,10 @@ def parse_chunk_akbk(obj):
 
 def parse_chunk(obj):
     #CAkBankMgr::LoadBank
+    chunk = None
     try:
         obj.four('dwTag').fmt(wdefs.chunk_type)
+        chunk = obj.lastval
         tag = obj.lastval
         obj.U32('dwChunkSize').omax()
 
@@ -3699,6 +3708,8 @@ def parse_chunk(obj):
         dispatch(obj)
     except wmodel.ParseError as e:
         obj.add_error(str(e))
+    except wio.ReaderError as e:
+        raise wio.ReaderError('failed parsing chunk %s' %  (chunk)) from e
 
     obj.consume()
     return
@@ -3800,12 +3811,32 @@ class Parser(object):
             return filename
 
         except wio.ReaderError as e:
-            logging.error("parser: error parsing %s (corrupted file?)" % (filename))
+            error_info = self._print_errors(e)
+            logging.error("parser: error parsing %s (corrupted file?), error:\n%s" % (filename, error_info))
+            #logging.exception also prints stack trace
         except Exception as e:
             logging.error("parser: error parsing " + filename, e)
 
         return None
 
+    def _print_errors(self, e):
+        import traceback
+
+        # crummy format exception, as python doesn't seem to offer anything decent
+        info = []
+        trace = traceback.format_exc()
+        trace_lines = trace.split('\n')
+        trace_lines.reverse()
+        for line in trace_lines:
+            target_msg = 'Error: '
+            if target_msg in line:
+                index = line.index(target_msg) + len(target_msg)
+                exc_info = '%s- %s' % ('  ' * len(info), line[index:])
+                info.append(exc_info)
+
+        #[exceptions.append(line) for line in msg_list if line.startswith('Exception:')]
+        text = '\n'.join(info)
+        return text
 
     def _process(self, r, filename):
         bank = wmodel.NodeRoot(r)

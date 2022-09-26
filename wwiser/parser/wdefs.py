@@ -56,6 +56,7 @@ bank_versions = [
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
     136, #0x88 Wwise 2019.2-B? *[Total War Saga: Troy (PC)-update]
     140, #0x8c Wwise 2021.1     [Disney Speedstorm (PC)]
+    141, #0x8c Wwise 2021.1-B?  [Overwatch (PC)]
    #144, #0x90 Wwise 2022.1-B1  (none known)
 ]
 

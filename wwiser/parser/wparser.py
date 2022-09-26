@@ -572,7 +572,7 @@ def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
 
     if cls.version <= 36: #36=UFC
         obj.u32('ulNumRTPC')
-    elif cls.version <= 140: #38=KOF12
+    elif cls.version <= 141: #38=KOF12
         obj.u16('ulNumRTPC')
     else: #
         obj.u16('uNumCurves')
@@ -2663,7 +2663,7 @@ def CAkAttenuation__SetInitialValues(obj, cls):
         num_curves = 4
     elif cls.version <= 89:
         num_curves = 5
-    elif cls.version <= 140:
+    elif cls.version <= 141:
         num_curves = 7
     else:
         num_curves = 19
@@ -3168,7 +3168,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
         obj.u32('dwProjectID')
         project_id = obj.lastval
 
-    if version <= 140:
+    if version <= 141:
         pass
     else:
         obj.u32('dwSoundBankType').fmt(wdefs.AkBankTypeEnum)
@@ -3179,7 +3179,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
         gap_size = chunk_size - 0x18 #there are always 0x08 after but not read by original code
     elif version <= 76:
         gap_size = chunk_size - 0x10
-    elif version <= 140:
+    elif version <= 141:
         gap_size = chunk_size - 0x14
     else:
         gap_size = chunk_size - 0x14 - 0x04 - 0x10

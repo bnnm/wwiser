@@ -20,7 +20,7 @@ Or from the command line: `wwiser [options] (files)`
 - `wwiser -h`
   - (shows all available actions)
 
-Loaded banks can be explored using the viewer, a web browser-based tool (if you'd
+Loaded banks can be explored using the *viewer*, a web browser-based tool (if you'd
 prefer a native GUI, please understand there are multiple reasons behind this),
 or dumped to a file. For best results load `init.bnk` then one or more related
 banks, since banks can point to data in other banks.
@@ -30,7 +30,9 @@ If companion files like *SoundbankInfo.xml* or *(bank name).txt* are found in th
 artificial ways to add reversed names (`wwnames.txt` and `wwnames.db3`).
 
 Be aware that depending on the bank size loading may be slow, memory usage high,
-dump output big, and *txtp* generation slow.
+dump output big, and *txtp* generation slow. Dumped `.xml` can be opened with a
+browser to see contents (like a simple html/GUI) but since they can be huge 
+browsers may run out of memory; the *viewer* is a safer bet (looks the same).
 
 *wwiser* requires *Python 3* installed. The viewer also needs a modern-ish browser.
 

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="#stylesheet" ?>
+<!DOCTYPE doc [
+  <!ELEMENT xsl:stylesheet (#PCDATA)>
+  <!ATTLIST xsl:stylesheet id ID #REQUIRED>
+]>
 <doc>
 
 <!-- STYLESHEET -->

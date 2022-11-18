@@ -149,6 +149,7 @@ class TxtpSimplifier(object):
             is_empty = len(node.children) == 0
             if is_empty:
                 self._kill_node(node)
+                return
 
             # Kill segments that don't play (would generate empty silence), seen in Doom Eternal (no duration)
             # and mass effect 2 (duration but no exit). But only do it in playlists, to allow Detroit's
@@ -156,7 +157,8 @@ class TxtpSimplifier(object):
             is_nosound = node.config.duration == 0
             is_noexit = node.config.exit == 0
             if is_nosound or is_noexit and self.is_playlist(node):
-                    self._kill_node(node)
+                self._kill_node(node)
+                return
 
         # set externals flag
         if node.is_sound() and node.sound.source and node.sound.source.plugin_external:

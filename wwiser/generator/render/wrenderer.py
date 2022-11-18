@@ -9,6 +9,11 @@ class Renderer(object):
         self._filter = filter
         self._ws = wwstate
 
+        # internals
+        self._node = None
+        self._ncaller = None
+        self._bstinger = None
+        self._btransition = None
 
     def get_generated_hircs(self):
         return wrenderer_util.GENERATED_BASE_HIRCS
@@ -65,19 +70,51 @@ class Renderer(object):
     def render_node(self, node):
         ncaller = node.find1(type='sid')
 
-        self._ws.reset() #each new node starts from 0
-
-        # initial render. if there are no combos this will be passed until final step
-        txtp = wtxtp.Txtp(self._txtpcache)
-        self._begin_txtp(txtp, node)
-
-        self._render_gs(node, txtp)
-
+        self._render_node(node)
         self._render_subs(ncaller)
 
 
+    # initial render. if there are no combos this will be passed until final step
+    def _render_node(self, node):
+        self._set_node(node) #no caller
+        self._ws.reset() # each new node starts from 0
+
+        txtp = self._make_txtp()
+        self._render_gs(txtp)
+
+    # derived render, depending on sub-nodes
+    def _render_subs(self, ncaller):
+        # get values before resetting
+        ws = self._ws
+        bstingers = ws.stingers.get_items()
+        btransitions = ws.transitions.get_items()
+
+        # stingers found during process
+        if bstingers:
+            for bstinger in bstingers:
+                self._ws.reset()
+                self._set_stinger(ncaller, bstinger)
+
+                txtp = self._make_txtp()
+                #self._render_last(txtp)
+                self._render_gs(txtp)
+
+        # transitions found during process
+        if btransitions:
+            for btransition in btransitions:
+                self._ws.reset()
+                self._set_transition(ncaller, btransition)
+
+                txtp = self._make_txtp()
+                #self._render_last(txtp)
+                self._render_gs(txtp)
+
+        # transition (stingers too probably) segments may also not exist (seen in Detroit)
+
+    #-------------------------------------
+
     # handle combinations of gamesyncs: "play_bgm (bgm=m01)", "play_bgm (bgm=m02)", ...
-    def _render_gs(self, node, txtp):
+    def _render_gs(self, txtp):
         ws = self._ws
 
         # SCs have regular states and "unreachable" ones. If we have GS bgm=m01 and SC bgm=m01/m02,
@@ -88,7 +125,7 @@ class Renderer(object):
         gscombos = ws.get_gscombos()
         if not gscombos:
             # no combo to re-render, skips to next step
-            self._render_sc(node, txtp)
+            self._render_sc(txtp)
 
         else:
             # re-render with each combo
@@ -97,10 +134,8 @@ class Renderer(object):
                 ws.reset_sc()
                 ws.reset_gv()
 
-                txtp = wtxtp.Txtp(self._txtpcache)
-                self._begin_txtp(txtp, node)
-
-                self._render_sc(node, txtp)
+                txtp = self._make_txtp()
+                self._render_sc(txtp)
 
                 if ws.scpaths.has_unreachables():
                     unreachables.append(gscombo)
@@ -112,15 +147,13 @@ class Renderer(object):
                     ws.reset_sc()
                     ws.reset_gv()
 
-                    txtp = wtxtp.Txtp(self._txtpcache)
-                    self._begin_txtp(txtp, node)
-
-                    self._render_sc(node, txtp, make_unreachables=True)
+                    txtp = self._make_txtp()
+                    self._render_sc(txtp, make_unreachables=True)
 
 
 
     # handle combinations of statechunks: "play_bgm (bgm=m01) {s}=(bgm_layer=hi)", "play_bgm (bgm=m01) {s}=(bgm_layer=lo)", ...
-    def _render_sc(self, node, txtp, make_unreachables=False):
+    def _render_sc(self, txtp, make_unreachables=False):
         ws = self._ws
 
         #TODO simplify: set scpaths to reachable/unreachable modes (no need to check sccombo_hash unreachables)
@@ -129,7 +162,7 @@ class Renderer(object):
         sccombos = ws.get_sccombos() #found during process
         if not sccombos:
             # no combo to re-render, skips to next step
-            self._render_gv(node, txtp)
+            self._render_gv(txtp)
 
         else:
             # re-render with each combo
@@ -142,10 +175,8 @@ class Renderer(object):
                 ws.set_sc(sccombo)
                 ws.reset_gv()
 
-                txtp = wtxtp.Txtp(self._txtpcache)
-                self._begin_txtp(txtp, node)
-
-                self._render_gv(node, txtp)
+                txtp = self._make_txtp()
+                self._render_gv(txtp)
 
 
             # needs a base .txtp in some cases
@@ -153,67 +184,37 @@ class Renderer(object):
                 ws.set_sc(None)
                 ws.reset_gv()
 
-                txtp = wtxtp.Txtp(self._txtpcache)
-                txtp.scparams_make_default = True
-                self._begin_txtp(txtp, node)
-
-                self._render_gv(node, txtp)
-                txtp.scparams_make_default = False
+                txtp = self._make_txtp(scdefs=True)
+                self._render_gv(txtp)
 
 
     # handle combinations of gamevars: "play_bgm (bgm=m01) {s}=(bgm_layer=hi) {bgm_rank=2.0}"
-    def _render_gv(self, node, txtp):
+    def _render_gv(self, txtp):
         ws = self._ws
 
         gvcombos = ws.get_gvcombos()
         if not gvcombos:
             # no combo to re-render, skips to next step
-            self._render_last(node, txtp)
+            self._render_last(txtp)
 
         else:
             # re-render with each combo
             for gvcombo in gvcombos:
                 ws.set_gv(gvcombo)
 
-                txtp = wtxtp.Txtp(self._txtpcache)
-                self._begin_txtp(txtp, node)
-
-                self._render_last(node, txtp)
+                txtp = self._make_txtp()
+                self._render_last(txtp)
 
 
     # final chain link
-    def _render_last(self, node, txtp):
+    def _render_last(self, txtp):
         txtp.write()
-
-
-    def _render_subs(self, ncaller):
-        ws = self._ws
-
-        # stingers found during process
-        bstingers = ws.stingers.get_items()
-        if bstingers:
-            for bstinger in bstingers:
-                txtp = wtxtp.Txtp(self._txtpcache)
-                self._begin_txtp_ntid(txtp, bstinger.ntid)
-                txtp.set_ncaller(ncaller)
-                txtp.set_bstinger(bstinger)
-                txtp.write()
-
-        # transitions found during process
-        btransitions = ws.transitions.get_items()
-        if btransitions:
-            for btransition in btransitions:
-                txtp = wtxtp.Txtp(self._txtpcache)
-                self._begin_txtp_ntid(txtp, btransition.ntid)
-                txtp.set_ncaller(ncaller)
-                txtp.set_btransition(btransition)
-                txtp.write()
-
-        # transition (stingers too probably) segments may also not exist (seen in Detroit)
 
     #-------------------------------------
 
-    def _begin_txtp(self, txtp, node):
+    def _begin_txtp(self, txtp):
+        node = self._node
+
         bnode = self._builder._init_bnode(node)
         if not bnode:
             return
@@ -226,9 +227,34 @@ class Renderer(object):
 
         return
 
-    def _begin_txtp_ntid(self, txtp, ntid):
-        node = self._builder._get_node_link(ntid)
-        self._begin_txtp(txtp, node)
+    def _make_txtp(self, scdefs=False):
+        txtp = wtxtp.Txtp(self._txtpcache)
+
+        txtp.scparams_make_default = scdefs
+        txtp.set_ncaller(self._ncaller)
+        txtp.set_bstinger(self._bstinger)
+        txtp.set_btransition(self._btransition)
+
+        self._begin_txtp(txtp)
+
+        return txtp
+
+    def _set_items(self, node, ncaller=None, bstinger=None, btransition=None):
+        self._node = node
+        self._ncaller = ncaller
+        self._bstinger = bstinger
+        self._btransition = btransition
+
+    def _set_node(self, node):
+        self._set_items(node)
+
+    def _set_stinger(self, ncaller, bstinger):
+        node = self._builder._get_node_link(bstinger.ntid)
+        self._set_items(node, ncaller=ncaller, bstinger=bstinger)
+
+    def _set_transition(self, ncaller, btransition):
+        node = self._builder._get_node_link(btransition.ntid)
+        self._set_items(node, ncaller=ncaller, btransition=btransition)
 
     #-------------------------------------
 

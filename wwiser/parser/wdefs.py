@@ -57,7 +57,8 @@ bank_versions = [
     136, #0x88 Wwise 2019.2-B? *[Total War Saga: Troy (PC)-update]
     140, #0x8c Wwise 2021.1     [Disney Speedstorm (PC)]
     141, #0x8c Wwise 2021.1-B?  [Overwatch (PC)]
-   #144, #0x90 Wwise 2022.1-B1  (none known)
+    144, #0x90 Wwise 2022.1-B   (none known)
+    145, #0x91 Wwise 2022.1     (none known)
 ]
 
 # no txtp support, even if forced

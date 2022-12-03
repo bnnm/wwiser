@@ -713,6 +713,14 @@ class TxtpSimplifier(object):
                 clamp_begin = seg_node.config.entry
                 clamp_end = seg_node.config.exit
 
+                # some games set entry=exit but that causes issues since overlaps don't work (GOW PS4)
+                # for the time being ignore those and hopefully doesn't affect much (in theory could use for weird transitions)
+                if clamp_begin == clamp_end: #and 
+                    # for now only for "step" mranseqs
+                    node_sub = node_playlist.children[0] #meh
+                    if node_sub.is_group_steps():
+                        continue
+
                 # extend begin/end if segment isn't part of a loop in some cases
                 if index == 0 and simple_groups:
                     clamp_begin = 0

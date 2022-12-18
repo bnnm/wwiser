@@ -901,7 +901,8 @@ class Names(object):
 
         lines.append('')
         if bank:
-            lines.append('### %s NAMES (%s)' % (hashtype.upper(), bank))
+            infobank = self._get_infobank(bank)
+            lines.append('### %s NAMES (%s)' % (hashtype.upper(), infobank))
         else:
             lines.append('### %s NAMES' % (hashtype.upper()))
 
@@ -929,7 +930,8 @@ class Names(object):
         if header:
             lines.append('')
             if bank:
-                lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), bank))
+                infobank = self._get_infobank(bank)
+                lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), infobank))
             else:
                 lines.append('### MISSING %s NAMES' % (hashtype.upper()))
 
@@ -947,6 +949,16 @@ class Names(object):
             for bank in banks:
                 self._include_missing(lines, hashtype, bank, header=True)
 
+    def _get_infobank(self, bank):
+        basebank, _ = os.path.splitext(bank)
+        if not basebank.isnumeric():
+            return bank
+
+        row = self.get_namerow(basebank)
+        if not row or not row.hashname:
+            return bank
+
+        return "%s: %s" % (bank, row.hashname)
 
     def _save_lst_name(self, row, lines):
         #logging.debug("names: using '%s'", row.hashname)

@@ -75,8 +75,9 @@ class GeneratorFilterItem(object):
             parts = value.split('-')
             bankname = parts[0]
             index = parts[1].split('~')[0] #remove possible extra parts
-            self.value = bankname + '.bnk'
+            self.value = self.get_bankcomp(bankname + '.bnk')
             self.value_index = int(index)
+            print(self.value, self.value_index)
 
         else:
             # event names
@@ -84,31 +85,39 @@ class GeneratorFilterItem(object):
 
         return
 
+    def get_bankcomp(self, bankname):
+        if self.is_pattern:
+            return bankname
+
+        # use bank's hash when no wildcards are used, to improve detection
+        bankbase, __ = os.path.splitext(bankname)
+        if bankbase.isnumeric():
+            return bankname
+        bankhash = wfnv.Fnv().get_hash(bankbase)
+        return '%s.bnk' % (bankhash)
+
     def match(self, sid, hashname, classname, bankname, index):
 
+        # filter's accepted value
         value = self.value
+
+        # depending on filter, set things to compare (comps)
         if   self.use_sid:
             comps = [str(sid)]
         elif self.use_bank:
-            comps = [bankname]
-
-            # compare (name).bnk as (hash).bnk when no wildcards are used, to improve detection
-            if not self.is_pattern:
-                bankbase, __ = os.path.splitext(bankname)
-                if not bankbase.isnumeric():
-                    bankhash = wfnv.Fnv().get_hash(bankbase)
-                    comps = ['%s.bnk' % (bankhash)]
-
+            comps = [self.get_bankcomp(bankname)]
         elif self.use_class:
             comps = [classname]
         elif self.use_index:
+
             # index needs multiple fields, check index here and bank below
             if self.value_index != index:
                 return False
-            comps = [bankname]
+            comps = [self.get_bankcomp(bankname)]
         else:
             comps = [str(sid), hashname] # bnk and hashnames sometimes clash
 
+        # test desined external comp vs current item's filter value
         for comp in comps:
             if not comp:
                 continue

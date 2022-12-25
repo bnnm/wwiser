@@ -160,7 +160,11 @@ _LANGUAGE_SHORTNAMES = {
     "Vietnamese": 'vi',
 }
 
-_PLUGIN_SILENCE = 0x00650002
+_PLUGIN_SILENCE = set([
+    0x00650002, #standard
+    0x00000000, #probably a removed plugin (South Park: Stick of Truth)
+])
+
 _PLUGIN_GAIN = 0x008B0003
 
 _PLUGIN_IGNORABLE = set([
@@ -172,6 +176,7 @@ PLUGIN_NAME = {
     0x00640002: 'sine',
     0x00650002: 'silence',
     0x00660002: 'tone',
+    0x00000000: 'removed',
 }
 
 class AkBankSourceData(object):
@@ -259,7 +264,7 @@ class AkBankSourceData(object):
         self.plugin_ignorable = (plugin in _PLUGIN_IGNORABLE)
 
         # info 
-        self.is_plugin_silence = (plugin == _PLUGIN_SILENCE)
+        self.is_plugin_silence = (plugin in _PLUGIN_SILENCE)
 
         # config loaded later
         self.plugin_fx = None

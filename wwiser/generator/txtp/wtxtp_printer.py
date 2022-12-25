@@ -271,12 +271,14 @@ class TxtpPrinter(object):
             #silent/empty subtrack (ignored)
             name = "?.silent"
 
-        elif sound.source.plugin_id:
+        elif sound.source.plugin_id is not None:
             # generator plugin
             name = "?.plugin-%s" % (sound.source.plugin_name)
 
-            if sound.source.is_plugin_silence:
+            if   sound.source.is_plugin_silence and sound.source.plugin_fx:
                 mods += self._get_ms(' #B', sound.source.plugin_fx.duration)
+            elif sound.source.is_plugin_silence: # plugin "none" has no fx
+                pass
             else:
                 self.has_unsupported = True
 

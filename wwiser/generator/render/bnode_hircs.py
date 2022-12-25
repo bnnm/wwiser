@@ -698,16 +698,20 @@ class CAkMusicTrack(CAkParameterNode):
         clip.sound.fet = nfet.value()
         clip.sound.fsd = nfsd.value()
 
+        # sometimes sourceid 0 is used, meaning it has an eventid. But rarely
+        # AkBankSourceData with source id 0 and plugin "none" exits (South Park: Stick of Truth)
         sourceid = nsourceid.value()
-        if sourceid: #otherwise has eventid
-            source = streaminfos[sourceid]
-
+        source = streaminfos.get(sourceid)
+        if source:
             clip.sound.source = source
             clip.sound.nsrc = source.nsourceid
 
             clip.fields.prop(source.nstreamtype)
             if source.nsourceid != source.nfileid:
                 clip.fields.prop(source.nfileid)
+
+        elif not neventid:
+            self._barf("no source nor eventid found, report")
 
         return clip
 

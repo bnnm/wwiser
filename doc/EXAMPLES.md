@@ -719,3 +719,6 @@ bus hierarchy:
 - has BusVolume states with custom buses to silence regular/8bit layers
   - when MUS_8BIT=DISABLED, bus "MUSIC_8BIT" is silent
   - when MUS_8BIT=ENABLED, bus "MUSIC_2D" is silent
+
+## South Park: Stick of Truth
+- has musictracks that reference a non-existing plugin (set as type/etc None), ex. in `259427237`

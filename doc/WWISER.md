@@ -217,6 +217,9 @@ Disables "fuzzy matching". By default *wwiser* tries to match derived names, lik
 #### `#@classify-bank`
 When generating a clean list (`wwiser *.bnk -sl -sm`) names are written as loaded then missing names. This option writes names and IDs grouped by bank, which makes it easier to check for wrong names target missing IDs, but lists are bigger and names repeated per bank.
 
+#### `#@classify-bank-path`
+Same as the above, but includes banks with paths.
+
 #### `#@hashtypes-missing <types>`
 When generating a clean list (`wwiser *.bnk -sl -sm`) all missing IDS are printed under `### MISSING (type) NAMES` headers. This option limits missing types to those in the list (mainly to target and reverse certain IDs in `words.py` companion helper script)
 

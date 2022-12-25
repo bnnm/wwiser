@@ -40,7 +40,8 @@ class Names(object):
         self._names_fuzzy = {}
         self._db = None
         self._loaded_wwnames = {}
-        self._loaded_banknames = set()
+        self._loaded_banknames = set() #for used names only
+        self._current_bankpaths = {} #for existing banks
         self._missing = {}
         self._fnv = wfnv.Fnv()
         # flags
@@ -265,7 +266,13 @@ class Names(object):
         # add banks names (doubles as hashnames), first since it looks a bit nicer in list output
         for bank in banks:
             bankname = bank.get_root().get_bankname()
+            bankpath = bank.get_root().get_path()
+
             self._add_name(None, bankname, source=NameRow.NAME_SOURCE_EXTRA)
+
+            # might as well register now
+            self._current_bankpaths[bankname] = bankpath
+
 
         # parse files for each single bank
         for filename in filenames:
@@ -901,8 +908,8 @@ class Names(object):
 
         lines.append('')
         if bank:
-            infobank = self._get_infobank(bank)
-            lines.append('### %s NAMES (%s)' % (hashtype.upper(), infobank))
+            banktext = self._get_banktext(bank)
+            lines.append('### %s NAMES (%s)' % (hashtype.upper(), banktext))
         else:
             lines.append('### %s NAMES' % (hashtype.upper()))
 
@@ -930,8 +937,8 @@ class Names(object):
         if header:
             lines.append('')
             if bank:
-                infobank = self._get_infobank(bank)
-                lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), infobank))
+                banktext = self._get_banktext(bank)
+                lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), banktext))
             else:
                 lines.append('### MISSING %s NAMES' % (hashtype.upper()))
 
@@ -949,16 +956,24 @@ class Names(object):
             for bank in banks:
                 self._include_missing(lines, hashtype, bank, header=True)
 
-    def _get_infobank(self, bank):
+    def _get_banktext(self, bank):
+        bankname = bank
         basebank, _ = os.path.splitext(bank)
-        if not basebank.isnumeric():
-            return bank
+
+        if self._cfg.bank_paths:
+            bankpath = self._current_bankpaths.get(basebank)
+            if bankpath:
+                bankpath = bankpath.replace('\\', '/')
+                bankname = "%s/%s" % (bankpath, bankname)
+
+        if not basebank.isdigit():
+            return bankname
 
         row = self.get_namerow(basebank)
         if not row or not row.hashname:
-            return bank
+            return bankname
 
-        return "%s: %s" % (bank, row.hashname)
+        return "%s: %s" % (bankname, row.hashname)
 
     def _save_lst_name(self, row, lines):
         #logging.debug("names: using '%s'", row.hashname)

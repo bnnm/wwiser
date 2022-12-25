@@ -9,6 +9,7 @@ class Config(object):
         self.disable_fuzzy = False
         self.classify = False
         self.classify_bank = False
+        self.bank_paths = False
         self._hashtypes_missing = None # print only certain hashtypes
 
         self.sort_always = False
@@ -23,6 +24,9 @@ class Config(object):
             self.classify = True
         if line.startswith('#@classify-bank'): #implicit: sets the above
             self.classify_bank = True
+        if line.startswith('#@classify-bank-path'): #implicit: sets the above
+            self.classify_bank = True
+            self.bank_paths = True
 
         if line.startswith('#@hashtypes-missing'):
             line = line.replace('#@hashtypes-missing', '')
@@ -36,7 +40,9 @@ class Config(object):
     def add_lines(self, lines):
         if self.disable_fuzzy:
             lines.append('#@nofuzzy')
-        if self.classify_bank:
+        if self.classify_bank and self.classify_bank:
+            lines.append('#@classify-bank-path')
+        elif self.classify_bank:
             lines.append('#@classify-bank')
         elif self.classify:
             lines.append('#@classify')

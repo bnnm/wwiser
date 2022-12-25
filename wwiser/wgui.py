@@ -635,7 +635,6 @@ class Gui(object):
         outpath = filedialog.asksaveasfilename(initialfile=default_name, defaultextension="*.*", filetypes=filetypes)
         if not outpath:
             return
-        print(outpath)
 
         dump_type = None
         dump_types = (

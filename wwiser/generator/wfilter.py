@@ -77,7 +77,6 @@ class GeneratorFilterItem(object):
             index = parts[1].split('~')[0] #remove possible extra parts
             self.value = self.get_bankcomp(bankname + '.bnk')
             self.value_index = int(index)
-            print(self.value, self.value_index)
 
         else:
             # event names

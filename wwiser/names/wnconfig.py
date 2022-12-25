@@ -40,7 +40,7 @@ class Config(object):
     def add_lines(self, lines):
         if self.disable_fuzzy:
             lines.append('#@nofuzzy')
-        if self.classify_bank and self.classify_bank:
+        if self.classify_bank and self.bank_paths:
             lines.append('#@classify-bank-path')
         elif self.classify_bank:
             lines.append('#@classify-bank')

@@ -10,7 +10,7 @@ class TxtpRenamer(object):
 
     def __init__(self):
         self._items = []
-        self._skips = []
+        self._has_skips = False
         self.skip = False
 
     def add(self, items):
@@ -33,19 +33,29 @@ class TxtpRenamer(object):
             else:
                 regex = re.compile(re.escape(text_in), re.IGNORECASE)
 
-            item = (text_in, text_out, regex)
-            if text_out == self.SKIP_FLAG:
-                self._skips.append(item)
-            else:
-                self._items.append(item)
+            skip = text_out == self.SKIP_FLAG
+            if skip:
+                self._has_skips = True
+
+            item = (text_in, text_out, skip, regex)
+            self._items.append(item)
         return
 
     def apply_renames(self, name):
-        if not self._items and not self._skips:
+        if not self._items:
             return name
 
+        # special "skip this txtp if rename matches" flag (for variables), lasts until next call
+        # repeated at the end b/c it should go after cleanup (extra spaces) and final name
+        self.skip = False
+
+
         # base renames
-        for text_in, text_out, regex in self._items:
+        for text_in, text_out, skip, regex in self._items:
+            if skip and (regex and regex.match(name) or text_in in name):
+                self.skip = True
+                return name
+
             if regex:
                 name = regex.sub(text_out, name)
             else:
@@ -60,13 +70,11 @@ class TxtpRenamer(object):
 
         name.strip()
 
-        # special "skip this txtp if rename matches" flag (for variables), lasts until next call
-        # at the end b/c it should go after cleanup (extra spaces) and final name
-        self.skip = False
-
-        for text_in, text_out, regex in self._skips:
-            if regex and regex.match(name) or text_in in name:
-                self.skip = True
-                break
+        # skips after cleaning up
+        if self._has_skips:
+            for text_in, text_out, skip, regex in self._items:
+                if skip and (regex and regex.match(name) or text_in in name):
+                    self.skip = True
+                    return name
 
         return name

@@ -271,6 +271,10 @@ class TxtpPrinter(object):
             #silent/empty subtrack (ignored)
             name = "?.silent"
 
+        elif not sound.source:
+            #rare (ZoE2 HD)
+            name = "?.missing"
+
         elif sound.source.plugin_id is not None:
             # generator plugin
             name = "?.plugin-%s" % (sound.source.plugin_name)

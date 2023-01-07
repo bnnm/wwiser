@@ -1,8 +1,10 @@
+import logging
 import itertools
 from collections import OrderedDict
 from . import wparams
 from ... import wfnv
 
+MAX_COMBOS = 15
 
 # Sometimes (ex. Platinum games) set states control volumes, so musictracks must play or mute.
 # Usually if state is set volume becomes -96db (silenced) but it's also used to increase/decrease
@@ -181,7 +183,17 @@ class StateChunkPaths(object):
         elems = self._elems.values()
 
         # combos of existing variables (order doesn't matter here)
-        items = itertools.product(*elems)
+        totals = 1
+        for elem in elems:
+            totals *= len(elem)
+
+        if totals >= MAX_COMBOS:
+            # in rare cases (ZoE HD) there are too many silence combos
+            logging.info("generator: ignoring statechunk combo excess of %s (may need to pass manually)" % (totals))
+            items = elems
+        else:
+            items = itertools.product(*elems)
+        
         for item in items:
             scparam = StateChunkParams()
             scparam.adds(item)

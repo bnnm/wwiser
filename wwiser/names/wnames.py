@@ -815,6 +815,7 @@ class Names(object):
         lines = default_lines
         self._cfg.add_lines(lines)
 
+        has_companion = False
         names = self._names.values()
         for row in names:
             #save hashnames only, as they can be safely shared between games
@@ -825,6 +826,7 @@ class Names(object):
                 continue
             #save names not in xml/h/etc only, unless set to save extra
             if row.source != NameRow.NAME_SOURCE_EXTRA and not save_companion:
+                has_companion = True
                 continue
 
             if self._cfg.classify:
@@ -888,6 +890,9 @@ class Names(object):
 
         #             for id in ids:
         #                 lines.append('# %s' % (id))
+
+        if not save_companion and has_companion:
+            lines.append("\n### (more names found in companion files)\n")
 
         with open(outname, 'w', encoding='utf-8') as outfile:
             outfile.write('\n'.join(lines))

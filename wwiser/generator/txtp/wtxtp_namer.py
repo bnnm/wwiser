@@ -92,7 +92,12 @@ class TxtpNamer(object):
 
         # final name after path can be a bit too big
         if  txtp.txtpcache.is_windows:
-            fullpath = txtp.txtpcache.basedir + '/' + outname
+            # in GUI may outname may be a full path already
+            if ':' in outname:
+                fullpath = outname
+            else:
+                fullpath = txtp.txtpcache.basedir + '/' + outname
+
             if len(fullpath) > WINDOWS_MAX_PATH:
                 maxlen = WINDOWS_MAX_PATH - len(txtp.txtpcache.basedir) - 10
                 outname = "%s~%04i%s" % (outname[0:maxlen], txtp.txtpcache.stats.created, '.txtp')

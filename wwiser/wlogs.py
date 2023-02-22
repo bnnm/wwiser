@@ -45,6 +45,8 @@ class _GuiLogHandler(logging.Handler):
 
     def emit(self, message):
         msg = self.format(message)
-        self._txt.config(state='normal')
-        self._txt.insert('end', msg + '\n')
-        self._txt.config(state='disabled')
+        txt = self._txt
+        txt.config(state='normal')
+        txt.insert('end', msg + '\n')
+        txt.see('end')
+        txt.config(state='disabled')

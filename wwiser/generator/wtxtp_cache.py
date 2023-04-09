@@ -73,11 +73,11 @@ class TxtpCache(object):
 
     # when loading multiple bnk from different dirs we usually want all .txtp in the same base dir,
     # taken from the first .bnk
-    # just in case allow separate dirs when using the lang flag
     def get_basepath(self, node):
 
-        if self.lang:
-            return node.get_root().get_path()
+        # allow separate dirs when using the lang flag? (harder to use)
+        #if self.lang:
+        #    return node.get_root().get_path()
 
         if self._common_base_path is None:
             self._common_base_path = node.get_root().get_path()

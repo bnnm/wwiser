@@ -128,9 +128,10 @@ class Cli(object):
         with open(args.config, 'r', encoding='utf-8-sig') as f:
             for line in f:
                 line = line.strip()
+                line_command = line.split(' ')[0]
 
                 # start a new config 'chunk' (useful to set different filters/config per bank)
-                if line == '#@new' or line == '# @new' and not empty:
+                if line_command == '#@new' and not empty:
                     current = []
                     current += defaults
                     configs.append(current)
@@ -138,7 +139,7 @@ class Cli(object):
                     continue
 
                 # stop config (useful quick testing of new configs)
-                if line == '#@break' or line == '# @break':
+                if line_command == '#@break':
                     break
 
                 if line.startswith('#'):

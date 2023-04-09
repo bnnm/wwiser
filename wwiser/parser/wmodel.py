@@ -618,7 +618,7 @@ class NodeField(NodeElement):
             if row and row.hashname and self.__hashtype != wdefs.fnv_no:
                 return row.hashname
             return None
-        if attr == 'guidname' and self.__row:
+        if attr == 'guidname': # and self.__row
             row = self._get_namerow()
             if row:
                 return row.guidname

@@ -546,6 +546,7 @@ Filter types:
 Filter prefixes:
 - (no prefix): affect "outer" objects
 - `@`: affect "inner" nodes (part of an "outer" object")
+  - may use text to filter source nodes by guidname (since they don't have hashname)
 - `~`: affect "unused" nodes (any objects not referenced)
 - `/` or `-`: exclude (`/` is needed for the command line)
 
@@ -558,7 +559,9 @@ Examples:
 - `play_bgm_*`: only event .txtp that start with `play_bgm_`
 - `/play_sfx_*`: same, alt since command line gets confused by `-`
 - `@/12345`: exclude sub-node used inside generated objects (filters txtp parts)
-- `@12345`: not working (in effect filters everything)
+- `@12345`: not working (in effect would filter everything)
+- `@*bgm*`: include nodes that have "bgm" in their guidname
+- `@/*bgm*`: extclude nodes that have "bgm" in their guidname
 - `~12345`: include unused node (when filtering nodes)
 - `~/12345`: exclude unused node (use only when using *Skip normal*, otherwise gets odd results)
 

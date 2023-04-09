@@ -84,7 +84,7 @@ class RN_CAkHircNode(object):
         # filter HIRC nodes (for example drop unwanted calls to layered ActionPlay)
         filter = self._filter
         if filter and filter.active:
-            generate = filter.allow_inner(bnode.node, bnode.nsid)
+            generate = filter.allow_inner(bnode.node, bnode.nsid, bnode=bnode)
             if not generate:
                 return
 

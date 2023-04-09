@@ -108,7 +108,6 @@ class GeneratorFilterItem(object):
         elif self.use_class:
             comps = [classname]
         elif self.use_index:
-
             # index needs multiple fields, check index here and bank below
             if self.value_index != index:
                 return False
@@ -204,7 +203,7 @@ class GeneratorFilter(object):
         self._cfgs[_MODE_UNUSED] = GeneratorFilterConfig(_MODE_UNUSED, filters)
         return
 
-    def _allow(self, mode, node, nsid=None, hashname=None, classname=None, bankname=None, index=None):
+    def _allow(self, mode, node, nsid=None, hashname=None, classname=None, bankname=None, index=None, bnode=None):
         if not nsid:
             nsid = node.find1(type='sid')
         if not nsid:
@@ -217,13 +216,24 @@ class GeneratorFilter(object):
         classname = classname or node.get_name().lower()
         bankname = bankname or node.get_root().get_filename().lower()
         index = index or node.get_attr('index')
+        if mode == _MODE_INNER and classname == 'caksound':
+            hashname = bnode.sound.nsrc.get_attr('guidname')
 
         cfg = self._cfgs[mode]
 
         if not cfg.allow_all_objects and classname not in self._default_hircs:
             return False
 
-        allow = cfg.default_allow
+        # inner filtering "excludes" works ok, but "includes" only apply to sounds (otherwise would filter whole branches)
+        if mode == _MODE_INNER:
+            if classname == 'caksound':
+                allow = cfg.default_allow
+            else:
+                allow = True
+        else:
+            allow = cfg.default_allow
+
+
         for filter in cfg.filters:
             if filter.match(sid, hashname, classname, bankname, index):
                 allow = not filter.excluded
@@ -237,8 +247,8 @@ class GeneratorFilter(object):
     # Same, the difference between inner/outer being, if filter is 123456789 (outer) it should generate
     # only that ID *and* generate any sub-nodes inside (inner). While if filter @/123456789 it
     # should exclude sub-nodes with that ID.
-    def allow_inner(self, node, nsid=None, hashname=None, classname=None, bankname=None, index=None):
-        return self._allow(_MODE_INNER, node, nsid, hashname, classname, bankname, index)
+    def allow_inner(self, node, nsid=None, hashname=None, classname=None, bankname=None, index=None, bnode=None):
+        return self._allow(_MODE_INNER, node, nsid, hashname, classname, bankname, index, bnode)
 
     # Same for unused. When filtering regular nodes, any others become "unused", so they are excluded by
     # default. You can include them back here.

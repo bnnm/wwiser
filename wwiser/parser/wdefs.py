@@ -1934,6 +1934,27 @@ CAkGuitarDistortion__AkDistortionType = wfmt.FormatterLUT({
   0x4: "CLIP",
 })
 
+CAkHarmonizerFX__AkInputType = wfmt.FormatterLUT({
+  0x0: "ASINPUT",
+  0x1: "CENTER",
+  0x2: "STEREO",
+  0x3: "3POINT0",
+  0x4: "4POINT0",
+  0x5: "5POINT0",
+  0x6: "LEFTONLY",
+})
+
+CAkHarmonizerFX__AkFilterType_0 = wfmt.FormatterLUT({
+  0x0: "NONE",
+  0x1: "LOWSHELF_0",
+  0x2: "PEAKINGEQ_0",
+  0x3: "HIGHSHELF_0",
+  0x4: "LOWPASS_0",
+  0x5: "HIGHPASS_0",
+  0x6: "BANDPASS_0",
+  0x7: "NOTCH_0",
+})
+
 
 # #############################################################################
 # VERSION SETUP

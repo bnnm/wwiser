@@ -368,6 +368,32 @@ def CAkGainFXParams__SetParamsBlock(obj, size):
 
     return
 
+#AkHarmonizer (v62+, BLands 2)
+def CAkHarmonizerFXParams__SetParamsBlock(obj, size):
+    #CAkHarmonizerFXParams::SetParamsBlock
+    obj = obj.node('AkHarmonizerFXParams')
+
+    count = 2
+    for elem in obj.list('Voice', 'AkPitchVoiceParams', count):
+        elem.U8x('bEnable')
+        elem.f32('fPitchFactor')
+        elem.f32('fGain')
+
+        subelem = elem.node('AkVoiceFilterParams') #Filter
+        subelem.U32('eFilterType').fmt(wdefs.CAkHarmonizerFX__AkFilterType_0)
+        subelem.f32('fFilterGain')
+        subelem.f32('fFilterFrequency')
+        subelem.f32('fFilterQFactor')
+
+    obj.U32('eInputType').fmt(wdefs.CAkHarmonizerFX__AkInputType)
+    obj.f32('fDryLevel')
+    obj.f32('fWetLevel')
+    obj.u32('uWindowSize')
+    obj.U8x('bProcessLFE')
+    obj.U8x('bSyncDry')
+
+    return
+
 
 #AkSynthOne
 def CAkSynthOneParams__SetParamsBlock(obj, size):
@@ -498,6 +524,7 @@ plugin_dispatch = {
     0x00810003: CAkMeterFXParams__SetParamsBlock,
     0x00870003: CAkStereoDelayFXParams__SetParamsBlock,
     0x008B0003: CAkGainFXParams__SetParamsBlock,
+    0x008A0003: CAkHarmonizerFXParams__SetParamsBlock,
     0x00940002: CAkSynthOneParams__SetParamsBlock,
     0x00C80002: CAkFxSrcAudioInputParams__SetParamsBlock,
     0x00041033: iZTrashDelayFXParams__SetParamsBlock,
@@ -537,7 +564,7 @@ def parse_plugin_params(obj, plugin_id, size_name, params_name, always=False):
     #obj = obj.node('AkPluginParam')
     #obj.omax(size) #only works in a subobj, meh
 
-    version = get_version(obj)
+    #version = get_version(obj)
     #if version <= 26 and plugin_id in plugin_dispatch_skip_26:
     #    dispatch = None
     #else:

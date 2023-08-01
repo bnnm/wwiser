@@ -59,6 +59,8 @@ class FormatterLUT(object):
 
         return self.fmt.format(type, value) + description
 
+    def get(self, val):
+        return self.enum.get(val)
 
 CHANNEL_FORMATS = {
     (1 << 0):  "FL", # front left

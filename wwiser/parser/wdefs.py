@@ -711,7 +711,6 @@ AkPropID_128 = wfmt.FormatterLUT({
   0x05: "BusVolume",
   0x06: "MakeUpGain",
   0x07: "Priority",
- #0x07: "StatePropNum", #same ID and used in priority methods too (decomp issue?)
   0x08: "PriorityDistanceOffset",
   0x09: "_FeedbackVolume", #removed
   0x0A: "_FeedbackLPF", #removed
@@ -781,6 +780,9 @@ AkPropID_128 = wfmt.FormatterLUT({
   #0x4A: AkPropID_NUM
 })
 AkPropID = None
+AkPropID_tids = {
+    "AttachedPluginFXID", "AttenuationID"
+}
 
 #046>= 088<=
 AkBank__AKBKSourceType_088 = wfmt.FormatterLUT({
@@ -1711,6 +1713,8 @@ AkModulatorPropID = wfmt.FormatterLUT({
   0x13: "Time_InitialDelay", #132~~
   #0x14: "NUM",
 })
+AkModulatorPropID_tids = {
+}
 
 #065>>
 AkJumpToSelType = wfmt.FormatterLUT({

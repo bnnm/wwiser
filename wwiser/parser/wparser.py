@@ -112,15 +112,27 @@ def AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls, modulato
 
     if modulator:
         prop_fmt = wdefs.AkModulatorPropID
+        prop_tids = wdefs.AkModulatorPropID_tids
     else:
         prop_fmt = wdefs.AkPropID
+        prop_tids = wdefs.AkPropID_tids
+    props = []
 
     obj.u8i('cProps')
     elems = obj.list('pProps', 'AkPropBundle', obj.lastval).preload()
     for elem in elems:
         elem.U8x('pID').fmt(prop_fmt)
+        props.append(prop_fmt.get(elem.lastval))
+
+    num = 0
     for elem in elems:
-        elem.uni('pValue')
+        # unions are autodetected as floats or low ints, but IDs aren't easy to do so
+        if props[num] in prop_tids:
+            elem.tid('pValue')
+        else:
+            elem.uni('pValue')
+
+        num += 1
 
 #    count = obj.lastval
 #    for i in range(count):

@@ -5,6 +5,7 @@ from .names import wnames
 from .parser import wparser
 from .viewer import wdumper, wview
 from .generator import wgenerator, wtags
+from . import wfnv
 
 
 class Cli(object):
@@ -193,6 +194,12 @@ class Cli(object):
             return False
         return True
 
+    def _add_files(self, files, filenames):
+        for file in files:
+            if not self._is_filename_ok(filenames, file):
+                continue
+            filenames.append(file)
+
     def _run(self, args):
         if args.log:
             wlogs.setup_file_logging()
@@ -203,20 +210,31 @@ class Cli(object):
         logging.info("%s (python %s)", title, platform.python_version())
 
 
-        #get expanded list
+        # get expanded list
+        fnv = wfnv.Fnv()
         filenames = []
         for file in args.files:
-            # manually test first, as glob expands "[...]" inside paths
+            # existing file: manually test as glob expands "[...]" inside paths
             if os.path.isfile(file):
-                if not self._is_filename_ok(filenames, file):
-                    continue
-                filenames.append(file)
-            else:
-                glob_files = glob.glob(file)
-                for glob_file in glob_files:
-                    if not self._is_filename_ok(filenames, glob_file):
-                        continue
-                    filenames.append(glob_file)
+                self._add_files([file], filenames)
+                continue
+
+            # wildcards: try globbed
+            glob_files = glob.glob(file)
+            self._add_files(glob_files, filenames)
+            if glob_files:
+                continue
+
+            # non-existing: to simplify using non-renamed banks, try hashname to id (sound/Init.bnk > sound/1355168291.bnk)
+            dir_name = os.path.dirname(file)
+            base_name = os.path.basename(file)
+            base_name, _ = os.path.splitext(base_name)
+            if base_name.isdigit():
+                continue
+            hash = fnv.get_hash(base_name)
+            new_file = os.path.join(dir_name, f'{hash}.bnk')
+            glob_files = glob.glob(new_file)
+            self._add_files(glob_files, filenames)
 
         if not filenames:
             logging.info("no valid files found")

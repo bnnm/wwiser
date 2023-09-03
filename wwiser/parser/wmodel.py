@@ -457,9 +457,8 @@ class NodeObject(NodeElement):
         self.append(child)
 
         # usually will fail by reading past object but in rare cases can generate too many fields
-        if count > 0x1FFFF: #arbitary max
-            raise ParseError("unlikely count", self)
-
+        if count > 0x28000: #arbitary max (seen ~139973 = 0x222C5)
+            raise ParseError("unlikely count %s" % count, self)
         if subname is None:
             subname = name
         return NodeListIterator(child, self.__r, subname, count)

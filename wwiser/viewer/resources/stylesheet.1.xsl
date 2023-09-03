@@ -128,7 +128,7 @@ body { font-family: monospace; font-size: 16px; white-space: nowrap; }
 <xsl:text disable-output-escaping="yes">
 <![CDATA[
 (function() {
-    var main = document.getElementById('view');
+    let main = document.getElementById('view');
     document.addEventListener('click', function(e) {
         if (!e.target)
             return;
@@ -142,6 +142,73 @@ body { font-family: monospace; font-size: 16px; white-space: nowrap; }
             return;
         }
     }, false);
+
+    // test option to middle-click on a wem and open it, browser support is kinda wonky
+    /*
+    let NEW_VERSION = 62;
+    let version = null;
+    function get_version() {
+        if (version)
+            return version;
+
+        let root_obj = document.querySelector('.root > .head > name');
+        if (!root_obj)
+            return null;
+        version = int(root_obj.textContent.substring(1));
+        return version;
+    }
+
+    function get_ext(source_obj) {
+        let version = get_version();
+        if (version >= NEW_VERSION )
+            return '.wem';
+
+        let plugin_fld = source_obj.querySelector('.head > .value');
+        if (plugin_fld.textContent.includes('[VORBIS]'))
+            return '.ogg';
+        if (plugin_fld.textContent.includes('[XMA]'))
+            return '.xma';
+        return '.wav'
+    }
+
+    document.addEventListener('auxclick', function(event) {
+        if (event.button != 1)
+            return;
+
+        let elem = event.target;
+        if (!elem.matches('a.target'))
+            return;
+
+        event.preventDefault();
+
+        let media_obj = elem.closest('.object'); //AkMediaInformation
+        if (!media_obj)
+            return;
+
+        let obj_name = media_obj.querySelector('.head > .name');
+        if (!obj_name.textContent.includes('AkMediaInformation'))
+            return;
+        let is_stream = false;
+        let source_obj = media_obj.parentElement.closest('.object');
+        let type_fld = media_obj.previousElementSibling;
+        if (type_fld) {
+            let type_value = type_fld.querySelector('.value');
+            is_stream = type_value.textContent.includes('[Streaming]');
+        }
+
+        let elem_id = elem.href.substring(elem.href.lastIndexOf('#') + 1);
+
+        if (is_stream) {
+            let filename = elem_id + get_ext(source_obj);
+            window.open(filename);
+            //window.open('file://' + filename);
+        }
+        else {
+            //would need to detect subsong N + pass TXTP to browser
+        }
+    })
+    */
+
 })();
 ]]>
 </xsl:text>
@@ -198,9 +265,11 @@ body { font-family: monospace; font-size: 16px; white-space: nowrap; }
 
     <xsl:template match="field|fld">
         <div class="field">
+            <xsl:if test="@offset|@of">
             <div class="offset">
                 <xsl:value-of select="@offset|@of"/>
             </div>
+            </xsl:if>
             <div class="head">
                 <span class="attr type"><xsl:value-of select="@type|@ty"/></span>
                 <span class="attr name"><xsl:value-of select="@name|@na"/></span>
@@ -227,9 +296,11 @@ body { font-family: monospace; font-size: 16px; white-space: nowrap; }
                     <span class="tooltip path"><span class="attr path"><xsl:value-of select="@path|@pa"/></span></span>
                 </xsl:if>
             </div>
+            <xsl:if test="*">
             <div class="body">
                 <xsl:apply-templates />
             </div>
+            </xsl:if>
         </div>
     </xsl:template>
 

@@ -7,23 +7,28 @@ class Externals(object):
     def __init__(self):
         self.active = False
         self._items = {}
+        self._locator = None
+    
+    def set_locator(self, locator):
+        self._locator = locator
 
     def get(self, item):
         return self._items.get(item)
 
-    def load(self, banks):
-        if not banks:
+    def load(self):
+        if not self._locator:
             return
 
-        # take first bank as base folder (like .txtp), not sure if current (wwiser's) would be beter
-        basepath = banks[0].get_root().get_path()
-        in_name = os.path.join(basepath, 'externals.txt')
-        if not os.path.exists(in_name):
+        files = self._locator.find_externals()
+        if not files:
             return
+        for file in files:
+            self._parse_externals(file)
 
-        logging.info("generator: found list of externals")
+    def _parse_externals(self, file):
+        logging.info("generator: loading externals in %s", file)
 
-        with open(in_name, 'r') as in_file:
+        with open(file, 'r') as in_file:
             current_tid = None
             current_list = None
             for line in in_file:

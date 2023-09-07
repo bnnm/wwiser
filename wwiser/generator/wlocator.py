@@ -35,6 +35,8 @@ class Locator(object):
         self._init = False
         self._wems = {}
         self._bnks = {}
+        self._externals = []
+        #self._registered_bnk_paths = set()
 
     def set_root_path(self, path):
         if path is None:
@@ -64,7 +66,15 @@ class Locator(object):
         # use first as base
         node = banks[0]
         self._version = node.get_root().get_version()
-        #self._common_base_path = node.get_root().get_path()
+
+        #for bank in banks:
+        #    path = node.get_root().get_path()
+        #    self._registered_bnk_paths.add(path)
+
+        # TODO improve performance?
+        # find wems from root-path and refer to them relative to txtp-path
+        self._prepare()
+
 
     #--------------------------------------------------------------------------
 
@@ -72,11 +82,6 @@ class Locator(object):
         # simple method: plain wem path (relative to txtp-path)
         if not self._auto_find or key is None:
             return self._wem_path
-
-        # comple method: find wems from root-path and refer to them relative to txtp-path
-        self._prepare()
-
-        # TODO improve performance?
 
         # since wem-path should be relative to txtp-path, detect number of ".." needed
         # ex. txtp-path = 'out/txtp/', wem in 'files/1.wem' > final path is '../../files/1.wem'
@@ -127,6 +132,9 @@ class Locator(object):
             key = bnk.lower()
         return self._find_path(key, lang, self._bnks)
 
+    def find_externals(self):
+        return self._externals
+
     def _prepare(self):
         if self._init:
             return
@@ -137,11 +145,18 @@ class Locator(object):
         else:
             exts_wems = ['.wem']
         exts_bnks = ['.bnk']
+        file_externals = ['externals.txt']
 
         # glob before certain version can't set root path nor check for multiple exts
         for root, _, files in os.walk(self._root_path):
 
             for file in files:
+                if file.lower() in file_externals:
+                    filepath = self._normalize_path(root) + file
+                    self._externals.append(filepath)
+                    # maybe should restrict only in bnk paths and root-path to avoid loading extra stuff, but externals aren't common
+                    continue
+
                 bn, ext = os.path.splitext(file)
 
                 key = None

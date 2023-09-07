@@ -34,6 +34,7 @@ class Generator(object):
 
         self._txtpcache.locator = locator
         self._txtpcache.wwnames = wwnames
+        self._txtpcache.externals.set_locator( locator )
 
         # options
         self._generate_unused = False       # generate unused after regular txtp
@@ -184,7 +185,7 @@ class Generator(object):
 
     def _setup(self):
         self._setup_nodes()
-        self._txtpcache.externals.load(self._banks)
+        self._txtpcache.externals.load()
         return
 
     def _setup_nodes(self):

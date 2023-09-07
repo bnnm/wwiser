@@ -194,20 +194,20 @@ class Locator(object):
 
 
     # base path were txtp are generated
-    def get_txtp_path(self):
+    def get_txtp_fullpath(self):
         outdir = self._root_path #important in GUI since work dir may be different
         txtp_path = self._txtp_path
         if txtp_path:
             outdir = os.path.join(outdir, txtp_path)
         return outdir
 
-    def get_root_path(self):
+    def get_root_fullpath(self):
         return self._root_path #important in GUI since work dir may be different
 
     def get_wem_fullpath(self):
         if self._auto_find:
             return ''
-        outdir = self.get_txtp_path()
+        outdir = self.get_txtp_fullpath()
         if self._wem_path:
             outdir = os.path.join(outdir, self._wem_path)
 

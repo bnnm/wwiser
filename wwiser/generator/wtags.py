@@ -76,7 +76,7 @@ class Tags(object):
         if not files:
             return
 
-        outdir = self._locator.get_txtp_path()
+        outdir = self._locator.get_txtp_fullpath()
         if outdir:
             outdir = os.path.join(basepath, outdir)
             os.makedirs(outdir, exist_ok=True)
@@ -113,7 +113,7 @@ class Tags(object):
         logging.info("tags: start making tags for wem")
 
         # try in current dir
-        root_path = self._locator.get_root_path()
+        root_path = self._locator.get_root_fullpath()
 
         done = 0
         for root, _, files in os.walk(root_path):

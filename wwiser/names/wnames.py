@@ -269,6 +269,12 @@ class Names(object):
             bankpath = bank.get_root().get_path()
 
             self._add_name(None, bankname, source=NameRow.NAME_SOURCE_EXTRA)
+            if bankpath:
+                # just in case add paths (generally only useful in UE4 event-based banks though)
+                splitter = '\\' if '\\' in bankpath else '/'
+                items = bankpath.split(splitter)
+                for item in items:
+                    self._add_name(None, item, source=NameRow.NAME_SOURCE_EXTRA)
 
             # might as well register now
             self._current_bankpaths[bankname] = bankpath

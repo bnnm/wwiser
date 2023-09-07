@@ -281,7 +281,7 @@ class Gui(object):
 
         bframe = ttk.Frame(gframe, style='Buttons.TFrame')
         bframe.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._chk('ignore_version', bframe, "Ignore version check").pack(side=tk.RIGHT)
+        #self._chk('ignore_version', bframe, "Ignore version check").pack(side=tk.RIGHT)
         self._btn(bframe, "Unload bank", self._unload_banks).pack(side=tk.RIGHT, **self.style.pads_button)
 
     def _setup_options(self):
@@ -619,7 +619,7 @@ class Gui(object):
         # dumb normalizer (not needed but for consistency)
         filenames = [ item.replace('\\','/') for item in filenames ]
 
-        self.parser.set_ignore_version( self._fields['ignore_version'].get() )
+        #self.parser.set_ignore_version( self._fields['ignore_version'].get() )
         loaded_filenames = self.parser.parse_banks(filenames)
         for file in loaded_filenames:
             self.list_box.insert(tk.END, file)

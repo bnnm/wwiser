@@ -48,7 +48,7 @@ class Cli(object):
         p.add_argument('-l',  '--log',                  help="Write info to wwiser log (has extra messages)", action='store_true')
         p.add_argument('-v',  '--viewer',               help="Start the viewer", action='store_true')
         p.add_argument('-vp', '--viewer-port',          help="Set the viewer port", metavar='PORT', default=wview.DEFAULT_PORT)
-        p.add_argument('-iv', '--ignore-version',       help="Ignore bank version check", action='store_true')
+        #p.add_argument('-iv', '--ignore-version',      help="Ignore bank version check", action='store_true')
 
         p = parser.add_argument_group('companion file options')
         p.add_argument('-nl', '--names-lst',            help="Set wwnames.txt companion file (default: auto)", metavar='NAME')
@@ -263,9 +263,11 @@ class Cli(object):
     def _execute(self, args, filenames):
 
         # process banks
-        parser = wparser.Parser(ignore_version=args.ignore_version)
+        parser = wparser.Parser()
+        #parser.set_ignore_version(args.ignore_version)
         parser.parse_banks(filenames)
         banks = parser.get_banks()
+
 
         # load names
         names = wnames.Names()

@@ -56,7 +56,7 @@ bank_versions = [
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
     136, #0x88 Wwise 2019.2-B? *[Total War Saga: Troy (PC)-update]
     140, #0x8c Wwise 2021.1     [Disney Speedstorm (PC)]
-    141, #0x8c Wwise 2021.1-B?  [Overwatch (PC)]
+    141, #0x8d Wwise 2021.1-B?  [Overwatch (PC)]
     144, #0x90 Wwise 2022.1-B   (none known)
     145, #0x91 Wwise 2022.1     [Sea of Stars (PC)]
 ]
@@ -65,6 +65,8 @@ bank_versions = [
 partial_versions = {
   14, 26
 }
+
+ancient_versions = 25 #<=
 
 # Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions?
 # (all have special custom fields, that don't exist for regular versions).

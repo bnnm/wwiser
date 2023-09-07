@@ -3729,8 +3729,8 @@ def parse_chunk(obj):
 # #############################################################################
 
 class Parser(object):
-    def __init__(self, ignore_version=False):
-        self._ignore_version = ignore_version
+    def __init__(self):
+        #self._ignore_version = ignore_version
         self._banks = {}
         self._names = None
 
@@ -3763,6 +3763,12 @@ class Parser(object):
             version = wdefs.bank_custom_versions[version]
             root.set_custom(True)
 
+        # 'custom' versions start with bitflag 0x80*
+        if version & 0xFFFF0000 == 0x80000000:
+            logging.warning("parser: unknown custom version %x, may output errors (report)", version)
+            version = version & 0x0000FFFF
+            root.set_custom(True)
+
         # in rare cases header is slightly encrypted with 32b values x4, in the game's init code [LIMBO demo, World of Tanks]
         # simulate with a xorpad file (must start with 32b 0, 32b0 then 32b x4 with xors in bank's endianness)
         if version & 0x0FFFF000:
@@ -3774,14 +3780,21 @@ class Parser(object):
                 with open(path, 'rb') as f:
                     xorpad = f.read()
             except:
+                # too limited to recover
                 raise wmodel.VersionError("encrypted bank version (needs xorpad.bin)", -1)
             r.set_xorpad(xorpad)
             r.skip(-4)
             version = r.u32() #re-read unxor'd
 
+        # overwrite for cursom versions
         root.set_version(version)
-        if not self._ignore_version and version not in wdefs.bank_versions:
-            raise wmodel.VersionError("unsupported bank version %i" % (version), -1)
+        if version not in wdefs.bank_versions: #not self._ignore_version and 
+            # allow since there shouldn't be that many changes from known versions
+            if version <= wdefs.ancient_versions:
+                logging.warning("parser: support for version %i is incomplete and may output errors (can't fix)", version)
+            else:    
+                logging.warning("parser: unknown bank version %i, may output errors (report)", version)
+            #raise wmodel.VersionError("unsupported bank version %i" % (version), -1)
 
         r.seek(current)
 
@@ -3895,8 +3908,8 @@ class Parser(object):
         for bank in self._banks.values():
             bank.set_names(names)
 
-    def set_ignore_version(self, value):
-        self._ignore_version = value
+    #def set_ignore_version(self, value):
+    #    self._ignore_version = value
 
     def unload_bank(self, filename):
         if filename in self._banks:

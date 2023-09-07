@@ -22,7 +22,7 @@ from . import wlang
 
 class Generator(object):
     def __init__(self, banks, locator, wwnames=None):
-        self._banks = banks
+        self._banks = banks #BEWARE this will be pre-processed
 
         self._globalsettings = wglobalsettings.GlobalSettings()
         self._builder = wbuilder.Builder(self._globalsettings)
@@ -147,24 +147,11 @@ class Generator(object):
 
     #--------------------------------------------------------------------------
 
-    def generate(self):
-        try:
-            logging.info("generator: start")
-            self._prepare_lang()
-
-            self._setup()
-            self._write_normal()
-            self._write_unused()
-            self._report()
-
-        except Exception: # as e
-            logging.warn("generator: PROCESS ERROR! (report)")
-            logging.exception("")
-            raise
-        return
+    def _prepare(self):
+        self._prepare_lang()
+        self._prepare_banks()
 
     def _prepare_lang(self):
-
         # info
         if self._txtpcache.lang:
             info = self._txtpcache.lang
@@ -178,6 +165,41 @@ class Generator(object):
                     logging.info(f"- {fullname} [{shortname}]")
                 self._txtpcache.lang = langs.items[0][0]
 
+    def _prepare_banks(self):
+        # removes localized banks of other langs, to avoid processing (would count as dupes)
+
+        banks = []
+        for bank in self._banks:
+            root = bank.get_root()
+            bankname = root.get_filename()
+            bankpath = root.get_path()
+
+            if self._txtpcache.lang:
+                lang = wlang.Lang(bank)
+                if not lang.matches(self._txtpcache.lang):
+                    logging.debug("generator: ignored %s lang in %s/%s", lang.fullname, bankpath, bankname)
+                    continue
+            banks.append(bank)
+
+        self._banks = banks
+
+    #--------------------------------------------------------------------------
+
+    def generate(self):
+        try:
+            logging.info("generator: start")
+            self._prepare()
+
+            self._setup()
+            self._write_normal()
+            self._write_unused()
+            self._report()
+
+        except Exception: # as e
+            logging.warn("generator: PROCESS ERROR! (report)")
+            logging.exception("")
+            raise
+        return
 
     def _report(self):
         wreport.Report(self).report()
@@ -196,13 +218,6 @@ class Generator(object):
             version = root.get_version()
             bank_id = root.get_id()
             bankname = root.get_filename()
-            bankpath = root.get_path()
-
-            if self._txtpcache.lang:
-                lang = wlang.Lang(bank)
-                if not lang.matches(self._txtpcache.lang):
-                    logging.debug("generator: ignored %s lang in %s/%s", lang.fullname, bankpath, bankname)
-                    continue
 
             if version in wdefs.partial_versions:
                 logging.warning("generator: WARNING, ignored unsupported bank version %s (can't make .txtp)", version)
@@ -270,7 +285,6 @@ class Generator(object):
         self._move_wems()
         return
    
-
 
     def _write_normal(self):
         # save nodes in bank order rather than all together (allows fine tuning bank load order)

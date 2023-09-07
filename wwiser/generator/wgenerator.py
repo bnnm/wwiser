@@ -21,7 +21,7 @@ from . import wlang
 #******************************************************************************
 
 class Generator(object):
-    def __init__(self, banks, wwnames=None):
+    def __init__(self, banks, locator, wwnames=None):
         self._banks = banks
 
         self._globalsettings = wglobalsettings.GlobalSettings()
@@ -32,7 +32,7 @@ class Generator(object):
         self._renderer = wrenderer.Renderer(self._txtpcache, self._builder, self._ws, self._filter)
         self._mover = wmover.Mover(self._txtpcache)
 
-        self._txtpcache.locator.register_banks(banks)
+        self._txtpcache.locator = locator
         self._txtpcache.wwnames = wwnames
 
         # options
@@ -90,15 +90,6 @@ class Generator(object):
 
     #--------------------------------------------------------------------------
 
-    def set_root_path(self, path):
-        self._txtpcache.locator.set_root_path(path)
-
-    def set_txtp_path(self, path):
-        self._txtpcache.locator.set_txtp_path(path)
-
-    def set_wem_path(self, path):
-        self._txtpcache.locator.set_wem_path(path)
-
     def set_master_volume(self, volume):
         self._txtpcache.set_master_volume(volume)
 
@@ -144,16 +135,14 @@ class Generator(object):
     def set_x_include_fx(self, flag):
         self._txtpcache.x_include_fx = flag
 
-    def set_tags(self, tags):
-        # registers short > long event names
-        self._txtpcache.tags = tags
-        tags.set_txtpcache(self._txtpcache)
-
     def set_x_noloops(self, flag):
         self._txtpcache.x_noloops = flag
 
     def set_x_nameid(self, flag):
         self._txtpcache.x_nameid = flag
+
+    def set_tags(self, tags):
+        self._txtpcache.tags = tags  # registers short > long event names
 
     #--------------------------------------------------------------------------
 
@@ -445,5 +434,8 @@ class Generator(object):
     #--------------------------------------------------------------------------
 
     def _move_wems(self):
+        if not self._move:
+            return
+
         self._mover.move_wems()
         return

@@ -25,6 +25,10 @@ class Mover(object):
             self._nodes.extend(nsources)
 
     def move_wems(self):
+        if self._txtpcache.locator.is_auto_find():
+            logging.info("mover: can't move wems when using autofind")
+            return
+
         if not self._nodes:
             return
         for node in self._nodes:
@@ -46,15 +50,14 @@ class Mover(object):
 
         self._moved_sources[source.tid] = True #skip dupes
 
-        dir = self._txtpcache.get_txtp_dir()
-        if self._txtpcache.lang:
-            dir += source.subdir()
-
         nroot = node.get_root()
         in_dir = nroot.get_path()
-        out_dir = self._txtpcache.get_basepath(node)
+        out_dir = self._txtpcache.locator.get_wem_full(node)
 
-        in_name, out_name = self._get_names(source, in_dir, out_dir, dir)
+        if in_dir == out_dir:
+            return
+
+        in_name, out_name = self._get_names(source, in_dir, out_dir)
 
         if os.path.exists(out_name):
             if os.path.exists(in_name):
@@ -73,8 +76,8 @@ class Mover(object):
 
             elif in_dir != out_dir:
                 # by default it tries in the bank's dir, but in case of lang banks may need to try in other banks' folder
-                in_dir = self._txtpcache.get_basepath(node)
-                in_name, out_name = self._get_names(source, in_dir, out_dir, dir)
+                in_dir = self._txtpcache.locator.get_basepath(node)
+                in_name, out_name = self._get_names(source, in_dir, out_dir)
                 wem_exists = os.path.exists(in_name)
 
         if not wem_exists:
@@ -123,10 +126,8 @@ class Mover(object):
 
         return (in_name, out_name)
 
-    def _get_names(self, source, in_dir, out_dir, dir):
-        if dir:
-            out_dir = os.path.join(out_dir, dir)
-            os.makedirs(out_dir, exist_ok=True)
+    def _get_names(self, source, in_dir, out_dir):
+        os.makedirs(out_dir, exist_ok=True)
 
         in_extension = source.extension
         out_extension = source.extension

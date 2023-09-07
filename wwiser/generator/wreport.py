@@ -65,7 +65,7 @@ class Report(object):
         if stats.multitrack:
             logging.info("generator: multitracks detected (ignore, may generate in future versions)")
 
-        auto_find =  txc.locator.get_auto_find()
+        auto_find =  txc.locator.is_auto_find()
         move_info = ''
         if not auto_find and not gen._move:
             move_info = ' (move to wem folder)'

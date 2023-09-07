@@ -1,5 +1,5 @@
 import logging, math, os
-from . import wexternals, wstats, wlocator
+from . import wexternals, wstats
 from .render import wmediaindex
 from .txtp import wtxtp_renamer
 
@@ -35,12 +35,12 @@ class TxtpCache(object):
         self.x_include_fx = False
 
         # process helpers (passed around)
+        self.locator = None
         self.tags = None
         self.mediaindex = wmediaindex.MediaIndex()
         self.externals = wexternals.Externals()
         self.renamer = wtxtp_renamer.TxtpRenamer()
         self.stats = wstats.Stats()
-        self.locator = wlocator.Locator()
 
         # other helpers
         self.is_windows = os.name == WINDOWS_INTERNAL_NAME

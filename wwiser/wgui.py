@@ -7,7 +7,7 @@ from . import wversion, wlogs
 from .names import wnames
 from .parser import wparser
 from .viewer import wdumper, wview
-from .generator import wgenerator, wtags, wlang
+from .generator import wgenerator, wtags, wlocator, wlang
 
 
 class GuiStyle(ttk.Style):
@@ -605,6 +605,9 @@ class Gui(object):
         if not filenames:
             return
 
+        # dumb normalizer (not needed but for consistency)
+        filenames = [ item.replace('\\','/') for item in filenames ]
+
         self.parser.set_ignore_version( self._fields['ignore_version'].get() )
         loaded_filenames = self.parser.parse_banks(filenames)
         for file in loaded_filenames:
@@ -768,13 +771,39 @@ class Gui(object):
         return self._fields[name].get()
 
     def _generate_txtp_start(self):
+        self._process(txtp=True)
+
+    def _process(self, txtp=False):
+        try:
+            self._process_main(txtp=txtp)
+        except Exception as e:
+            logging.error("gui: process stopped on error")
+            logging.error(e)
+            #raise
+
+    def _process_main(self, txtp=False):
+
         banks = self.parser.get_banks()
         if not banks:
             messagebox.showerror('Error', 'Load one or more banks')
             return
 
-        try:
-            generator = wgenerator.Generator(banks, self.names)
+        # dirs
+        locator = wlocator.Locator()
+        locator.register_banks(banks)
+        locator.set_root_path( self._root_path )
+        locator.set_txtp_path( self._get_item('txtp_outdir') )
+        locator.set_wem_path( self._get_item('txtp_wemdir') )
+
+        # !tags.m3u
+        tags = wtags.Tags(banks, locator=locator, names=self.names)
+        tags.set_make_event( self._get_item('tags_event') )
+        tags.set_make_wem( self._get_item('tags_wem') )
+        #tags.set_add(args.tags_add)
+        #tags.set_limit(args.tags_limit)
+
+        if txtp:
+            generator = wgenerator.Generator(banks, locator, self.names)
             generator.set_filter( self._get_list('txtp_filter') )
             generator.set_filter_rest( self._get_item('txtp_filter_rest') )
             generator.set_filter_normal( self._get_item('txtp_filter_normal') )
@@ -786,10 +815,6 @@ class Gui(object):
             generator.set_renames( self._get_list('txtp_renames') )
 
             generator.set_statechunks_sd( self._get_item('txtp_statechunks_sd') )
-
-            generator.set_root_path( self._root_path )
-            generator.set_txtp_path( self._get_item('txtp_outdir') )
-            generator.set_wem_path( self._get_item('txtp_wemdir') )
 
             generator.set_master_volume( self._get_item('txtp_volume') )
             generator.set_lang( self._get_item('txtp_lang') )
@@ -808,20 +833,12 @@ class Gui(object):
             generator.set_x_silence( self._get_item('txtp_x_silence') )
             generator.set_x_include_fx( self._get_item('txtp_x_include_fx') )
 
-            tags = wtags.Tags(banks, self.names)
-            tags.set_make_event( self._get_item('tags_event') )
-            tags.set_make_wem( self._get_item('tags_wem') )
             generator.set_tags(tags)
 
             generator.generate()
 
-            # extra
-            tags.make()
-
-        except Exception as e:
-            logging.error("gui: generator stopped on error")
-            logging.error(e)
-            #raise
+        # extra
+        tags.make()
 
     #--------------------------------------------------------------------------
 

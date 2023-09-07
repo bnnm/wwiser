@@ -4,7 +4,7 @@ from . import wversion, wlogs, wtests
 from .names import wnames
 from .parser import wparser
 from .viewer import wdumper, wview
-from .generator import wgenerator, wtags
+from .generator import wgenerator, wtags, wlocator
 from . import wfnv
 
 
@@ -305,8 +305,16 @@ class Cli(object):
 
         txtp_rootdir = os.getcwd()
 
+
+        # dirs
+        locator = wlocator.Locator()
+        locator.register_banks(banks)
+        locator.set_root_path(txtp_rootdir)
+        locator.set_txtp_path(args.txtp_outdir)
+        locator.set_wem_path(args.txtp_wemdir)
+
         # !tags.m3u
-        tags = wtags.Tags(banks, names)
+        tags = wtags.Tags(banks, locator=locator, names=names)
         tags.set_make_event(args.tags_event)
         tags.set_make_wem(args.tags_wem)
         tags.set_add(args.tags_add)
@@ -314,7 +322,7 @@ class Cli(object):
 
         # generate txtp
         if args.txtp:
-            generator = wgenerator.Generator(banks, names)
+            generator = wgenerator.Generator(banks, locator, names)
             generator.set_generate_unused(args.txtp_unused)
             generator.set_filter(args.txtp_filter)
             generator.set_filter_rest(args.txtp_filter_rest)
@@ -329,10 +337,6 @@ class Cli(object):
             generator.set_dupes_exact(args.txtp_dupes_exact)
             generator.set_bank_order(args.txtp_bank_order)
             generator.set_renames(args.txtp_renames)
-
-            generator.set_root_path(txtp_rootdir)
-            generator.set_txtp_path(args.txtp_outdir)
-            generator.set_wem_path(args.txtp_wemdir)
 
             generator.set_move(args.txtp_move)
             generator.set_name_wems(args.txtp_name_wems)

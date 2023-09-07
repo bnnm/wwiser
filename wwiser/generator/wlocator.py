@@ -55,7 +55,7 @@ class Locator(object):
         else:
             self._wem_path = self._normalize_path(path)
 
-    def get_auto_find(self):
+    def is_auto_find(self):
         return self._auto_find
 
     def register_banks(self, banks):
@@ -180,26 +180,23 @@ class Locator(object):
 
     # base path were txtp are generated
     def get_txtp_path(self):
-        #_basepath = self._get_basepath(node)
-
         basepath = self._root_path #important in GUI since work dir may be different
         outdir = self._txtp_path
         if outdir:
             outdir = os.path.join(basepath, outdir)
         return outdir
 
+    def get_root_path(self):
+        return self._root_path #important in GUI since work dir may be different
 
-    # when loading multiple bnk from different dirs we usually want all .txtp in the same base dir,
-    # taken from the first .bnk
-    def _get_basepath(self, node):
-        return ''
-        # allow separate dirs when using the lang flag? (harder to use)
-        #if self.lang:
-        #    return node.get_root().get_path()
+    def get_wem_fullpath(self):
+        if self._auto_find:
+            return ''
+        outdir = self.get_txtp_path()
+        if self._wem_path:
+            outdir = os.path.join(outdir, self._wem_path)
 
-        if self._common_base_path is None:
-            self._common_base_path = node.get_root().get_path()
-        return self._common_base_path
+        return outdir
 
     # paths for txtp
     def _normalize_path(self, path, cleanroot=False):

@@ -5,6 +5,7 @@ from tkinter import ttk, font, filedialog, scrolledtext, messagebox
 
 from . import wversion, wlogs
 from .names import wnames
+from .tools import wconfigini
 from .parser import wparser
 from .viewer import wdumper, wview
 from .generator import wgenerator, wtags, wlocator, wlang
@@ -191,6 +192,8 @@ class Gui(object):
         self.viewer = wview.Viewer(self.parser)
         self.names = wnames.Names()
         self.parser.set_names(self.names)
+
+        self.cfg = wconfigini.ConfigIni()
 
         self._thread_banks = None
         self._thread_dump = None
@@ -579,6 +582,10 @@ class Gui(object):
         #current_dir = os.path.dirname(os.path.realpath(__file__)) #less useful
         current_dir = os.getcwd()
 
+        last_path = self.cfg.get('last_path')
+        if last_path:
+            current_dir = last_path
+
         is_dir = self._load_dir
         if is_dir:
             dirname = filedialog.askdirectory(parent=self.root, initialdir=current_dir)
@@ -597,10 +604,14 @@ class Gui(object):
             self._root_path = dirname
 
         else:
-            filenames = filedialog.askopenfilenames(filetypes = (("Wwise bank files","*.bnk"),("All files","*.*")))
+            filenames = filedialog.askopenfilenames(initialdir=current_dir, filetypes = (("Wwise bank files","*.bnk"),("All files","*.*")))
             # load base dir but only if there wasn't one (IOW uses first dir or first single .bnk)
             if filenames and not self._root_path: 
                 self._root_path = os.path.dirname(filenames[0])
+
+        # keep last dir around as otherwise it's kinda boring
+        self.cfg.set('last_path', self._root_path)
+        self.cfg.update()
 
         if not filenames:
             return

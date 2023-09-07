@@ -195,10 +195,10 @@ class Locator(object):
 
     # base path were txtp are generated
     def get_txtp_path(self):
-        basepath = self._root_path #important in GUI since work dir may be different
-        outdir = self._txtp_path
-        if outdir:
-            outdir = os.path.join(basepath, outdir)
+        outdir = self._root_path #important in GUI since work dir may be different
+        txtp_path = self._txtp_path
+        if txtp_path:
+            outdir = os.path.join(outdir, txtp_path)
         return outdir
 
     def get_root_path(self):

@@ -3912,6 +3912,9 @@ class Parser(object):
     #    self._ignore_version = value
 
     def unload_bank(self, filename):
-        if filename in self._banks:
-            logging.info("parser: unloading " + filename)
-            self._banks.pop(filename)
+        if filename not in self._banks:
+            logging.warn("parser: can't unload " + filename)
+            return
+
+        logging.info("parser: unloading " + filename)
+        self._banks.pop(filename)

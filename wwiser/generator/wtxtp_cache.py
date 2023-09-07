@@ -1,10 +1,8 @@
 import logging, math, os
-from . import wexternals, wstats
+from . import wexternals, wstats, wlocator
 from .render import wmediaindex
 from .txtp import wtxtp_renamer
 
-DEFAULT_OUTDIR = 'txtp/'
-DEFAULT_WEMDIR = 'wem/'
 WINDOWS_INTERNAL_NAME = 'nt'
 
 # config/cache/info for all txtp (updated during process)
@@ -12,8 +10,6 @@ WINDOWS_INTERNAL_NAME = 'nt'
 class TxtpCache(object):
     def __init__(self):
         # process config
-        self.outdir = DEFAULT_OUTDIR
-        self.wemdir = DEFAULT_WEMDIR
         self.name_wems = False
         self.name_vars = False
         self.volume_master = None
@@ -44,50 +40,13 @@ class TxtpCache(object):
         self.externals = wexternals.Externals()
         self.renamer = wtxtp_renamer.TxtpRenamer()
         self.stats = wstats.Stats()
+        self.locator = wlocator.Locator()
 
         # other helpers
         self.is_windows = os.name == WINDOWS_INTERNAL_NAME
         self.basedir = os.getcwd()
 
         self._common_base_path = None
-
-
-    # paths for txtp
-    def normalize_path(self, path):
-        #path = path or '' #better?
-        if path is None:
-            path = ''
-        path = path.strip()
-        path = path.replace('\\', '/')
-        if path and not path.endswith('/'):
-            path += '/'
-        return path
-
-    def get_txtp_dir(self):
-        dir = ''
-        if self.outdir:
-            dir += self.outdir
-        if self.wemdir:
-            dir += self.wemdir
-        return dir
-
-    # when loading multiple bnk from different dirs we usually want all .txtp in the same base dir,
-    # taken from the first .bnk
-    def get_basepath(self, node):
-
-        # allow separate dirs when using the lang flag? (harder to use)
-        #if self.lang:
-        #    return node.get_root().get_path()
-
-        if self._common_base_path is None:
-            self._common_base_path = node.get_root().get_path()
-        return self._common_base_path
-    
-    def set_basepath(self, banks):
-        if not banks:
-            return
-        node = banks[0]
-        self._common_base_path = node.get_root().get_path()
 
 
     def set_master_volume(self, volume):

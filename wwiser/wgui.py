@@ -7,7 +7,7 @@ from . import wversion, wlogs
 from .names import wnames
 from .parser import wparser
 from .viewer import wdumper, wview
-from .generator import wgenerator, wtags
+from .generator import wgenerator, wtags, wlang
 
 
 class GuiStyle(ttk.Style):
@@ -34,8 +34,6 @@ class GuiStyle(ttk.Style):
         # overwrite system default (windows/linux/max style) with a simple one
         # some widgets like TButton aren't configurable otherwise
         self.theme_use('default') #others: alt, winnative, clam, classic, default, vista, xpnative
-
-        #print(tk.Button().keys())
 
         font_main = self._get_font(('Segoe UI','Helvetica','Arial'))
         top_font = self._get_font(('Fixedsys', 'Consolas', 'Monospace', 'Fixedsys'))
@@ -91,6 +89,11 @@ class GuiStyle(ttk.Style):
             },
             'TEntry': {
                 'fieldbackground': '#50545b', 'foreground': color_text, 'padding': 3, 'font': (font_main, 11),
+            },
+            # not working properly (win/default style issue?)
+            'TCombobox': {
+                'font': (font_main, 10), 'padding': 3,
+                #'foreground': '#50545b',  'fieldbackground': '#50545b', 'selectbackground': '#50545b', 'background': '#50545b',
             },
         }
 
@@ -194,6 +197,8 @@ class Gui(object):
         self._thread_wwnames = None
         self._thread_txtp = None
 
+        self._root_path = None
+
         title = 'wwiser'
         if wversion.WWISER_VERSION:
             title += " " + wversion.WWISER_VERSION
@@ -256,8 +261,8 @@ class Gui(object):
 
         bframe = ttk.Frame(gframe, style='Buttons.TFrame')
         bframe.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._btn(bframe, "Load banks...", self._load_banks_files, main=True).pack(side=tk.LEFT, **self.style.pads_button)
-        self._btn(bframe, "Load dir...", self._load_banks_dir).pack(side=tk.LEFT, **self.style.pads_button)
+        self._btn(bframe, "Load dirs...", self._load_banks_dir, main=True).pack(side=tk.LEFT, **self.style.pads_button)
+        self._btn(bframe, "Load banks...", self._load_banks_files).pack(side=tk.LEFT, **self.style.pads_button)
         #self._chk('bnk_isdir', frame, "Load dir").pack(side=LEFT)
         self._load_dir = False
 
@@ -275,7 +280,6 @@ class Gui(object):
         bframe.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self._chk('ignore_version', bframe, "Ignore version check").pack(side=tk.RIGHT)
         self._btn(bframe, "Unload bank", self._unload_banks).pack(side=tk.RIGHT, **self.style.pads_button)
-
 
     def _setup_options(self):
         #self._sep(root).pack(side=tk.TOP, fill=X, pady=10)
@@ -298,25 +302,32 @@ class Gui(object):
         frame.grid_columnconfigure(0, minsize=80) #weight 2 = x2 of others
         row = 0
 
-        box = self._box('txtp_wemdir', frame, "Wem subdir:", "Subdir where .txtp expects .wem", width=20)
-        self._fields['txtp_wemdir'].set('wem/')
+
+        cmb = self._cmb('txtp_lang', frame, 'Language:', 'Current language (select when loading multiple localized banks or set to SFX to skip all localized banks)')
+        cmb[0].grid(row=row, column=0, sticky=tk.E)
+        cmb[1].grid(row=row, column=1, sticky=tk.W)
+        cmb[2].grid(row=row, column=2, sticky=tk.W)
+
+        row += 1
+
+        box = self._box('txtp_outdir', frame, "TXTP subdir:", "Subdir where .txtp are generated (relative to loaded dir)", width=20)
+        self._fields['txtp_outdir'].set('txtp/')
         box[0].grid(row=row, column=0, sticky=tk.E)
         box[1].grid(row=row, column=1, sticky=tk.W)
         box[2].grid(row=row, column=2, sticky=tk.W)
 
-        chk = self._chk('txtp_move', frame, "Move referenced .wem to subdir")
-        chk.grid(row=row, column=3, sticky=tk.W, columnspan=2)
-
         row += 1
 
-        # may be useful but 'unset' has special meaning, while an empty box may confuse users
-        # box = self._box('txtp_outdir', frame, "TXTP subdir:", "Subdir where .txtp goes", width=20)
-        # self._fields['txtp_outdir'].set('txtp/')
-        # box[0].grid(row=row, column=0, sticky=tk.E)
-        # box[1].grid(row=row, column=1, sticky=tk.W)
-        # box[2].grid(row=row, column=2, sticky=tk.W)
+        box = self._box('txtp_wemdir', frame, "Wem subdir:", "Subdir where .txtp expects .wem (set * for autofind all .wem/bnk, relative to loaded dir)", width=20)
+        self._fields['txtp_wemdir'].set('*')
+        box[0].grid(row=row, column=0, sticky=tk.E)
+        box[1].grid(row=row, column=1, sticky=tk.W)
+        box[2].grid(row=row, column=2, sticky=tk.W)
 
-        # row += 1
+        #chk = self._chk('txtp_move', frame, "Move referenced .wem to subdir")
+        #chk.grid(row=row, column=3, sticky=tk.W, columnspan=2)
+
+        row += 1
 
         box = self._box('txtp_volume', frame, "Volume:", "Master output volume (*=auto, 2.0=200%, 0.5=50%, -6dB=50%, 6dB=200%)", width=10)
         box[0].grid(row=row, column=0, sticky=tk.E)
@@ -412,8 +423,8 @@ class Gui(object):
         frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_labeltext)
         row = 0
 
-        chk = self._chk('txtp_lang', frame, "Mark .txtp and set .wem subdir per language")
-        chk.grid(row=row, column=0, sticky=tk.W)
+        #chk = self._chk('txtp_lang', frame, "Mark .txtp and set .wem subdir per language")
+        #chk.grid(row=row, column=0, sticky=tk.W)
 
         chk = self._chk('txtp_bnkmark', frame, "Mark .txtp that use internal .bnk (reference)")
         chk.grid(row=row, column=1, sticky=tk.W)
@@ -531,6 +542,18 @@ class Gui(object):
         self._fields[field] = var
         return chk
 
+    def _cmb(self, field, frame, text, info, width=18):
+        lbl = ttk.Label(frame, text=text)
+
+        cmb = ttk.Combobox(frame, width=width, state='readonly', values=None, style='TCombobox')
+
+        if info:
+            inf = ttk.Label(frame, text=info, style='Info.TLabel')
+        else:
+            inf = None
+
+        self._fields[field] = cmb
+        return (lbl, cmb, inf)
 
     def start(self):
         self.root.mainloop()
@@ -562,25 +585,36 @@ class Gui(object):
             if not dirname:
                 return
             filenames = []
-            for filename in os.listdir(dirname):
-                pathname = os.path.join(dirname, filename)
-                if not filename.endswith('.bnk') or not os.path.isfile(pathname):
-                    continue
-                filenames.append(pathname)
+            for root, _, files in os.walk(dirname):
+
+                for file in files:
+                    pathname = os.path.join(root, file)
+                    if not file.endswith('.bnk') or not os.path.isfile(pathname):
+                        continue
+                    filenames.append(pathname)
+
+            #TODO detect depending on all loaded dirs? (may load multiple times)
+            self._root_path = dirname
+
         else:
             filenames = filedialog.askopenfilenames(filetypes = (("Wwise bank files","*.bnk"),("All files","*.*")))
+            # load base dir but only if there wasn't one (IOW uses first dir or first single .bnk)
+            if filenames and not self._root_path: 
+                self._root_path = os.path.dirname(filenames[0])
 
         if not filenames:
             return
 
         self.parser.set_ignore_version( self._fields['ignore_version'].get() )
         loaded_filenames = self.parser.parse_banks(filenames)
-        for filename in loaded_filenames:
-            self.list_box.insert(tk.END, filename)
+        for file in loaded_filenames:
+            self.list_box.insert(tk.END, file)
 
         banks = self.parser.get_banks()
         names = self.names
         names.parse_files(banks, loaded_filenames)
+
+        self._update_langs()
 
 
     def _unload_banks(self):
@@ -598,6 +632,8 @@ class Gui(object):
         indexes.reverse() #in reverse order b/c indexes disappear
         for index in indexes:
             self.list_box.delete(index)
+
+        self._update_langs()
 
     #--------------------------------------------------------------------------
 
@@ -702,6 +738,19 @@ class Gui(object):
 
     #--------------------------------------------------------------------------
 
+    def _update_langs(self):
+        banks = self.parser.get_banks()
+        langs = wlang.Langs(banks)
+
+        # convert items 
+        items = []
+        for fullname, shortname in langs.items:
+            items.append(fullname)
+
+        cmb = self._fields["txtp_lang"]
+        cmb['values'] = [''] + items
+
+
     def _generate_txtp(self):
         if self._thread_txtp and self._thread_txtp.is_alive():
             logging.info("gui: generator still working (may be slow, be patient)")
@@ -738,11 +787,13 @@ class Gui(object):
 
             generator.set_statechunks_sd( self._get_item('txtp_statechunks_sd') )
 
-            generator.set_wemdir( self._get_item('txtp_wemdir') )
-            #generator.set_outdir( self._get_item('txtp_outdir') )
+            generator.set_root_path( self._root_path )
+            generator.set_txtp_path( self._get_item('txtp_outdir') )
+            generator.set_wem_path( self._get_item('txtp_wemdir') )
+
             generator.set_master_volume( self._get_item('txtp_volume') )
             generator.set_lang( self._get_item('txtp_lang') )
-            generator.set_move( self._get_item('txtp_move') )
+            #generator.set_move( self._get_item('txtp_move') )
             generator.set_bnkskip( self._get_item('txtp_bnkskip') )
             generator.set_bnkmark( self._get_item('txtp_bnkmark') )
             generator.set_name_wems( self._get_item('txtp_name_wems') )

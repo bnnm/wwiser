@@ -41,6 +41,7 @@ class Cli(object):
         p = parser.add_argument_group('base options')
         p.add_argument('files',                         help="Files to get (wildcards work)", nargs='*')
         p.add_argument('-m',  '--multi',                help="Treat files as multiple separate files", action='store_true')
+        p.add_argument('-r',  '--recursive',            help="Load banks recursively (use with wildcards like **/*.bnk)", action='store_true')
         p.add_argument('-c',  '--config',               help="Set config text file\nAllows same CLI options but in a text file\n(may split commands into multiple lines)\n(write '#@new' to start a new process in the same file)")
         p.add_argument('-d',  '--dump-type',            help="Set dump type: txt|xml|xsl|xsl_s|none (default: auto)", metavar='TYPE')
         p.add_argument('-dn', '--dump-name',            help="Set dump filename (default: auto)", metavar='NAME')
@@ -59,12 +60,12 @@ class Cli(object):
         p.add_argument('-sm', '--save-missing',         help="Include in saved list of missing IDs\n(IDs that should have hashnames but weren't found)", action='store_true')
         p.add_argument('-sc', '--save-companion',       help="Include in saved list companion names \n(loaded from companion XML/TXT/H, for a full list)", action='store_true')
         p.add_argument('-sa', '--save-all',             help="Include all loaded names, rather than only used names", action='store_true')
-        
+
         p = parser.add_argument_group('txtp options')
         p.add_argument('-g',  '--txtp',                 help="Generate TXTP", action='store_true')
         p.add_argument('-gu', '--txtp-unused',          help="Generate TXTP for unused nodes too\n(try loading other banks first)", action='store_true')
         p.add_argument('-go', '--txtp-outdir',          help="Set TXTP output dir (default: auto)")
-        p.add_argument('-gw', '--txtp-wemdir',          help="Set TXTP .wem dir (default: auto)")
+        p.add_argument('-gw', '--txtp-wemdir',          help="Set TXTP .wem dir (default: auto)", default='*')
         p.add_argument('-gm', '--txtp-move',            help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
         p.add_argument('-gv', '--txtp-volume',          help="Set master TXTP volume, in percent or decibels\nexamples: *=auto, 2.0=200%%, 0.5=50%%, -6dB=50%%, 6dB=200%%\n(negative dB needs equals: -gv=-6dB)", default='*')
 
@@ -91,7 +92,7 @@ class Cli(object):
         p.add_argument('-gbs','--txtp-bnkskip',         help="Treat internal (in .bnk) .wem as if external", action='store_true')
         p.add_argument('-gbm','--txtp-bnkmark',         help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
         p.add_argument('-gae','--txtp-alt-exts',        help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
-        p.add_argument('-gl', '--txtp-lang',            help="Mark .txtp and set .wem subdir per language\n(some games put voices/songs in 'English(US)' and such)", action='store_true')
+        p.add_argument('-gl', '--txtp-lang',            help="Set current language and mark localized .txtp with it\nUseful when loading bnks in different folders so other\nlangs are skipped (use 'SFX' to skip localized banks)\nAllows full names like 'English(US)' or shorhands like 'en'", metavar='LANG')
         p.add_argument('-gra','--txtp-random-all',      help="Make multiple .txtp per base 'random' group", action='store_true')
         p.add_argument('-grm','--txtp-random-multi',    help="Force multiloops to be selectable like a 'random'\n(ex. make .txtp per layer in multiloops files)", action='store_true')
         p.add_argument('-grf','--txtp-random-force',    help="Force base section to be selectable like a 'random'\n(ex. make .txtp per layer in all files)", action='store_true')
@@ -220,7 +221,12 @@ class Cli(object):
                 continue
 
             # wildcards: try globbed
-            glob_files = glob.glob(file)
+            if args.recursive:
+                if '**' not in file:
+                    file = '**/' + file
+                glob_files = glob.glob(file, recursive=True)
+            else:
+                glob_files = glob.glob(file)
             self._add_files(glob_files, filenames)
             if glob_files:
                 continue
@@ -231,10 +237,15 @@ class Cli(object):
             base_name, _ = os.path.splitext(base_name)
             if base_name.isdigit():
                 continue
+
             hash = fnv.get_hash(base_name)
-            new_file = os.path.join(dir_name, f'{hash}.bnk')
+            idname = f'{hash}.bnk'
+
+            new_file = os.path.join(dir_name, idname)
             glob_files = glob.glob(new_file)
             self._add_files(glob_files, filenames)
+            if glob_files:
+                logging.info("loading %s from %s", idname, base_name)
 
         if not filenames:
             logging.info("no valid files found")
@@ -292,6 +303,8 @@ class Cli(object):
             #left open until manually stopped
             viewer.stop()
 
+        txtp_rootdir = os.getcwd()
+
         # !tags.m3u
         tags = wtags.Tags(banks, names)
         tags.set_make_event(args.tags_event)
@@ -317,8 +330,10 @@ class Cli(object):
             generator.set_bank_order(args.txtp_bank_order)
             generator.set_renames(args.txtp_renames)
 
-            generator.set_outdir(args.txtp_outdir)
-            generator.set_wemdir(args.txtp_wemdir)
+            generator.set_root_path(txtp_rootdir)
+            generator.set_txtp_path(args.txtp_outdir)
+            generator.set_wem_path(args.txtp_wemdir)
+
             generator.set_move(args.txtp_move)
             generator.set_name_wems(args.txtp_name_wems)
             generator.set_name_vars(args.txtp_name_vars)

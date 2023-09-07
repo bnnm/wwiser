@@ -74,8 +74,6 @@ class Txtp(object):
         self._namer.node = node
         self._namer.ntid = ntid
 
-        self._basepath = self.txtpcache.get_basepath(node)
-
         return
 
     #--------------------------------------------------------------------------
@@ -192,9 +190,8 @@ class Txtp(object):
             return
 
         # prepare dirs and final output
-        outdir = self.txtpcache.outdir
+        outdir = self.txtpcache.locator.get_txtp_path()
         if outdir:
-            outdir = os.path.join(self._basepath, outdir)
             os.makedirs(outdir, exist_ok=True)
 
         outname = self._namer.get_outname(name, outdir)

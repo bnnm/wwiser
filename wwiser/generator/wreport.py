@@ -65,14 +65,15 @@ class Report(object):
         if stats.multitrack:
             logging.info("generator: multitracks detected (ignore, may generate in future versions)")
 
-        dir = txc.get_txtp_dir()
-        if not dir:
-            dir = '.'
+        auto_find =  txc.locator.get_auto_find()
+        move_info = ''
+        if not auto_find and not gen._move:
+            move_info = ' (move to wem folder)'
 
-        if stats.streams and not gen._move:
-            logging.info("generator: some .txtp (%s) use streams, move to %s", stats.streams, dir)
+        if stats.streams:
+            logging.info("generator: some .txtp (%s) use streams%s", stats.streams, move_info)
         if stats.internals and not txc.bnkskip:
-            logging.info("generator: some .txtp (%s) use .bnk, move to %s", stats.internals, dir)
+            logging.info("generator: some .txtp (%s) use .bnk%s", stats.internals, move_info)
             for bankname in txc.stats.get_used_banks():
                 logging.info("- %s", bankname)
 

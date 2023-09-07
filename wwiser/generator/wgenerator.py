@@ -2,6 +2,7 @@ import logging
 from . import wfilter, wmover, wtxtp_cache, wreport
 from .render import wbuilder, wrenderer, wstate, wglobalsettings
 from ..parser import wdefs
+from . import wlang
 
 
 
@@ -31,7 +32,7 @@ class Generator(object):
         self._renderer = wrenderer.Renderer(self._txtpcache, self._builder, self._ws, self._filter)
         self._mover = wmover.Mover(self._txtpcache)
 
-        self._txtpcache.set_basepath(banks)
+        self._txtpcache.locator.register_banks(banks)
         self._txtpcache.wwnames = wwnames
 
         # options
@@ -89,21 +90,20 @@ class Generator(object):
 
     #--------------------------------------------------------------------------
 
-    def set_outdir(self, path):
-        if path is None:
-            return
-        self._txtpcache.outdir = self._txtpcache.normalize_path(path)
+    def set_root_path(self, path):
+        self._txtpcache.locator.set_root_path(path)
 
-    def set_wemdir(self, path):
-        if path is None:
-            return
-        self._txtpcache.wemdir = self._txtpcache.normalize_path(path)
+    def set_txtp_path(self, path):
+        self._txtpcache.locator.set_txtp_path(path)
+
+    def set_wem_path(self, path):
+        self._txtpcache.locator.set_wem_path(path)
 
     def set_master_volume(self, volume):
         self._txtpcache.set_master_volume(volume)
 
-    def set_lang(self, flag):
-        self._txtpcache.lang = flag
+    def set_lang(self, elem):
+        self._txtpcache.lang = elem
 
     def set_name_wems(self, flag):
         self._txtpcache.name_wems = flag
@@ -145,6 +145,7 @@ class Generator(object):
         self._txtpcache.x_include_fx = flag
 
     def set_tags(self, tags):
+        # registers short > long event names
         self._txtpcache.tags = tags
         tags.set_txtpcache(self._txtpcache)
 
@@ -159,6 +160,7 @@ class Generator(object):
     def generate(self):
         try:
             logging.info("generator: start")
+            self._prepare_lang()
 
             self._setup()
             self._write_normal()
@@ -170,6 +172,22 @@ class Generator(object):
             logging.exception("")
             raise
         return
+
+    def _prepare_lang(self):
+
+        # info
+        if self._txtpcache.lang:
+            info = self._txtpcache.lang
+            logging.info("generator: selected localized bank '%s'", info)
+        else:
+            langs = wlang.Langs(self._banks, localized_only=True)
+            if len(langs.items) > 1: #maybe should only print >1?
+                logging.info("generator: multiple localized banks, will use first language")
+                #info = ", ".join(f"{lang[0]} [{lang[1]}]" for lang in langs.items)
+                for fullname, shortname in langs.items:
+                    logging.info(f"- {fullname} [{shortname}]")
+                self._txtpcache.lang = langs.items[0][0]
+
 
     def _report(self):
         wreport.Report(self).report()
@@ -187,7 +205,14 @@ class Generator(object):
             root = bank.get_root()
             version = root.get_version()
             bank_id = root.get_id()
-            bankname = bank.get_root().get_filename()
+            bankname = root.get_filename()
+            bankpath = root.get_path()
+
+            if self._txtpcache.lang:
+                lang = wlang.Lang(bank)
+                if not lang.matches(self._txtpcache.lang):
+                    logging.debug("generator: ignored %s lang in %s/%s", lang.fullname, bankpath, bankname)
+                    continue
 
             if version in wdefs.partial_versions:
                 logging.warning("generator: WARNING, ignored unsupported bank version %s (can't make .txtp)", version)

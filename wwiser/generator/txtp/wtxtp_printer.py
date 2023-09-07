@@ -259,12 +259,14 @@ class TxtpPrinter(object):
             name += '?'
             self.has_unsupported = True
 
-        name += self._txtpcache.wemdir
+
+        # prepare lang for some cases
+        lang_fullname = ''
         if sound.source and self._txtpcache.lang:
-            lang = sound.source.lang()
-            if lang: #in case it's blank for some sources yet filled for others
-                self.lang_name = lang
-            name += sound.source.subdir()
+            lang_fullname = sound.source.lang_fullname()
+            if lang_fullname and lang_fullname != 'SFX': #in case it's blank for some sources yet filled for others
+                self.lang_name = sound.source.lang_shortname()
+
 
         # add source
         if   sound.silent:
@@ -310,10 +312,12 @@ class TxtpPrinter(object):
 
             if media:
                 bankname, index = media
+                name += self._txtpcache.locator.find_bnk_path(bankname, lang_fullname)
                 name += "%s #s%s" % (bankname, index + 1)
                 info += "  ##%s.%s" % (sound.source.tid, extension) #to check source in info tree
             elif sound.source.internal_ebp:
                 # memory audio in UE4 may be in a RAM .uasset, but .bnk has no way to known this so allow as loose .wem
+                name += self._txtpcache.locator.find_wem_path(sound.source.tid, extension, lang_fullname)
                 name = name + "%s.%s" % (sound.source.tid, extension)
                 info += "  ##memory"
                 mdi.set_ebp(True)
@@ -335,6 +339,7 @@ class TxtpPrinter(object):
             if self._txtpcache.alt_exts:
                 extension = sound.source.extension_alt
 
+            name += self._txtpcache.locator.find_wem_path(sound.source.tid, extension, lang_fullname)
             name += "%s.%s" % (sound.source.tid, extension)
             self.has_streams = True
 

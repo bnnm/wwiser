@@ -6,7 +6,25 @@ and view banks, dump contents or make TXTP (used to simulate audio). It reads
 and shows all `.bnk` chunks, including *HIRC* (audio scripting) data, and properly
 identifies all fields. *wwiser* *can't* modify banks.
 
-Or from the command line: `wwiser [options] (files)`
+
+## MINI GUIDE
+How to play audio simulating the Wwise engine:
+- open *wwiser.pyz*
+- press *Load dirs...* and select a base directory with .bnk and .wem inside
+  - if game has `SoundbanksInfo.xml`, `Wwise_IDs.h`, `(bankname).txt` or similar files you are set,
+    otherwise you may want to generate a name list and put it as `wwnames.txt` in the base directory
+- press *View bank contents* to explore banks, if needed
+  - info is presented as-is and may be a bit hard to understand, but isn't really to generate TXTP
+- press *Generate TXTP*
+  - this will make files that simulate how Wwise plays audio, based on the bank info
+  - may want to set language to 'SFX' to skip voice lines
+- go loaded base directory and open `*.txtp`` with some player like *foobar2000/winamp/audacious* having installed the *vgmstream* plugin
+  - if generated TXTP aren't fully satisfactory, fiddle with the many TXTP Generator options
+- Wwise is very complex so this program can only help so much, you may want to read and understand *doc/WWISER.md*
+
+
+## OTHER INFO
+All actions (and more) can be done from the command line as well: `wwiser [options] (files)`
 - `wwiser bgm.bnk`
   - (dumps `bgm.bnk` info to `bgm.bnk.xml`)
 - `wwiser -d txt init.bnk bgm.bnk -o banks.txt`
@@ -22,8 +40,8 @@ Or from the command line: `wwiser [options] (files)`
 
 Loaded banks can be explored using the *viewer*, a web browser-based tool (if you'd
 prefer a native GUI, please understand there are multiple reasons behind this),
-or dumped to a file. For best results load `init.bnk` then one or more related
-banks, since banks can point to data in other banks.
+or dumped to a file. For best results make sure to load `init.bnk` then one or more
+related banks, since banks can point to data in other banks.
 
 If companion files like *SoundbankInfo.xml* or *(bank name).txt* are found in the
 `.bnk` dir they'll automatically be used to show names. *wwiser* also supports some
@@ -54,7 +72,7 @@ simple looping (some games loop like this), and a music module that dynamically
 plays multiple audio stems mixed in realtime (other games loop by using multiple
 separate files). You want *TXTP* to handle the later, but they also give consistency
 and (sometimes) original names to the former. In short, for games using Wwise audio
-don't play `.wem` but use *wwiser*'s generated `.txtp`.
+don't play `.wem` directly but use *wwiser*'s generated `.txtp`.
 
 
 ## WWISER OUTPUT

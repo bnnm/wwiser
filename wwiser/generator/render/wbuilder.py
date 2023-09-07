@@ -94,7 +94,7 @@ class Builder(object):
 
         # add to regular list
         if self._ref_to_node.get(ref) is not None: # common
-            logging.debug("generator: ignored repeated bank %s + id %s + idtype %s", bank_id, sid, idtype)
+            logging.debug("generator: ignored repeated node %s + id %s + idtype %s", bank_id, sid, idtype)
             return
         self._ref_to_node[ref] = node
 

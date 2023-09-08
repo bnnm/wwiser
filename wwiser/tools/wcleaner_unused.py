@@ -10,6 +10,8 @@ import hashlib
 _OUTPUT_FOLDER_MARK = '[wwiser-unused]'
 _OUTPUT_FOLDER_DUPE = '[wwiser-unused-dupes]'
 _IS_TEST = False
+_IS_TEST_DIR = False
+
 _HASH_BUF_SIZE = 0x8000
 
 _OBJECT_SOURCES = {
@@ -42,6 +44,7 @@ class CleanerUnused(object):
         self._root_dupe = None
         self._sizes_paths = {} #size > [path,...]
         self._hashes = {} #path > hash
+        self._dirs_moved = set()
 
     def process(self):
         self._prepare()
@@ -66,6 +69,7 @@ class CleanerUnused(object):
 
 
         self._move_files()
+        self._clean_dirs()
 
         logging.info("cleaner: moved %s files (%s errors)", self._moved, self._errors)
         if self._moved:
@@ -170,6 +174,9 @@ class CleanerUnused(object):
         file_move = outpath + file[len(root) :]
         file_move = os.path.normpath(file_move)
 
+        dir_move = os.path.dirname(file)
+        self._dirs_moved.add(dir_move)
+
         if _IS_TEST:
             print("move: ", file)
             print("      ", file_move)
@@ -219,3 +226,25 @@ class CleanerUnused(object):
         hash = md5.digest()
         self._hashes[file] = hash
         return hash
+
+    def _clean_dirs(self):
+        
+        dirs = list(self._dirs_moved)
+        dirs.reverse() #in case of subdirs this (probably) should remove them correctly
+
+        for dir in dirs:
+            if not os.path.isdir(dir):
+                logging.warning("cleaner: not a dir? %s", dir)
+                continue
+            items = os.listdir(dir)
+            if items:
+                continue
+
+            if _IS_TEST_DIR:
+                print("remove dir:", dir)
+                continue
+
+            try:
+                os.rmdir(dir)
+            except:
+                logging.warning("cleaner: dir error? %s", dir)

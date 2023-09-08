@@ -7,6 +7,7 @@ import os, logging, re
 # in the rare case of moving in root, would probably throw an error (whatevs)
 _OUTPUT_FOLDER_MARK = '[wwiser-unwanted]'
 _IS_TEST = False
+_IS_TEST_DIR = False
 
 # moves .wem/bnk to extra folders
 # - load all existing .wem/bnk from root-path
@@ -30,6 +31,7 @@ class CleanerUnwanted(object):
         self._errors = 0
         self._root_orig = None
         self._root_move = None
+        self._dirs_moved = set()
 
     def process(self):
         self._prepare()
@@ -53,6 +55,7 @@ class CleanerUnwanted(object):
 
 
         self._move_files()
+        self._clean_dirs()
 
         logging.info("cleaner: moved %s files (%s errors)", self._moved, self._errors)
         if self._moved:
@@ -161,6 +164,9 @@ class CleanerUnwanted(object):
         file_move = outpath + file[len(root) :]
         file_move = os.path.normpath(file_move)
 
+        dir_move = os.path.dirname(file)
+        self._dirs_moved.add(dir_move)
+
         if _IS_TEST:
             print("move: ", file)
             print("      ", file_move)
@@ -173,3 +179,25 @@ class CleanerUnwanted(object):
             self._moved += 1
         except:
             self._errors += 1
+
+    def _clean_dirs(self):
+        
+        dirs = list(self._dirs_moved)
+        dirs.reverse() #in case of subdirs this (probably) should remove them correctly
+
+        for dir in dirs:
+            if not os.path.isdir(dir):
+                logging.warning("cleaner: not a dir? %s", dir)
+                continue
+            items = os.listdir(dir)
+            if items:
+                continue
+
+            if _IS_TEST_DIR:
+                print("remove dir:", dir)
+                continue
+
+            try:
+                os.rmdir(dir)
+            except:
+                logging.warning("cleaner: dir error? %s", dir)

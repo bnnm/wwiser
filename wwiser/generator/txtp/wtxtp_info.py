@@ -234,9 +234,12 @@ class TxtpInfo(object):
         for ninfo in self._ninfo:
             node = ninfo.get_node()
             if node:
+                path = node.get_root().get_path()
                 bank = node.get_root().get_filename()
-                if bank not in banks:
-                    banks.append(bank)
+                path = self._txtpcache.locator.clean_path(path)
+                bankpath = path + bank  # print path from root as reference and for cleaner
+                if bankpath not in banks:
+                    banks.append(bankpath)
         self._banks = banks
         return banks
 

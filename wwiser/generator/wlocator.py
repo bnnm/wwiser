@@ -36,6 +36,8 @@ class Locator(object):
         self._wems = {}
         self._bnks = {}
         self._externals = []
+
+        self._files = []
         #self._registered_bnk_paths = set()
 
     def set_root_path(self, path):
@@ -109,7 +111,7 @@ class Locator(object):
             return paths[-1][0]
 
 
-        for path, dirlast, dirhash in paths:
+        for path, _, dirlast, dirhash in paths:
             if lang.isdigit():
                 if int(lang) == dirhash:
                     return path
@@ -174,11 +176,11 @@ class Locator(object):
                     continue
 
                 # save a list since may be multiple paths for the same wem/bnk, ex. localized audio or repeats for different updates
-                path = self._normalize_path(root, cleanroot=True)
                 if key not in items:
                     items[key] = []
 
                 # prepare stuff for easier comparison
+                path = self._normalize_path(root, cleanroot=True)
                 dirs = path.split('/')
                 if len(dirs) >= 2: #ends with '/'
                     dirlast = dirs[-2]
@@ -189,9 +191,10 @@ class Locator(object):
                 else:
                     dirhash = self._fnv.get_hash(dirlast)
 
-                val = (path, dirlast, dirhash)
+                val = (path, file, dirlast, dirhash)
                 items[key].append(val)
 
+                self._files.append(path + file)
 
     # base path were txtp are generated
     def get_txtp_fullpath(self):
@@ -229,3 +232,12 @@ class Locator(object):
             path = path[len(self._root_path):]
 
         return path
+
+    def clean_path(self, path):
+        return self._normalize_path(path, cleanroot=True)
+
+    def get_files(self):
+        return self._files
+
+    def get_wems(self):
+        return self._wems

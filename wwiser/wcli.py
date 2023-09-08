@@ -5,6 +5,7 @@ from .names import wnames
 from .parser import wparser
 from .viewer import wdumper, wview
 from .generator import wgenerator, wtags, wlocator
+from .tools import wcleaner
 from . import wfnv
 
 
@@ -98,11 +99,12 @@ class Cli(object):
         p.add_argument('-grf','--txtp-random-force',    help="Force base section to be selectable like a 'random'\n(ex. make .txtp per layer in all files)", action='store_true')
         p.add_argument('-gwd','--txtp-write-delays',    help="Don't skip initial delay.\n(some .txtp will start with some delay)", action='store_true')
 
-        p = parser.add_argument_group('tags options')
+        p = parser.add_argument_group('other options')
         p.add_argument('-te', '--tags-event',           help="Use shorter .txtp names and put full names in !tags.m3u", action='store_true')
         p.add_argument('-tl', '--tags-limit',           help="Use shorter names + m3u by limiting original names to N", metavar='LIMIT', type=int)
         p.add_argument('-tw', '--tags-wem',             help="Make !tags.m3u for .wem in folder", action='store_true')
         p.add_argument('-ta', '--tags-add',             help="Add to existing !tags.m3u instead of overwritting", action='store_true')
+        p.add_argument('-fc', '--file-cleaner',         help="Move .wem/bnk not used in .txtp to unused folder", action='store_true')
 
         p = parser.add_argument_group('extra options')
         p.add_argument('-gxs', '--txtp-x-silence',     help="Silence by default parts that crossfade", action='store_true')
@@ -365,6 +367,10 @@ class Cli(object):
 
         # extra
         tags.make()
+
+        if args.file_cleaner:
+            cleaner = wcleaner.Cleaner(locator, banks)
+            cleaner.process()
 
         # db manipulation
         if args.dump_type == wdumper.TYPE_NONE and (args.save_lst or args.save_db):

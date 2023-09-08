@@ -5,7 +5,7 @@ from tkinter import ttk, font, filedialog, scrolledtext, messagebox
 
 from . import wversion, wlogs
 from .names import wnames
-from .tools import wconfigini
+from .tools import wcleaner, wconfigini
 from .parser import wparser
 from .viewer import wdumper, wview
 from .generator import wgenerator, wtags, wlocator, wlang
@@ -286,8 +286,8 @@ class Gui(object):
         bframe = ttk.Frame(gframe, style='Buttons.TFrame')
         bframe.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self._btn(bframe, "Generate TXTP", self._generate_txtp, main=True).pack(side=tk.LEFT, **self.style.pads_button)
-        self._btn(bframe, "View bank contents", self._start_viewer).pack(side=tk.LEFT, **self.style.pads_button)
-        self._btn(bframe, "Dump bank", self._dump_banks).pack(side=tk.LEFT, **self.style.pads_button)
+        self._btn(bframe, "View banks", self._start_viewer).pack(side=tk.LEFT, **self.style.pads_button)
+        self._btn(bframe, "Dump banks", self._dump_banks).pack(side=tk.LEFT, **self.style.pads_button)
         #self._btn(bframe, "Stop", self._stop_viewer).pack(side=LEFT, **self.style.pads_button)
         #box = self._box('viewer_port', frame, "Port:", None, width=6)
         #box[0].pack(side=LEFT)
@@ -397,7 +397,7 @@ class Gui(object):
         frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, **self.style.pads_labeltext)
         row = 0
 
-        chk = self._chk('txtp_unused', frame, "Generate unused audio (when log complains)")
+        chk = self._chk('txtp_unused', frame, "Generate unused audio (use when log complains)")
         chk.grid(row=row, column=0, columnspan=3, sticky=tk.W)
 
         chk = self._chk('txtp_statechunks_sd', frame, "Skip default statechunk")
@@ -511,7 +511,7 @@ class Gui(object):
 
         self._btn(frame, "Make !tags.m3u for .wem", self._generate_tags, min=True).pack(side=tk.LEFT, **self.style.pads_button)
 
-        #self._btn(frame, "Move .wem/bnk not used in .txtp", self._clean_output, min=True).pack(side=tk.LEFT, **self.style.pads_button)
+        self._btn(frame, "Move .wem/bnk not used in .txtp", self._clean_output, min=True).pack(side=tk.LEFT, **self.style.pads_button)
 
         self._btn(frame, "Exit", self._exit, min=True).pack(side=tk.RIGHT)
 
@@ -816,19 +816,19 @@ class Gui(object):
         self._run(self._generate_txtp_start)
 
     def _generate_txtp_start(self):
-        self._process(txtp=True)
+        self._process(make_txtp=True)
 
     def _generate_tags(self):
         self._run(self._generate_tags_start)
 
     def _generate_tags_start(self):
-        self._process(tags=True)
+        self._process(make_tags=True)
 
     def _clean_output(self):
         self._run(self._clean_output_start)
 
     def _clean_output_start(self):
-        pass
+        self._process(make_clean=True)
 
     def _run(self, target):
         if self._thread_txtp and self._thread_txtp.is_alive():
@@ -846,15 +846,15 @@ class Gui(object):
     def _get_item(self, name):
         return self._fields[name].get()
 
-    def _process(self, txtp=False, tags=False):
+    def _process(self, **args):
         try:
-            self._process_main(txtp=txtp, tags=tags)
+            self._process_main(**args)
         except Exception as e:
             logging.error("gui: process stopped on error")
             logging.error(e)
             #raise
 
-    def _process_main(self, txtp=False, tags=False):
+    def _process_main(self, make_txtp=False, make_tags=False, make_clean=False):
 
         banks = self.parser.get_banks()
         if not banks:
@@ -871,12 +871,12 @@ class Gui(object):
         # !tags.m3u
         tags = wtags.Tags(banks, locator=locator, names=self.names)
         tags.set_make_event( self._get_item('tags_event') )
-        tags.set_make_wem( tags )
+        tags.set_make_wem( make_tags )
         #tags.set_make_wem( self._get_item('tags_wem') )
         #tags.set_add(args.tags_add)
         #tags.set_limit(args.tags_limit)
 
-        if txtp:
+        if make_txtp:
             generator = wgenerator.Generator(banks, locator, self.names)
             generator.set_filter( self._get_list('txtp_filter') )
             generator.set_filter_rest( self._get_item('txtp_filter_rest') )
@@ -913,6 +913,10 @@ class Gui(object):
 
         # extra
         tags.make()
+
+        if make_clean:
+            cleaner = wcleaner.Cleaner(locator, banks)
+            cleaner.process()
 
     #--------------------------------------------------------------------------
 

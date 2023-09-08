@@ -211,17 +211,26 @@ See https://github.com/bnnm/wwiser-utils for a guide and utils to help with reve
 ### Name flags
 You can add some special flags to `wwnames.txt` that alter some minor behaviors (not quite full program options). Just write the following text lines inside (flags aren't stable and may change without warning though).
 
-#### `#@nofuzzy`
+#### `#@no-fuzzy`
 Disables "fuzzy matching". By default *wwiser* tries to match derived names, like `play_bgm01` may try to use `play_bgm02`. In rare cases (mainly when there are a lot of IDs/names) it may derive names that don't make much sense, like `play_bgm0g`, so this flag disables this fuzzy derivation.
 
-#### `#@classify-bank`
-When generating a clean list (`wwiser *.bnk -sl -sm`) names are written as loaded then missing names. This option writes names and IDs grouped by bank, which makes it easier to check for wrong names target missing IDs, but lists are bigger and names repeated per bank.
+#### `#@no-save-missing`
+Doesn't write missing IDs.
 
-#### `#@classify-bank-path`
-Same as the above, but includes banks with paths.
+#### `#@no-save-companion`
+Doesn't write IDs already in companion files.
+
+#### `#@no-classify`
+By default names and IDs grouped by bank, which makes it easier to check for wrong names target missing IDs, but lists are bigger and names repeated per bank. Setting this will create a simpler list.
+
+#### `#@classify-path`
+Same as default but includes banks with paths.
+
+#### `#@save-all`
+Saves all registered names even if unused (only useful when loading few banks).
 
 #### `#@hashtypes-missing <types>`
-When generating a clean list (`wwiser *.bnk -sl -sm`) all missing IDS are printed under `### MISSING (type) NAMES` headers. This option limits missing types to those in the list (mainly to target and reverse certain IDs in `words.py` companion helper script)
+When generating a clean list (`wwiser *.bnk -sl`) all missing IDS are printed under `### MISSING (type) NAMES` headers. This option limits missing types to those in the list (mainly to target and reverse certain IDs in `words.py` companion helper script)
 
 #### `#@sort-always`
 For events that change depending of parameters (`play_bgm (music=m01)`, `play_bgm (music=m02)`, etc) *wwiser* sorts the variables so `.txtp` with names come first. However some objects are pre-sorted in bnk. This flags also sorts pre-sorted names, that may result in better names.

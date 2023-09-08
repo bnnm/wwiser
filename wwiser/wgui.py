@@ -704,7 +704,8 @@ class Gui(object):
             messagebox.showerror('Error', 'Load one or more banks')
             return None
 
-        base_path = os.path.dirname(filenames[0])
+        #base_path = os.path.dirname(filenames[0])
+        base_path = self._root_path
         if len(filenames) == 1:
             base_name = os.path.basename(filenames[0])
         else:
@@ -768,8 +769,7 @@ class Gui(object):
         dumper.dump()
 
         # save new wwnames.txt
-        #save_missing = self._get_item('ww_missing')
-        self.names.save_lst(basename=dump_name, path=base_path, save_all=False, save_companion=True, save_missing=True)
+        self.names.save_lst(basename=dump_name, path=base_path)
 
     #--------------------------------------------------------------------------
 

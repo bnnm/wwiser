@@ -50,24 +50,13 @@ class Cli(object):
         p.add_argument('-v',  '--viewer',               help="Start the viewer", action='store_true')
         p.add_argument('-vp', '--viewer-port',          help="Set the viewer port", metavar='PORT', default=wview.DEFAULT_PORT)
         #p.add_argument('-iv', '--ignore-version',      help="Ignore bank version check", action='store_true')
-
-        p = parser.add_argument_group('companion file options')
-        p.add_argument('-nl', '--names-lst',            help="Set wwnames.txt companion file (default: auto)", metavar='NAME')
-        p.add_argument('-nd', '--names-db',             help="Set wwnames.db3 companion file (default: auto)", metavar='NAME')
-
-        p = parser.add_argument_group('list options')
-        p.add_argument('-sd', '--save-db',              help="Save/update wwnames.db3 with hashnames used in fields\n(needs dump set, or save-all)", action='store_true')
         p.add_argument('-sl', '--save-lst',             help="Clean wwnames.txt and include missing hashnames\n(needs dump set)", action='store_true')
-        p.add_argument('-sm', '--save-missing',         help="Include in saved list of missing IDs\n(IDs that should have hashnames but weren't found)", action='store_true')
-        p.add_argument('-sc', '--save-companion',       help="Include in saved list companion names \n(loaded from companion XML/TXT/H, for a full list)", action='store_true')
-        p.add_argument('-sa', '--save-all',             help="Include all loaded names, rather than only used names", action='store_true')
 
         p = parser.add_argument_group('txtp options')
         p.add_argument('-g',  '--txtp',                 help="Generate TXTP", action='store_true')
         p.add_argument('-gu', '--txtp-unused',          help="Generate TXTP for unused nodes too\n(try loading other banks first)", action='store_true')
         p.add_argument('-go', '--txtp-outdir',          help="Set TXTP output dir (default: auto)")
         p.add_argument('-gw', '--txtp-wemdir',          help="Set TXTP .wem dir (default: auto)", default='*')
-        p.add_argument('-gm', '--txtp-move',            help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
         p.add_argument('-gv', '--txtp-volume',          help="Set master TXTP volume, in percent or decibels\nexamples: *=auto, 2.0=200%%, 0.5=50%%, -6dB=50%%, 6dB=200%%\n(negative dB needs equals: -gv=-6dB)", default='*')
 
         p = parser.add_argument_group('txtp Wwise state options')
@@ -106,7 +95,12 @@ class Cli(object):
         p.add_argument('-ta', '--tags-add',             help="Add to existing !tags.m3u instead of overwritting", action='store_true')
         p.add_argument('-fc', '--file-cleaner',         help="Move .wem/bnk not used in .txtp to unused folder", action='store_true')
 
-        p = parser.add_argument_group('extra options')
+        p = parser.add_argument_group('extra options (for testing)')
+        p.add_argument('-nl', '--names-lst',            help="Set wwnames.txt companion file (default: auto)", metavar='NAME')
+        p.add_argument('-nd', '--names-db',             help="Set wwnames.db3 companion file (default: auto)", metavar='NAME')
+        p.add_argument('-sd', '--save-db',              help="Save/update wwnames.db3 with hashnames used in fields\n(needs dump set, or save-all)", action='store_true')
+        p.add_argument('-gm', '--txtp-move',            help="Move all .wem referenced in loaded banks to wem dir", action='store_true')
+
         p.add_argument('-gxs', '--txtp-x-silence',     help="Silence by default parts that crossfade", action='store_true')
         p.add_argument('-gxif','--txtp-x-include-fx',  help="Apply FX volumes", action='store_true')
         p.add_argument('-gxnl','--txtp-x-noloops',     help="Extra: don't loop sounds", action='store_true')
@@ -376,9 +370,9 @@ class Cli(object):
         if args.dump_type == wdumper.TYPE_NONE and (args.save_lst or args.save_db):
             logging.info("dump set to none, may not save all names")
         if args.save_lst:
-            names.save_lst(basename=dump_name, save_all=args.save_all, save_companion=args.save_companion, save_missing=args.save_missing)
+            names.save_lst(basename=dump_name)
         if args.save_db:
-            names.save_db(save_all=args.save_all, save_companion=args.save_companion)
+            names.save_db()
         names.close() #in case DB was open
 
         if args.tests:

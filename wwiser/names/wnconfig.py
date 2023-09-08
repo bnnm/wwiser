@@ -5,27 +5,43 @@ class Config(object):
 
     def __init__(self):
         #self._names = names
+        self._hashtypes_missing = None # print only certain hashtypes
 
         self.disable_fuzzy = False
-        self.classify = False
-        self.classify_bank = False
+        self.classify = True
+        self.classify_bank = True
         self.bank_paths = False
-        self._hashtypes_missing = None # print only certain hashtypes
+        self.save_missing = True
+        self.save_companion = True
+        self.save_all = False
 
         self.sort_always = False
         self._default_weight = 100
         self._sort_weights = []
+        self._config_lines = []
 
     def add_config(self, line):
-        if line.startswith('#@nofuzzy'):
+        if line.startswith('#@'):
+            self._config_lines.append(line)
+
+
+        if line.startswith('#@no-fuzzy') or line.startswith('#@nofuzzy'):
             self.disable_fuzzy = True
 
-        if line.startswith('#@classify'):
-            self.classify = True
-        if line.startswith('#@classify-bank'): #implicit: sets the above
-            self.classify_bank = True
-        if line.startswith('#@classify-bank-path'): #implicit: sets the above
-            self.classify_bank = True
+        if line.startswith('#@no-save-missing'):
+            self.save_missing = False
+
+        if line.startswith('#@no-save-companion'):
+            self.save_companion = False
+
+        if line.startswith('#@no-save-all'):
+            self.save_all = True
+
+        if line.startswith('#@no-classify'):
+            self.classify = False
+            self.classify_bank = False
+
+        if line.startswith('#@classify-path'):
             self.bank_paths = True
 
         if line.startswith('#@hashtypes-missing'):
@@ -38,16 +54,7 @@ class Config(object):
             self._add_sort_weight(line)
 
     def add_lines(self, lines):
-        if self.disable_fuzzy:
-            lines.append('#@nofuzzy')
-        if self.classify_bank and self.bank_paths:
-            lines.append('#@classify-bank-path')
-        elif self.classify_bank:
-            lines.append('#@classify-bank')
-        elif self.classify:
-            lines.append('#@classify')
-        elif self._hashtypes_missing:
-            lines.append('#@hashtypes-missing ' + ' '.join(self._hashtypes_missing))
+        lines.extend(self._config_lines)
 
     def skip_hastype(self, hashtype):
         return self._hashtypes_missing and hashtype not in self._hashtypes_missing

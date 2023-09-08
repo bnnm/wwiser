@@ -803,7 +803,7 @@ class Names(object):
 
     # saves loaded hashnames to .txt
     # (useful to check names when loading generic db/lst of names)
-    def save_lst(self, basename=None, path=None, save_all=False, save_companion=False, save_missing=False):
+    def save_lst(self, basename=None, path=None):
         if not basename:
             basename = 'banks'
         else:
@@ -820,6 +820,10 @@ class Names(object):
 
         lines = default_lines
         self._cfg.add_lines(lines)
+
+        save_companion = self._cfg.save_companion
+        save_missing = self._cfg.save_missing
+        save_all = self._cfg.save_all
 
         has_companion = False
         names = self._names.values()
@@ -1003,8 +1007,11 @@ class Names(object):
 
 
     # saves loaded hashnames to DB
-    def save_db(self, save_all=False, save_companion=False):
+    def save_db(self):
         logging.info("names: saving db")
+
+        save_all = True
+        save_companion = True
         if not self._db or not self._db.is_open():
             #force creation of BD if didn't exist
             #self._db.close() #not needed?

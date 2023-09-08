@@ -10,16 +10,17 @@ identifies all fields. *wwiser* *can't* modify banks.
 ## MINI GUIDE
 How to play audio simulating the Wwise engine:
 - open *wwiser.pyz*
-- press *Load dirs...* and select a base directory with `.bnk` and `.wem` inside
+- press *Load dirs...* and select a *base folder* with `.bnk` and `.wem` inside
   - if game has `SoundbanksInfo.xml`, `Wwise_IDs.h`, `(bankname).txt` or similar files you are set,
-    otherwise you may want to generate a name list and put it as `wwnames.txt` in the base directory
-- press *View banks* to explore banks, if needed
-  - info is presented as-is and may be a bit hard to understand, but isn't important to generate TXTP
+    otherwise you may want to generate a name list and put it as `wwnames.txt` in the *base folder*
 - press *Generate TXTP* to make `.txtp`
   - this will make files that simulate how Wwise plays audio, based on loaded bank info
-  - may want to set language to 'SFX' to skip voice lines
+  - may want to set language to `SFX` to skip voice lines (ignore if `SFX`` isn'0't shown)
 - go loaded base directory and open `*.txtp` with some player like *foobar2000/winamp/audacious* having installed the *vgmstream* plugin
-  - if generated TXTP aren't fully satisfactory, fiddle with the *TXTP Generator* options
+  - if generated TXTP aren't fully satisfactory, fiddle with *TXTP Generator* options
+  - when making audio rips to distribute, may be better to set *TXTP subdir* to *empty* so that `.txtp` are generated in the *base folder*
+- you can only press *View banks* to explore banks, or *Dump banks* to save readable bank info, if needed
+  - info is presented as-is and may be a bit hard to understand, but isn't important to generate *TXTP*
 - Wwise is very complex so this program can only help so much, you may want to read and understand *doc/WWISER.md*
 
 

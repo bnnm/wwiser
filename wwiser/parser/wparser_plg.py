@@ -11,20 +11,27 @@ def get_version(obj):
 def CAkFxSrcSineParams__SetParamsBlock(obj, size):
     #CAkFxSrcSineParams::SetParamsBlock
     obj = obj.node('AkSineFXParams')
+    obj.omax(size)
 
     obj.f32('fFrequency')
     obj.f32('fGain')
     obj.f32('fDuration')
     obj.U32('uChannelMask').fmt(wdefs.fmt_ch)
 
+    obj.consume()
+    return
+
 #AkSoundEngineDLL (part of main engine)
 def CAkFxSrcSilenceParams__SetParamsBlock(obj, size):
     #CAkFxSrcSilenceParams::SetParamsBlock
     obj = obj.node('AkFXSrcSilenceParams')
+    obj.omax(size)
 
     obj.f32('fDuration')
     obj.f32('fRandomizedLengthMinus')
     obj.f32('fRandomizedLengthPlus')
+
+    obj.consume()
     return
 
 
@@ -32,6 +39,7 @@ def CAkFxSrcSilenceParams__SetParamsBlock(obj, size):
 def CAkToneGenParams__SetParamsBlock(obj, size):
     #CAkToneGenParams::SetParamsBlock
     obj = obj.node('AkToneGenParams')
+    obj.omax(size)
 
     obj.f32('fGain')
     obj.f32('fStartFreq')
@@ -55,6 +63,7 @@ def CAkToneGenParams__SetParamsBlock(obj, size):
     elif size == 0x45: #~072>=
         obj.U32('uChannelMask').fmt(wdefs.fmt_ch)
 
+    obj.consume()
     return
 
 
@@ -62,6 +71,8 @@ def CAkToneGenParams__SetParamsBlock(obj, size):
 def CAkParameterEQFXParams__SetParamsBlock(obj, size):
     #CAkParameterEQFXParams::SetParamsBlock
     obj = obj.node('AkParameterEQFXParams') #m_Params
+    obj.omax(size)
+
     version = get_version(obj)
 
     count = 3
@@ -77,6 +88,8 @@ def CAkParameterEQFXParams__SetParamsBlock(obj, size):
         pass
     else:
         obj.U8x('bProcessLFE')
+
+    obj.consume()
     return
 
 
@@ -84,6 +97,7 @@ def CAkParameterEQFXParams__SetParamsBlock(obj, size):
 def CAkDelayFXParams__SetParamsBlock(obj, size):
     #CAkDelayFXParams::SetParamsBlock
     obj = obj.node('AkDelayFXParams')
+    obj.omax(size)
 
     #RTPC: AkDelayRTPCParams
     #NonRTPC: AkDelayNonRTPCParams
@@ -97,6 +111,7 @@ def CAkDelayFXParams__SetParamsBlock(obj, size):
     elif size == 0x12:
         obj.U8x('NonRTPC.bProcessLFE')
 
+    obj.consume()
     return
 
 
@@ -104,6 +119,7 @@ def CAkDelayFXParams__SetParamsBlock(obj, size):
 def CAkPeakLimiterFXParams__SetParamsBlock(obj, size):
     #CAkPeakLimiterFXParams::SetParamsBlock
     obj = obj.node('AkPeakLimiterFXParams')
+    obj.omax(size)
 
     #RTPC: AkPeakLimiterRTPCParams
     #NonRTPC: AkPeakLimiterNonRTPCParams
@@ -115,6 +131,7 @@ def CAkPeakLimiterFXParams__SetParamsBlock(obj, size):
     obj.U8x('NonRTPC.bProcessLFE')
     obj.U8x('NonRTPC.bChannelLink')
 
+    obj.consume()
     return
 
 
@@ -122,6 +139,7 @@ def CAkPeakLimiterFXParams__SetParamsBlock(obj, size):
 def CAkFDNReverbFXParams__SetParamsBlock(obj, size):
     #CAkFDNReverbFXParams::SetParamsBlock
     obj = obj.node('AkFDNReverbFXParams')
+    obj.omax(size)
 
     version = get_version(obj)
 
@@ -153,10 +171,15 @@ def CAkFDNReverbFXParams__SetParamsBlock(obj, size):
             obj.f32('RTPC.fDelayTime')
 
 
+    obj.consume()
+    return
+
+
 #AkRoomVerb
 def CAkRoomVerbFXParams__SetParamsBlock(obj, size):
     #CAkRoomVerbFXParams::SetParamsBlock
     obj = obj.node('AkStereoDelayFXParams')
+    obj.omax(size)
 
     elem = obj.node('RTPCParams') #sRTPCParams
     elem.f32('fDecayTime')
@@ -212,12 +235,15 @@ def CAkRoomVerbFXParams__SetParamsBlock(obj, size):
     elem.f32('fReverbUnitInputDelay')
     elem.f32('fReverbUnitInputDelayRmdPerc')
 
+    obj.consume()
     return
+
 
 #AkFlanger
 def CAkFlangerFXParams__SetParamsBlock(obj, size):
     #CAkFlangerFXParams::SetParamsBlock
     obj = obj.node('AkFlangerFXParams')
+    obj.omax(size)
 
     #RTPC: AkFlangerRTPCParams
     #NonRTPC: AkFlangerNonRTPCParams
@@ -241,12 +267,15 @@ def CAkFlangerFXParams__SetParamsBlock(obj, size):
     obj.U8x('NonRTPC.bProcessCenter')
     obj.U8x('NonRTPC.bProcessLFE')
 
+    obj.consume()
     return
+
 
 #AkGuitarDistortion
 def CAkGuitarDistortionFXParams__SetParamsBlock(obj, size):
     #CAkGuitarDistortionFXParams::SetParamsBlock
     obj = obj.node('AkGuitarDistortionFXParams')
+    obj.omax(size)
 
     count = 3
     for elem in obj.list('PreEQ', 'AkFilterBand', count):
@@ -270,6 +299,7 @@ def CAkGuitarDistortionFXParams__SetParamsBlock(obj, size):
     elem.f32('fOutputLevel') #db
     elem.f32('fWetDryMix')
 
+    obj.consume()
     return
 
 
@@ -277,6 +307,7 @@ def CAkGuitarDistortionFXParams__SetParamsBlock(obj, size):
 def CAkConvolutionReverbFXParams__SetParamsBlock(obj, size):
     #CAkConvolutionReverbFXParams::SetParamsBlock
     obj = obj.node('AkConvolutionReverbFXParams') #m_Params
+    obj.omax(size)
 
     obj.f32('fPreDelay')
     obj.f32('fFrontRearDelay')
@@ -298,7 +329,10 @@ def CAkConvolutionReverbFXParams__SetParamsBlock(obj, size):
     obj.U32('eAlgoType').fmt(wdefs.CAkConvolutionReverbFX__AkConvolutionAlgoType)
     if size >= 0x38: #~v135
         obj.f32('unknown?') #db
+    if size >= 0x39: #~v145
+        obj.U8x('unknown?') #db
 
+    obj.consume()
     return
 
 
@@ -306,6 +340,7 @@ def CAkConvolutionReverbFXParams__SetParamsBlock(obj, size):
 def CAkMeterFXParams__SetParamsBlock(obj, size):
     #CAkMeterFXParams::SetParamsBlock
     obj = obj.node('AkMeterFXParams') #m_Params
+    obj.omax(size)
 
     #RTPC: AkMeterRTPCParams
     #NonRTPC: AkMeterNonRTPCParams
@@ -329,6 +364,7 @@ def CAkMeterFXParams__SetParamsBlock(obj, size):
     obj.U8x('NonRTPC.bApplyDownstreamVolume')
     obj.U32('NonRTPC.uGameParamID')
 
+    obj.consume()
     return
 
 
@@ -336,6 +372,7 @@ def CAkMeterFXParams__SetParamsBlock(obj, size):
 def CAkStereoDelayFXParams__SetParamsBlock(obj, size):
     #CAkStereoDelayFXParams::SetParamsBlock
     obj = obj.node('AkStereoDelayFXParams')
+    obj.omax(size)
 
     count = 2
     for elem in obj.list('StereoDelayParams', 'AkStereoDelayChannelParams', count):
@@ -356,22 +393,28 @@ def CAkStereoDelayFXParams__SetParamsBlock(obj, size):
     obj.U8x('bEnableFeedback')
     obj.U8x('bEnableCrossFeed')
 
+    obj.consume()
     return
+
 
 #AkGain
 def CAkGainFXParams__SetParamsBlock(obj, size):
     #CAkGainFXParams::SetParamsBlock
     obj = obj.node('AkGainFXParams')
+    obj.omax(size)
 
     obj.f32('fFullbandGain')
     obj.f32('fLFEGain')
 
+    obj.consume()
     return
+
 
 #AkHarmonizer (v62+, BLands 2)
 def CAkHarmonizerFXParams__SetParamsBlock(obj, size):
     #CAkHarmonizerFXParams::SetParamsBlock
     obj = obj.node('AkHarmonizerFXParams')
+    obj.omax(size)
 
     count = 2
     for elem in obj.list('Voice', 'AkPitchVoiceParams', count):
@@ -392,6 +435,7 @@ def CAkHarmonizerFXParams__SetParamsBlock(obj, size):
     obj.U8x('bProcessLFE')
     obj.U8x('bSyncDry')
 
+    obj.consume()
     return
 
 
@@ -399,6 +443,7 @@ def CAkHarmonizerFXParams__SetParamsBlock(obj, size):
 def CAkSynthOneParams__SetParamsBlock(obj, size):
     #CAkSynthOneParams::SetParamsBlock
     obj = obj.node('AkSynthOneParams')
+    obj.omax(size)
 
     obj.U8x('eFreqMode').fmt(wdefs.CAkSynthOne__AkSynthOneFrequencyMode)
     obj.f32('fBaseFreq')
@@ -419,21 +464,25 @@ def CAkSynthOneParams__SetParamsBlock(obj, size):
     obj.f32('fOsc2Level')
     obj.f32('fOsc2Pwm')
 
+    obj.consume()
     return
 
 
 def CAkFxSrcAudioInputParams__SetParamsBlock(obj, size):
     #CAkFxSrcAudioInputParams::SetParamsBlock
     obj = obj.node('AkFXSrcAudioInputParams')
+    obj.omax(size)
 
     obj.f32('fGain')
 
+    obj.consume()
     return
 
 
 def iZTrashDelayFXParams__SetParamsBlock(obj, size):
     #iZTrashDelayFXParams::SetParamsBlock
     obj = obj.node('iZTrashDelayFXParams')
+    obj.omax(size)
 
     obj.f32('fDryOut')
     obj.f32('fWetOut')
@@ -446,12 +495,14 @@ def iZTrashDelayFXParams__SetParamsBlock(obj, size):
     obj.f32('fTrash')
     obj.U32('bHasChanged')
 
+    obj.consume()
     return
 
 #TODO: missing some fields in later versions? need to test more
 def CREVFxSrcModelPlayerParams__SetParamsBlock(obj, size):
     #CREVFxSrcModelPlayerParams::SetParamsBlock
     obj = obj.node('CREVFxSrcModelPlayerParams')
+    obj.omax(size)
 
     obj.f32('unknown')
     obj.f32('unknown')
@@ -499,7 +550,7 @@ def CREVFxSrcModelPlayerParams__SetParamsBlock(obj, size):
     elem.f32('IDLE_TECHNIQUE_COVERUP')
     elem.f32('IDLE_TECHNIQUE_RAMPIN')
 
-
+    obj.consume()
     return
 
 # #############################################################################

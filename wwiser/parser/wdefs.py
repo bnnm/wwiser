@@ -58,7 +58,8 @@ bank_versions = [
     140, #0x8c Wwise 2021.1     [Disney Speedstorm (PC)]
     141, #0x8d Wwise 2021.1-B?  [Overwatch (PC)]
     144, #0x90 Wwise 2022.1-B   (none known)
-    145, #0x91 Wwise 2022.1     [Sea of Stars (PC)]
+    145, #0x91 Wwise 2022.1     [Sea of Stars (PC), Mortal Kombat 1 (PC)]
+    150, #0x91 Wwise 2023.1-B   (none known)
 ]
 
 # no txtp support, even if forced
@@ -316,6 +317,8 @@ AkPluginType_id = wfmt.FormatterLUT({
   0x00120001: "CAF", # unused?
   0x00130001: "OPUS",
   0x00140001: "OPUS_WEM",
+  0x00150001: "OPUS_WEM", #"Memory stats file as written through AK::MemoryMgr::DumpToFile()"
+  0x00160001: "SONY360", #unused/internal? '360 Reality Audio', MPEG-H derived?
 
   #other types
   0x00640002: "Wwise Sine", #AkSineTone
@@ -449,7 +452,7 @@ AkRtpcType_144 = wfmt.FormatterLUT({
   0x2: "Switch",
   0x3: "State",
   0x4: "Modulator",
-  0x5: "Count",
+  #0x5: "Count",
   #0x8: "MaxNum",
 })
 AkRtpcType = None
@@ -781,6 +784,98 @@ AkPropID_128 = wfmt.FormatterLUT({
   0x49: "PAN_UD", #140>=
   #0x4A: AkPropID_NUM
 })
+AkPropID_150 = wfmt.FormatterLUT({
+  #0x0: "FirstRtpc",
+  0x00: "Volume",
+  0x01: "Pitch",
+  0x02: "LPF",
+  0x03: "HPF",
+  0x04: "BusVolume",
+  0x05: "MakeUpGain",
+  0x06: "Priority",
+  0x07: "MuteRatio",
+  0x08: "UserAuxSendVolume0",
+  0x09: "UserAuxSendVolume1",
+  0x0A: "UserAuxSendVolume2",
+  0x0B: "UserAuxSendVolume3",
+  0x0C: "GameAuxSendVolume",
+  0x0D: "OutputBusVolume",
+  0x0E: "OutputBusHPF",
+  0x0F: "OutputBusLPF",
+  0x10: "UserAuxSendLPF0",
+  0x11: "UserAuxSendLPF1",
+  0x12: "UserAuxSendLPF2",
+  0x13: "UserAuxSendLPF3",
+  0x14: "UserAuxSendHPF0",
+  0x15: "UserAuxSendHPF1",
+  0x16: "UserAuxSendHPF2",
+  0x17: "UserAuxSendHPF3",
+  0x18: "GameAuxSendLPF",
+  0x19: "GameAuxSendHPF",
+  0x1A: "ReflectionBusVolume",
+  0x1B: "HDRBusThreshold",
+  0x1C: "HDRBusRatio",
+  0x1D: "HDRBusReleaseTime",
+  0x1E: "HDRActiveRange",
+  0x1F: "MidiTransposition",
+  0x20: "MidiVelocityOffset",
+  0x21: "PlaybackSpeed",
+  0x22: "InitialDelay",
+  0x23: "Positioning_Pan_X_2D",
+  0x24: "Positioning_Pan_Y_2D",
+  0x25: "Positioning_Pan_Z_2D",
+  0x26: "Positioning_Pan_X_3D",
+  0x27: "Positioning_Pan_Y_3D",
+  0x28: "Positioning_Pan_Z_3D",
+  0x29: "Positioning_CenterPercent",
+  0x2A: "Positioning_TypeBlend",
+  0x2B: "Positioning_EnableAttenuation",
+  0x2C: "Positioning_Cone_AttenuationOnOff",
+  0x2D: "Positioning_Cone_Attenuation",
+  0x2E: "Positioning_Cone_LPF",
+  0x2F: "Positioning_Cone_HPF",
+  0x30: "BypassFX",
+  0x31: "BypassAllFX",
+  0x32: "Available_0",
+  0x33: "Available_1",
+  0x34: "Available_2",
+  0x35: "MaxNumInstances",
+  0x36: "BypassAllMetadata",
+  0x37: "PlayMechanismSpecialTransitionsValue",
+  0x38: "FirstNonRtpc",
+  0x37: "LastRtpc",
+  0x38: "PriorityDistanceOffset",
+  0x39: "DelayTime",
+  0x3A: "TransitionTime",
+  0x3B: "Probability",
+  0x3C: "DialogueMode",
+  0x3D: "HDRBusGameParam",
+  0x3E: "HDRBusGameParamMin",
+  0x3F: "HDRBusGameParamMax",
+  0x40: "LoopStart",
+  0x41: "LoopEnd",
+  0x42: "TrimInTime",
+  0x43: "TrimOutTime",
+  0x44: "FadeInTime",
+  0x45: "FadeOutTime",
+  0x46: "FadeInCurve",
+  0x47: "FadeOutCurve",
+  0x48: "LoopCrossfadeDuration",
+  0x49: "CrossfadeUpCurve",
+  0x4A: "CrossfadeDownCurve",
+  0x4B: "MidiTrackingRootNote",
+  0x4C: "MidiPlayOnNoteType",
+  0x4D: "MidiKeyRangeMin",
+  0x4E: "MidiKeyRangeMax",
+  0x4F: "MidiVelocityRangeMin",
+  0x50: "MidiVelocityRangeMax",
+  0x51: "MidiChannelMask",
+  0x52: "MidiTempoSource",
+  0x53: "MidiTargetNode",
+  0x54: "Loop",
+  0x55: "AttenuationID",
+  #0x56: "NUM",
+})
 AkPropID = None
 AkPropID_tids = {
     "AttachedPluginFXID", "AttenuationID"
@@ -1009,6 +1104,24 @@ AkActionType_062 = wfmt.FormatterLUT({
   0x3202: "ResetSetFX_M", #144>=
   0x3204: "ResetSetFX_ALL", #144>=
   0x4000: "NoOp", #144>=
+  0x1B00: "Trigger", #150>=
+  0x1B01: "Trigger_O", #150>=
+  0x3302: "SetBypassFXSlot_M", #150>=
+  0x3303: "SetBypassFXSlot_O", #150>=
+  0x3402: "ResetBypassFXSlot_M", #150>=
+  0x3403: "ResetBypassFXSlot_O", #150>=
+  0x3404: "ResetBypassFXSlot_ALL", #150>=
+  0x3405: "ResetBypassFXSlot_ALL_O", #150>=
+  0x3502: "SetBypassAllFX_M", #150>=
+  0x3503: "SetBypassAllFX_O", #150>=
+  0x3602: "ResetBypassAllFX_M", #150>=
+  0x3603: "ResetBypassAllFX_O", #150>=
+  0x3604: "ResetBypassAllFX_ALL", #150>=
+  0x3605: "ResetBypassAllFX_ALL_O", #150>=
+  0x3702: "ResetAllBypassFX_M", #150>=
+  0x3703: "ResetAllBypassFX_O", #150>=
+  0x3704: "ResetAllBypassFX_ALL", #150>=
+  0x3705: "ResetAllBypassFX_ALL_O", #150>=
 }, zeropad=4)
 AkActionType = None
 
@@ -1142,7 +1255,7 @@ AkRtpcAccum_128 = wfmt.FormatterLUT({
   0x4: "Boolean",
   0x5: "Maximum",
   0x6: "Filter",
-  #0x8: "MaxNum",
+  #0x8: "MaxNum/Count",
 })
 AkRtpcAccum = None
 
@@ -1667,6 +1780,7 @@ AkRTPC_ParameterID_135 = wfmt.FormatterLUT({
   0x3E: "Unknown/Custom?", #AC Valhalla (found near "DB" scaling, some volume?)
   0x3F: "Unknown/Custom?", #AC Valhalla
 })
+#AkRTPC_ParameterID_150 = AkPropID_150 #not defined? same as a regular prop? internally AkRtpcPropID
 AkRTPC_ParameterID = None
 
 #118>=
@@ -1690,9 +1804,10 @@ AkRTPC_ModulatorParamID = wfmt.FormatterLUT({
   0xF: "ModulatorTimeInitialDelay", #132~~
   #0x10: "MaxNumModulatorRTPC",
 })
+#AkRTPC_ModulatorParamID_150 = AkRTPC_ModulatorParamID #not defined?
 
 #112>=
-AkModulatorPropID = wfmt.FormatterLUT({
+AkModulatorPropID_112 = wfmt.FormatterLUT({
   0x0: "Scope",
   0x1: "Envelope_StopPlayback",
   0x2: "Lfo_Depth",
@@ -1715,6 +1830,31 @@ AkModulatorPropID = wfmt.FormatterLUT({
   0x13: "Time_InitialDelay", #132~~
   #0x14: "NUM",
 })
+AkModulatorPropID_150 = wfmt.FormatterLUT({
+  0x0: "Scope",
+  0x1: "Envelope_StopPlayback",
+  0x2: "Lfo_Depth",
+  0x3: "Lfo_Attack",
+  0x4: "Lfo_Frequency",
+  0x5: "Lfo_Waveform",
+  0x6: "Lfo_Smoothing",
+  0x7: "Lfo_PWM",
+  0x8: "Lfo_InitialPhase",
+  0x9: "Lfo_Retrigger",
+  0xA: "Envelope_AttackTime",
+  0xB: "Envelope_AttackCurve",
+  0xC: "Envelope_DecayTime",
+  0xD: "Envelope_SustainLevel",
+  0xE: "Envelope_SustainTime",
+  0xF: "Envelope_ReleaseTime",
+  0x10: "Envelope_TriggerOn",
+  0x11: "Time_Duration",
+  0x12: "Time_Loops",
+  0x13: "Time_PlaybackRate",
+  0x14: "Time_InitialDelay",
+  #0x15: "NUM",
+})
+AkModulatorPropID = None
 AkModulatorPropID_tids = {
 }
 
@@ -1799,7 +1939,7 @@ AkFilterBehavior = wfmt.FormatterLUT({
 })
 
 # #############################################################################
-# PLUGIN ENUMS (prefixed since they are proce to collisions)
+# PLUGIN ENUMS (prefixed since they are prone to collisions)
 
 CAkToneGen__AkToneGenType = wfmt.FormatterLUT({
   0x0: "SINE",
@@ -2004,6 +2144,12 @@ def setup(version):
     else:
         AkRTPC_ParameterID = AkRTPC_ParameterID_135
 
+    global AkModulatorPropID
+    if  version <= 145:
+        AkModulatorPropID = AkModulatorPropID_112
+    else:
+        AkModulatorPropID = AkModulatorPropID_150
+
     global AkRtpcAccum
     if  version <= 125:
         AkRtpcAccum = AkRtpcAccum_125
@@ -2033,8 +2179,10 @@ def setup(version):
         AkPropID = AkPropID_113
     elif version <= 126:
         AkPropID = AkPropID_126
-    else:
+    elif version <= 145:
         AkPropID = AkPropID_128
+    else:
+        AkPropID = AkPropID_150
 
     global AkBank__AKBKHircType
     if version <= 126:

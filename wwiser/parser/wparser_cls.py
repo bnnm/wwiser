@@ -82,6 +82,8 @@ CAkActionSetSwitch = 'CAkActionSetSwitch'
 #CAkActionSetRTPC : CAkAction
 CAkActionSetRTPC = 'CAkActionSetRTPC'
 #CAkActionBypassFX : CAkActionExcept
+CAkActionSetFX = 'CAkActionSetFX'
+#CAkActionBypassFX : CAkActionExcept
 CAkActionBypassFX = 'CAkActionBypassFX'
 #CAkActionBreak : CAkAction
 CAkActionBreak = 'CAkActionBreak'
@@ -276,6 +278,13 @@ def CAkAction__Create(obj, actionType):
         0x2200: CAkActionResetPlaylist,
         0x2300: CAkActionPlayEventUnknown,
         0x3000: CAkActionSetAkProp, #AkPropID_HPF
+        0x3100: CAkActionSetFX,
+        0x3200: CAkActionSetFX,
+        0x3300: CAkActionBypassFX,
+        0x3400: CAkActionBypassFX,
+        0x3500: CAkActionBypassFX,
+        0x3600: CAkActionBypassFX,
+        0x3700: CAkActionBypassFX,
     }
 
 
@@ -308,6 +317,7 @@ def CAkAction__Create(obj, actionType):
         CAkActionDuck: (wparser.CAkAction__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         CAkActionSetSwitch: (wparser.CAkActionSetSwitch__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         CAkActionSetRTPC: (wparser.CAkActionSetRTPC__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
+        CAkActionSetFX: (wparser.CAkActionSetFX__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         CAkActionBypassFX: (wparser.CAkActionBypassFX__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         CAkActionBreak: (wparser.CAkAction__SetActionParams, wparser.CAkAction__SetActionSpecificParams),
         CAkActionTrigger: (wparser.CAkAction__SetActionParams, wparser.CAkAction__SetActionSpecificParams),

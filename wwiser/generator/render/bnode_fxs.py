@@ -48,7 +48,13 @@ class AkFxChunkList(object):
         self.init = True
 
         # & 0x1/0x2/0x4/0x8 = bypass index 0/1/2/3, 0x10 = bypass all
-        self._flags = node.find(name='bitsFXBypass')
+        flags = node.find1(name='bitsFXBypass')
+        if flags is not None:
+            self._flags = flags.value()
+        else:
+            flags = node.find1(name='bBypassAll')
+            if flags and flags.value():
+                self._flags = 0x10
 
         nfxs = nfxchunk.finds(name='FXChunk')
         for nfx in nfxs:            

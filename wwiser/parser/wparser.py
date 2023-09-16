@@ -66,6 +66,7 @@ def parse_rtpc_graph(obj, name='pRTPCMgr', subname='AkRTPCGraphPoint'):
 def AkPropBundle_float_unsigned_short___SetInitialParams(obj, cls):
     #AkPropBundle<float,unsigned short>::SetInitialParams
     #AkPropBundle<float,unsigned short,(AkMemID)0>::SetInitialParams #135
+    #AkPropBundleBase<float,unsigned short,(AkMemID)0>::SetInitialParams #150
     obj = obj.node('AkPropBundle<float,unsigned short>') #AkPropBundle
 
     # despite the generic name this is used by CAkState only
@@ -108,6 +109,7 @@ def AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls, modulato
     #AkPropBundle<AkPropValue>::SetInitialParams
     #AkPropBundle<AkPropValue,unsigned char>::SetInitialParams #v128>=
     #AkPropBundle<AkPropValue,unsigned char,(AkMemID)0>::SetInitialParams #v135>=
+    #AkPropBundleBase<AkPropValue,unsigned char,(AkMemID)0>::SetInitialParams #v150>=
     obj = obj.node('AkPropBundle<AkPropValue,unsigned char>') #AkPropBundle
 
     if modulator:
@@ -349,8 +351,10 @@ def CAkParameterNode__SetInitialFxParams(obj, cls):
     if count > 0:
         if   cls.version <= 26:
             pass
-        else:
+        elif   cls.version <= 145:
             obj.U8x('bitsFXBypass')
+        else:
+            obj.U8x('bBypassAll')
 
         for elem in obj.list('pFXChunk', 'FXChunk', count):
             if   cls.version <= 26:
@@ -374,9 +378,15 @@ def CAkParameterNode__SetInitialFxParams(obj, cls):
                 #elem.U32('ulPresetSize')
                 #elem.gap('pDataBloc', elem.lastval)
 
-            else:
+            elif cls.version <= 145:
                 elem.U8x('bIsShareSet')
                 elem.U8x('bIsRendered')
+
+            else:
+                elem.U8x('bitVector') \
+                    .bit('bBypass', obj.lastval, 0) \
+                    .bit('bShareSet', obj.lastval, 1) \
+                    .bit('bRendered', obj.lastval, 2)
 
             if   cls.version <= 46:
                 pass
@@ -512,7 +522,12 @@ def CAkStateAware__ReadStateChunk(obj, cls):
         elem.var('ulNumStates')
         for elem2 in elem.list('pStates', 'AkState', elem.lastval):
             elem2.tid('ulStateID').fnv(wdefs.fnv_val)
-            elem2.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
+            
+            if   cls.version <= 145: #uses AkState
+                elem2.tid('ulStateInstanceID').fnv(wdefs.fnv_no)
+            else:
+                #AkSortedPropBundle_float_unsigned_short___SetInitialParams > AkPropBundleBase_float_unsigned_short___SetInitialParams
+                AkPropBundle_float_unsigned_short___SetInitialParams(elem2, cls)
     return
 
 #053>= 120<=
@@ -671,8 +686,10 @@ def CAkParameterNodeBase__SetNodeBaseParams(obj, cls):
 
     if   cls.version <= 89:
         pass
-    else:
+    elif cls.version <= 145:
         obj.U8x('bOverrideAttachmentParams')
+    else:
+        pass
 
     obj.tid('OverrideBusId').fnv(wdefs.fnv_bus)
     obj.tid('DirectParentID').fnv(wdefs.fnv_no)
@@ -954,24 +971,35 @@ def CAkParameterNode__SetInitialMetadataParams(obj, cls):
 #140>=
 def CAkEffectSlots__SetInitialValues(obj, cls):
     #CAkEffectSlots::SetInitialValues
+    #AkOwnedEffectSlots::SetInitialValues #v150
     
     obj.u8i('uNumFx')
     count = obj.lastval
 
     if count > 0:
-        obj.U8x('bitsFXBypass') #bIsBypassed & 0x11 != 0
+        if   cls.version <= 145:
+            obj.U8x('bitsFXBypass') #bIsBypassed & 0x11 != 0
+        else:
+            obj.U8x('bBypassAll')
 
         for elem in obj.list('pFXChunk', 'FXChunk', count):
             elem.u8i('uFXIndex')
             elem.tid('fxID') #.fnv(wdefs.fnv_sfx)
-            elem.U8x('bIsShareSet')
-            elem.U8x('_bIsRendered') #unused (effects can't render)
+
+            if   cls.version <= 145:
+                elem.U8x('bIsShareSet')
+                elem.U8x('_bIsRendered') #unused (effects can't render)
+            else:
+                elem.U8x('bitVector') \
+                    .bit('bBypass', obj.lastval, 0) \
+                    .bit('bShareSet', obj.lastval, 1)
+
     return
 
 #******************************************************************************
 # HIRC: State
 
-#026>=
+#026>= 145<=
 def CAkState__SetInitialValues(obj, cls):
     #CAkState::SetInitialValues
     obj = obj.node('StateInitialValues')
@@ -1199,6 +1227,19 @@ def CAkActionActive__SetActionParams(obj, cls):
     CAkActionExcept__SetExceptParams(obj, cls)
     return
 
+#150>=
+def CAkActionSetFX__SetActionParams(obj, cls):
+    #CAkActionSetFX::SetActionParams
+    obj = obj.node('SetFXActionParams')
+
+    obj.U8x('bIsAudioDeviceElement')
+    obj.U8x('uSlotIndex')
+    obj.tid('uFXID')
+    obj.U8x('bIsShared')
+
+    CAkActionExcept__SetExceptParams(obj, cls)
+    return
+
 #046>=
 def CAkActionBypassFX__SetActionParams(obj, cls):
     #CAkActionBypassFX::SetActionParams
@@ -1207,8 +1248,10 @@ def CAkActionBypassFX__SetActionParams(obj, cls):
     obj.U8x('bIsBypass')
     if   cls.version <= 26:
         pass
-    else:
+    elif cls.version <= 145:
         obj.U8x('uTargetMask')
+    else:
+        obj.U8x('byFxSlot')
 
     CAkActionExcept__SetExceptParams(obj, cls)
     return
@@ -1692,12 +1735,15 @@ def CAkBus__SetInitialFxParams(obj, cls):
         pass
     else: #136+
         CAkEffectSlots__SetInitialValues(obj, cls) #like the above fx reading though
+        #AkOwnedEffectSlots::SetInitialValues
 
-    if cls.version <= 89:
+    if   cls.version <= 89:
         pass
-    else:
+    elif cls.version <= 145:
         obj.tid('fxID_0')
         obj.U8x('bIsShareSet_0') #!=0
+    else:
+        pass
 
     return
 
@@ -1884,8 +1930,10 @@ def CAkBus__SetInitialValues(obj, cls):
 
     if   cls.version <= 89:
         pass
-    else:
+    elif cls.version <= 145:
         obj.U8x('bOverrideAttachmentParams')
+    else:
+        pass
 
     if   cls.version <= 136:
         pass

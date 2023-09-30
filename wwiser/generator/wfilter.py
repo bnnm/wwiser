@@ -253,7 +253,7 @@ class GeneratorFilter(object):
     # Same for unused. When filtering regular nodes, any others become "unused", so they are excluded by
     # default. You can include them back here.
     def allow_unused(self, node, nsid=None, hashname=None, classname=None, bankname=None, index=None):
-        return self._allow(_MODE_UNUSED, node, nsid, hashname, classname, bankname, index)
+        return self.generate_rest or self._allow(_MODE_UNUSED, node, nsid, hashname, classname, bankname, index)
 
     def _has_mode(self, mode):
         return bool(self._cfgs[mode].filters)

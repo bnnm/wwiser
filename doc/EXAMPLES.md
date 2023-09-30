@@ -722,3 +722,23 @@ bus hierarchy:
 
 ## South Park: Stick of Truth
 - has musictracks that reference a non-existing plugin (set as type/etc None), ex. in `259427237`
+
+## Bayonetta 3 (Switch)
+```
+(simplified)
+
+[589623248]
+    mswitch > (BGM_battle_normal_outro=none) > (BGM_battle_normal=bt_etc)  > ---
+            > (BGM_battle_normal_outro=*)    > (BGM_battle_normal=bt_moon) > 691815518
+
+[691815518]
+    mswitch > (BGM_battle_normal_outro=none) > (BGM_battle_normal_region_moon=region_01) > mtrack1
+            > (BGM_battle_normal_outro=none) > (BGM_battle_normal_region_moon=region_02) > mtrack2
+            > (BGM_battle_normal_outro=outro) > (BGM_battle_normal_region_moon=*) > mtrack3
+
+```
+- has tree paths that fail then use *
+  - ex. (BGM_battle_normal_outro=none)(BGM_battle_normal=bt_moon)
+  - on first mswitch actually uses BGM_battle_normal_outro=*: nothing for none+bt_moon, tries *+bt_moon
+- simulates loops by changing states?
+  - ex. starts with region_01, changes to region_02, region_03... (Wwise waits and swaps to next mtrack)

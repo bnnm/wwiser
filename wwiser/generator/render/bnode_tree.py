@@ -127,31 +127,58 @@ class AkDecisionTree(object):
 
         return
 
+    # find gamesyncs matches in path, ex.
+    # - defined:
+    #    bgm=m01,bgm_vo=on  > 123
+    #    bgm=m02,bgm_vo=on  > 345
+    #    bgm=*  ,bgm_vo=off > 789
+    # - paths
+    #   - (bgm=m01,bgm_vo=on ): gets 123 (direct match)
+    #   - (bgm=m01,bgm_vo=off): gets 789 (tries bgm=m01 but can't find bgm_vo=off, then tries bgm=* and matches bgm_vo=off)
+    # Each part (bgm > bgm_vo) is defined in "args" at index N
     def get_npath(self, params):
-        # find gamesyncs matches in path
+        # Follow tree up to some match (recursive since it may need to re-try using other branches)
+        # Result is [paths..] and should fill ntid, or set None
 
-        # follow tree up to match, with implicit depth args
-        npath = []
-        curr_tree = self.tree
-        for gtype, ngname in self.args:
-            # current arg must be defined to some value
-            gvalue = params.current(gtype, ngname.value())
-            if gvalue is None: #not defined = can't match
-                return None
+        self._leaf_ntid = None #meh
+        npath = self._get_npath_sub(params, self.tree, 0)
+        if not npath or not self._leaf_ntid:
+            return None
+        return (npath, self._leaf_ntid)
 
-            # value must exist in tree
-            match = curr_tree.get(gvalue) # exact match (could match * too if gvalue is set to 0)
-            if not match:
-                match = curr_tree.get(0) # * match
-            if not match:
-                return None
+    # tree should be well formed and stop at some point when no match is found
+    def _get_npath_sub(self, params, tree, args_index):
+        if not tree: #args_index >= len(self.args):
+            return None
 
-            ngvalue, ntid, subtree = match
-            npath.append( (gtype, ngname, ngvalue) )
+        # current arg + params must be defined to some value
+        gtype, ngname = self.args[args_index]
 
-            if not ntid:
-                curr_tree = subtree # try next args = higher depth
-            else:
-                return (npath, ntid)
+        gvalue = params.current(gtype, ngname.value())
+        if gvalue is None: #not found in params = can't match
+            return None
 
-        return None
+        npath = self._get_npath_submatch(params, tree, args_index, gvalue) # exact match
+        if not npath:
+            npath = self._get_npath_submatch(params, tree, args_index, 0)  # * match
+        return npath
+
+    def _get_npath_submatch(self, params, tree, args_index, gvalue):
+        gtype, ngname = self.args[args_index]
+
+        match = tree.get(gvalue)
+        if not match:
+            return None
+        ngvalue, ntid, subtree = match
+
+        npath = [(gtype, ngname, ngvalue)] #note paths are a list, combined on return
+        if ntid: #leaf
+            self._leaf_ntid = ntid
+            return npath
+
+        # next depth
+        subnpath = self._get_npath_sub(params, subtree, args_index + 1)
+        if subnpath:
+            return npath + subnpath
+        else:
+            return None

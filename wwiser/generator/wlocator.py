@@ -28,6 +28,7 @@ class Locator(object):
         self._root_path = _DEFAULT_ROOT_PATH #may be full path
         self._txtp_path = _DEFAULT_OUTDIR
         self._wem_path = _DEFAULT_WEMDIR
+        self._mod_path = ''
 
         self._fnv = wfnv.Fnv()
 
@@ -73,10 +74,38 @@ class Locator(object):
         #    path = node.get_root().get_path()
         #    self._registered_bnk_paths.add(path)
 
-        # TODO improve performance?
-        # find wems from root-path and refer to them relative to txtp-path
-        self._prepare()
+    # find wems from root-path and refer to them relative to txtp-path
+    # (call after setting options to properly read paths)
+    # TODO improve performance?
+    def setup(self):
+        if self._init:
+            return
+        self._init = True
+        self._prepare_files()
+        self._prepare_paths()
 
+    #--------------------------------------------------------------------------
+
+    def _prepare_paths(self):
+        #if not self._auto_find: #useful?
+        #    return
+
+        # since wem-path is relative to txtp-path, detect how to move into root folder, ex:
+        # (final path in .txtp would be mod-path + wem location, ex. '../' + 'sound/1.wem' in the first case)
+        # - 'txtp/'         >  '../'
+        # - 'out/txtp'      >  '../../'
+        # - '.'             >  ''
+        # - '../'           >  '(root)/'
+        # - '../../'        >  '(preroot)/(root)/'
+        # - '../txtp/'      >  '../(root)/'
+        # - '../root/'      >  '.' #hard to detect
+
+        self._mod_path = ''
+
+        root_full = self._normalize_path(os.path.realpath(self._root_path))
+        txtp_full = root_full + self._txtp_path
+        rel_path = os.path.relpath(root_full, txtp_full)
+        self._mod_path = self._normalize_path(rel_path)
 
     #--------------------------------------------------------------------------
 
@@ -85,16 +114,10 @@ class Locator(object):
         if not self._auto_find or key is None:
             return self._wem_path
 
-        # since wem-path should be relative to txtp-path, detect number of ".." needed
-        # ex. txtp-path = 'out/txtp/', wem in 'files/1.wem' > final path is '../../files/1.wem'
-        prev = ''
-        num_backs = self._txtp_path.count('/')
-        for _ in range(num_backs):
-            prev += '../'
-
+        # find wem path (from root folder) and include calc'd modifier (from txtp output folder)
         paths = items.get(key)
         if paths:
-            path = prev + self._find_path_lang(paths, lang)
+            path = self._mod_path + self._find_path_lang(paths, lang)
         else:
             path = self._wem_path #???
         return path
@@ -137,10 +160,7 @@ class Locator(object):
     def find_externals(self):
         return self._externals
 
-    def _prepare(self):
-        if self._init:
-            return
-        self._init = True
+    def _prepare_files(self):
 
         if self._version < _CODEC_EXTENSION_NEW_VERSION:
             exts_wems = ['.ogg', '.logg', '.wav', '.lwav', 'xma']

@@ -310,6 +310,7 @@ class Cli(object):
         locator.set_root_path(txtp_rootdir)
         locator.set_txtp_path(args.txtp_outdir)
         locator.set_wem_path(args.txtp_wemdir)
+        locator.setup()
 
         # !tags.m3u
         tags = wtags.Tags(banks, locator=locator, names=names)

@@ -867,6 +867,7 @@ class Gui(object):
         locator.set_root_path( self._root_path )
         locator.set_txtp_path( self._get_item('txtp_outdir') )
         locator.set_wem_path( self._get_item('txtp_wemdir') )
+        locator.setup()
 
         # !tags.m3u
         tags = wtags.Tags(banks, locator=locator, names=self.names)

@@ -179,7 +179,7 @@ class Lang(object):
     def matches(self, lang):
         if not lang:
             return True
-        if not self.fullname: #sfx
+        if not self.fullname or self.fullname.lower() == 'sfx': #sfx
             return True
         # can pass allowed lang "sfx", meaning any localized banks are ignored
         lang = lang.lower()

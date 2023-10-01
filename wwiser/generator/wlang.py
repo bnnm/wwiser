@@ -88,12 +88,20 @@ _LANGUAGE_HASHNAMES = {
     4036333791: "Turkish",
     4065424201: "Ukrainian",
     2847887552: "Vietnamese",
+
+    # derived just in case, some seen in games
+    3383237639: "English",
+    3133094709: "French",
+    4039628935: "Spanish",
+    577468018: "Portuguese",
+    1016554174: "Chinese",
 }
 
 # list also used to sort names in printed info, defaults to most common ones
 _LANGUAGE_SHORTNAMES = {
     "SFX": 'sfx',
 
+    "English": 'en',
     "English(US)": 'en', #en-us
     "English(UK)": 'uk', #en-gb
     "Japanese": 'ja',
@@ -101,6 +109,7 @@ _LANGUAGE_SHORTNAMES = {
 
     "Arabic": 'ar',
     "Bulgarian": 'bg',
+    "Chinese": 'zh',
     "Chinese(HK)": 'zh-hk',
     "Chinese(PRC)": 'zh-cn',
     "Chinese(Taiwan)": 'zh-tw',
@@ -110,6 +119,7 @@ _LANGUAGE_SHORTNAMES = {
     "English(Australia)": 'en-au',
     "English(India)": 'en-in', #?
     "Finnish": 'fi',
+    "French": 'fr',
     "French(Canada)": 'fr-ca',
     "French(France)": 'fr',
     "German": 'de',
@@ -121,11 +131,13 @@ _LANGUAGE_SHORTNAMES = {
     "Korean": 'ko',
     "Norwegian": 'no',
     "Polish": 'pl',
+    "Portuguese": 'pt',
     "Portuguese(Brazil)": 'pt-br',
     "Portuguese(Portugal)": 'pt',
     "Romanian": 'ro',
     "Russian": 'ru',
     "Slovenian": 'sl',
+    "Spanish": 'es',
     "Spanish(Mexico)": 'es-mx',
     "Spanish(Spain)": 'es',
     "Spanish(US)": 'es-us',

@@ -601,6 +601,7 @@ And these renames (note that order matters):
 - `(ST_READY=*):`
 - `ST_MISSION_STATE=:MISSION`
 - `ST_:`
+- `ST_(.+)_MISSION:ST_MISSION` #regex (detected by use of +*^$.)
 
 You would get:
 - `play_bgm (MISSION=M01)`

@@ -24,13 +24,17 @@ class TxtpRenamer(object):
             text_in = parts[0]
             text_out = parts[1]
             regex = None
-            if '*' in text_in:
-                replaces = { '(':'\(', ')':'\)', '[':'\[', ']':'\]', '.':'\.', '*':'.*?' }
+            if any(item in text_in for item in ['*','+','^','$', '.']):
+                # full regex
                 regex_in = text_in
-                for key, val in replaces.items():
-                    regex_in = regex_in.replace(key, val)
+
+                # not sure how to guess if regex was properly parsed or not
+                #replaces = { '(':'\(', ')':'\)', '[':'\[', ']':'\]', '.':'\.', '*':'.*?' }
+                #for key, val in replaces.items():
+                #    regex_in = regex_in.replace(key, val)
                 regex = re.compile(regex_in, re.IGNORECASE)
             else:
+                # simple text
                 regex = re.compile(re.escape(text_in), re.IGNORECASE)
 
             skip = text_out == self.SKIP_FLAG

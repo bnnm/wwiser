@@ -6,8 +6,8 @@ _TXTP_INDENTATION_SPACES = 1
 _DEBUG_PRINT_GROUP_HEADER = False
 # envelopes tend to make giant lines in some cases and vgmstream max line is ~2000, adjust as needed
 _ENVELOPES_LIMIT = 1800
-# many sounds are problematic due to txtp limit, mark as {!}
-_SOUNDS_LIMIT = 250
+# many sounds are problematic due to txtp/filesystem limit, mark as {!}
+_SOUNDS_LIMIT = 150
 
 
 GROUPS_TYPE = {

@@ -68,7 +68,7 @@ class Tags(object):
 
         logging.info("tags: start making tags for events")
 
-        basepath = self._get_basepath() #TODO
+        basepath = self.__get_basepath() #TODO
 
         tags = self._tag_names
         files = list(tags.keys())

@@ -63,11 +63,19 @@ class TxtpCache(object):
         }
 
         auto = False
+        volume = volume.replace(" ", "") # "* + 3.0 db" > "*+3.0db"
         try:
             # use dB for easier mixing with Wwise's values
-            if volume == '*':
-                master_db = 0.0
-                auto = True
+            for text in ['*','auto']:
+                if volume.startswith(text):
+                    master_db = 0.0
+                    auto = True
+                    # allow *+3.0db = auto volume then adds 3.0db
+                    volume = volume[len(text):]
+                    break
+
+            if not volume: #in case of auto volume
+                pass
 
             elif volume.lower().endswith('db'):
                 master_db = float(volume[:-2])

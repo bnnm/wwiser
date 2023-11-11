@@ -944,7 +944,7 @@ class TxtpSimplifier(object):
 
         if self.volume_master_auto:
             self._set_master_volume_auto(node)
-            return
+            #return #may mix master volume and regular volume
 
         if not self.volume_master or self.volume_master == 0:
             # no actual volume

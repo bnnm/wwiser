@@ -27,9 +27,10 @@ from . import wnconfig
 #******************************************************************************
 
 class Names(object):
-    ONREPEAT_INCLUDE = 1
-    ONREPEAT_IGNORE = 2
-    ONREPEAT_BEST = 3
+    ONREPEAT_NOCAPS = 1 #update objnames but don't change name caps
+    ONREPEAT_UPDATECAPS = 2 #update objnames and change name caps
+    ONREPEAT_IGNORE = 3 #ignore if already exists
+    ONREPEAT_BEST = 4 #compare caps and pick
     EMPTY_BANKTYPE = ''
 
 
@@ -182,7 +183,7 @@ class Names(object):
     # AK's docs) are actually from NAMEs, so it's worth manually testing rather than trusting the caller.
     # Multiple GUIDNAMEs for an ID are possible, so we can update the results, and we can also add Wwise's
     # "Path/ObjectPath" for extra info (never hashnames, considered separate).
-    def _add_name(self, id, name, objpath=None, path=None, onrepeat=ONREPEAT_INCLUDE, exhash=False, source=None):
+    def _add_name(self, id, name, objpath=None, path=None, onrepeat=ONREPEAT_NOCAPS, exhash=False, source=None):
         if name:
             name = name.strip()
         if objpath:
@@ -209,6 +210,7 @@ class Names(object):
             id = int(id)
         is_hashname = id == id_hash
 
+        is_update_name = True
         row = self._names.get(id)
         if row:
             #ignore even if guidname
@@ -216,21 +218,27 @@ class Names(object):
                 return row
 
             if is_hashname and row.hashname:
-                if row.hashname.lower() != name.lower():
+                # ignore if same name with different caps
+                if onrepeat == self.ONREPEAT_NOCAPS:
+                    is_update_name = name.lower() != row.hashname.lower()
                     #logging.info("names: alt hashname (using old), old=%s vs new=%s" % (row.hashname, name))
                     #return None #allow to add as alt, logged once used
-                    pass
-                # ignore new name if all uppercase (favors lowercase names)
-                if onrepeat == self.ONREPEAT_BEST and name.isupper():
-                    #logging.info("names: ignoring new uppercase name, new=%s vs old=%s" % (name, row.hashname))
-                    return None
+
+                # update if caps change (ex. 'bgm' exists, adds 'BGM' > updates as 'BGM')
+                if onrepeat == self.ONREPEAT_UPDATECAPS:
+                    is_update_name = name != row.hashname
+
+                # favors lowercase names
+                if onrepeat == self.ONREPEAT_BEST:
+                    is_update_name = name != row.hashname and not name.isupper()
+
                 #logging.info("names: updating row, new=%s vs old=%s" % (name, row.hashname))
         else:
             row = NameRow(id)
             row.source = source
             self._names[id] = row
 
-        if is_hashname:
+        if is_hashname and is_update_name:
             row.add_hashname(name, extended=extended)
             #logging.info("names: added id=%i, hashname=%s" % (id, name))
         else:
@@ -777,7 +785,10 @@ class Names(object):
             return
         processed[elem] = True
 
-        self._add_name(None, elem, source=NameRow.NAME_SOURCE_EXTRA)
+        onrepeat = Names.ONREPEAT_NOCAPS
+        if self._cfg.repeats_update_caps:
+            onrepeat = Names.ONREPEAT_UPDATECAPS
+        self._add_name(None, elem, source=NameRow.NAME_SOURCE_EXTRA, onrepeat=onrepeat)
 
 
     # wwnames.db3

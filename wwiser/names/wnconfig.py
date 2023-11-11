@@ -14,6 +14,7 @@ class Config(object):
         self.save_missing = True
         self.save_companion = True
         self.save_all = False
+        self.repeats_update_caps = False
 
         self.sort_always = False
         self._default_weight = 100
@@ -52,6 +53,9 @@ class Config(object):
             self.sort_always = True
         if line.startswith('#@sort-weight') or line.startswith('#@sw'):
             self._add_sort_weight(line)
+
+        if line.startswith('#@repeats-update-caps'):
+            self.repeats_update_caps = True
 
     def add_lines(self, lines):
         lines.extend(self._config_lines)

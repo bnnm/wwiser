@@ -232,6 +232,11 @@ Saves all registered names even if unused (only useful when loading few banks).
 #### `#@hashtypes-missing <types>`
 When generating a clean list (`wwiser *.bnk -sl`) all missing IDS are printed under `### MISSING (type) NAMES` headers. This option limits missing types to those in the list (mainly to target and reverse certain IDs in `words.py` companion helper script)
 
+#### `#@repeats-update-caps`
+When names in *wwnames* have repeated names (already added from bank names or .xml for example) they are ignored. With this flag wwnames overwrite previous names. This basically can be used to control caps when names/caps from `.bnk` or `Wwise_IDs.h` are unwanted.
+
+For example, when loading a `BGM_Blah.bnk` and having `bgm_blah` in *wwnames*, *wwiser* will normally use first one (`BGM_Blah`), and with this flag set it'll use last one (`bgm_blah`).
+
 #### `#@sort-always`
 For events that change depending of parameters (`play_bgm (music=m01)`, `play_bgm (music=m02)`, etc) *wwiser* sorts the variables so `.txtp` with names come first. However some objects are pre-sorted in bnk. This flags also sorts pre-sorted names, that may result in better names.
 

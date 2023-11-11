@@ -31,15 +31,17 @@ class NameRow(object):
     def add_hashname(self, name, extended=False):
         if not name:
             return
+
+        self.extended = extended
+
         if not self.hashname: #base
             self.hashname = name
         else:
-            if name.lower() == self.hashname.lower():
-                return
-            if name.lower() in (hashname.lower() for hashname in self.hashnames):
-                return
-            self.hashnames.append(name) #alts
-        self.extended = extended
+            is_samecaps = name.lower() == self.hashname.lower()
+            is_exists = name.lower() in (hashname.lower() for hashname in self.hashnames)
+            if not is_samecaps and not is_exists:
+                self.hashnames.append(name) #alts
+            self.hashname = name #overwrite if reached this function (update caps)
 
     def add_guidname(self, name):
         if not name:

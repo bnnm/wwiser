@@ -52,7 +52,7 @@ class Mover(object):
 
         nroot = node.get_root()
         in_dir = nroot.get_path()
-        out_dir = self._txtpcache.locator.get_wem_full(node)
+        out_dir = self._txtpcache.locator.get_wem_fullpath()
 
         if in_dir == out_dir:
             return
@@ -76,7 +76,7 @@ class Mover(object):
 
             elif in_dir != out_dir:
                 # by default it tries in the bank's dir, but in case of lang banks may need to try in other banks' folder
-                in_dir = self._txtpcache.locator.get_basepath(node)
+                in_dir = self._txtpcache.locator.get_root_fullpath()
                 in_name, out_name = self._get_names(source, in_dir, out_dir)
                 wem_exists = os.path.exists(in_name)
 

@@ -59,7 +59,7 @@ bank_versions = [
     141, #0x8d Wwise 2021.1-B?  [Overwatch (PC)]
     144, #0x90 Wwise 2022.1-B   (none known)
     145, #0x91 Wwise 2022.1     [Sea of Stars (PC), Mortal Kombat 1 (PC)]
-    150, #0x91 Wwise 2023.1-B   (none known)
+    150, #0x96 Wwise 2023.1     (none known)
 ]
 
 # no txtp support, even if forced

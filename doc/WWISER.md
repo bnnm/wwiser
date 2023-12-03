@@ -323,7 +323,7 @@ Watch out for filenames with:
 - `{m}`: uses multi-loops where multiple places set to `#@loop`
 - `{e}`: uses "external IDs" set by game at runtime so can't guess file, usually voices
 - `{!}`: some kind of unplayable issues (missing/unsupported audio)
-- `{l=(lang)}`: when flag to handle languages is set, use when multiple songs/sfx per language need to coexist coexist in same dir
+- `{l=(lang)}`: when "localized" audio is found and language is selected or there are multiple language banks
 
 *wwiser* adds those marks to tell you those files may need special care, and will be detailed below. Some optional settings also add extra marks to the name, too.
 
@@ -617,15 +617,37 @@ While you can mutate anything to anything, I recommend shortening but respecting
 As a "quick delete" hack, if a `text-out` is `<skip>` (such as `ST_SILENT=:<skip>`), any `.txtp` matching that rename will not be written out.
 
 
+## ENCRYPTED BNK HEADERS
+In very rare cases `.bnk` headers are slightly encrypted, meaning *wwiser* can't handle them as-is and will throw an error like `encrypted bank version (needs xorpad.bin)`. You can supply *wwiser* a decryption key named `xorpad.bin` (put near the `bnk`). Fortunately the encrypted part is very simple and easy enough to figure out by inspection (for known games, at least) if you have some basic understanding of hex editting and xor operations.
+
+This encryption seems to be an optional but rarely used feature of Wwise, and can be seen by decompiling and looking at parts that initialize and read `BKHD`. It's not a key over data but xor'ing applied field by field in the init code.
+
+Example from Limbo's Wwise demo: 
+- `424B4844 34000000 2144985C DCF3835F 02CBF4DE B724A036` (encrypted header)
+- `00000000 00000000 B144985C 7065B909 3C9684C9 A724A036` (`xorpad.bin` key)
+- `424B4844 34000000 90000000 AC963A56 3E5D7017 10000000` (result of xor'ing both)
+
+Resulting encrypted fields are:
+- `424B4844`: `dwTag`, always `BKHD`. Not encrypted so key has 0s
+- `34000000`: `dwChunkSize` (little endian on PC), also not encrypted
+- `90000000`: `dwBankGeneratorVersion`, only field actually needed by *wwiser*. Its value can be guessed by knowing the release date (see `wdefs.py` for Wwise version <> bank version), and just trying to read the `.bnk` with different versions until *wwiser* stops throwing errors
+- `AC963A56`: `dwSoundBankID`, bank's hash. Not important but can be derived from its name: if you have `l_testbank.bnk`, `fnv.exe -n l_testbank` gives 1446680236 / 0x563a96ac (see wwiser-utils for `fnv.exe`)
+- `3E5D7017`: `dwLanguageID`, in this case hash of `SFX` (most common, `Engligh(US)` is also common)
+- `10000000`: `dwProjectID`, a reference ID.
+
+Since only the bank version is needed, you can use `00000000 00000000 XXXXXXXX 00000000 00000000 00000000` and tweak XXXXXXXX so it results in some sensical values, until it works. Technically more fields could be encrypted so `xorpad.bin` may need to be bigger though.
+
+Note that devs could instead encrypt the whole `.bnk` using standard encryption like AES, this is unrelated to Wwise and not covered by this program.
+
 ## KNOWN ISSUES
 Bank format may change a bit between major Wwise SDK versions, adding new features or moving fields around. *wwiser* should handle almost all but there are bugs left:
-- earliest versions used in *Shadowrun (X360)* and *Too Human (X360)* not supported
-- parameters for custom plugins only partially parsed (uncommon and time-consuming to add)
+- earliest versions used in *Shadowrun (X360)* and *Too Human (X360)* partially supported
+- parameters for custom plugins not always parsed (uncommon and time-consuming to add)
 - some versions' field names and descriptions may be incorrect (missing SDKs)
 - viewer doesn't work in older (IE11<) browsers
 - some functions may not properly handle repeated IDs on different objects (unlikely and unsure how Wwise handles this)
 
-New bank versions must be manually added, but you can skip the version check. If you find an unsupported version, or the tool outputs "errors" (overreads) and "skips" (underreads) please report.
+New bank versions must be manually added. If you find an unsupported version, or the tool outputs "errors" (overreads) and "skips" (underreads) please report.
 
 Providing some missing Wwise SDKs would help development a lot: `2012.1`, `2011.3`, lower or equal than `2009.2`. Any sub-version is ok (`2012.1.1` or `2012.1.2` work the same).
 

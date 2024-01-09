@@ -51,7 +51,7 @@ class Config(object):
 
         if line.startswith('#@sort-always'):
             self.sort_always = True
-        if line.startswith('#@sort-weight') or line.startswith('#@sw'):
+        if line.startswith('#@sort-weight'): #or line.startswith('#@sw'): #clases with strings2 wwnames
             self._add_sort_weight(line)
 
         if line.startswith('#@repeats-update-caps'):

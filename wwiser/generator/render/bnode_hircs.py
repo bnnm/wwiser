@@ -109,8 +109,9 @@ class CAkAudioDevice(CAkHircNode):
         if fxid == 0x00B50007: #No Output
             self.silent = True
 
-            # only used in latest versions (no known games) and this just means there is no
+            # only used in latest versions and this just means there is no
             # output (txtp config could be marked 'silenced'), not sure when would be used though.
+            # ex. MK1 Switch redirects output to "Critical_Health_Controller" while silencing main
             #self._barf("No_Output CAkAudioDevice, report")
             logging.info("WARNING: No_Output CAkAudioDevice found (report)")
 

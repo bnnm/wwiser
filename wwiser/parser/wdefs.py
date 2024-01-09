@@ -41,7 +41,7 @@ bank_versions = [
      72, #0x48 Wwise 2012.2     [Metal Gear Rising (PC/X360)-most banks, Saints Row IV (PC), South Park: The Stick of Truth (PC)]
      88, #0x58 Wwise 2013.1/2   [Bayonetta 2 (WiiU), Devil's Third (WiiU), Total War: Rome (PC)]
      89, #0x59 Wwise 2013.2-B? *[Destiny (PS4)]
-    112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy, Plants vs Zombies 2 (Android), Total War: Attila (PC)]
+    112, #0x70 Wwise 2014.1     [Transformers (PS3/X360), Oddworld (Vita), Star Fox Zero (WiiU)-buggy, Star Fox Guard (WiiU)-buggy, Plants vs Zombies 2 (Android), Total War: Attila (PC)]
     113, #0x71 Wwise 2015.1     [Nier Automata (PC), Doom 2016 (PC), South Park: The Fractured But Whole (PC)]
     118, #0x76 Wwise 2016.1     [WipEout: Omega Collection (PS4), Coffence (PC), Mario + Rabbids Kingdom Battle (Switch)]
     120, #0x78 Wwise 2016.2     [Polyball (PC), Battle Chasers (PC)]
@@ -81,8 +81,9 @@ bank_custom_versions = {
 
 
 # for extra detection
-sfz_buggy_project_ids = {
-  0x000004A0
+v112_buggy_project_ids = {
+  0x000004A0, #Star Fox Zero
+  0x00000950  #Star Fox Guard
 }
 aot2_buggy_banks = {
     #base

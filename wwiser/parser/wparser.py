@@ -3249,14 +3249,14 @@ def CAkBankMgr__ProcessBankHeader(obj):
 
     # * special detection for buggy banks
     
-    # Star Fox Zero (v112) has some odd behavior in the feedback flag. All .bnk except init.bnk set it, but
+    # Star Fox Zero/Guard (v112) have some odd behavior in the feedback flag. All .bnk except init.bnk set it, but
     # no .bnk has feedback info. Presumably only init.bnk (first) flag's matters, but since we can't be sure
     # that bank was loaded, we need some crude autodetection.
     # Some test/remnant .bnk in SFZ use v88 and don't have the flag set, and no other 112 bnk exhibits this bug
     # either (flag works as intended), so maybe it happened in some Wwise revision only.
     if version == 112:
         is_be = root.is_be()
-        if project_id in wdefs.sfz_buggy_project_ids and is_be: #id not unique but seems unique enough for this case
+        if project_id in wdefs.v112_buggy_project_ids and is_be: #id not unique but seems unique enough for this case
             root.set_feedback(0)
 
     # Army of Two: the 40th Day banks range from v034~045, though init.bnk and most files use 045.

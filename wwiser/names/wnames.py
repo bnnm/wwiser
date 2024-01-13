@@ -306,11 +306,6 @@ class Names(object):
             for string in strings:
                 self._add_name(None, string, source=NameRow.NAME_SOURCE_EXTRA)
 
-        # parse .h (names in CAPS so less priority)
-        for filename in filenames:
-            self.set_bankname(filename)
-            self.parse_h(h)
-
         # extra files, after other banks or priority when generating some missing lists and stuff is off
         for filename in filenames:
             # try wwnames in bnk folder
@@ -324,6 +319,20 @@ class Names(object):
             prevname = os.path.join(prevname, basename)
             self.set_bankname(prevname)
             self.parse_lst(lst)
+
+        # parse .h (names in CAPS so less priority)
+        for filename in filenames:
+            self.set_bankname(filename)
+            self.parse_h(h)
+
+            # also try in prev folder, for easier names in localized dirs
+            pathname = os.path.dirname(filename)
+            basename = os.path.basename(filename)
+            prevname = os.path.join(pathname, '..')
+            prevname = os.path.join(prevname, basename)
+            self.set_bankname(prevname)
+            self.parse_h(h)
+
 
         # current folder just in case
         self.set_bankname(None)

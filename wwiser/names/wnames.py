@@ -6,7 +6,7 @@ from ..parser import wdefs
 from .wsqlite import SqliteHandler
 from .wnamerow import NameRow
 from . import wnconfig
-
+from . import wnamedumper
 
 # Parses various companion files with names and saves results, later used to assign names to bank's
 # ShortIDs. Resulting name list may be either ID=HASHNAME, where ID is a hash of HASHNAME (events,
@@ -41,9 +41,9 @@ class Names(object):
         self._names_fuzzy = {}
         self._db = None
         self._loaded_wwnames = {}
-        self._loaded_banknames = set() #for used names only
+        self._current_banknames = set() #for existing banks
         self._current_bankpaths = {} #for existing banks
-        self._missing = {}
+        self._missing = {} # [hashtype] = banks
         self._fnv = wfnv.Fnv()
         # flags
         self._cfg = wnconfig.Config()
@@ -75,7 +75,6 @@ class Names(object):
 
             key = (hashtype, bank)
             row.hashtypes.add(key)
-            self._loaded_banknames.add(bank)
 
         # log this first time it's marked as used
         if not row.multiple_marked and row.hashnames:
@@ -273,6 +272,7 @@ class Names(object):
 
         # add banks names (doubles as hashnames), first since it looks a bit nicer in list output
         for bank in banks:
+            bankfile = bank.get_root().get_filename()
             bankname = bank.get_root().get_bankname()
             bankpath = bank.get_root().get_path()
 
@@ -285,6 +285,7 @@ class Names(object):
                     self._add_name(None, item, source=NameRow.NAME_SOURCE_EXTRA)
 
             # might as well register now
+            self._current_banknames.add(bankfile)
             self._current_bankpaths[bankname] = bankpath
 
 
@@ -824,207 +825,9 @@ class Names(object):
     # saves loaded hashnames to .txt
     # (useful to check names when loading generic db/lst of names)
     def save_lst(self, basename=None, path=None):
-        if not basename:
-            basename = 'banks'
-        else:
-            basename = os.path.basename(basename)
-        time = datetime.today().strftime('%Y%m%d%H%M%S')
-        outname = 'wwnames-%s-%s.txt' % (basename, time)
-        if path:
-            outname = os.path.join(path, outname)
-
-        logging.info("names: saving %s" % (outname))
-
-        hashtypes_lines = {}
-        default_lines = []
-
-        lines = default_lines
-        self._cfg.add_lines(lines)
-
-        save_companion = self._cfg.save_companion
-        save_missing = self._cfg.save_missing
-        save_all = self._cfg.save_all
-
-        has_companion = False
-        names = self._names.values()
-        for row in names:
-            #save hashnames only, as they can be safely shared between games
-            if not row.hashname:
-                continue
-            #save used names only, unless set to save all
-            if not save_all and not row.hashname_used:
-                continue
-            #save names not in xml/h/etc only, unless set to save extra
-            if row.source != NameRow.NAME_SOURCE_EXTRA and not save_companion:
-                has_companion = True
-                continue
-
-            if self._cfg.classify:
-                hashtypes = row.hashtypes
-                if not hashtypes:
-                    hashtypes = set()
-                    hashtypes.add((wdefs.fnv_no, self.EMPTY_BANKTYPE))
-
-                for hashtype, bank in hashtypes:
-                     
-                    banks_lines = hashtypes_lines.get(hashtype)
-                    if not banks_lines:
-                        banks_lines = {}
-                        hashtypes_lines[hashtype] = banks_lines
-
-                    sublines = banks_lines.get(bank)
-                    if not sublines:
-                        sublines = []
-                        banks_lines[bank] = sublines
-
-                    self._save_lst_name(row, sublines)
-            else:
-                self._save_lst_name(row, lines)
-
-        # when this flag is set, lines are saved for each type above and classified 
-        # into sections (helps a bit to detect bogus names)
-        if self._cfg.classify:
-            lines = default_lines #restore
-
-            # may print like: bank > hashtypes (banks_first=True), or hashtypes > banks
-            banks_first = True
-            if banks_first:
-                for bank in sorted(self._loaded_banknames):
-                    for hashtype in wdefs.fnv_order:
-                        self._include_lines(save_missing, lines, hashtypes_lines, hashtype, bank)
-            else:
-                for hashtype in wdefs.fnv_order:
-                    for bank in sorted(self._loaded_banknames):
-                        self._include_lines(save_missing, lines, hashtypes_lines, hashtype, bank)
-
-            lines.append('')
-
-        # write IDs that don't should have hashnames but don't
-        if save_missing:
-            self._include_missing_all(lines)
-
-        #     for hashtype in wdefs.fnv_order:
-        #         if hashtype not in self._missing:
-        #             continue
-        #         banks = self._missing[hashtype]
-        #         for bank in banks:
-        #             ids = banks[bank]
-        #             if not ids:
-        #                 continue
-
-        #             lines.append('')
-        #             if bank:
-        #                 lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), bank))
-        #             else:
-        #                 lines.append('### MISSING %s NAMES' % (hashtype.upper()))
-
-        #             for id in ids:
-        #                 lines.append('# %s' % (id))
-
-        if not save_companion and has_companion:
-            lines.append("\n### (more names found in companion files)\n")
-
-        with open(outname, 'w', encoding='utf-8') as outfile:
-            outfile.write('\n'.join(lines))
-
-    def _include_lines(self, save_missing, lines, types_lines, hashtype, bank):
-        if hashtype not in types_lines:
-            return
-        banks = types_lines[hashtype]
-
-        if bank not in banks:
-            banks_missing = self._missing.get(hashtype)
-            if not banks_missing or bank not in banks_missing:
-                return
-
-        sublines = banks.get(bank)
-        if not sublines and not save_missing:
-            return
-
-        lines.append('')
-        if bank:
-            banktext = self._get_banktext(bank)
-            lines.append('### %s NAMES (%s)' % (hashtype.upper(), banktext))
-        else:
-            lines.append('### %s NAMES' % (hashtype.upper()))
-
-        if sublines:
-            sublines.sort(key=str.lower)
-            for subline in sublines:
-                lines.append(subline)
-
-        # include missing ids at bank level (otherwise at the end)
-        if save_missing:
-            self._include_missing(lines, hashtype, bank)
-
-
-    def _include_missing(self, lines, hashtype, bank, header=False):
-        if self._cfg.skip_hastype(hashtype):
-            return
-
-        banks = self._missing.get(hashtype)
-        if not banks:
-            return
-        ids = banks.get(bank)
-        if not ids:
-            return
-
-        if header:
-            lines.append('')
-            if bank:
-                banktext = self._get_banktext(bank)
-                lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), banktext))
-            else:
-                lines.append('### MISSING %s NAMES' % (hashtype.upper()))
-
-        for id in ids:
-            lines.append('# %s' % (id))
-        
-        # remove so it doesn't get saved twice
-        banks[bank] = {}
-
-    def _include_missing_all(self, lines):
-        for hashtype in wdefs.fnv_order:
-            if hashtype not in self._missing:
-                continue
-            banks = self._missing[hashtype]
-            for bank in banks:
-                self._include_missing(lines, hashtype, bank, header=True)
-
-    def _get_banktext(self, bank):
-        bankname = bank
-        basebank, _ = os.path.splitext(bank)
-
-        if self._cfg.bank_paths:
-            bankpath = self._current_bankpaths.get(basebank)
-            if bankpath:
-                bankpath = bankpath.replace('\\', '/')
-                bankname = "%s/%s" % (bankpath, bankname)
-
-        if not basebank.isdigit():
-            return bankname
-
-        row = self.get_namerow(basebank)
-        if not row or not row.hashname:
-            return bankname
-
-        return "%s: %s" % (bankname, row.hashname)
-
-    def _save_lst_name(self, row, lines):
-        #logging.debug("names: using '%s'", row.hashname)
-        extended = ''
-        if row.extended:
-            extended = ' = 0' #allow names with special chars
-        lines.append('%s%s' % (row.hashname, extended))
-
-        # log alts too (list should be cleaned up manually)
-        for hashname in row.hashnames:
-            if extended:
-                lines.append('#alt')
-                lines.append('%s%s' % (row.hashname, extended))
-            else:
-                lines.append('%s #alt' % (hashname))
-
+        dumper = wnamedumper.Namedumper(self._cfg, self._names, self._missing, self._current_banknames)
+        dumper.save_lst(basename, path)
+        return
 
     # saves loaded hashnames to DB
     def save_db(self):

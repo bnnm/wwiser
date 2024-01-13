@@ -22,43 +22,56 @@ class Config(object):
         self._config_lines = []
 
     def add_config(self, line):
-        if line.startswith('#@'):
-            self._config_lines.append(line)
-
+        ok = False
 
         if line.startswith('#@no-fuzzy') or line.startswith('#@nofuzzy'):
             self.disable_fuzzy = True
+            ok = True
 
         if line.startswith('#@no-save-missing'):
             self.save_missing = False
+            ok = True
 
         if line.startswith('#@no-save-companion'):
             self.save_companion = False
+            ok = True
 
         if line.startswith('#@no-save-all'):
             self.save_all = True
+            ok = True
 
         if line.startswith('#@no-classify'):
             self.classify = False
             self.classify_bank = False
+            ok = True
 
         if line.startswith('#@classify-path'):
             self.bank_paths = True
+            ok = True
 
         if line.startswith('#@hashtypes-missing'):
             line = line.replace('#@hashtypes-missing', '')
             self._hashtypes_missing = [item.lower().strip() for item in line.split()]
+            ok = True
 
         if line.startswith('#@sort-always'):
             self.sort_always = True
+            ok = True
+
         if line.startswith('#@sort-weight'): #or line.startswith('#@sw'): #clases with strings2 wwnames
             self._add_sort_weight(line)
+            ok = True
 
         if line.startswith('#@repeats-update-caps'):
             self.repeats_update_caps = True
+            ok = True
 
-    def add_lines(self, lines):
-        lines.extend(self._config_lines)
+        if ok:
+            self._config_lines.append(line)
+
+
+    def get_config_lines(self):
+        return self._config_lines
 
     def skip_hastype(self, hashtype):
         return self._hashtypes_missing and hashtype not in self._hashtypes_missing

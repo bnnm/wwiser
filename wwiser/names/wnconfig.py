@@ -8,7 +8,6 @@ class Config(object):
         self._hashtypes_missing = None # print only certain hashtypes
 
         self.disable_fuzzy = False
-        self.classify = True
         self.classify_bank = True
         self.bank_paths = False
         self.save_missing = True
@@ -41,7 +40,6 @@ class Config(object):
             ok = True
 
         if line.startswith('#@no-classify'):
-            self.classify = False
             self.classify_bank = False
             ok = True
 

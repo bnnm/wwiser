@@ -9,12 +9,27 @@ from .wnamerow import NameRow
 class Namedumper(object):
     EMPTY_BANKTYPE = ''
 
-    def __init__(self, cfg, names, missing, banks):
+    def __init__(self, cfg, names, missing, bankpaths):
         # flags
         self._cfg = cfg
         self._names = names
         self._missing = missing
-        self._current_banknames = banks
+        self._bankpaths = bankpaths
+        self._bank_mix = self._get_bank_mix()
+        
+
+    # true if there are sfx and localized, false if all are from the same type
+    def _get_bank_mix(self):
+        is_sfx = False
+        is_lang = False
+        for _, loc in self._bankpaths.keys():
+            if loc:
+                is_lang = True
+            else:
+                is_sfx = True
+
+        return is_lang and is_sfx
+
 
     # saves loaded hashnames to .txt
     # (useful to check names when loading generic db/lst of names)
@@ -61,7 +76,7 @@ class Namedumper(object):
 
             rows.append(row)
                 
-        if self._cfg.classify:
+        if self._cfg.classify_bank:
             # clasified list: include rows divided into sections
             lines = self._include_classify(rows)
         else:
@@ -114,20 +129,21 @@ class Namedumper(object):
                 self._save_lst_name(row, sublines)
 
         # get banks to write
-        banks = [self.EMPTY_BANKTYPE] #special value for other names
-        banks += list(self._current_banknames) #all banks
-        banks.sort(key=lambda x: (x != self.EMPTY_BANKTYPE, x.lower() != 'init.bnk', x)) # general names > init > rest
+        banks = [(self.EMPTY_BANKTYPE, False)] #special value for other names
+        banks += list(self._bankpaths.keys()) #all bankkeys
+         # general names > init > regular-localized > names
+        banks.sort(key=lambda x: (x[0] != self.EMPTY_BANKTYPE, x[0].lower() not in ('init.bnk','1355168291.bnk'), x[1], x[0]))
 
         # may print like: bank > hashtypes (banks_first=True), or hashtypes > banks (mainly a test)
         banks_first = True
         if banks_first:
-            for bank in banks:
+            for bankkey in banks:
                 for hashtype in wdefs.fnv_order:
-                    self._include_classify_lines(lines, hashtypes_lines, hashtype, bank)
+                    self._include_classify_lines(lines, hashtypes_lines, hashtype, bankkey)
         else:
             for hashtype in wdefs.fnv_order:
-                for bank in banks:
-                    self._include_classify_lines(lines, hashtypes_lines, hashtype, bank)
+                for bankkey in banks:
+                    self._include_classify_lines(lines, hashtypes_lines, hashtype, bankkey)
 
         lines.append('')
         return lines
@@ -149,11 +165,10 @@ class Namedumper(object):
             return
 
         lines.append('')
-        if bank:
-            banktext = self._get_banktext(bank)
-            lines.append('### %s NAMES (%s)' % (hashtype.upper(), banktext))
-        else:
-            lines.append('### %s NAMES' % (hashtype.upper()))
+        banktext = self._get_banktext(bank)
+        if banktext:
+            banktext = " (%s)" % (banktext)
+        lines.append('### %s NAMES%s' % (hashtype.upper(), banktext))
 
         if sublines:
             sublines.sort(key=str.lower)
@@ -178,11 +193,10 @@ class Namedumper(object):
 
         if header:
             lines.append('')
-            if bank:
-                banktext = self._get_banktext(bank)
-                lines.append('### MISSING %s NAMES (%s)' % (hashtype.upper(), banktext))
-            else:
-                lines.append('### MISSING %s NAMES' % (hashtype.upper()))
+            banktext = self._get_banktext(bank)
+            if banktext:
+                banktext = " (%s)" % (banktext)
+            lines.append('### MISSING %s NAMES%s' % (hashtype.upper(), banktext))
 
         for id in ids:
             lines.append('# %s' % (id))
@@ -190,16 +204,23 @@ class Namedumper(object):
         # remove so it doesn't get saved twice
         banks[bank] = {}
 
-    def _get_banktext(self, bank):
-        bankname = bank
-        basebank, _ = os.path.splitext(bank)
+    def _get_banktext(self, bankkey):
+        bankname, bank_loc = bankkey
+        basebank, _ = os.path.splitext(bankname)
+        if not bankname:
+            return ''
 
-        # TODO fix
+        # optional info
+        bankpath = ''
         if self._cfg.bank_paths:
-            bankpath = self._current_bankpaths.get(basebank)
-            if bankpath:
-                bankpath = bankpath.replace('\\', '/')
-                bankname = "%s/%s" % (bankpath, bankname)
+            bankpath = self._bankpaths.get(bankkey)
+        elif bank_loc is True and self._bank_mix:
+            # mark localized banks if there are localized and non-localized banks (as some games may use only localized)
+            bankpath = 'langs'
+
+        if bankpath:
+            bankpath = bankpath.replace('\\', '/')
+            bankname = "%s/%s" % (bankpath, bankname)
 
         if not basebank.isdigit():
             return bankname

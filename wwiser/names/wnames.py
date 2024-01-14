@@ -32,6 +32,7 @@ class Names(object):
     ONREPEAT_IGNORE = 3 #ignore if already exists
     ONREPEAT_BEST = 4 #compare caps and pick
     EMPTY_BANKTYPE = ''
+    EMPTY_BANKLANG = 0
 
 
     def __init__(self):
@@ -41,9 +42,8 @@ class Names(object):
         self._names_fuzzy = {}
         self._db = None
         self._loaded_wwnames = {}
-        self._current_banknames = set() #for existing banks
-        self._current_bankpaths = {} #for existing banks
-        self._missing = {} # [hashtype] = banks
+        self._current_bankpaths = {} #existing banks info, in the form of (bank, localized) = path
+        self._missing = {} # [hashtype] = {(bank, localized)} = [ids]
         self._fnv = wfnv.Fnv()
         # flags
         self._cfg = wnconfig.Config()
@@ -52,29 +52,11 @@ class Names(object):
         self._gamename = gamename #path
 
     def _mark_used(self, row, hashtype, node):
-        #if row.hashname_used:
+        #if row.hashname_used: #save multiple
         #    return
         row.hashname_used = True
 
-        if self._cfg.classify and hashtype:
-            if not row.hashtypes:
-                row.hashtypes = set()
-            
-            # even if marked sometimes 
-            if self._cfg.classify_bank:
-                # should only happen when reading GV/SC/GS params, ignore
-                if not node:
-                    return
-
-                bank = node.get_root().get_filename()
-                # put all bnk together
-                if hashtype in wdefs.fnv_order_join:
-                    bank = self.EMPTY_BANKTYPE
-            else:
-                bank = self.EMPTY_BANKTYPE
-
-            key = (hashtype, bank)
-            row.hashtypes.add(key)
+        self._register_classify_row(row, hashtype, node)
 
         # log this first time it's marked as used
         if not row.multiple_marked and row.hashnames:
@@ -84,37 +66,80 @@ class Names(object):
             logging.info("names: alt hashnames (using old), old=%s vs new=%s" % (old, new))
             row.multiple_marked = True
 
-    def _mark_unused(self, id, hashtype, node):
+        return
 
+    # Register name usage (ID > hash types > banks), as a single name may be used in multiple contexts.
+    # This info can be used when saving wwnames to detect ID origin. 
+    #
+    # When loading multiple banks it's possible that some reuse the same name
+    #  ex: wwise/cutscenes.bnk, wwise/English(US)/cutscenes.bnk
+    # If we register bank usage only by name, all IDs from regular and localized are lumped together,
+    # so need to mark (bank, localized) to divide them.
+    # Could also mark bank (bank, path) which would allow non-localized banks of the same name in different paths,
+    # but that's less common and would need to filter some langs, yet we don't know yet which lang will be selected.
+    def _register_classify_row(self, row, hashtype, node):
+        if not self._cfg.classify_bank or not hashtype:
+            return
+        if not row.hashtypes:
+            row.hashtypes = set()
+
+        bankkey = self._get_register_bankkey(hashtype, node)
+        if bankkey is None:
+            return
+
+        key = (hashtype, bankkey)
+        row.hashtypes.add(key) # type > bank which uses it
+
+    # saves a list of banks 
+    def _register_classify_bank(self, node):
+        bank = node.get_root().get_filename()
+        lang = node.get_root().get_lang()
+        path = node.get_root().get_path()
+        localized = lang != 0 and lang != 393239870 #early or regular SFX
+        
+        self._current_bankpaths[(bank, localized)] = path
+        pass
+
+    def _get_register_bankkey(self, hashtype, node):
         if self._cfg.classify_bank:
             # should only happen when reading GV/SC/GS params, ignore
             if not node:
-                return
+                return None
 
             bank = node.get_root().get_filename()
-            # put all bnk together
+            lang = node.get_root().get_lang()
             if hashtype in wdefs.fnv_order_join:
                 bank = self.EMPTY_BANKTYPE
+                lang = self.EMPTY_BANKLANG
         else:
             bank = self.EMPTY_BANKTYPE
+            lang = self.EMPTY_BANKLANG
+
+        localized = lang != 0 and lang != 393239870 #early or regular SFX
+        return (bank, localized)
+
+    def _mark_unused(self, id, hashtype, node):
+        bankkey = self._get_register_bankkey(hashtype, node)
+        if bankkey is None:
+            return
 
         banks = self._missing.get(hashtype)
         if not banks:
             banks = {}
             self._missing[hashtype] = banks
 
-        ids = banks.get(bank)
+        ids = banks.get(bankkey)
         if not ids:
             ids = {}
-            banks[bank] = ids
+            banks[bankkey] = ids
 
         ids[id] = True
 
     def _unmark_unused(self, id):
         for hashtype in self._missing.keys():
-            for bank in self._missing[hashtype].keys():
-                if id in self._missing[hashtype][bank]:
-                    del self._missing[hashtype][bank][id]
+            for bankkey in self._missing[hashtype].keys():
+                if id in self._missing[hashtype][bankkey]:
+                    del self._missing[hashtype][bankkey][id]
 
     def get_namerow(self, id, hashtype=None, node=None):
         if not id or id == -1: #including id=0, that is used as "none"
@@ -272,7 +297,6 @@ class Names(object):
 
         # add banks names (doubles as hashnames), first since it looks a bit nicer in list output
         for bank in banks:
-            bankfile = bank.get_root().get_filename()
             bankname = bank.get_root().get_bankname()
             bankpath = bank.get_root().get_path()
 
@@ -285,8 +309,7 @@ class Names(object):
                     self._add_name(None, item, source=NameRow.NAME_SOURCE_EXTRA)
 
             # might as well register now
-            self._current_banknames.add(bankfile)
-            self._current_bankpaths[bankname] = bankpath
+            self._register_classify_bank(bank)
 
 
         # parse files for each single bank
@@ -825,7 +848,7 @@ class Names(object):
     # saves loaded hashnames to .txt
     # (useful to check names when loading generic db/lst of names)
     def save_lst(self, basename=None, path=None):
-        dumper = wnamedumper.Namedumper(self._cfg, self._names, self._missing, self._current_banknames)
+        dumper = wnamedumper.Namedumper(self._cfg, self._names, self._missing, self._current_bankpaths)
         dumper.save_lst(basename, path)
         return
 

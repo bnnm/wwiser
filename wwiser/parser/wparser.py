@@ -3205,6 +3205,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
         obj.u32('dwLanguageID').fmt(wdefs.language_id)
     else:
         obj.sid('dwLanguageID').fnv(wdefs.fnv_lng) #hashed lang string
+    root.set_lang(obj.lastval)
 
     if version <= 26:
         obj.u64('timestamp?')

@@ -585,7 +585,8 @@ class CAkMusicTrack(CAkParameterNode):
         self.subtracks = []
         self.gtype = None
         self.ngname = None
-        self.gvalue_index = {}
+        self.gvalue_indexes = {}
+        self.gvalue_names = {}
         self.automationlist = {}
         self.silence = None
 
@@ -652,22 +653,27 @@ class CAkMusicTrack(CAkParameterNode):
             self.gtype = nswitches.find(name='eGroupType').value()
             self.ngname = nswitches.find(name='uGroupID')
             ngvdefault = nswitches.find(name='uDefaultSwitch')
-            self.gvalue_index = {}
 
             ngvalues = nswitches.finds(name='ulSwitchAssoc')
             for ngvalue in ngvalues: #switch N = track N
                 gvalue = ngvalue.value()
                 index = ngvalue.get_parent().get_index()
-                self.gvalue_index[gvalue] = (index, ngvalue)
+
+                # rare but same ID may set N tracks (FE:E)
+                if gvalue not in self.gvalue_indexes:
+                    self.gvalue_indexes[gvalue] = []
+                    self.gvalue_names[gvalue] = ngvalue
+                self.gvalue_indexes[gvalue].append(index)
 
             # NMH3 uses default to play no subtrack (base) + one ulSwitchAssoc to play subtrack (base+extra)
             # maybe should also add "value none"
             gvdefault = ngvdefault.value()
-            if gvdefault not in self.gvalue_index:
-                 self.gvalue_index[gvdefault] = (None, ngvdefault) #None to force "don't play any subtrack"
+            if gvdefault not in self.gvalue_indexes:
+                self.gvalue_indexes[gvalue] = [] #none to force "don't play any subtrack"
+                self.gvalue_names[gvalue] = ngvdefault
 
             # maybe should include "any other state"?
-            #self.gvalue_index[None] = (None, 0) #None to force "don't play any subtrack"
+            #self.gvalue_index[None] = [None] #None to force "don't play any subtrack"
 
         self.fields.props([ntype, ncount])
         self.fields.automations(self.automationlist)

@@ -396,7 +396,7 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             ws = self._ws
             if ws.gs_registrable():
                 # find all possible gamesyncs paths (won't generate txtp)
-                for __, ngvalue in bnode.gvalue_index.values(): #order doesn't matter
+                for ngvalue in bnode.gvalue_names.values(): #order doesn't matter
                     if not ngvalue:
                         gvalue = 0
                     else:
@@ -411,20 +411,26 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
             gvalue = ws.gsparams.current(gtype, gname)
             if gvalue is None:
                 return
-            if not gvalue in bnode.gvalue_index:
+            if not gvalue in bnode.gvalue_indexes:
                 return
-            index, ngvalue = bnode.gvalue_index[gvalue]
+            indexes = bnode.gvalue_indexes[gvalue]
+            ngvalue = bnode.gvalue_names[gvalue]
 
             #play subtrack based on index (assumed to follow order as defined)
             txtp.info.gamesync(gtype, bnode.ngname, ngvalue)
 
-            if index is None:
+            if not indexes:
                 return # no subtrack, after adding path to gamesync (NHM3)
-            subtrack = bnode.subtracks[index]
 
-            txtp.group_single(config)
-            self._render_clips(bnode, subtrack, txtp)
-            txtp.group_done()
+            # usually only 1 subtrack though
+            subtracks = []
+            for index in indexes:
+                subtracks.append( bnode.subtracks[index] )
+
+            txtp.group_layer(subtracks, None)
+            for subtrack in subtracks:
+                self._render_clips(bnode, subtrack, txtp)
+            txtp.group_done(subtracks)
 
         else:
             self._barf('unknown musictrack mode')

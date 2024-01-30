@@ -742,3 +742,16 @@ bus hierarchy:
   - on first mswitch actually uses BGM_battle_normal_outro=*: nothing for none+bt_moon, tries *+bt_moon
 - simulates loops by changing states?
   - ex. starts with region_01, changes to region_02, region_03... (Wwise waits and swaps to next mtrack)
+
+
+## Fire Emblem: Engage (Switch)
+```
+* 6 tracks (2x state)
+482081215 mu
+    888716976 se
+        909697499 ra
+            899887964 sw
+                614545882 pl
+                    313263861 ev BGM_Field_P02_Heavy_Combat_ST_Play
+```
+- has musictrack with one group=value enabling N tracks

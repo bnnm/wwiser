@@ -9,8 +9,9 @@ from .wnamerow import NameRow
 class Namedumper(object):
     EMPTY_BANKTYPE = ''
 
-    def __init__(self, cfg, names, missing, bankpaths):
+    def __init__(self, wnames, cfg, names, missing, bankpaths):
         # flags
+        self._wnames = wnames
         self._cfg = cfg
         self._names = names
         self._missing = missing
@@ -225,7 +226,7 @@ class Namedumper(object):
         if not basebank.isdigit():
             return bankname
 
-        row = self.get_namerow(basebank)
+        row = self._wnames.get_namerow(basebank)
         if not row or not row.hashname:
             return bankname
 

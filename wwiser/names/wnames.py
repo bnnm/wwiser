@@ -848,7 +848,7 @@ class Names(object):
     # saves loaded hashnames to .txt
     # (useful to check names when loading generic db/lst of names)
     def save_lst(self, basename=None, path=None):
-        dumper = wnamedumper.Namedumper(self._cfg, self._names, self._missing, self._current_bankpaths)
+        dumper = wnamedumper.Namedumper(self, self._cfg, self._names, self._missing, self._current_bankpaths)
         dumper.save_lst(basename, path)
         return
 

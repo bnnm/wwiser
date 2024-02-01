@@ -238,7 +238,13 @@ class Cli(object):
             idname = f'{hash}.bnk'
 
             new_file = os.path.join(dir_name, idname)
-            glob_files = glob.glob(new_file)
+            if args.recursive:
+                if '**' not in new_file:
+                    new_file = '**/' + new_file
+                glob_files = glob.glob(new_file, recursive=True)
+            else:
+                glob_files = glob.glob(new_file)
+
             self._add_files(glob_files, filenames)
             if glob_files:
                 logging.info("loading %s from %s", idname, base_name)

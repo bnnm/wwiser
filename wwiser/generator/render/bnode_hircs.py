@@ -669,8 +669,8 @@ class CAkMusicTrack(CAkParameterNode):
             # maybe should also add "value none"
             gvdefault = ngvdefault.value()
             if gvdefault not in self.gvalue_indexes:
-                self.gvalue_indexes[gvalue] = [] #none to force "don't play any subtrack"
-                self.gvalue_names[gvalue] = ngvdefault
+                self.gvalue_indexes[gvdefault] = [] #none to force "don't play any subtrack"
+                self.gvalue_names[gvdefault] = ngvdefault
 
             # maybe should include "any other state"?
             #self.gvalue_index[None] = [None] #None to force "don't play any subtrack"

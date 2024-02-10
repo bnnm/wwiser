@@ -132,8 +132,22 @@ class Namedumper(object):
         # get banks to write
         banks = [(self.EMPTY_BANKTYPE, False)] #special value for other names
         banks += list(self._bankpaths.keys()) #all bankkeys
-         # general names > init > regular-localized > names
-        banks.sort(key=lambda x: (x[0] != self.EMPTY_BANKTYPE, x[0].lower() not in ('init.bnk','1355168291.bnk'), x[1], x[0]))
+
+        # general names > init > regular-localized > names
+        def sorter(x):
+            bankname, bank_loc = x
+            basebank, _ = os.path.splitext(bankname)
+
+            # for hash banks use name if possible
+            if basebank and basebank.isdigit():
+                row = self._wnames.get_namerow(basebank)
+                if row and row.hashname:
+                    basebank = row.hashname
+
+            not_init = basebank.lower() not in ('init.bnk','1355168291.bnk')
+
+            return (basebank != self.EMPTY_BANKTYPE, not_init, bank_loc, basebank)
+        banks.sort(key=sorter)
 
         # may print like: bank > hashtypes (banks_first=True), or hashtypes > banks (mainly a test)
         banks_first = True

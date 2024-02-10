@@ -3,7 +3,7 @@ import re
 class Fnv(object):
     FNV_DICT = '0123456789abcdefghijklmnopqrstuvwxyz_'
     FNV_FORMAT = re.compile(r"^[a-z_][a-z0-9\_]*$")
-    FNV_FORMAT_EX = re.compile(r"^[a-z_0-9][a-z0-9_()\- ]*$")
+    FNV_FORMAT_EX = re.compile(r"^[a-z_0-9][a-z0-9_()\- ,]*$")
 
     def is_hashable(self, lowname):
         return self.FNV_FORMAT.match(lowname)

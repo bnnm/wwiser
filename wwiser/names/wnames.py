@@ -562,25 +562,36 @@ class Names(object):
 
     def _parse_xml(self, infile):
         #catch: "	<Thing Id="12345" Name="Play_Thing" ObjectPath="\Default Work Unit\Play_Thing">"
-        pattern_in = re.compile(r"^.*<.+ Id=[\"]([0-9]+)[\"] .*Name=[\"]([a-zA-Z0-9_]+)[\"](.* ObjectPath=[\"](.+?)[\"])?.+")
+        pattern_in = re.compile(r'^.*<.+ Id="([0-9]+)" .*Name="([a-zA-Z0-9_]+)"(.* ObjectPath="(.+?)")?.+')
+        #catch: "	<Thing Id="12345" Name="Bus Thing 1,2"/>"
+        pattern_ib = re.compile(r'^.*<.+ Id="([0-9]+)" .*Name="([a-zA-Z0-9_()\- ,]+)"(.* ObjectPath="(.+?)")?.+')
         #catch: "	<Thing Id="12345" Language="SFX">"
         #       "		<ShortName>Thing-Stuff.wem</ShortName>"
-        pattern_id = re.compile(r"^.*<.+ Id=[\"]([0-9]+)[\"] .+")
-        pattern_sn = re.compile(r"^.*<ShortName.*>(.+?)</ShortName.*>")
-        pattern_pa = re.compile(r"^.*<Path.*>(.+?)</Path.*>")
-        pattern_ob = re.compile(r"^.*<ObjectPath.*>(.+?)</ObjectPath.*>")
+        pattern_id = re.compile(r'^.*<.+ Id="([0-9]+)" .+')
+        pattern_sn = re.compile(r'^.*<ShortName.*>(.+?)</ShortName.*>')
+        pattern_pa = re.compile(r'^.*<Path.*>(.+?)</Path.*>')
+        pattern_ob = re.compile(r'^.*<ObjectPath.*>(.+?)</ObjectPath.*>')
+        bus_starts = ['<Bus '] #, '<AuxBus ' #aux buses follow standard fnv rules
 
         id = name = objpath = path = None
+        bus_hash = False
         for line in infile:
+            # not very common to include buses in xml/json though
+            bus_hash = any(x in line for x in bus_starts)
+
             # accept id + name (+ objpath)
-            match = pattern_in.match(line)
+            if bus_hash:
+                match = pattern_ib.match(line)
+            else:
+                match = pattern_in.match(line)
+
             if match:
-                # prev id + shortname still hanging around
+                # prev id + shortname still hanging around (shouldn't happen with buses but...)
                 if id and name:
-                    self._add_name(id, name, objpath=objpath, path=path)
+                    self._add_name(id, name, objpath=objpath, path=path, exhash=bus_hash)
 
                 id, name, dummy, objpath = match.groups()
-                self._add_name(id, name, objpath=objpath)
+                self._add_name(id, name, objpath=objpath, exhash=bus_hash)
                 id = name = objpath = path = None
                 continue
 
@@ -617,7 +628,7 @@ class Names(object):
 
         # last id + shortname still hanging around
         if id and name:
-            self._add_name(id, name, objpath=objpath, path=path)
+            self._add_name(id, name, objpath=objpath, path=path, exhash=bus_hash)
 
 
     # SoundbanksInfo.json ('JSON metadata')

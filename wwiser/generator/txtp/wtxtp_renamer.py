@@ -4,6 +4,10 @@ import  re
 # Used to  simplify repetitive prefixes like "play_bgm (BGM_TYPE_MUSIC=BGM_TYPE_M01)" > play_bgm (MUSIC=M01)
 # Contains a list loaded of rename stems, when applies to final txtp.
 # Also deletes unwanted .txtp by using the <skip> flag.
+# examples:
+# "(BGM_:(": changes "play_BGM (BGM_MUSIC=M01)" to "play_BGM (MUSIC=M01)"
+# "\\((.+?)=\\1_:(\\1=": changes "play_BGM (BGM_MUSIC=BGM_MUSIC_M01)" to "play_BGM (BGM_MUSIC=M01)"
+
 
 class TxtpRenamer(object):
     SKIP_FLAG = '<skip>'

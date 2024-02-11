@@ -755,3 +755,6 @@ bus hierarchy:
                     313263861 ev BGM_Field_P02_Heavy_Combat_ST_Play
 ```
 - has musictrack with one group=value enabling N tracks
+
+## Killer Instinct (PC)
+- most music is made of random parts per loop (like Doom)

@@ -144,7 +144,7 @@ class Namedumper(object):
                 if row and row.hashname:
                     basebank = row.hashname
 
-            not_init = basebank.lower() not in ('init.bnk','1355168291.bnk')
+            not_init = basebank.lower() not in ['init','1355168291']
 
             return (basebank != self.EMPTY_BANKTYPE, not_init, bank_loc, basebank)
         banks.sort(key=sorter)

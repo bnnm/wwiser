@@ -2954,7 +2954,7 @@ def CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_(obj):
     cls = wcls.CAkFxCustom__Create(obj)
     obj.set_name(cls.name)
 
-    obj.sid('ulID').fnv(wdefs.fnv_sfx)
+    obj.sid('ulID') #.fnv(wdefs.fnv_sfx) #seemingly not fnv
 
     CAkFxBase__SetInitialValues(obj, cls)
     return

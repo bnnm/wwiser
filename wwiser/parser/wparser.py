@@ -613,7 +613,7 @@ def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
         else:
             pass
 
-        elem.tid('RTPCID').fnv(wdefs.fnv_gme)
+        elem.tid('RTPCID').fnv(wdefs.fnv_gmx) #depends on target (ex. gamevar=hashname, rtpc=hashname, modulator=guidname)
 
         if   cls.version <= 89:
             pass
@@ -1308,7 +1308,7 @@ def CAkActionSetRTPC__SetActionParams(obj, cls):
     #named differently 056>=?
     obj = obj.node('RTPCActionParams')
 
-    obj.tid('RTPC_ID').fnv(wdefs.fnv_gme) #tid? 113=Doom16
+    obj.tid('RTPC_ID').fnv(wdefs.fnv_gmx) #depends on target (ex. gamevar=hashname, rtpc=hashname, modulator=guidname)
     obj.f32('fRTPCValue')
     return
 
@@ -1991,7 +1991,7 @@ def CAkLayer__SetInitialValues(obj, cls):
 
     SetInitialRTPC_CAkLayer_(obj, cls)
 
-    obj.tid('rtpcID').fnv(wdefs.fnv_gme)
+    obj.tid('rtpcID').fnv(wdefs.fnv_gmx) #depends on target (ex. modulator=guidname, curve=hashname)
 
     if cls.version <= 89:
         pass
@@ -3374,7 +3374,7 @@ def CAkBankMgr__ProcessFxParamsChunk(obj):
             else:
                 elem2.U32('pBufferToFill')
                 elem2.u8i('uFXIndex')
-            elem2.tid('RTPCID').fnv(wdefs.fnv_gme)
+            elem2.tid('RTPCID').fnv(wdefs.fnv_gmx) #depends on target (ex. modulator=guidname, curve=hashname)
             elem2.U32('ParamID').fmt(wdefs.AkRTPC_ParameterID)
             elem2.sid('rtpcCurveID') #fnv?
             if version <= 34: #34=LOTR (probably for 36 too since other parts need it
@@ -3559,7 +3559,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     obj.u32('ulNumSwitchGroups')
     for elem in obj.list('pItems', 'SwitchGroups', obj.lastval):
         elem.tid('SwitchGroupID').fnv(wdefs.fnv_var)
-        elem.tid('rtpcID').fnv(wdefs.fnv_gme)
+        elem.tid('rtpcID').fnv(wdefs.fnv_gmx) #depends on target (ex. gamevar=hashname, rtpc=hashname, modulator=guidname)
         if version <= 89:
             pass
         else:
@@ -3574,7 +3574,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
 
     obj.u32('ulNumParams')
     for elem in obj.list('pRTPCMgr', 'RTPCRamping', obj.lastval):
-        elem.sid('RTPC_ID').fnv(wdefs.fnv_gme) #tid? 113=Doom16? (134=Xeno is sid)
+        elem.sid('RTPC_ID').fnv(wdefs.fnv_gme) #should be sid/base definition of gamevar/shareset RTPC (not modulator/etc that use guidnames)
         elem.f32('fValue')
 
         if version <= 89:
@@ -3590,7 +3590,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     elif version <= 122:
         obj.u32('ulNumTextures')
         for elem in obj.list('acousticTextures', 'AkAcousticTexture', obj.lastval):
-            elem.tid('ID')
+            elem.sid('ID').fnv(wdefs.fnv_aco)
             elem.u16('OnOffBand1')
             elem.u16('OnOffBand2')
             elem.u16('OnOffBand3')
@@ -3610,7 +3610,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     else:
         obj.u32('ulNumTextures')
         for elem in obj.list('acousticTextures', 'AkAcousticTexture', obj.lastval):
-            elem.tid('ID')
+            elem.sid('ID').fnv(wdefs.fnv_aco)
             elem.f32('fAbsorptionOffset')
             elem.f32('fAbsorptionLow')
             elem.f32('fAbsorptionMidLow')
@@ -3623,7 +3623,7 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     elif version <= 122:
         obj.u32('ulNumReverberator')
         for elem in obj.list('pObjects', 'AkDiffuseReverberator', obj.lastval):
-            elem.tid('ID')
+            elem.sid('ID').fnv(wdefs.fnv_aco)
             elem.f32('Time')
             elem.f32('HFRatio')
             elem.f32('DryLevel')

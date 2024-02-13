@@ -16,8 +16,9 @@ class Namedumper(object):
         self._names = names
         self._missing = missing
         self._bankpaths = bankpaths
+        self._conditionals = set()
         self._bank_mix = self._get_bank_mix()
-        
+
 
     # true if there are sfx and localized, false if all are from the same type
     def _get_bank_mix(self):
@@ -75,6 +76,10 @@ class Namedumper(object):
                 has_companion_names = True
                 continue
 
+            # determine if some IDs that not be reversable should be written
+            if row.hashtypes and any(x in row.hashtypes for x in wdefs.fnv_conditionals_origin):
+                self._conditionals.add(row.id)
+
             rows.append(row)
                 
         if self._cfg.classify_bank:
@@ -100,7 +105,7 @@ class Namedumper(object):
                 continue
             banks = self._missing[hashtype]
             for bank in banks:
-                self._include_missing(lines, hashtype, bank, header=True)
+                lines += self._include_missing(hashtype, bank, header=True)
 
         return lines
 
@@ -116,7 +121,7 @@ class Namedumper(object):
                 hashtypes = set()
                 hashtypes.add((wdefs.fnv_no, self.EMPTY_BANKTYPE))
 
-            for hashtype, bank in hashtypes:                     
+            for hashtype, bank in hashtypes:
                 banks_lines = hashtypes_lines.get(hashtype)
                 if not banks_lines:
                     banks_lines = {}
@@ -176,8 +181,15 @@ class Namedumper(object):
             sublines = None
         else:
             sublines = banks.get(bank)
-        if not sublines and not save_missing:
+
+        missing_lines = None
+        # include missing ids at bank level (otherwise at the end)
+        if save_missing:
+            missing_lines = self._include_missing(hashtype, bank)
+
+        if not sublines and not missing_lines:
             return
+
 
         lines.append('')
         banktext = self._get_banktext(bank)
@@ -190,21 +202,20 @@ class Namedumper(object):
             for subline in sublines:
                 lines.append(subline)
 
-        # include missing ids at bank level (otherwise at the end)
-        if save_missing:
-            self._include_missing(lines, hashtype, bank)
+        lines += missing_lines
 
 
-    def _include_missing(self, lines, hashtype, bank, header=False):
-        if self._cfg.skip_hastype(hashtype):
-            return
+    def _include_missing(self, hashtype, bank, header=False):
+        lines = []
+        if self._cfg.skip_hashtype(hashtype):
+            return lines
 
         banks = self._missing.get(hashtype)
         if not banks:
-            return
+            return lines
         ids = banks.get(bank)
         if not ids:
-            return
+            return lines
 
         if header:
             lines.append('')
@@ -214,10 +225,17 @@ class Namedumper(object):
             lines.append('### MISSING %s NAMES%s' % (hashtype.upper(), banktext))
 
         for id in ids:
+            # some IDs may point to hashnames or guidnames, find out if safe to print
+            # (this info is preloaded at the beginning)
+            if hashtype in wdefs.fnv_conditionals:
+                if id not in self._conditionals:
+                    continue
+
             lines.append('# %s' % (id))
         
         # remove so it doesn't get saved twice
         banks[bank] = {}
+        return lines
 
     def _get_banktext(self, bankkey):
         bankname, bank_loc = bankkey

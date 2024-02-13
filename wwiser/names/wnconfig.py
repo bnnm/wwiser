@@ -71,7 +71,7 @@ class Config(object):
     def get_config_lines(self):
         return self._config_lines
 
-    def skip_hastype(self, hashtype):
+    def skip_hashtype(self, hashtype):
         return self._hashtypes_missing and hashtype not in self._hashtypes_missing
 
 

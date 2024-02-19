@@ -202,7 +202,8 @@ class Namedumper(object):
             for subline in sublines:
                 lines.append(subline)
 
-        lines += missing_lines
+        if missing_lines:
+            lines += missing_lines
 
 
     def _include_missing(self, hashtype, bank, header=False):

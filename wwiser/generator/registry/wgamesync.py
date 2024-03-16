@@ -5,7 +5,6 @@ from ... import wfnv
 
 DEBUG_PRINT_TREE_BASE = False
 DEBUG_PRINT_TREE_COMBOS = False
-DEBUG_PRINT_TREE_PARAMS = False
 DEBUG_PRINT_TREE_MAKING = False
 DEBUG_PRINT_TREE_TEXT = False
 DEBUG_DEPTH_MULT = 2
@@ -467,7 +466,7 @@ class GamesyncPaths(object):
     def _debug_print_tree_combos(self):
         logging.info("*** combos")
         for path in self._params:
-            elems = self._print_elems(path.get_elems())
+            elems = self._debug_print_elems(path.get_elems())
             logging.info(elems)
         logging.info(" >> (total %i)" % (len(self._params)))
         logging.info("")

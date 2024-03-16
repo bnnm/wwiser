@@ -110,7 +110,7 @@ class Config(object):
 
     def _get_weight_regex(self, text_in):
         if '*' in text_in:
-            replaces = { '(':'\(', ')':'\)', '[':'\[', ']':'\]', '.':'\.', '*':'.*?' }
+            replaces = { '(':'\\(', ')':'\\)', '[':'\\[', ']':'\\]', '.':'\\.', '*':'.*?' }
             regex_in = text_in
             for key, val in replaces.items():
                 regex_in = regex_in.replace(key, val)

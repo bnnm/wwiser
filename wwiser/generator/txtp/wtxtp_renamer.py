@@ -67,6 +67,7 @@ class TxtpRenamer(object):
             if regex:
                 name = regex.sub(text_out, name)
             else:
+                # not used at the moment (uses regex to handle case insensitiveness)
                 name = name.replace(text_in, text_out)
 
         # clean extra stuff after cleanup            

@@ -71,7 +71,8 @@ class CleanerUnwanted(object):
 
     def _parse_txtps(self):
         base_root = self._locator.get_root_fullpath()
-        txtp_root = self._locator.get_txtp_fullpath()
+        txtp_root = self._locator.get_txtp_rootpath()
+        #TODO detect if subpaths are used
         try:
             filenames = os.listdir(txtp_root)
         except:

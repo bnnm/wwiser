@@ -88,7 +88,7 @@ class TxtpNamer(object):
             txtp.txtpcache.stats.trims += 1
             logging.debug("txtp: trimmed name '%s'", name)
 
-        outname = outdir + name
+        outname = os.path.join(outdir, name)
 
         # final name after path can be a bit too big
         if  txtp.txtpcache.is_windows:

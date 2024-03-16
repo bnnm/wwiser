@@ -55,7 +55,7 @@ class Cli(object):
         p = parser.add_argument_group('txtp options')
         p.add_argument('-g',  '--txtp',                 help="Generate TXTP", action='store_true')
         p.add_argument('-gu', '--txtp-unused',          help="Generate TXTP for unused nodes too\n(try loading other banks first)", action='store_true')
-        p.add_argument('-go', '--txtp-outdir',          help="Set TXTP output dir (default: auto)")
+        p.add_argument('-go', '--txtp-outdir',          help="Set TXTP output dir (default: auto)\nadd '/*' at the end to put txtp in subfolders per bank")
         p.add_argument('-gw', '--txtp-wemdir',          help="Set TXTP .wem dir (default: auto)", default='*')
         p.add_argument('-gv', '--txtp-volume',          help="Set master TXTP volume, in percent or decibels\nexamples: *=auto, 2.0=200%%, 0.5=50%%, -6dB=50%%, 6dB=200%%\n(negative dB needs equals: -gv=-6dB)", default='*')
 

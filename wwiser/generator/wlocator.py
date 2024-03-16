@@ -38,6 +38,8 @@ class Locator(object):
         self._bnks = {}
         self._externals = []
 
+        self._auto_subdirs = False
+
         self._files = []
         #self._registered_bnk_paths = set()
 
@@ -50,6 +52,11 @@ class Locator(object):
         if path is None:
             return
         self._txtp_path = self._normalize_path(path)
+        # extra: if path ends with '*', each txtp will be moved to a subdir
+        # (note other features like the file cleaner don't properly work with this)
+        if self._txtp_path and self._txtp_path.endswith('/*/'):
+            self._txtp_path = self._txtp_path[0:-3]
+            self._auto_subdirs = True
 
     def set_wem_path(self, path):
         if path is None:
@@ -120,12 +127,19 @@ class Locator(object):
             path = self._mod_path + self._find_path_lang(paths, lang)
         else:
             path = self._wem_path #???
+
+        if self._auto_subdirs:
+            path = '../' + path
         return path
 
     # find most appropriate path given current wem/bnk's expected lang
     # lang is generally a normalized path (such as "SFX", "English(US)" but in rare cases could be hash.
     # Similarly paths may be names or hashes.
     def _find_path_lang(self, paths, lang):
+        # TODO locator bug: if there are multiple bnks with the same name, sometimes internal wem is inside others
+        # may need to register media wem <> bnk and use that ref
+        # todo however if multiple .wem copies are found it should favor the shortest dir
+
         if not lang or len(paths) == 1: #or lang.lower() == 'sfx':
             return paths[0][0]
 
@@ -216,12 +230,27 @@ class Locator(object):
 
                 self._files.append(path + file)
 
-    # base path were txtp are generated
-    def get_txtp_fullpath(self):
+    # base path where txtp are generated
+    def get_txtp_rootpath(self):
         outdir = self._root_path #important in GUI since work dir may be different
         txtp_path = self._txtp_path
         if txtp_path:
             outdir = os.path.join(outdir, txtp_path)
+        return outdir
+
+    # final txtp path
+    def get_txtp_fullpath(self, node):
+        outdir = self.get_txtp_rootpath()
+        if self._auto_subdirs and node:
+            bank = node.get_root().get_filename()
+            lang = node.get_root().get_lang()
+
+            bank = os.path.splitext(bank)[0]
+            localized = lang != 0 and lang != 393239870 #early or regular SFX
+            if localized:
+                bank = '%s[%s]' % (bank, 'localized')
+
+            outdir = os.path.join(outdir, bank)
         return outdir
 
     def get_root_fullpath(self):
@@ -230,7 +259,7 @@ class Locator(object):
     def get_wem_fullpath(self):
         if self._auto_find:
             return ''
-        outdir = self.get_txtp_fullpath()
+        outdir = self.get_txtp_rootpath()
         if self._wem_path:
             outdir = os.path.join(outdir, self._wem_path)
 

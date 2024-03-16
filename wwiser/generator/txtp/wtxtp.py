@@ -190,7 +190,7 @@ class Txtp(object):
             return
 
         # prepare dirs and final output
-        outdir = self.txtpcache.locator.get_txtp_fullpath()
+        outdir = self.txtpcache.locator.get_txtp_fullpath(self._node)
         if outdir:
             os.makedirs(outdir, exist_ok=True)
 

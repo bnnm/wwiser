@@ -76,7 +76,7 @@ class Tags(object):
         if not files:
             return
 
-        outdir = self._locator.get_txtp_fullpath()
+        outdir = self._locator.get_txtp_rootpath()
         if outdir:
             outdir = os.path.join(basepath, outdir)
             os.makedirs(outdir, exist_ok=True)

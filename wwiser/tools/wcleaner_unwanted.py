@@ -1,4 +1,4 @@
-import os, logging, re
+import os, logging, re, glob
 
 
 # output folder is the same as original but using a extra mark
@@ -72,17 +72,15 @@ class CleanerUnwanted(object):
     def _parse_txtps(self):
         base_root = self._locator.get_root_fullpath()
         txtp_root = self._locator.get_txtp_rootpath()
-        #TODO detect if subpaths are used
+
         try:
-            filenames = os.listdir(txtp_root)
+            subpath = os.path.join(txtp_root, '**/*.txtp')
+            filenames = glob.glob(subpath, recursive=True)
         except:
             return
 
         for filename in filenames:
-            if not filename.endswith('.txtp'):
-                continue
-            txtp = os.path.join(txtp_root, filename)
-            with open(txtp, 'r', encoding='utf-8-sig') as infile:
+            with open(filename, 'r', encoding='utf-8-sig') as infile:
                 for line in infile:
                     if line.startswith('#'):
                         match = _BANK_PATTERN.match(line)
@@ -96,13 +94,14 @@ class CleanerUnwanted(object):
                     name, = match.groups()
                     file = name.replace('\\', '/')
 
+                    txtp_subdir = os.path.dirname(filename)
                     #file = os.path.normpath(name)
                     #file = os.path.normcase(file)
                     #path = os.path.dirname(file)
                     if extra_bank:
                         filepath = os.path.join(base_root, file) #relative to root dir
                     else:
-                        filepath = os.path.join(txtp_root, file) #relative to txtp dir
+                        filepath = os.path.join(txtp_subdir, file) #relative to current txtp
                     filepath = os.path.abspath(filepath)
                     self._files_used.add(filepath)
                     #self._folders_used.add(path)

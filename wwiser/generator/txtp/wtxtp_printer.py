@@ -88,6 +88,9 @@ class TxtpPrinter(object):
     def ignore_silenced(self, tnode):
         return self._simplifier.get_sounds_count() == 1 and tnode.silenced_default
 
+    def is_crossfading_multiple(self):
+        return self.has_silences and self._simplifier.get_sounds_count() > 1
+
     #--------------------------------------------------------------------------
 
     # simplifies tree to simulate some Wwise features with TXTP

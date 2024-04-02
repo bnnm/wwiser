@@ -226,13 +226,16 @@ class TxtpNamer(object):
         name += txtp.info.get_gsnames()
 
         # extra flags
-        if printer.has_silences:
+        # only show {s} if there are multiple crossfading sounds, or if user has ser manual variables
+        sc = self._get_scparams()
+        gv = self._get_gamevars(printer)
+        if printer.is_crossfading_multiple() or sc or gv:
             if txtp.txtpcache.x_silence_all:
                 name += " {s-}"
             else:
                 name += " {s}"
-        name += self._get_scparams()
-        name += self._get_gamevars(printer)
+        name += sc
+        name += gv
 
 
         name += txtp.info.get_wemnames()
@@ -304,8 +307,9 @@ class TxtpNamer(object):
         gvnames = txtp.info.get_gvnames()
         if not gvnames:
             return info
-        
-        if printer.has_silences:
+
+        # show {s}={vars} is user has set vars (even if there aren't multiple corssfading variables)
+        if printer.has_silences: #printer.is_crossfading_multiple():
             info += '='
         else:
             info += ' '

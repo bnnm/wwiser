@@ -1,5 +1,6 @@
 import os
 from .. import wfnv
+from . import wlang
 
 # Saves paths and returns appropriate values based on config.
 # Example: loading from . (root)
@@ -38,7 +39,8 @@ class Locator(object):
         self._bnks = {}
         self._externals = []
 
-        self._auto_subdirs = False
+        self._auto_subdirs = None
+        self._auto_count = 0
 
         self._files = []
         #self._registered_bnk_paths = set()
@@ -52,11 +54,18 @@ class Locator(object):
         if path is None:
             return
         self._txtp_path = self._normalize_path(path)
-        # extra: if path ends with '*', each txtp will be moved to a subdir
-        # (note other features like the file cleaner don't properly work with this)
-        if self._txtp_path and self._txtp_path.endswith('/*/'):
-            self._txtp_path = self._txtp_path[0:-3]
-            self._auto_subdirs = True
+
+        # extra: if path ends with 'stuff/blah-{var}/', each txtp will be moved to a subdir changing {var} to something else on generation.
+        # In this case root will be 'stuff/' (always needs a defined root) and 'blah-{var}/' will be a subdir set later.
+        # NOTE: some features like tags may work incorrectly with subdirs (untested)
+        if self._txtp_path and '{' in self._txtp_path:
+            temp = self._txtp_path
+            pos = temp.find('{')
+            pos = temp.rfind('/', 0, pos)
+
+            self._txtp_path = temp[0:pos+1]
+            self._auto_subdirs = temp[pos+1:]
+            self._auto_count = self._auto_subdirs.count('/')
 
     def set_wem_path(self, path):
         if path is None:
@@ -128,8 +137,9 @@ class Locator(object):
         else:
             path = self._wem_path #???
 
+        # TO-DO improve detection of subdirs
         if self._auto_subdirs:
-            path = '../' + path
+            path = self._auto_count * '../' + path
         return path
 
     # find most appropriate path given current wem/bnk's expected lang
@@ -243,14 +253,20 @@ class Locator(object):
         outdir = self.get_txtp_rootpath()
         if self._auto_subdirs and node:
             bank = node.get_root().get_filename()
-            lang = node.get_root().get_lang()
+            #lang = node.get_root().get_lang()
 
             bank = os.path.splitext(bank)[0]
-            localized = lang != 0 and lang != 393239870 #early or regular SFX
-            if localized:
-                bank = '%s[%s]' % (bank, 'localized')
+            #localized = lang != 0 and lang != 393239870 #early or regular SFX
+            #if localized:
+            #    bank = '%s[%s]' % (bank, 'localized')
 
-            outdir = os.path.join(outdir, bank)
+            lang = wlang.Lang(node)
+
+            subpath = self._auto_subdirs
+            subpath = subpath.replace('{bank}', bank)
+            subpath = subpath.replace('{lang}', lang.shortname)
+
+            outdir = os.path.join(outdir, subpath)
         return outdir
 
     def get_root_fullpath(self):

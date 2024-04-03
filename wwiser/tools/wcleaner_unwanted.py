@@ -18,9 +18,10 @@ _IS_TEST_DIR = False
 # (maybe should have a .zip option but that doesn't let you check bgm files not in txtp)
 
 # catch folder-like parts followed by name + extension
-_FILE_PATTERN = re.compile(r"^[ ]*[?]*[ ]*([0-9a-zA-Z_\- \\/\.]*[0-9a-zA-Z_]+\.[0-9a-zA-Z_]+).*$")
+_FILE_PATTERN = re.compile(r"^[ ]*[?]*[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.[0-9a-zA-Z_]+).*$")
 # catch comment with .bnk used to generate current .txtp
-_BANK_PATTERN = re.compile(r"^#[ ]*-[ ]*([0-9a-zA-Z_\- \\/\.]*[0-9a-zA-Z_]+\.bnk).*$")
+_BANK_PATTERN = re.compile(r"^#[ ]*-[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.bnk).*$")
+_VALID_EXTS = ['.wem', '.bnk', '.xma', '.ogg', '.wav', '.logg', '.lwav']
 
 class CleanerUnwanted(object):
     def __init__(self, locator):
@@ -79,6 +80,7 @@ class CleanerUnwanted(object):
         except:
             return
 
+        logging.info(" * reading from to %s txtp", len(filenames))
         for filename in filenames:
             with open(filename, 'r', encoding='utf-8-sig') as infile:
                 for line in infile:
@@ -92,6 +94,10 @@ class CleanerUnwanted(object):
                     if not match:
                         continue
                     name, = match.groups()
+                    vals = os.path.splitext(name)
+                    if len(vals) != 2 or vals[1].lower() not in _VALID_EXTS:
+                        continue
+
                     file = name.replace('\\', '/')
 
                     txtp_subdir = os.path.dirname(filename)

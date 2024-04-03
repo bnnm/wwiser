@@ -82,7 +82,7 @@ class Cli(object):
         p.add_argument('-gbs','--txtp-bnkskip',         help="Treat internal (in .bnk) .wem as if external", action='store_true')
         p.add_argument('-gbm','--txtp-bnkmark',         help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
         p.add_argument('-gae','--txtp-alt-exts',        help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
-        p.add_argument('-gl', '--txtp-lang',            help="Set current language and mark localized .txtp with it\nUseful when loading bnks in different folders so other\nlangs are skipped (use 'SFX' to skip localized banks)\nAllows full names like 'English(US)' or shorhands like 'en'", metavar='LANG')
+        p.add_argument('-gl', '--txtp-langs',           help="Set current language and mark localized .txtp with it\nUseful when loading bnks in different folders so other\nlangs are skipped (use 'SFX' to skip localized banks)\nAllows full names like 'English(US)' or shorhands like 'en'", metavar='LANGS', nargs='*')
         p.add_argument('-gra','--txtp-random-all',      help="Make multiple .txtp per base 'random' group", action='store_true')
         p.add_argument('-grm','--txtp-random-multi',    help="Force multiloops to be selectable like a 'random'\n(ex. make .txtp per layer in multiloops files)", action='store_true')
         p.add_argument('-grf','--txtp-random-force',    help="Force base section to be selectable like a 'random'\n(ex. make .txtp per layer in all files)", action='store_true')
@@ -327,6 +327,42 @@ class Cli(object):
 
         # generate txtp
         if args.txtp:
+            self._generate(args, banks, locator, names, tags)
+
+        # extra
+        tags.make()
+
+        if args.file_cleaner:
+            cleaner = wcleaner.Cleaner(locator, banks)
+            cleaner.process()
+
+        # db manipulation
+        if args.dump_type == wdumper.TYPE_NONE and (args.save_lst or args.save_db):
+            logging.info("dump set to none, may not save all names")
+        if args.save_lst:
+            names.save_lst(basename=dump_name)
+        if args.save_db:
+            names.save_db()
+        names.close() #in case DB was open
+
+        if args.tests:
+            wtests.Tests().main()
+
+    def _generate(self, args, banks, locator, names, tags):
+            # generate txtp
+        if not args.txtp:
+            return
+
+        #TO-DO multilangs: maybe add some way to exclude making 'sfx' txtp events if lang is selected
+        # - hard to know if a sfx bank is used for loading memory web/etc until reading its wem
+        # - maybe some filter setting to ignore events from non-localized banks
+        # - some localized banks have events with .wem that don't set "localized audio", repeated per localized bank
+        #   (ex. MGSurvive stingers)
+        langs = [None]
+        if args.txtp_langs:
+            langs = args.txtp_langs
+
+        for lang in langs:
             generator = wgenerator.Generator(banks, locator, names)
             generator.set_generate_unused(args.txtp_unused)
             generator.set_filter(args.txtp_filter)
@@ -350,7 +386,7 @@ class Cli(object):
             generator.set_bnkmark(args.txtp_bnkmark)
 
             generator.set_alt_exts(args.txtp_alt_exts)
-            generator.set_lang(args.txtp_lang)
+            generator.set_lang(lang)
             generator.set_master_volume(args.txtp_volume)
             generator.set_random_all(args.txtp_random_all)
             generator.set_random_multi(args.txtp_random_multi)
@@ -365,22 +401,3 @@ class Cli(object):
             generator.set_x_include_fx(args.txtp_x_include_fx)
 
             generator.generate()
-
-        # extra
-        tags.make()
-
-        if args.file_cleaner:
-            cleaner = wcleaner.Cleaner(locator, banks)
-            cleaner.process()
-
-        # db manipulation
-        if args.dump_type == wdumper.TYPE_NONE and (args.save_lst or args.save_db):
-            logging.info("dump set to none, may not save all names")
-        if args.save_lst:
-            names.save_lst(basename=dump_name)
-        if args.save_db:
-            names.save_db()
-        names.close() #in case DB was open
-
-        if args.tests:
-            wtests.Tests().main()

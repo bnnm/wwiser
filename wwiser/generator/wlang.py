@@ -97,6 +97,12 @@ _LANGUAGE_HASHNAMES = {
     1016554174: "Chinese",
 }
 
+# common alt names to simplify usage
+_LANGUAGE_ALTS = {
+    'us': 'en',
+    'jp': 'ja',
+}
+
 # list also used to sort names in printed info, defaults to most common ones
 _LANGUAGE_SHORTNAMES = {
     "SFX": 'sfx',
@@ -197,6 +203,8 @@ class Lang(object):
         lang = lang.lower()
         #if lang == 'sfx':
         #    lang = ''
+        if lang in _LANGUAGE_ALTS: #simplify...
+            lang = _LANGUAGE_ALTS[lang]
 
         # allow full name "English(US)" or "en"
         return self.fullname.lower() == lang or self.shortname.lower() == lang

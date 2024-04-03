@@ -82,7 +82,7 @@ class Cli(object):
         p.add_argument('-gbs','--txtp-bnkskip',         help="Treat internal (in .bnk) .wem as if external", action='store_true')
         p.add_argument('-gbm','--txtp-bnkmark',         help="Mark .txtp that use internal .bnk (for reference)", action='store_true')
         p.add_argument('-gae','--txtp-alt-exts',        help="Use TXTP alt extensions (.logg/lwav)", action='store_true')
-        p.add_argument('-gl', '--txtp-langs',           help="Set current language and mark localized .txtp with it\nUseful when loading bnks in different folders so other\nlangs are skipped (use 'SFX' to skip localized banks)\nAllows full names like 'English(US)' or shorhands like 'en'", metavar='LANGS', nargs='*')
+        p.add_argument('-gl', '--txtp-lang',            help="Set current language(s) and mark localized .txtp with it\nUseful when loading bnks in different folders so other\nlangs are skipped (use 'SFX' to skip localized banks)\nAllows full names like 'English(US)' or shorhands like 'en'", metavar='LANGS', nargs='*')
         p.add_argument('-gra','--txtp-random-all',      help="Make multiple .txtp per base 'random' group", action='store_true')
         p.add_argument('-grm','--txtp-random-multi',    help="Force multiloops to be selectable like a 'random'\n(ex. make .txtp per layer in multiloops files)", action='store_true')
         p.add_argument('-grf','--txtp-random-force',    help="Force base section to be selectable like a 'random'\n(ex. make .txtp per layer in all files)", action='store_true')
@@ -359,8 +359,8 @@ class Cli(object):
         # - some localized banks have events with .wem that don't set "localized audio", repeated per localized bank
         #   (ex. MGSurvive stingers)
         langs = [None]
-        if args.txtp_langs:
-            langs = args.txtp_langs
+        if args.txtp_lang:
+            langs = args.txtp_lang
 
         for lang in langs:
             generator = wgenerator.Generator(banks, locator, names)

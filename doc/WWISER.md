@@ -208,8 +208,13 @@ Watch out for false positives though, since Wwise name hashing is very collision
 
 See https://github.com/bnnm/wwiser-utils for a guide and utils to help with reversing names.
 
+### Regenerating wwnames.txt name list with missing IDs
+*wwiser* has an option to re-save names and IDs based on currently loaded banks, which can be used to get a "clean" `wwnames.txt` and get a list of used names missing IDs (see *wwiser-utils* project for tips to reverse into names those missing IDs). By default it writes an ordered list divided in sections by name type and usage.
+
+For best results you try loading all banks before making the list, in particular `init.bnk` is needed to detect certain RTPC IDs.
+
 ### Name flags
-You can add some special flags to `wwnames.txt` that alter some minor behaviors (not quite full program options). Just write the following text lines inside (flags aren't stable and may change without warning though).
+You can add some special flags to `wwnames.txt` that alter some minor behaviors (not quite full program options). Just write the following text lines inside (flags aren't stable and may change without warning or behave erratically in some cases though).
 
 #### `#@no-fuzzy`
 Disables "fuzzy matching". By default *wwiser* tries to match derived names, like `play_bgm01` may try to use `play_bgm02`. In rare cases (mainly when there are a lot of IDs/names) it may derive names that don't make much sense, like `play_bgm0g`, so this flag disables this fuzzy derivation.

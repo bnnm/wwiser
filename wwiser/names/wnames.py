@@ -172,6 +172,10 @@ class Names(object):
                 self._mark_used(row, hashtype, node)
                 return row
 
+        # groups missing ids (uninteresting ids like AkSound don't pass type)
+        if hashtype:
+            self._mark_unused(id, hashtype, node)
+
         if not self._db:
             return None
 
@@ -194,11 +198,6 @@ class Names(object):
             if row:
                 self._mark_used(row, hashtype, node)
                 return row
-
-
-        # groups missing ids (uninteresting ids like AkSound don't pass type)
-        if hashtype:
-            self._mark_unused(id, hashtype, node)
 
         return None
 

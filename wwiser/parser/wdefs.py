@@ -105,7 +105,7 @@ aot2_buggy_banks = {
 
 
 # #############################################################################
-# AK ENUMS AND FORMATS
+# INTERNAL HELPERS
 
 # format helpers
 fmt_hexfix = wfmt.FormatterHex(fixed=True)
@@ -121,13 +121,13 @@ fnv_bus = 'bus'
 fnv_sfx = 'sfx'
 fnv_trg = 'trigger'
 fnv_aco = 'acoustic texture'
-fnv_gme = 'rtpc/game-variable'
-fnv_gmx = 'rtpc/game-variable'
+fnv_gme = 'base rtpc/game-variable'
+fnv_gmx = 'rtpc/game-variable' #separate from the above
 fnv_var = 'variable' #switches/states names
 fnv_val = 'value' #switches/states values
 fnv_unk = '???'
 fnv_order = [
-  fnv_bnk, fnv_lng, fnv_evt, fnv_bus, fnv_sfx, fnv_trg, fnv_aco, fnv_gme, fnv_var, fnv_val, fnv_unk
+  fnv_bnk, fnv_lng, fnv_evt, fnv_bus, fnv_sfx, fnv_trg, fnv_aco, fnv_gme, fnv_gmx, fnv_var, fnv_val, fnv_unk
 ]
 fnv_order_join = [
   fnv_bnk, fnv_lng, fnv_bus
@@ -138,6 +138,9 @@ fnv_conditionals = {
 fnv_conditionals_origin = {
     fnv_gme
 }
+
+# #############################################################################
+# AK ENUMS AND FORMATS
 
 chunk_type = wfmt.FormatterLUT({
   b'AKBK': "Audiokinetic Bank",

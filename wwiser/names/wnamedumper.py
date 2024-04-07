@@ -63,6 +63,15 @@ class Namedumper(object):
         names = self._names.values()
         rows = []
 
+        # conditionals: some IDs detect if are reversable by the existence of other "origin" IDs, mark those
+        for hashtype in self._missing:
+            if hashtype not in wdefs.fnv_conditionals_origin:
+                continue
+            # [hashtype] = {(bank, localized)} = [ids]
+            for ids in self._missing[hashtype].values():
+                for id in ids:
+                    self._conditionals.add(id)
+
         # save valid names
         for row in names:
             # hashnames only, as they can be safely shared between games
@@ -76,7 +85,7 @@ class Namedumper(object):
                 has_companion_names = True
                 continue
 
-            # determine if some IDs that not be reversable should be written
+            # conditionals: same as above but for existing names, that don't go to missing
             if row.hashtypes and any(x in row.hashtypes for x in wdefs.fnv_conditionals_origin):
                 self._conditionals.add(row.id)
 
@@ -233,7 +242,7 @@ class Namedumper(object):
                     continue
 
             lines.append('# %s' % (id))
-        
+
         # remove so it doesn't get saved twice
         banks[bank] = {}
         return lines

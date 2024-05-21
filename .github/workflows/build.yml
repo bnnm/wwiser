@@ -34,31 +34,21 @@ jobs:
 
       - name: Get Release Version
         id: release_version
-        run: echo "wwiser_version=$(Get-Date -Format 'yyyyMMdd') >> $env:GITHUB_OUTPUT"
+        run: |
+          $DateString = Get-Date -Format "yyyyMMdd"
+          echo "wwiser_version=$DateString" >> $env:GITHUB_OUTPUT
             
       - name: Build WWiser
         env:
           wwiser_version: ${{ steps.release_version.outputs.wwiser_version }}
         run: python build.py ${{ env.wwiser_version }}
-        
-      - name: Create Release
-        id: make_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          wwiser_version: v${{ steps.release_version.outputs.wwiser_version }}
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ env.wwiser_version }}
-          release_name: ${{ env.wwiser_version }}
-          draft: false
-          prerelease: false
-          
-      - name: Upload Binaries
-        uses: actions/upload-release-asset@v1
+          files: ./bin/wwiser.pyz
+          name: ${{ env.WWISER_VERSION}}
+          tag_name: ${{env.WWISER_VERSION}}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.make_release.outputs.upload_url }}
-          asset_path: ./bin/wwiser.pyz
-          asset_name: wwiser.pyz
-          asset_content_type: application/octet-stream
+          WWISER_VERSION: v${{ steps.release_version.outputs.wwiser_version }}

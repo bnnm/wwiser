@@ -34,7 +34,7 @@ jobs:
 
       - name: Get Release Version
         id: release_version
-        run: echo "::set-output name=wwiser_version::$(Get-Date -Format 'yyyyMMdd')"
+        run: echo "wwiser_version=$(Get-Date -Format 'yyyyMMdd') >> $env:GITHUB_OUTPUT"
             
       - name: Build WWiser
         env:

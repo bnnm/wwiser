@@ -1,4 +1,4 @@
-name: build-wwiser-stable
+name: build-wwiser-nightly
 
 on:
   push:

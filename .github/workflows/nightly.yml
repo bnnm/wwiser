@@ -1,0 +1,50 @@
+name: build-wwiser-stable
+
+on:
+  push:
+    branches:
+    - master
+    paths: # Run on any code change
+    - "wwiser/**/*.py"
+    - "wwiser.py"
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  release-new-nightly:
+    runs-on: windows-2019
+
+    steps:
+      # Checkout your code
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      # Setup env
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      # Make release version tag
+      - name: Get Release Version
+        id: release_version
+        run: |
+          $DateString = Get-Date -Format "yyyyMMdd"
+          echo "wwiser_version=$DateString" >> $env:GITHUB_OUTPUT
+            
+      # Build app
+      - name: Build WWiser
+        run: python build.py ${{ steps.release_version.outputs.wwiser_version }}
+
+      # Release nightly
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./bin/wwiser.pyz
+          name: ${{ env.WWISER_VERSION}}-nightly
+          tag_name: latest-nightly
+          prerelease: true
+        env:
+          WWISER_VERSION: v${{ steps.release_version.outputs.wwiser_version }}

@@ -1,5 +1,6 @@
 import glob, os, zipfile
 from datetime import datetime
+import sys
 
 def make_pyz():
     if not os.path.exists('bin'):
@@ -19,7 +20,11 @@ def make_pyz():
             continue
         zf.write(filename, compress_type=zipfile.ZIP_DEFLATED)
 
-    strdate = datetime.today().strftime('%Y%m%d')
+    if len(sys.argv) > 1: # Accept version from cli
+        strdate = sys.argv[1]
+        strdate = strdate.lstrip("v")
+    else:
+        strdate = datetime.today().strftime('%Y%m%d')
     #zf.writestr('VERSION', strdate, compress_type=zipfile.ZIP_DEFLATED)
     version = 'WWISER_VERSION = "v%s"' % (strdate)
     zf.writestr('wwiser/wversion.py', version, compress_type=zipfile.ZIP_DEFLATED) # './...' fails here

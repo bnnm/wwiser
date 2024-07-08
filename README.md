@@ -15,11 +15,12 @@ How to play audio simulating the Wwise engine:
     otherwise you may want to generate a name list and put it as `wwnames.txt` in the *base folder*
 - press *Generate TXTP* to make `.txtp`
   - this will make files that simulate how Wwise plays audio, based on loaded bank info
-  - may want to set language to `SFX` to skip voice lines (ignore if `SFX`` isn'0't shown)
-- go loaded base directory and open `*.txtp` with some player like *foobar2000/winamp/audacious* having installed the *vgmstream* plugin
+  - may want to set language to `SFX` to skip voice lines (ignore if `SFX`` isn't shown)
+- enter the *base folder* and open those `.txtp` with some player like *foobar2000/winamp/audacious* with the *vgmstream* plugin installed
   - if generated TXTP aren't fully satisfactory, fiddle with *TXTP Generator* options
+  - note that TXTP currently can't simulate all Wwise features
   - when making audio rips to distribute, may be better to set *TXTP subdir* to *empty* so that `.txtp` are generated in the *base folder*
-- you can only press *View banks* to explore banks, or *Dump banks* to save readable bank info, if needed
+- you can also press *View banks* to explore, or *Dump banks* to save readable info, if needed
   - info is presented as-is and may be a bit hard to understand, but isn't important to generate *TXTP*
 - Wwise is very complex so this program can only help so much, you may want to read and understand *doc/WWISER.md*
 

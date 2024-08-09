@@ -13,18 +13,18 @@ on:
 
 jobs:
   release-new-nightly:
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     steps:
       # Checkout your code
       - name: Checkout
-        uses: actions/checkout@v2
-      
+        uses: actions/checkout@v4
+
       # Setup env
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: '3.8'
 
       # Make release version tag
       - name: Get Release Version
@@ -32,7 +32,7 @@ jobs:
         run: |
           $DateString = Get-Date -Format "yyyyMMdd"
           echo "wwiser_version=$DateString" >> $env:GITHUB_OUTPUT
-            
+
       # Build app
       - name: Build WWiser
         run: python build.py ${{ steps.release_version.outputs.wwiser_version }}
@@ -40,7 +40,7 @@ jobs:
       # Release nightly
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ./bin/wwiser.pyz
           name: ${{ env.WWISER_VERSION}}-nightly

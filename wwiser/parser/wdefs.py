@@ -60,6 +60,7 @@ bank_versions = [
     144, #0x90 Wwise 2022.1-B   (none known)
     145, #0x91 Wwise 2022.1     [Sea of Stars (PC), Mortal Kombat 1 (PC)]
     150, #0x96 Wwise 2023.1     (none known)
+    152, #0x98 Wwise 2024.1-B   (none known)
 ]
 
 # no txtp support, even if forced
@@ -854,8 +855,8 @@ AkPropID_150 = wfmt.FormatterLUT({
   0x35: "MaxNumInstances",
   0x36: "BypassAllMetadata",
   0x37: "PlayMechanismSpecialTransitionsValue",
-  0x38: "FirstNonRtpc",
-  0x37: "LastRtpc",
+  #0x38: "FirstNonRtpc",
+  #0x37: "LastRtpc",
   0x38: "PriorityDistanceOffset",
   0x39: "DelayTime",
   0x3A: "TransitionTime",
@@ -887,6 +888,88 @@ AkPropID_150 = wfmt.FormatterLUT({
   0x54: "Loop",
   0x55: "AttenuationID",
   #0x56: "NUM",
+})
+AkPropID_152 = wfmt.FormatterLUT({
+  #0x0: "FirstRtpc",
+  0x00: "Volume",
+  0x01: "Pitch",
+  0x02: "LPF",
+  0x03: "HPF",
+  0x04: "BusVolume",
+  0x05: "MakeUpGain",
+  0x06: "Priority",
+  0x07: "MuteRatio",
+  0x08: "UserAuxSendVolume0",
+  0x09: "UserAuxSendVolume1",
+  0x0A: "UserAuxSendVolume2",
+  0x0B: "UserAuxSendVolume3",
+  0x0C: "GameAuxSendVolume",
+  0x0D: "OutputBusVolume",
+  0x0E: "OutputBusHPF",
+  0x0F: "OutputBusLPF",
+  0x10: "UserAuxSendLPF0",
+  0x11: "UserAuxSendLPF1",
+  0x12: "UserAuxSendLPF2",
+  0x13: "UserAuxSendLPF3",
+  0x14: "UserAuxSendHPF0",
+  0x15: "UserAuxSendHPF1",
+  0x16: "UserAuxSendHPF2",
+  0x17: "UserAuxSendHPF3",
+  0x18: "GameAuxSendLPF",
+  0x19: "GameAuxSendHPF",
+  0x1A: "ReflectionBusVolume",
+  0x1B: "HDRBusThreshold",
+  0x1C: "HDRBusRatio",
+  0x1D: "HDRBusReleaseTime",
+  0x1E: "HDRActiveRange",
+  0x1F: "MidiTransposition",
+  0x20: "MidiVelocityOffset",
+  0x21: "PlaybackSpeed",
+  0x22: "InitialDelay",
+  0x23: "Positioning_Pan_X_2D",
+  0x24: "Positioning_Pan_Y_2D",
+  0x25: "Positioning_Pan_Z_2D",
+  0x26: "Positioning_Pan_X_3D",
+  0x27: "Positioning_Pan_Y_3D",
+  0x28: "Positioning_Pan_Z_3D",
+  0x29: "Positioning_CenterPercent",
+  0x2A: "Positioning_TypeBlend",
+  0x2B: "Positioning_EnableAttenuation",
+  0x2C: "Positioning_Cone_AttenuationOnOff",
+  0x2D: "Positioning_Cone_Attenuation",
+  0x2E: "Positioning_Cone_LPF",
+  0x2F: "Positioning_Cone_HPF",
+  0x30: "BypassFX",
+  0x31: "BypassAllFX",
+  0x32: "Available_0",
+  0x33: "Available_1",
+  0x34: "Available_2",
+  0x35: "MaxNumInstances",
+  0x36: "BypassAllMetadata",
+  0x37: "PlayMechanismSpecialTransitionsValue",
+  0x38: "AttenuationDistanceScaling",
+  #0x39: "FirstNonRtpc",
+  #0x38: "LastRtpc",
+  0x39: "PriorityDistanceOffset",
+  0x3A: "DelayTime",
+  0x3B: "TransitionTime",
+  0x3C: "Probability",
+  0x3D: "DialogueMode",
+  0x3E: "HDRBusGameParam",
+  0x3F: "HDRBusGameParamMin",
+  0x40: "HDRBusGameParamMax",
+  0x41: "MidiTrackingRootNote",
+  0x42: "MidiPlayOnNoteType",
+  0x43: "MidiKeyRangeMin",
+  0x44: "MidiKeyRangeMax",
+  0x45: "MidiVelocityRangeMin",
+  0x46: "MidiVelocityRangeMax",
+  0x47: "MidiChannelMask",
+  0x48: "MidiTempoSource",
+  0x49: "MidiTargetNode",
+  0x4A: "Loop",
+  0x4B: "AttenuationID",
+  #0x4C: "NUM",
 })
 AkPropID = None
 AkPropID_tids = {
@@ -1297,7 +1380,9 @@ Ak3DSpatializationMode = wfmt.FormatterLUT({
 eCurveXType = wfmt.FormatterLUT({
   0x0: "CurveObs",
   0x1: "CurveOcc",
-  #0x2: "MAX_CURVE_X_TYPES",
+  0x2: "CurveDiff", #152>=
+  0x3: "CurveTrans", #152>=
+  #0x4: "MAX_CURVE_X_TYPES",
 })
 
 #046>=
@@ -2193,8 +2278,10 @@ def setup(version):
         AkPropID = AkPropID_126
     elif version <= 145:
         AkPropID = AkPropID_128
-    else:
+    elif version <= 150:
         AkPropID = AkPropID_150
+    else:
+        AkPropID = AkPropID_152
 
     global AkBank__AKBKHircType
     if version <= 126:

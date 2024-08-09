@@ -242,8 +242,12 @@ def CAkBankMgr__LoadSource(obj, cls, subnode=False):
             elem.U32('uFileOffset')
         elem.U32('uInMemoryMediaSize')
 
-    else:
+    elif cls.version <= 150:
         #fileID is sourceID
+        elem.U32('uInMemoryMediaSize')
+
+    else:
+        elem.U32('cacheID')
         elem.U32('uInMemoryMediaSize')
 
 
@@ -1594,12 +1598,16 @@ def CAkSwitchCntr__SetInitialValues(obj, cls):
             elem.U8x('bIsFirstOnly')
             elem.U8x('bContinuePlayback')
             elem.U32('eOnSwitchMode').fmt(wdefs.AkOnSwitchMode)
-        else:
+        elif cls.version <= 150:
             elem.U8x('byBitVector') \
                 .bit('bIsFirstOnly', elem.lastval, 0) \
                 .bit('bContinuePlayback', elem.lastval, 1)
             elem.U8x('byBitVector') \
                 .bit('eOnSwitchMode', elem.lastval, 0, 0x7, fmt=wdefs.AkOnSwitchMode)
+        else:
+            elem.U8x('byBitVector') \
+                .bit('bIsFirstOnly', elem.lastval, 0) \
+                .bit('bContinuePlayback', elem.lastval, 1) \
 
         elem.s32('FadeOutTime')
         elem.s32('FadeInTime')
@@ -2219,6 +2227,10 @@ def CAkMusicTrack__SetInitialValues(obj, cls):
             for elem in obj.list('pPlaylist', 'AkTrackSrcInfo', obj.lastval):
                 elem.u32('trackID') #0..N
                 elem.tid('sourceID').fnv(wdefs.fnv_no)
+                if cls.version <= 150:
+                    pass
+                else:
+                    elem.U32('cacheID')
                 if cls.version <= 132:
                     pass
                 else:
@@ -3648,11 +3660,14 @@ def CAkBankMgr__ProcessEnvSettingsChunk(obj):
     obj.set_name('EnvSettingsChunk')
     version = get_version(obj)
 
-    if version <= 89:
+    if   version <= 89:
         max_x = 2
         max_y = 2
-    else:
+    elif version <= 150:
         max_x = 2
+        max_y = 3
+    else:
+        max_x = 4
         max_y = 3
 
     obj = obj.node('ConversionTable')

@@ -86,7 +86,7 @@ class CAkHircNode(object):
 
         # during during calculations to make a final list
         #for bsi in statechunk.get_states():
-        #    self.fields.statechunk(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
+        #    self.fields.statechunk(bsi.nstategroupid, bsi.nstatevalueid, bsi.props)
 
         return statechunk
 

@@ -251,7 +251,8 @@ class PropertyCalculator(object):
         # base node applies extra props that aren't inherited
         self._is_base = self._bnode == bnode
 
-        self._apply_props(bnode)
+        self._apply_props(bnode.props)
+        self._apply_props_fx(bnode)
 
         self._apply_statechunks(bnode)
         self._apply_rtpclist(bnode)
@@ -263,12 +264,11 @@ class PropertyCalculator(object):
     # -------------------------------------------------------------------------
 
     # standard props
-    def _apply_props(self, bnode):
-        if not bnode.props:  #events don't have props
+    def _apply_props(self, props):
+        if not props:  #events don't have props
             return
 
         cfg = self._config
-        props = bnode.props
 
         # behavior props: only on base node
         # (props from statechunks/rtpcs are included, so must add to existing values)
@@ -289,14 +289,24 @@ class PropertyCalculator(object):
                 cfg.gain += props.busvolume
                 cfg.gain += props.outputbusvolume
 
+    # standard props
+    def _apply_props_fx(self, bnode):
+        if not bnode:
+            return
+        if not self._include_fx:
+            return
+
+        cfg = self._config
+
+        # relative props: only add current if base node will output audio
+        if self._audible:
             # fake a bit FX to include Wwise Gain (effects render a bit different but should be ok for typical usage)
             # (may be on bus or node level)
-            if self._include_fx:
-                fxlist = self._get_fxlist(bnode)
-                if fxlist:
-                    gain = fxlist.get_gain()
-                    cfg.gain += gain
-                    #TODO handle statechunks/rtpcs in the fxgain
+            fxlist = self._get_fxlist(bnode)
+            if fxlist:
+                gain = fxlist.get_gain()
+                cfg.gain += gain
+                #TODO handle statechunks/rtpcs in the fxgain
 
     def _get_fxlist(self, bnode):
         if not bnode:
@@ -343,12 +353,12 @@ class PropertyCalculator(object):
         # find currently set states (may be N)
         for state in ws.scparams.get_states():
             bsi = bnode.statechunk.get_bsi(state.group, state.value)
-            if not bsi or not bsi.bstate:
+            if not bsi or not bsi.props:
                 continue
 
             cfg.crossfaded = True
             self._uses_vars = True
-            self._apply_props(bsi.bstate)
+            self._apply_props(bsi.props)
             self._txtp.info.statechunk(state)
 
     # -------------------------------------------------------------------------

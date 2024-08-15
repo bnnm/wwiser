@@ -1,3 +1,4 @@
+from . import bnode_props
 
 # STATECHUNK
 #
@@ -14,8 +15,8 @@ class _AkStateInfo(object):
         self.nstatevalueid = None
         self.group = None
         self.value = None
-        self.ntid = None
-        self.bstate = None
+        #self.ntid = None
+        self.props = None
 
 class AkStateChunk(object):
     def __init__(self, node, builder):
@@ -57,11 +58,15 @@ class AkStateChunk(object):
                 if not nstatevalueid or not nstatevalueid.value():
                     continue #not possible to set "none" as value
 
+
                 nprops = nstate.find1(name='AkPropBundle')
-                if nprops: #includes props directly
-                    for nprop in nprops:
-                        # todo handle
-                        pass
+                if nprops:
+                    # state props are included directly (ex. Aster Tatariqus v150 58709424)
+                    props = bnode_props.CAkProps(nstate)
+                    if not props.valid:
+                        continue
+
+                    self.include_statechunk(nstategroupid, nstatevalueid, props)
 
                 else:
                     # uses a reference to a state object
@@ -75,16 +80,20 @@ class AkStateChunk(object):
                     if not bstate or not bstate.props:
                         continue
 
-                    bsi = _AkStateInfo()
-                    bsi.nstategroupid = nstategroupid
-                    bsi.nstatevalueid = nstatevalueid
-                    bsi.group = nstategroupid.value()
-                    bsi.value = nstatevalueid.value()
-                    bsi.ntid = nstateinstanceid
-                    bsi.bstate = bstate
+                    self.include_statechunk(nstategroupid, nstatevalueid, bstate.props)
 
-                    #TODO filter repeats
-                    self._states.append(bsi)
+    def include_statechunk(self, nstategroupid, nstatevalueid, props):
+        bsi = _AkStateInfo()
+        bsi.nstategroupid = nstategroupid
+        bsi.nstatevalueid = nstatevalueid
+        bsi.group = nstategroupid.value()
+        bsi.value = nstatevalueid.value()
+        #bsi.ntid = nstateinstanceid
+        bsi.props = props
+
+        #TODO filter repeats
+        self._states.append(bsi)
+
 
     def get_bsi(self, group, value):
         for bsi in self._states:
@@ -100,7 +109,7 @@ class AkStateChunk(object):
         if self._usables is None:
             items = []
             for bsi in self._states:
-                if bsi.bstate.props.is_usable(apply_bus):
+                if bsi.props.is_usable(apply_bus):
                     items.append(bsi)
             self._usables = items
         return self._usables

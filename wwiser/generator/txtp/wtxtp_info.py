@@ -281,7 +281,7 @@ class TxtpInfo(object):
         return self._get_fields_lines("GAMEVARS", self._rtpc_fields)
 
     def report_statechunk(self, bsi):
-        self._statechunk_fields.statechunk(bsi.nstategroupid, bsi.nstatevalueid, bsi.bstate.props)
+        self._statechunk_fields.statechunk(bsi.nstategroupid, bsi.nstatevalueid, bsi.props)
 
     def get_statechunk_lines(self):
         return self._get_fields_lines("STATECHUNKS", self._statechunk_fields)

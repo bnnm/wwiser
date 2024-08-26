@@ -8,16 +8,16 @@ class MediaIndex(object):
         self._media_banks = {}              # bank + sid > internal wem index
         self._media_sids = {}               # sid > bank + internal wem index
         self._missing_media = {}            # media (wem) objects missing in some bank
-        self._ebp = False
+        self._event_based_packaging = False
 
-    def set_ebp(self, flag):
-        self._ebp = flag
+    def set_event_based_packaging(self, flag):
+        self._event_based_packaging = flag
 
     def get_missing_media(self):
         return self._missing_media
 
-    def get_ebp(self):
-        return self._ebp
+    def get_event_based_packaging(self):
+        return self._event_based_packaging
 
     #--------------------------------------------------------------------------
 

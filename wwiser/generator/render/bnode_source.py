@@ -79,7 +79,7 @@ class AkBankSourceData(object):
 
         #0=bnk (always), 1/2=prefetch<>stream (varies with version)
         self.internal = (self.nstreamtype.value() == 0)
-        # no actual detection, just to indicate may be ignored
+        # "event based packaging": no actual detection, just to indicate may be ignored
         self.internal_ebp = self.internal and self.version and (
             self.version >= _MEMORY_ASSET_NEW or self.version in _MEMORY_ASSET_CUSTOM)
 

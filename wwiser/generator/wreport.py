@@ -19,8 +19,9 @@ class Report(object):
 
         if mdi.get_missing_media():
             missing = len(mdi.get_missing_media())
-            if mdi.get_ebp():
-                logging.info("generator: NOTICE! %s memory audio (extract .wem or load banks)", missing)
+            if mdi.get_event_based_packaging():
+                # usually not an error but can't detect
+                logging.debug("generator: some .txtp use packaged memory audio from .wem/bnk")
             else:
                 logging.info("generator: WARNING! missing %s memory audio (load more banks?)", missing)
 
@@ -71,11 +72,11 @@ class Report(object):
             move_info = ' (move to wem folder)'
 
         if stats.streams:
-            logging.info("generator: some .txtp (%s) use streams%s", stats.streams, move_info)
+            logging.debug("generator: some .txtp (%s) use streams%s", stats.streams, move_info)
         if stats.internals and not txc.bnkskip:
-            logging.info("generator: some .txtp (%s) use .bnk%s", stats.internals, move_info)
+            logging.debug("generator: some .txtp (%s) use .bnk%s", stats.internals, move_info)
             for bankname in txc.stats.get_used_banks():
-                logging.info("- %s", bankname)
+                logging.debug("- %s", bankname)
 
         #logging.info("generator: done")
         line = "created %i" % stats.created

@@ -323,7 +323,7 @@ class TxtpPrinter(object):
                 name += self._txtpcache.locator.find_wem_path(sound.source.tid, extension, lang_fullname)
                 name = name + "%s.%s" % (sound.source.tid, extension)
                 info += "  ##memory"
-                mdi.set_ebp(True)
+                mdi.set_event_based_packaging(True)
             else:
                 # old memory audio must be in a bnk
                 name = "?" + name + "%s.%s" % (sound.source.tid, extension)

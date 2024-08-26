@@ -111,7 +111,16 @@ class Cli(object):
 
     # read config file's lines to make one (or many) configs, and pass to argparse
     def _handle_config(self, args):
+        config_name = args.config
+        if config_name == '*':
+            config_name = 'wwconfig.txt'
+
         defaults = sys.argv[1:]
+        try:
+            defaults.remove(config_name)
+        except ValueError:
+            pass
+
         configs = []
 
         current = []
@@ -119,11 +128,7 @@ class Cli(object):
         configs.append(current)
         empty = True
 
-        config_name = args.config
-        if config_name == '*':
-            config_name = 'wwconfig.txt'
-
-        with open(args.config, 'r', encoding='utf-8-sig') as f:
+        with open(config_name, 'r', encoding='utf-8-sig') as f:
             for line in f:
                 line = line.strip()
                 line_command = line.split(' ')[0]
@@ -156,11 +161,6 @@ class Cli(object):
             if len(config) == 0:
                 continue
             args = self._parser.parse_args(config)
-            try:
-                args.files.remove(config_name)
-            except ValueError:
-                pass
-
             self._run(args)
 
         return

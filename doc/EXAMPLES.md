@@ -304,6 +304,9 @@ event > ... > mranseq > segment
 ```
 - uses transition objects in musicranseq (rare)
 
+## Mass effect 2 (PC)
+- uses transition objects in playlist (rare)
+
 ## Trine 2 (PC)
 ```
 music.bnk

@@ -3812,7 +3812,7 @@ class Parser(object):
             fourcc = r.fourcc()
 
         if fourcc != b'BKHD':
-            raise wmodel.VersionError("not a Wwise bank", -1)
+            raise wmodel.VersionError("%s is not a valid Wwise bank" % (r.get_filename()), -1)
 
         _size = r.u32()
 

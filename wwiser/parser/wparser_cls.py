@@ -247,13 +247,13 @@ def CAkAction__Create(obj, actionType):
         0x0200: CAkActionPause,
         0x0300: CAkActionResume,
         0x0400: CAkActionPlay,
-        0x0500: CAkActionPlayAndContinue, #early
+        0x0500: CAkActionPlayAndContinue, #early (removed in later versions)
         0x0600: CAkActionMute,
         0x0700: CAkActionMute,
         0x0800: CAkActionSetAkProp, #AkPropID_Pitch
         0x0900: CAkActionSetAkProp, #AkPropID_Pitch
-        0x0A00: CAkActionSetAkProp, #(none)
-        0x0B00: CAkActionSetAkProp, #(none)
+        0x0A00: CAkActionSetAkProp, #(none) / AkPropID_Volume (~v145) / AkPropID_FirstRtpc (v150) 
+        0x0B00: CAkActionSetAkProp, #(none) / AkPropID_Volume (~v145) / AkPropID_FirstRtpc (v150)
         0x0C00: CAkActionSetAkProp, #AkPropID_BusVolume
         0x0D00: CAkActionSetAkProp, #AkPropID_BusVolume
         0x0E00: CAkActionSetAkProp, #AkPropID_LPF
@@ -263,9 +263,9 @@ def CAkAction__Create(obj, actionType):
         0x1200: CAkActionSetState,
         0x1300: CAkActionSetGameParameter,
         0x1400: CAkActionSetGameParameter,
-        0x1500: CAkActionEvent,
-        0x1600: CAkActionEvent,
-        0x1700: CAkActionEvent,
+        0x1500: CAkActionEvent, #not in v150
+        0x1600: CAkActionEvent, #not in v150
+        0x1700: CAkActionEvent, #not in v150
         0x1900: CAkActionSetSwitch,
         0x1A00: CAkActionBypassFX,
         0x1B00: CAkActionBypassFX,
@@ -276,7 +276,7 @@ def CAkAction__Create(obj, actionType):
         0x2000: CAkActionSetAkProp, #AkPropID_HPF
         0x2100: CAkActionPlayEvent,
         0x2200: CAkActionResetPlaylist,
-        0x2300: CAkActionPlayEventUnknown,
+        0x2300: CAkActionPlayEventUnknown, #normally not defined
         0x3000: CAkActionSetAkProp, #AkPropID_HPF
         0x3100: CAkActionSetFX,
         0x3200: CAkActionSetFX,
@@ -286,13 +286,20 @@ def CAkAction__Create(obj, actionType):
         0x3600: CAkActionBypassFX,
         0x3700: CAkActionBypassFX,
     }
-
+    CAkAction_ActionTypes_150_changes = {
+        0x1A00: CAkActionBreak,
+        0x1B00: CAkActionTrigger,
+    }
 
     version = wparser.get_version(obj)
+    if version >= 150:
+        CAkAction_ActionTypes_072.update(CAkAction_ActionTypes_150_changes)
+
     if   version <= 56:
         name = CAkAction_ActionTypes_056.get(actionType & 0xFF000)
     else:
         name = CAkAction_ActionTypes_072.get(actionType & 0xFF00)
+
     if name is None:
         raise wmodel.ParseError("Unknown action type %05x " % (actionType), obj)
 

@@ -761,3 +761,17 @@ bus hierarchy:
 
 ## Killer Instinct (PC)
 - most music is made of random parts per loop (like Doom)
+
+## Wattam (PC)
+```
+Music_CoreInst_Test [SINGLESONG_SONG=afro_cuban] [People=SV_02]
+> 247825035
+  > ...
+    > CAkMusicSwitchCntr 492860160 + OverrideBusId 169792562
+        * OutputBusVolume = -96.0
+      > ...
+        > CAkMusicTrack 436047631 + OverrideBusId 169792562
+
+```
+- many playlist nodes have OutputBusVolume at -96db but children object override buses
+  - even though both define output bus only latest one matters, and won't see it's parent bus properties

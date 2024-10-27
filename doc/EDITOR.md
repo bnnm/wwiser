@@ -717,3 +717,7 @@ sound > (volumes) > bus > bus > ... > bus > output
   - custom = CAkFxCustom (has guidname)
   - shared = CAkFxShareSet (has hashname), sets bIsShareSet flag
   - internally work the same and have same fields
+
+## MIDI
+- wwise supports MIDI objects as BGM
+- can be defined to play using Wwise Synth, or with a sampler by importing individual .wav notes

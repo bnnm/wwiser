@@ -251,19 +251,35 @@ class Locator(object):
     # final txtp path
     def get_txtp_fullpath(self, node):
         outdir = self.get_txtp_rootpath()
-        if self._auto_subdirs and node:
-            bank = node.get_root().get_filename()
-            #lang = node.get_root().get_lang()
 
-            bank = os.path.splitext(bank)[0]
+        if self._auto_subdirs and node:
+
+            #lang = node.get_root().get_lang()
             #localized = lang != 0 and lang != 393239870 #early or regular SFX
             #if localized:
             #    bank = '%s[%s]' % (bank, 'localized')
 
+            nroot = node.get_root()
+            bankname = os.path.basename(nroot.get_filename()) #[:-4] #
+            bankname = os.path.splitext(bankname)[0]
+
+            # use bank's hashname if available
+            nbnk = nroot.find1(name='BankHeader')
+            nbid = nbnk.find(name='dwSoundBankID')
+            battrs = nbid.get_attrs()
+            hashname = battrs.get('hashname')
+            if hashname:
+                name = hashname
+            else:
+                name = bankname
+
             lang = wlang.Lang(node)
 
             subpath = self._auto_subdirs
-            subpath = subpath.replace('{bank}', bank)
+            subpath = subpath.replace('{bank}', name)
+            subpath = subpath.replace('{bnk}', name)
+            subpath = subpath.replace('{bank-fn}', bankname)
+            subpath = subpath.replace('{bnk-fn}', bankname)
             subpath = subpath.replace('{lang}', lang.shortname)
 
             outdir = os.path.join(outdir, subpath)

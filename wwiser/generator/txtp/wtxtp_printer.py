@@ -258,9 +258,12 @@ class TxtpPrinter(object):
         silence_line = False
 
         name = ''
+
+        # sometimes midis are used as bgm, but also used to sync stuff (silent)
         if sound.source and sound.source.plugin_wmid:
             name += '?'
-            self.has_unsupported = True
+            if not tnode.silenced:
+                self.has_unsupported = True
 
 
         # prepare lang for some cases
@@ -286,7 +289,7 @@ class TxtpPrinter(object):
 
             if   sound.source.is_plugin_silence and sound.source.plugin_fx:
                 mods += self._get_ms(' #B', sound.source.plugin_fx.duration)
-            elif sound.source.is_plugin_silence: # plugin "none" has no fx
+            elif sound.source.is_plugin_silence or tnode.silenced: # plugin "none" has no fx
                 pass
             else:
                 self.has_unsupported = True

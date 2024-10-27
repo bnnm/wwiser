@@ -787,26 +787,28 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
         fld = obj.U8x('uBitsPositioning')
 
     fld.bit('bPositioningInfoOverrideParent', obj.lastval, 0)
-    fld.bit('bHasListenerRelativeRouting', obj.lastval, 1) #has_3d
     if cls.version <= 89:
+        fld.bit('bHasListenerRelativeRouting', obj.lastval, 1) #has_3d?  (TODO)
         pass
     elif cls.version <= 112:
-        fld.bit('unknown2d', obj.lastval, 2) #flag for next bit
+        fld.bit('bHasListenerRelativeRouting', obj.lastval, 1) #has_3d?  (TODO)
+        fld.bit('unknown2d_next_flag', obj.lastval, 2) #flag for next bit
         fld.bit('unknown2d', obj.lastval, 3) #bPriorityOverrideParent? bIsFXOverrideParent?
         fld.bit('unknown3d', obj.lastval, 4)
         fld.bit('unknown3d', obj.lastval, 5)
         fld.bit('unknown3d', obj.lastval, 6) #always set?
         fld.bit('unknown3d', obj.lastval, 7) #always set?
     elif cls.version <= 122:
-        fld.bit('unknown2d', obj.lastval, 1) #flag for next bit
+        fld.bit('unknown2d_next_flag', obj.lastval, 1) #flag for next bit
         fld.bit('unknown2d', obj.lastval, 2) #bPriorityOverrideParent? bIsFXOverrideParent?
         fld.bit('cbIs3DPositioningAvailable', obj.lastval, 3)
     elif cls.version <= 129:
         fld.bit('unknown2d', obj.lastval, 1) #?
-        fld.bit('unknown2d', obj.lastval, 2) #flag for next bit
+        fld.bit('unknown2d_next_flag', obj.lastval, 2) #flag for next bit
         fld.bit('unknown2d', obj.lastval, 3) #bPriorityOverrideParent? bIsFXOverrideParent?
         fld.bit('cbIs3DPositioningAvailable', obj.lastval, 4)
     else:
+        fld.bit('bHasListenerRelativeRouting', obj.lastval, 1) #has_3d?  (TODO)
         fld.bit('ePannerType', obj.lastval, 2, mask=3, fmt=wdefs.AkSpeakerPanningType)
         fld.bit('e3DPositionType', obj.lastval, 5, mask=3, fmt=wdefs.Ak3DPositionType)
     uBitsPositioning = obj.lastval

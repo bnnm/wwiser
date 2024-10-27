@@ -1,36 +1,59 @@
 from ..txtp import hnode_misc
 
+_DEBUG_SIMPLER_PROPS = False # calculate like old wwiser versions (enables some flags + ignores buses)
+
+
 # PROPERTY CALCULATIONS
 #
-# Wwise objects have a list of associated "properties" (volumes, delays, pitch, etc), but the way
-# final values are calculated is rather complex. Objects are part of a hierarchy (parents) and
-# properties "trickle down" differently dending on their type:
-# - "relative" properties (volume, pitch, lfo, etc): final props adds from all inherited from parents
-# - "absolute" properties (bus, positioning, etc): may overwrite parent's setting, so only latest matters
-# - "behavior" properties (loops, delays, etc): only are used when event chain passes over those objects
-#   (not an official classification,)
+# Wwise objects have associated "properties" (volumes, delays, pitch, etc), but the way final
+# values are calculated is rather complex. Objects are part of a hierarchy (parents) and
+# properties "trickle down" differently depending on their type:
+# - "relative" properties (volume, pitch, lfo, etc): final value adds from all parents
+# - "absolute" properties (bus, positioning, etc): first value found (current object may overwrite parent)
+# - "behavior" properties (loops, delays, etc): only used when event chain passes over those objects
+# (not an official classification)
 #
-# Since "relative" properties are applied even if an event chain doesn't use reference parents, this basically
-# means they are calculated from the lowest audible object (aksound/musictrack) by adding all of their parents,
-# while using latest "absolute" properties found in the hierarchy. "behavior" properties are special in that
-# only apply directly to each object (doesn't make sense to inherit a loop flag, since meaning is object-dependant).
+# "Relative" and "absolute" properties are taken from current and parent objects, even if an event chain
+# doesn't 'use' said parents, while "behavior" properties's meaning are usually object-dependant 
+# (doesn't make sense to inherit a loop flag).
 #
-# For example with a "family" of aksound >> switch >> actor-mixer, and event > actionplay > aksound,
-# the aksound inherits properties from both ancestors (even if they don't participate in the event),
-# but not a "delay" in the switch (would only affect when doing event > actionplay > switch > aksound).
-# This way so one can make hierarchies and change multiple children's properties at once, even if
-# parents aren't used.
+# For example with a "family" of aksound >> switch >> actor-mixer the aksound inherits properties from
+# both ancestors (even if actor-mixers aren't part of events). This way one can make hierarchies and change
+# multiple children's properties at once (setting the actor-mixer's volume).
 #
 # If some part of the family has properties that change via statechunk/rtpc, and are active, they are
 # taken into account when calculating object's properties. Each only allows changing some types of
 # properties though.
 #
-# Apart from their inheritance, "audible" objects 'pass through' their assigned "bus" (an "absolute" prop)
-# Buses in turn have properties (also inherit) that then are applied over the object. These props are
-# separate so you can route an object through buses with distinct effects and config. Buses can't have
-# "behavior" properties (to create a delayed signal would need to use "effects").
 #
-# Example:
+# BUSES
+# Apart from their inheritance, "audible" (.wem) objects 'pass through' an assigned "bus" ("absolute" prop).
+# Buses in turn have and inherit properties that are then applied to the object. These props are
+# separate so you can route an object through buses with distinct effects and config without having to
+# change the object directly. Buses can't have "behavior" properties (to create a "delay" prop would
+# need to use "effects").
+#
+# Multiple objects may override bus, but only first defined one is used and rest would be ignored.
+# - ranseq [master-bus] > aksound [(no bus)] 
+# - ranseq [master-bus] > aksound [music-bus]
+# In the first case, aksound uses master-bus's props, but in the second only music-bus is used.
+# (if master-bus has -96db, aksound will be silent in the first case, not in the second).
+#
+# Objects may set special bus props (OutputBusVolume/HPF/HPF) which only apply to the *directly* overriden bus.
+#   > ranseq   OutpuBusVolume = -5db        OverrideID=music-bus
+#     > segment   OutpuBusVolume = -10db        OverrideID=master-bus
+# In the example only -10db is applied (not -15db). If segment removes OverrideBusId it would use -5db
+# by inheriting bus + applying parent's props, but OutputBusVolume may still be defined in segment
+# (the Wwise editor internally hides -10db if override is unset, shows -10db again if set).
+# OutputBusVolume set via RTPC or states also matter.
+# Note that buses also have OutputBusVolume which is inherited from parents and applied normally.
+#
+# Generally bus volumes aren't too important since final volume can be autonormalized, but in
+# odd cases buses are used to fix certain .wem volumes and may contain useful statechunks
+# (seen in Astral Chain wems with  "low" "mid" buses + silence states).
+#
+#
+# EXAMPLE
 # - object hierarchy                                     - bus hierarchy
 #   actormixer {vol +2db} [bus=master_bus]                 bgm_bus { vol +1db }
 #       > statechunk: bgm=hi > vol = +3db                    master_bus { vol -3db }
@@ -59,19 +82,9 @@ from ..txtp import hnode_misc
 # there are "Volume", "MakeUpGain", "OutputBusVolume", "BusVolume", etc) but ultimately
 # are added the final value (in simpler cases, see below).
 #
-# Also buses are only used in "audible" objects, while parent's buses are just to be inherited
-# and don't pass properties to regular objects:
-#   ranseq > aksound          ranseq > aksound
-#   > bus1   > ---            > bus1   > bus2
-# In the first case, aksound uses bus1's props, but in the second bus1 is ignored completely
-# (if bus1 has -96db, aksound will be silent in the first case, not in the second).
 #
-# Generally bus volumes aren't too important since final volume can be autonormalized, but in
-# rare cases buses are used to fix certain .wem volumes and may contain useful statechunks
-# (seen in Astral Chain wems with  "low" "mid" buses + silence states). If init.bnk is loaded
-# those are applied.
-#
-# While the above is the basic usage of buses, they actually come in two forms:
+# BUS TYPES
+# Buses actually come in two forms:
 # - non-mixing: properties are passed down to the objects
 # - mixing: does processing then applies (some) properties
 #   - BusVolume/OutputBusVolume are post applied, Volume/MakeUpGain are still passed down
@@ -131,8 +144,8 @@ _CLAMP_DELAY = (0 * 1000.0,  3200 * 1000.0) # seconds to ms
 #_CLAMP_FILTER = (0, 100) # percent (for HPF/LPF)
 _VOLUME_SILENT = -96.0
 
-_DEBUG_SIMPLER_PROPS = False # calculate like old wwiser versions (enables some of those flags)
 
+# take a HIRC node and return calculated config based on all props from current and parents
 class PropertyCalculator(object):
     def __init__(self, ws, bnode, txtp):
         self._ws = ws
@@ -140,116 +153,54 @@ class PropertyCalculator(object):
         self._txtp = txtp
         self._config = hnode_misc.NodeConfig()
 
-        self._bbus = None
-        self._audible = bnode.name in _HIRC_AUDIBLE
-        self._is_base = None #process flag
-        self._include_bus = False #process flag
+        self._hirc_audible = bnode.name in _HIRC_AUDIBLE
+        self._include_fx = txtp.txtpcache.x_include_fx #probably ok but not very tested
 
+        # process flags
+        self._is_base_object = None 
+        self._is_bus_holder = None
+        self._is_processing_bus = False
         self._uses_vars = False #if applies statechunk/gamevars
 
-        self._include_fx = txtp.txtpcache.x_include_fx
 
     def get_properties(self):
         if _DEBUG_SIMPLER_PROPS:
-            self._audible = True
+            self._hirc_audible = True
 
-        # get output bus, if possible
-        self._find_bus()
+        # load if possible (only audible nodes use buses)
+        self._bus = BusLoader(self._bnode, self._hirc_audible)
 
-        # read props from current objects and its parents
+        # add props from current objects and its parents
         # (base node gets behavior props, and relative only if it's audible)
-        self._calculate(self._bnode)
+        self._calculate_props(self._bnode)
 
-        # read props from bus and its parents
-        # those work basically the same (has parents, props/rtpcs/statechunks)
+        # add props from bus and its parents, similar to the above with small differences
         # will also register rtpcs and statechunk combos while reading props (may be repeated)
-        # (buses can't apply certain props like delays, but shouldn't be possible anyway)
-        if self._include_bus:
-            self._calculate(self._bbus)
+        # (buses can't apply certain props like delays, but shouldn't be found anyway)
+        if self._bus:
+            self._is_processing_bus = True
+            self._calculate_props(self._bus.bbus)
+            self._is_processing_bus = False
 
-        # props are clamped in Wwise to certain min/max
-        self._clamp()
-
-        # special flag
-        if not self._uses_vars and self._config.gain <= -96.0:
-            self._config.silenced_default = True
-        self._config.silenced = self._config.gain <= -96.0
+        # cleanup
+        pproc = PropertyPostprocessor(self._config)
+        pproc.clamp()
+        pproc.mark_flags(self._uses_vars)
 
         return self._config
 
     # -------------------------------------------------------------------------
 
-    def _find_bus(self):
-        if _DEBUG_SIMPLER_PROPS:
-            return
-        # only audible nodes use buses
-        if not self._audible:
-            return
-        # buses are inherited or overwritten, find first one (absolute prop)
-        self._bbus = self._get_bus(self._bnode)
-
-        # if buses aren't loaded shouldn't apply buses' properties (like busvolume)
-        self._include_bus = self._bbus is not None
-
-    def _get_bus(self, bnode):
-        if not bnode:
-            return None
-        if bnode.bbus:
-            #TODO improve: should select between object bus or current aux bus when doing calculate
-            # need to use aux bus in rare cases. In Elden Ring:
-            # - bgm field/battle musictrack variations go to a field bus
-            # - field bus uses BusVolume -96db, but defines 2 FieldBattleAux/FieldNormalAux aux buses
-            # - both have regular volume and parent is also field's parent
-            # So to avoid silent files due to bus volume, detect if we should use aux bus
-            if self.is_bus_usable(bnode.bbus):
-                return bnode.bbus
-
-            if not bnode.bbus.auxlist:
-                return None
-
-            bauxs = bnode.bbus.auxlist.get_bauxs()
-
-            for baux in bauxs:
-                # maybe should check best aux based on rtpc/statechunk props but for now just pick first
-                if self.is_bus_usable(baux):
-                    return baux
-            return None
-
-            
-        return self._get_bus(bnode.bparent)
-
-    def is_bus_usable(self, bbus):
-        if not bbus or not bbus.props:
-            return
-        return bbus.props.busvolume > _VOLUME_SILENT and bbus.props.outputbusvolume > _VOLUME_SILENT
-
-    def _clamp(self):
-        cfg = self._config
-
-        # simulate Wwise's clamps, useless but might as well
-        cfg.loop = self._clamp_prop(cfg.loop, *_CLAMP_LOOPS)
-        cfg.gain = self._clamp_prop(cfg.gain, *_CLAMP_VOLUME)
-        cfg.delay = self._clamp_prop(cfg.delay, *_CLAMP_DELAY)
-
-
-    def _clamp_prop(self, prop, min, max):
-        if prop is None:
-            return prop
-        if prop < min:
-            return min
-        if prop > max:
-            return max
-        return prop
-
-    # -------------------------------------------------------------------------
-
     # apply all properties for a node
-    def _calculate(self, bnode):
+    def _calculate_props(self, bnode):
         if not bnode:  #no parent
             return
 
-        # base node applies extra props that aren't inherited
-        self._is_base = self._bnode == bnode
+        if not self._is_processing_bus:
+            # base node applies extra props that aren't inherited
+            self._is_base_object = self._bnode == bnode
+            # current node applies extra bus props
+            self._is_bus_holder = self._bus.bholder == bnode
 
         self._apply_props(bnode.props)
         self._apply_props_fx(bnode)
@@ -258,8 +209,8 @@ class PropertyCalculator(object):
         self._apply_rtpclist(bnode)
 
         # repeat with parent nodes to simulate prop inheritance (non-playable nodes don't inherit directly)
-        if self._audible and not _DEBUG_SIMPLER_PROPS:
-            self._calculate(bnode.bparent)
+        if self._hirc_audible and not _DEBUG_SIMPLER_PROPS:
+            self._calculate_props(bnode.bparent)
 
     # -------------------------------------------------------------------------
 
@@ -272,7 +223,7 @@ class PropertyCalculator(object):
 
         # behavior props: only on base node
         # (props from statechunks/rtpcs are included, so must add to existing values)
-        if self._is_base:
+        if self._is_base_object:
             if cfg.loop is None: #statechunks can't have this though
                 cfg.loop = props.loop
             cfg.delay += props.delay
@@ -281,13 +232,20 @@ class PropertyCalculator(object):
         # ...
 
         # relative props: only add current if base node will output audio
-        if self._audible:
+        if self._hirc_audible:
+            # sound object volumes
             cfg.gain += props.volume
             cfg.gain += props.makeupgain
-            # only if we output through a bus (these are separate from bus's props)
-            if self._include_bus:
+
+            # bus's extra volumes props when "outputting through a bus"
+            if self._is_processing_bus:
                 cfg.gain += props.busvolume
                 cfg.gain += props.outputbusvolume
+
+            # overriden bus's "holder" volumes
+            if self._is_bus_holder:
+                cfg.gain += props.outputbusvolume
+
 
     # standard props
     def _apply_props_fx(self, bnode):
@@ -299,7 +257,7 @@ class PropertyCalculator(object):
         cfg = self._config
 
         # relative props: only add current if base node will output audio
-        if self._audible:
+        if self._hirc_audible:
             # fake a bit FX to include Wwise Gain (effects render a bit different but should be ok for typical usage)
             # (may be on bus or node level)
             fxlist = self._get_fxlist(bnode)
@@ -328,7 +286,7 @@ class PropertyCalculator(object):
 
         check_info = True # always?
         if check_info:
-            bscis = bnode.statechunk.get_usable_states(self._include_bus)
+            bscis = bnode.statechunk.get_usable_states(self._is_processing_bus)
 
             # useful? may mark lots of uninteresting {s}
             #if len(bscis) > 0:
@@ -373,7 +331,7 @@ class PropertyCalculator(object):
 
         check_info = True # always?
         if check_info:
-            brtpcs = bnode.rtpclist.get_usable_rtpcs(self._include_bus)
+            brtpcs = bnode.rtpclist.get_usable_rtpcs(self._is_processing_bus)
 
             # useful? may mark lots of uninteresting {s}
             #if len(brtpcs) > 0:
@@ -403,7 +361,7 @@ class PropertyCalculator(object):
                 brtpcs = [brtpc]
 
             for brtpc in brtpcs:
-                if not brtpc or not brtpc.is_usable(self._include_bus):
+                if not brtpc or not brtpc.is_usable(self._is_processing_bus):
                     continue
 
                 cfg.crossfaded = True
@@ -431,7 +389,7 @@ class PropertyCalculator(object):
         cfg = self._config
 
         # behavior props: only on base node
-        if self._is_base:
+        if self._is_base_object:
             # RTPCs can't have loops
             if brtpc.is_delay:
                 cfg.delay = brtpc.accum(value_y, cfg.delay)
@@ -440,16 +398,117 @@ class PropertyCalculator(object):
         # ...
 
         # relative props: only add current if base node will output audio
-        if self._audible:
+        if self._hirc_audible:
             if brtpc.is_volume:
                 cfg.gain = brtpc.accum(value_y, cfg.gain)
             if brtpc.is_makeupgain:
                 cfg.gain = brtpc.accum(value_y, cfg.gain)
 
-            if self._include_bus:
+            if self._is_processing_bus:
                 if brtpc.is_busvolume:
                     cfg.gain = brtpc.accum(value_y, cfg.gain)
                 if brtpc.is_outputbusvolume:
                     cfg.gain = brtpc.accum(value_y, cfg.gain)
 
+            if self._is_bus_holder:
+                if brtpc.is_outputbusvolume:
+                    cfg.gain = brtpc.accum(value_y, cfg.gain)
+
+
         self._txtp.info.gamevar(brtpc.nid, value_x)
+
+class PropertyPostprocessor(object):
+    def __init__(self, config):
+        self._config = config
+
+    # props are clamped in Wwise to certain min/max
+    def clamp(self):
+        self._clamp_config(self._config)
+
+    def mark_flags(self, uses_vars):
+        # special flag
+        if not uses_vars and self._config.gain <= -96.0:
+            self._config.silenced_default = True
+        self._config.silenced = self._config.gain <= -96.0
+
+    @staticmethod
+    def _clamp_config(cfg):
+
+        # simulate Wwise's clamps, useless but might as well
+        cfg.loop = PropertyPostprocessor._clamp_prop(cfg.loop, *_CLAMP_LOOPS)
+        cfg.gain = PropertyPostprocessor._clamp_prop(cfg.gain, *_CLAMP_VOLUME)
+        cfg.delay = PropertyPostprocessor._clamp_prop(cfg.delay, *_CLAMP_DELAY)
+
+    @staticmethod
+    def _clamp_prop(prop, min, max):
+        if prop is None:
+            return prop
+        if prop < min:
+            return min
+        if prop > max:
+            return max
+        return prop
+
+
+
+# Get output bus if any, since it modifies calculated volume.
+# If bus objects can't be found (usually in init.bnk) they simply won't be applied.
+class BusLoader(object):
+    def __init__(self, bnode, hirc_audible):
+        self.bbus = None
+        self.bholder = None
+        self.loaded = False
+        self._hirc_audible = hirc_audible
+
+        self._find_bus(bnode)
+
+        # if buses aren't loaded shouldn't apply buses' properties (like busvolume)
+        self.loaded = self.bbus is not None
+
+    def _find_bus(self, bnode):
+        if _DEBUG_SIMPLER_PROPS:
+            return
+        if not self._hirc_audible:
+            return
+
+        # get this object's output bus (inherited from ancestor or overriden in current object).
+        # the bus's "holder" bnode also applies certain values to the bus
+        result = self._get_bus(bnode)
+        if result:
+            self.bbus = result[0]
+            self.bholder = result[1]
+            self.aux = result[2]
+
+    @staticmethod
+    def _get_bus(bnode):
+        if not bnode:
+            return None
+
+        if bnode.bbus:
+            #TODO improve: should select between object bus or current aux bus when doing calculate
+            # need to use aux bus in rare cases. In Elden Ring:
+            # - bgm field/battle musictrack variations go to a field bus
+            # - field bus uses BusVolume -96db, but defines 2 FieldBattleAux/FieldNormalAux aux buses
+            # - both have regular volume and parent is also field's parent
+            # So to avoid silent files due to bus volume, detect if we should use aux bus
+            if BusLoader.is_bus_usable(bnode.bbus):
+                return (bnode.bbus, bnode, False)
+
+            if not bnode.bbus.auxlist:
+                return None
+
+            bauxs = bnode.bbus.auxlist.get_bauxs()
+
+            for baux in bauxs:
+                # maybe should check best aux based on rtpc/statechunk props but for now just pick first
+                if BusLoader.is_bus_usable(baux):
+                    return (baux, bnode, True)
+            return None
+            
+        return BusLoader._get_bus(bnode.bparent)
+
+    @staticmethod
+    def is_bus_usable(bbus):
+        if not bbus or not bbus.props:
+            return False
+        return bbus.props.busvolume > _VOLUME_SILENT and bbus.props.outputbusvolume > _VOLUME_SILENT

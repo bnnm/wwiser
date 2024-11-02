@@ -85,6 +85,11 @@ class TxtpNode(object):
         if sound and sound.clip:
             self.loop = None
 
+        # seen in Ghostwire: Tokyo amb_beds_daidara_Play, messes up vgmstream's calcs
+        # (maybe should consider anything bigger than N an infinite loop)
+        if self.loop and self.loop >= 32767:
+            self.loop = 0
+
         self.fake_entry = False
         self.force_selectable = False
 

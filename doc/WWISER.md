@@ -644,6 +644,16 @@ Since only the bank version is needed, you can use `00000000 00000000 XXXXXXXX 0
 
 Note that devs could instead encrypt the whole `.bnk` using standard encryption like AES, this is unrelated to Wwise and not covered by this program.
 
+## LOADING REPEATED BANKS
+By default *wwiser* allows loading the same bank ID+lang in different dirs multiple times, or the same bank in the same dir with different names (same bank in the same dir is ignored). Real *Wwise* games probably don't do that, plus the engine should ignore repeated IDs, but *wwiser* has some leniency for usability or odd games.
+
+The most notable case is game updates, where newer `.bnk` may be put in a separate dir or `.pck`. Manually loading newer banks is time consuming, so when loading multiple dirs *wwiser* just accepts everything. This works fine when dumping contents or wwnames (dupes are taken into account), but affects TXTP generation.
+
+Repeated banks may have the same IDs but different contents. For example a *music-switch* object in v1.0 may have 10 cases (10 `.txtp`), while v1.1 has 12 cases (12 `.txtp`), but the other way around could be possible. *wwiser* can only use either v1.0 or v1.1, but can't guess which *music-switch* is the newer/better one.
+
+By default it favors bigger banks first (usually v1.1) while still allowing both. This can be overridden to ignore repeated banks (first only, last only, biggest, etc) for fine tuning. In comple cases you may need to experiment and see if other mores make more `.txtp`. There is nothing stopping tricky devs of reusing a bank ID with completely different contents though, so use with care.
+
+
 ## KNOWN ISSUES
 Bank format may change a bit between major Wwise SDK versions, adding new features or moving fields around. *wwiser* should handle almost all but there are bugs left:
 - earliest versions used in *Shadowrun (X360)* and *Too Human (X360)* partially supported

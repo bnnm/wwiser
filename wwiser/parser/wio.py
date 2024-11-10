@@ -195,8 +195,8 @@ class FileReader(object):
     def current(self):
         return self.file.tell()
 
-    #def size(self):
-    #    return self.size
+    def get_size(self):
+        return self.size
 
     def guess_endian32(self, offset):
         current = self.file.tell()

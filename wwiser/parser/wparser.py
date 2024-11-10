@@ -3795,6 +3795,26 @@ def parse_chunk(obj):
 # #############################################################################
 
 class Parser(object):
+    # when loading multiple banks
+    MULTIBANK_AUTO          = 'auto'
+    MULTIBANK_MANUAL        = 'manual-all'
+    MULTIBANK_FIRST         = 'first'
+    MULTIBANK_LAST          = 'last'
+    MULTIBANK_BIGGEST       = 'biggest'
+    MULTIBANK_BIGGEST_LAST  = 'biggest+last'
+    MULTIBANK_SMALLEST      = 'smallest'
+
+   #MULTIBANK_NEWEST            = 6 # latest timestamp (useful?)
+    MULTIBANK_MODES = [
+        MULTIBANK_AUTO,
+        MULTIBANK_MANUAL,
+        MULTIBANK_FIRST,
+        MULTIBANK_LAST,
+        MULTIBANK_BIGGEST,
+        MULTIBANK_BIGGEST_LAST,
+        MULTIBANK_SMALLEST,
+    ]
+
     def __init__(self):
         #self._ignore_version = ignore_version
         self._banks = {}
@@ -3958,12 +3978,79 @@ class Parser(object):
         if self._names:
             bank.set_names(self._names)
 
-        self._banks[filename] = bank
+        root = bank.get_root()
+        sid = root.get_id()
+        lang = root.get_lang()
+        size = r.get_size()
+
+        self._banks[filename] = (bank, sid, lang, size)
         return None
 
+    def get_banks(self, mode=None):
+        if not mode:
+            mode = self.MULTIBANK_AUTO
 
-    def get_banks(self):
-        banks = list(self._banks.values())
+        if mode not in self.MULTIBANK_MODES:
+            logging.warning("parser: WARNING, unknown repeat mode '%s'" % (mode))
+            
+        # as loaded (MULTIBANK_ALLOW_MANUAL)
+        items = self._banks.values()
+
+        done = {}
+        banks = []
+        for bank, version, lang, size in items:
+
+            key = (version, lang)
+            if key not in done:
+                # not a dupe = always include
+                done[key] = (bank, size)
+                banks.append(bank)
+                continue
+
+            # handle dupe
+            old_bank, old_size = done.get(key)
+            index = banks.index(old_bank)
+
+
+            # allow as loaded
+            if mode == self.MULTIBANK_MANUAL:
+                banks.append(bank)
+
+            # allow, bigger first
+            if mode == self.MULTIBANK_AUTO:
+                if size > old_size:
+                    banks.insert(index, bank) #before
+                else:
+                    banks.append(bank) #after (tail)
+               
+            # ignore current
+            if mode == self.MULTIBANK_FIRST:
+                pass
+
+            # overwrite old
+            if mode == self.MULTIBANK_LAST:
+                banks[index] = bank
+                done[key] = (bank, size)
+
+            # favor bigger
+            if mode == self.MULTIBANK_BIGGEST:
+                if size > old_size:
+                    banks[index] = bank #overwrite
+                    done[key] = (bank, size)
+
+            # favor bigger, or last (same size = overwrite)
+            # (generally useless except when fine-tuning which clone banks are preferred, for -fc + multiple updates)
+            if mode == self.MULTIBANK_BIGGEST_LAST:
+                if size >= old_size:
+                    banks[index] = bank #overwrite
+                    done[key] = (bank, size)
+
+            # favor smaller
+            if mode == self.MULTIBANK_SMALLEST:
+                if size < old_size:
+                    banks[index] = bank #overwrite
+                    done[key] = (bank, size)
+
         return banks
 
     def get_filenames(self):
@@ -3971,7 +4058,8 @@ class Parser(object):
 
     def set_names(self, names):
         self._names = names
-        for bank in self._banks.values():
+        for items in self._banks.values():
+            bank = items[0]
             bank.set_names(names)
 
     #def set_ignore_version(self, value):
@@ -3979,7 +4067,7 @@ class Parser(object):
 
     def unload_bank(self, filename):
         if filename not in self._banks:
-            logging.warn("parser: can't unload " + filename)
+            logging.warning("parser: can't unload " + filename)
             return
 
         logging.info("parser: unloading " + filename)

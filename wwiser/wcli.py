@@ -51,6 +51,7 @@ class Cli(object):
         p.add_argument('-vp', '--viewer-port',          help="Set the viewer port", metavar='PORT', default=wview.DEFAULT_PORT)
         #p.add_argument('-iv', '--ignore-version',      help="Ignore bank version check", action='store_true')
         p.add_argument('-sl', '--save-lst',             help="Clean wwnames.txt and include missing hashnames\n(needs dump set)", action='store_true')
+        p.add_argument('-br', '--bank-repeat',          help="Override repeated banks handling:\n  manual / first / last / smallest / biggest / biggest+last")
 
         p = parser.add_argument_group('txtp options')
         p.add_argument('-g',  '--txtp',                 help="Generate TXTP", action='store_true')
@@ -268,7 +269,7 @@ class Cli(object):
         parser = wparser.Parser()
         #parser.set_ignore_version(args.ignore_version)
         parser.parse_banks(filenames)
-        banks = parser.get_banks()
+        banks = parser.get_banks(args.bank_repeat)
 
 
         # load names

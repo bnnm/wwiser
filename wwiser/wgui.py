@@ -322,6 +322,15 @@ class Gui(object):
         frame.grid_columnconfigure(0, minsize=80) #weight 2 = x2 of others
         row = 0
 
+        cmb = self._cmb('bank_repeat', frame, 'Repeats:', 'How different banks with same ID + language (such as updates) are handled')
+        cmb[0].grid(row=row, column=0, sticky=tk.E)
+        cmb[1].grid(row=row, column=1, sticky=tk.W)
+        cmb[2].grid(row=row, column=2, sticky=tk.W)
+
+        items = self._fields["bank_repeat"]
+        items['values'] = [''] + wparser.Parser.MULTIBANK_MODES #self.parser.MULTIBANK_MODES
+
+        row += 1
 
         cmb = self._cmb('txtp_lang', frame, 'Language:', 'Current language (select when loading multiple localized banks or set to SFX to skip all localized banks)')
         cmb[0].grid(row=row, column=0, sticky=tk.E)
@@ -855,8 +864,11 @@ class Gui(object):
             #raise
 
     def _process_main(self, make_txtp=False, make_tags=False, make_clean=False):
+        repeat_mode = self._get_list('bank_repeat')
+        if repeat_mode: #TODO: better way to handle
+            repeat_mode = repeat_mode[0]
 
-        banks = self.parser.get_banks()
+        banks = self.parser.get_banks(repeat_mode)
         if not banks:
             messagebox.showerror('Error', 'Load one or more banks')
             return

@@ -298,15 +298,26 @@ Since Wwise has a bunch of complex features that make playing `.wem` directly a 
 
 TXTP is a simple text file, so you can open it and see how audio is configured. Format is custom (see vgmstream's TXTP.md docs), but it also prints comments with extra info and a simplified tree of how Wwise plays the whole thing that may be useful to understand what's going on.
 
-Simply load all banks and generation will make a bunch of `.txtp` files that are playable by *vgmstream*. It's recommended to load `init.bnk` (sometimes `1355168291.bnk`) to improve volume output in some cases.
+Simply load all banks (using *load dir...*), use *Generate* option and *wwiser* will make a bunch of `.txtp` files that are playable with *vgmstream*. It's recommended to load `init.bnk` (sometimes `1355168291.bnk`) to improve volume output in some cases.
 
 
 ### Basic output
-By default it will try to create `.txtp` for all "usable" cases (mainly *events* with audio). If an event uses *variables* (meaning game gets to choose sounds) it'll try to make one `.txtp` per value combo. Pay attention to the log, as it prints about important, non obvious details you may need to tweak (detailed later).
+By default it will try to create `.txtp` for all *usable* cases (mainly *events* with audio, including combos per "variables"). Pay attention to the log, as it prints about important, non obvious details you may need to tweak (detailed later).
 
-Files are written in a `txtp/` subfolder, and `.wem` must be moved to `txtp/wem/` (can be configured). `.txtp` may reference data inside `.bnk`, so some banks need to go to *wem* subfolder too. You can set that all `.wem` referenced in `.bnk` are moved automatically (`bnk` aren't moved automatically since there are less and it's harder to test/regenerate .txtp otherwise). List of used banks is shown in the log.
+`.txtp` are created in the `(base loaded folder)/txtp/` folder, and will need `.wem` and `.bnk`. Their location is autodetected from base folder too (`.txtp` will reference files in previous folders) but if a `.wem` is not found it'll default to `txtp/wem/`.
 
 The more banks you load the more `.txtp` you may get, so don't be surprised if you get thousands of files. Modern games simply have *many* sounds.
+
+#### Output folders 
+When loading many `.bnk` you may get thousands of files. To manage this you can include certain variables in the *output dir*
+- `{bnk}` / `{bank}`: the bank's name (translated from `(number).bnk` if possible)
+- `{bnk-fn}` / `{bank-fn}`: the bank's filename (not-translated)
+- `{lang}` bank's language
+- `{path}` bank's subpath
+
+For example using `txtp/{bnk}-{lang}` as the ouptput dir may create `txtp/BGM-sfx/*.txtp` and `txtp/Voices-en/*.txtp`.
+
+Note certain options are a bit errating when using this (to be improved?).
 
 
 ### Output names
@@ -356,7 +367,7 @@ TXTP is a custom format tailored for *vgmstream* (a library that plays video-gam
 You also need a recent version of *vgmstream*, as sometimes *wwiser*'s `.txtp` output may depend on latest features. Get *vgmstream* here: https://vgmstream.org/downloads/
 
 #### Move wem and bnk
-Each `.txtp` calls one or several audio files, in `.wem` and `.bnk`. Make sure all needed files are in the output dir, by default `txtp/wem` (can be configured). You can open the `.txtp` file in a text editor and see what `.wem/bnk` are being used.
+Each `.txtp` calls one or several audio files, in `.wem` and `.bnk`. Existing `.wem` should be autodetected from the base folder. You can open the `.txtp` file in a text editor and see what `.wem/bnk` are being used.
 
 The output log (see above) tells you when you need to move `.bnk` or `.wem`, plus there is an option to automatically move `.wem` to output dir.
 
@@ -386,8 +397,8 @@ There is an option to allow dupes, created marked with `{d}`. Mainly useful for 
 Note that some events that aren't exactly the same but *very* similar (for example, sound starts with some delay) are considered dupes, but some cases do sound 100% the same yet aren't, as they are too complex to detect (see *wwiser-utils* for clean-up scripts).
 
 
-### Wem folders and extensions
-Language-specific `.wem` can be configured to go to `/txtp/wem/(language name)`. Older games may use other extensions like `.wav/xma/ogg`, this is ok and taken into account.
+### Wem extensions
+Older games may use other extensions like `.wav/xma/ogg`, this is ok and taken into account.
 
 Note that the Wwise engine automatically loads `(number).wem` (or `.ogg/wav/xma` in old versions) as needed. In rare cases devs can feed `(name).wem` manually (called an *external*), but note the extension is always enforced (as confirmed by official docs). Thus, *wwiser* only uses `.wem/ogg/wav/xma`.
 

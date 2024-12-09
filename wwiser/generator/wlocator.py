@@ -262,7 +262,7 @@ class Locator(object):
             nroot = node.get_root()
             bankname = os.path.basename(nroot.get_filename()) #[:-4] #
             bankname = os.path.splitext(bankname)[0]
-
+            
             # use bank's hashname if available
             nbnk = nroot.find1(name='BankHeader')
             nbid = nbnk.find(name='dwSoundBankID')
@@ -276,13 +276,23 @@ class Locator(object):
             lang = wlang.Lang(node)
 
             subpath = self._auto_subdirs
-            subpath = subpath.replace('{bank}', name)
             subpath = subpath.replace('{bnk}', name)
-            subpath = subpath.replace('{bank-fn}', bankname)
+            subpath = subpath.replace('{bank}', name)
             subpath = subpath.replace('{bnk-fn}', bankname)
+            subpath = subpath.replace('{bank-fn}', bankname)
             subpath = subpath.replace('{lang}', lang.shortname)
 
+            if '{path}' in subpath:
+                # must flattern due to a limitation when counting paths back
+                # maybe could do {path-1}, {path-2} to select which parts so counting back works
+                bankpath = nroot.get_path()
+                bankpath = bankpath.replace('/', '~')
+                bankpath = bankpath.replace('\\', '~')
+                subpath = subpath.replace('{path}', bankpath)
+                subpath = subpath.replace('{path}', bankpath)
+
             outdir = os.path.join(outdir, subpath)
+            
         return outdir
 
     def get_root_fullpath(self):

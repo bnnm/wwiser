@@ -29,7 +29,7 @@ class Cli(object):
             "examples:\n"
             "  %(prog)s -d xsl bgm.bnk\n"
             "  - dumps bgm.bnk info to bgm.bnk.txt\n"
-            "  %(prog)s -d txt init.bnk bgm.bnk -o banks\n"
+            "  %(prog)s -d txt init.bnk bgm.bnk -dn banks\n"
             "  - loads multiple .bnk (like Wwise does) and dumps to banks.txt\n"
             "  %(prog)s *.bnk -v\n"
             "  - loads all .bnk in the dir and starts the viewer\n"

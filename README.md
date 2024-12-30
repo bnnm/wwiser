@@ -29,7 +29,7 @@ How to play audio simulating the Wwise engine:
 All actions (and more) can be done from the command line as well: `wwiser [options] (files)`
 - `wwiser bgm.bnk`
   - (dumps `bgm.bnk` info to `bgm.bnk.xml`)
-- `wwiser -d txt init.bnk bgm.bnk -o banks.txt`
+- `wwiser -d txt init.bnk bgm.bnk -dn banks.txt`
   - (loads multiple `.bnk`, like Wwise does, and dumps to banks.txt)
 - `wwiser *.bnk -r -v`
   - (loads all .bnk in current folder and subfolders recursively and starts the viewer)

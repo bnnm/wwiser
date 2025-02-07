@@ -75,6 +75,8 @@ class CleanerUnwanted(object):
         txtp_root = self._locator.get_txtp_rootpath()
 
         try:
+            #for char, repl in [('[','\['), ('[','\[')]:
+            txtp_root = glob.escape(txtp_root)
             subpath = os.path.join(txtp_root, '**/*.txtp')
             filenames = glob.glob(subpath, recursive=True)
         except:

@@ -231,9 +231,6 @@ By default names and IDs grouped by bank, which makes it easier to check for wro
 #### `#@classify-path`
 Same as default but includes banks with paths.
 
-#### `#@save-all`
-Saves all registered names even if unused (only useful when loading few banks).
-
 #### `#@hashtypes-missing <types>`
 When generating a clean list (`wwiser *.bnk -sl`) all missing IDS are printed under `### MISSING (type) NAMES` headers. This option limits missing types to those in the list (mainly to target and reverse certain IDs in `words.py` companion helper script)
 

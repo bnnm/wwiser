@@ -316,7 +316,15 @@ class TxtpPrinter(object):
             if self._txtpcache.alt_exts:
                 extension = sound.source.extension_alt
 
-            if media:
+            if media and self._simpler:
+                # when finding dupes we want to ignore bank origins were same sounds are loaded in multiple .bnk
+                # (would be technically possible that 2 .wem in .bnk share same id but content differs, extremely unlikely though)
+                bankname, index = media
+                #name += self._txtpcache.locator.find_bnk_path(bankname, lang_fullname)
+                name += 'banks/' #sometimes id repeat between banks in different localization dirs
+                name += "%s.%s" % (sound.source.tid, extension)
+                #info += "  ##%s #s%s" % (bankname, index + 1) #matters for dupes
+            elif media:
                 bankname, index = media
                 name += self._txtpcache.locator.find_bnk_path(bankname, lang_fullname)
                 name += "%s #s%s" % (bankname, index + 1)

@@ -188,15 +188,13 @@ The above means you only get ShortIDs (numbers) references in `.bnk` and `.wem`.
 - **wwnames.txt**: an artificial list of possible Wwise names (see *reversing names* below).
 - **wwnames.db3**: an artificial, pre-generated database of possible Wwise names.
 
-While a game may not include any of the above, events and variables sometimes follow simple and common patterns, like *"music"* + *"on"*, *"play_bgm01"*, and so on. This database saves common names that banks may use, and is placed together with *wwiser*.
-
-They'll be automatically used if found in the bank dir (except *wwnames.db3*, that must reside in *wwiser*'s dir).
+While a game may not include any of the above, events and variables sometimes follow simple and common patterns, like *"music"* + *"on"*, *"play_bgm01"*, and so on. It's possible to make a manual name list, called `wwnames.txt` (see below).
 
 A few games may use **SoundbankInfo.json**, **(bankname).xml** and **(bankname).json** (also handled here). The editor optionally can generate those, but are less common.
 
 
 ## NAME LIST AND REVERSING NAMES
-When a game doesn't have companion `.xml` with names, you can make a name list and put it in `wwnames.txt` and *wwiser* will use it, as long as those names are really used. For example, include the word `init` in `wwnames.txt`, and when *wwiser* finds ID *1355168291* (that corresponds to that ID) it will show `init` nearby.
+When a game doesn't have companion `.xml` with names, you can make a name list and put it in `wwnames.txt` and *wwiser* will use it, as long as those names are actually used. For example, include the word `init` in `wwnames.txt`, and when *wwiser* finds ID *1355168291* it will print `init` nearby.
 
 Guessing which names are actually used isn't easy, so instead sometimes it's possible to extract and create a list of strings from (decompressed) game files and executables, with software like `strings2.exe` or IDA. This often gets you many usable names even if companion files like *SoundbankInfo.xml* don't exist, or even if they do exist but some names are missing (particularly useful to get game variables).
 
@@ -361,7 +359,7 @@ Sometimes when you try to open the files just won't play. *wwiser* is reasonably
 #### Install *vgmstream*
 TXTP is a custom format tailored for *vgmstream* (a library that plays video-game music), and is a simple(-ish) text file that tells it how to play music. This means you need some form of *vgmstream* (CLI converter, *foobar2000/winamp/audacious/etc* plugin, and so on) installed.
 
-You also need a recent version of *vgmstream*, as sometimes *wwiser*'s `.txtp` output may depend on latest features. Get *vgmstream* here: https://vgmstream.org/downloads/
+You also need a recent version of *vgmstream*, as sometimes *wwiser*'s `.txtp` output may depend on latest features. Get *vgmstream* here: https://vgmstream.org/
 
 #### Move wem and bnk
 Each `.txtp` calls one or several audio files, in `.wem` and `.bnk`. Existing `.wem` should be autodetected from the base folder. You can open the `.txtp` file in a text editor and see what `.wem/bnk` are being used.

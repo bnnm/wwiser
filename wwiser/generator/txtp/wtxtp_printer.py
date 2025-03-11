@@ -357,6 +357,10 @@ class TxtpPrinter(object):
             name += "%s.%s" % (sound.source.tid, extension)
             self.has_streams = True
 
+        if sound.unreachable:
+            name = "#" + name
+            info += " ##unreachable"
+
 
         line += name
 

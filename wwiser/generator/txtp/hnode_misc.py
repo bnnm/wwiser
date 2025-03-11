@@ -29,6 +29,7 @@ class NodeSound(object):
         self.nsrc = None #to get root bank
         self.silent = False
         self.automations = None
+        self.unreachable = False
 
         #clips can be modded by the engine (regular sounds are pre-changed when saved to .wem)
         self.clip = False

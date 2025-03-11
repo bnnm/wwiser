@@ -382,6 +382,12 @@ If log complains about unused audio there is an option to make `.txtp` for those
 Sometimes unused `.wem` (not referenced by any bank) exist too, so keep an eye to move manually. It's not unusual that banks and wems have this kind of unfinished stuff.
 
 
+### Unreachables
+Rarely a music track may define `.wem` that it can't access. This seems possible in Wwise by making a "switch track" and defining .wem variations per state but then disabling the "switch" mode.
+
+Currently there is no way to know this other than opening the affected `.txtp` and see if it has `#unreachable` (to be improved). It's marked to the *cleaner* option doesn't remove those `.wem`.
+
+
 ### Dupes and name order 
 Some Wwise events and variable combos end up generating the same results, like paths point to the same thing, or simply repeated commands like `play_bgm01` and `play_bgm01_ex` that end up being the same song. *wwiser* automatically ignores duplicates.
 

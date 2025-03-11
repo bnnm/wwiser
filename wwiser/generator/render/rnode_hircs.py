@@ -435,6 +435,16 @@ class RN_CAkMusicTrack(RN_CAkHircNode):
         else:
             self._barf('unknown musictrack mode')
 
+        # extra cases that can't be handled in separate TXTP the moment
+        # (unreachables don't have a separate 'buildable' node since they are part of musictracks)
+        # maybe could be silent layers or randoms but would need to modify all of the above cases
+        if bnode.unreachables:
+            #txtp.group_layer(bnode.unreachables, None)
+            for sound in bnode.unreachables:
+                txtp.info.source(sound.nsrc, sound.source)
+                txtp.source_sound(sound, None)
+            #txtp.group_done(bnode.unreachables)
+
         return
 
     def _render_clips(self, bnode, subtrack, txtp):

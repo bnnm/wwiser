@@ -21,6 +21,7 @@ _IS_TEST_DIR = False
 _FILE_PATTERN = re.compile(r"^[ ]*[?]*[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.[0-9a-zA-Z_]+).*$")
 # catch comment with .bnk used to generate current .txtp
 _BANK_PATTERN = re.compile(r"^#[ ]*-[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.bnk).*$")
+_UNREACHABLE_PATTERN = re.compile(r"^[ ]*[?]*[ ]*#[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.[0-9a-zA-Z_]+).*$")
 _VALID_EXTS = ['.wem', '.bnk', '.xma', '.ogg', '.wav', '.logg', '.lwav']
 
 class CleanerUnwanted(object):
@@ -86,12 +87,14 @@ class CleanerUnwanted(object):
         for filename in filenames:
             with open(filename, 'r', encoding='utf-8-sig') as infile:
                 for line in infile:
-                    if line.startswith('#'):
+                    extra_bank = False
+                    if '#unreachable' in line:
+                        match = _UNREACHABLE_PATTERN.match(line)
+                    elif line.startswith('#'):
                         match = _BANK_PATTERN.match(line)
                         extra_bank = True
                     else:
                         match = _FILE_PATTERN.match(line)
-                        extra_bank = False
 
                     if not match:
                         continue

@@ -589,6 +589,7 @@ class CAkMusicTrack(CAkParameterNode):
         self.gvalue_names = {}
         self.automationlist = {}
         self.silence = None
+        self.unreachables = []
 
     def _build_audionode(self, node):
         self._build_silence()
@@ -621,18 +622,24 @@ class CAkMusicTrack(CAkParameterNode):
             tid = source.nsourceid.value()
             streaminfos[tid] = source
 
-        #each track contains "clips" (srcs):
-        #- 0: silent track (ex. Astral Chain 517843579)
-        #- 1: normal
-        #- N: layered with fades if overlapped (pre-defined)
-        #Final length size depends on segment
+        # match musictracks sources to subtracks. First it defines AkBankSourceData,
+        # then it sets "subtracks" which may use those sources. They don't map 1:1,
+        # rather 1 track may use N sources as part of clips. Usually there is only 1 track
+        # but multiple are possible other eTrackTypes. It's also possible to define N sources
+        # yet only use 1 (leftover unused data).
+
+        # each track contains N "clips" (srcs):
+        # - 0: silent track (ex. Astral Chain 517843579)
+        # - 1: normal
+        # - N: layered clips with fades if overlapped (pre-defined)
+        # Final length size depends on segment
         ncount = node.find1(name='numSubTrack')
         if not ncount: #empty / no clips
             return
 
         self.subtracks = [None] * ncount.value()
 
-        #map clips to subtracks
+        # map clips to subtracks
         index = 0
         nsrcs = node.finds(name='AkTrackSrcInfo')
         for nsrc in nsrcs:
@@ -674,6 +681,25 @@ class CAkMusicTrack(CAkParameterNode):
 
             # maybe should include "any other state"?
             #self.gvalue_index[None] = [None] #None to force "don't play any subtrack"
+
+        # detect unused sources by finding sources in clips
+        # (Tribe Nine's bank_Play_Music_XB.bnk: 469329726, Lego Horizon MUS_MusicAll.bnk: 865368961, some ACs Sea Shanties, etc)
+        streaminfos_used = []
+        for clips in self.subtracks:
+            if not clips:
+                continue
+            for clip in clips:
+                # possible when clips use event IDs
+                if not clip.sound or not clip.sound.nsrc: 
+                    continue
+                tid = clip.sound.nsrc.value()
+                streaminfos_used.append(tid)
+        for tid in streaminfos:
+            if tid in streaminfos_used:
+                continue
+            source = streaminfos[tid]
+            sound = self._build_unreachable(source)
+            self.unreachables.append(sound)
 
         self.fields.props([ntype, ncount])
         self.fields.automations(self.automationlist)
@@ -722,6 +748,15 @@ class CAkMusicTrack(CAkParameterNode):
         #    self._barf("no source nor eventid found, report")
 
         return clip
+
+    def _build_unreachable(self, source):
+        # for (rare) cases that no track is defined
+        sound = hnode_misc.NodeSound()
+        sound.source = source
+        sound.nsrc = source.nsourceid
+        sound.unreachable = True
+        sound.clip = True #treat as clip as it's needed as part of segments
+        return sound
 
 class CAkMusicTrack_Clip(object):
     def __init__(self):

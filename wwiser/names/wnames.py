@@ -62,7 +62,11 @@ class Names(object):
         if not row.multiple_marked and row.hashnames:
             old = row.hashname
             new = row.hashnames[0]
-            # could show more but not too interesting
+
+            # triggered for the same equal names, not sure why (GoWR mx_niflheim.bnk)
+            if row.hashname == row.hashnames[0]:
+                return
+
             logging.info("names: alt hashnames (using old), old=%s vs new=%s" % (old, new))
             row.multiple_marked = True
 

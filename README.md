@@ -11,9 +11,9 @@ identifies all fields. *wwiser* *can't* modify banks.
 How to play audio simulating the Wwise engine:
 - open *wwiser.pyz*
 - press *Load dirs...* and select a *base folder* with `.bnk` and `.wem` inside
-  - if game has `SoundbanksInfo.xml`, `Wwise_IDs.h`, `(bankname).txt` or similar files you are set,
-    otherwise you may want to generate a name list and put it as `wwnames.txt` in the *base folder*
-  - if you have `.pck`, use *Quickbms* + [this script](https://github.com/bnnm/wwiser-utils/blob/master/scripts/wwise_pck_extractor.bms) to extrac `.wem`/`.bnk`
+  - if game has `SoundbanksInfo.xml`, `Wwise_IDs.h`, `(bankname).txt` or similar files you will have names
+  - or make/download a name list called `wwnames.txt` and put it as in the *base folder*
+  - if you have `.pck`, use *Quickbms* + [this script](https://github.com/bnnm/wwiser-utils/blob/master/scripts/wwise_pck_extractor.bms) to extract `.wem`/`.bnk`
 - press *Generate TXTP* to make `.txtp`
   - this will make files that simulate how Wwise plays audio, based on loaded bank info
   - may want to set language to `SFX` to skip voice lines (ignore if `SFX`` isn't shown)

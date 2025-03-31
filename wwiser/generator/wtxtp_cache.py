@@ -33,6 +33,7 @@ class TxtpCache(object):
         self.x_nameid = False
         self.x_silence_all = False
         self.x_include_fx = False
+        self.x_prefilter_paths = False
 
         # process helpers (passed around)
         self.locator = None

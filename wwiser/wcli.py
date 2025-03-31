@@ -104,6 +104,7 @@ class Cli(object):
 
         p.add_argument('-gxs', '--txtp-x-silence',     help="Silence by default parts that crossfade", action='store_true')
         p.add_argument('-gxif','--txtp-x-include-fx',  help="Apply FX volumes", action='store_true')
+        p.add_argument('-gxpp','--txtp-x-prefilter-paths',  help="Prefilter unreachable paths (for games with huge trees)", action='store_true')
         p.add_argument('-gxnl','--txtp-x-noloops',     help="Extra: don't loop sounds", action='store_true')
         p.add_argument('-gxni','--txtp-x-nameid',      help="Extra: add ID to generic names", action='store_true')
         p.add_argument('-x','--tests',                 help="Extra: debug", action='store_true')
@@ -400,5 +401,6 @@ class Cli(object):
             generator.set_x_nameid(args.txtp_x_nameid)
             generator.set_x_silence(args.txtp_x_silence)
             generator.set_x_include_fx(args.txtp_x_include_fx)
+            generator.set_x_prefilter_paths(args.txtp_x_prefilter_paths)
 
             generator.generate()

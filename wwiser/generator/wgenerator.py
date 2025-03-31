@@ -136,6 +136,9 @@ class Generator(object):
     def set_x_include_fx(self, flag):
         self._txtpcache.x_include_fx = flag
 
+    def set_x_prefilter_paths(self, flag):
+        self._txtpcache.x_prefilter_paths = flag
+
     def set_x_noloops(self, flag):
         self._txtpcache.x_noloops = flag
 
@@ -367,6 +370,7 @@ class Generator(object):
 
         # make txtp for nodes
         for node in nodes:
+            logging.debug("node: %s", node.find1(type='sid').value())
             self._render_txtp(node)
 
         return

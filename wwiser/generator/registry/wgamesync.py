@@ -147,6 +147,11 @@ class _GamesyncNode(object):
         self.elems = gamesyncs #a list for nodes with multiple gamesyncs at once
         self.children = []
 
+        if txtpcache.x_prefilter_paths:
+            self.params = {}
+            for type, name, value in gamesyncs:
+                self.params[(type, name)] = value
+
     def append(self, node):
         self.children.append(node)
 
@@ -371,13 +376,36 @@ class GamesyncPaths(object):
 
     # register path
     def adds(self, gamesyncs):
-        self._empty = False
         node = _GamesyncNode(self._current, gamesyncs, self._txtpcache)
+
         self._current.append(node)
         self._current = node
+        self._empty = False
+
+        unreachable = self._is_unreachable()
+        return unreachable
+
+    def _is_unreachable(self):
+        if not self._txtpcache.x_prefilter_paths:
+            return False
+
+        gamesyncs = self._current.elems
+        node = self._current
+
+        while True:
+            node = node.parent
+            if not node:
+                break
+            for type, name, value in gamesyncs:
+                key = (type, name)
+                value_prev = node.params.get(key)
+                if value_prev and value_prev != value:
+                    return True
+
+        return False
 
     def add(self, type, name, value):
-        self.adds([(type, name, value)])
+        return self.adds([(type, name, value)])
 
     # current path is done
     def done(self):

@@ -530,6 +530,13 @@ class NodeObject(NodeElement):
         self.get_root()._skip_count += 1
         return self
 
+    def offset_info(self):
+        offset = self.__r.current()
+        omax = self._omax
+
+        #TODO improve
+        return (omax, offset)
+
 
 # simple subnode container (represents an array)
 class NodeList(NodeElement):

@@ -2303,10 +2303,12 @@ def CAkBankMgr__ReadSourceParent_CAkMusicTrack_(obj):
 #******************************************************************************
 # HIRC: Music Switch
 
-def parse_tree_node(obj, cls, count, count_max, cur_depth, max_depth):
+def parse_tree_node(obj, cls, count, count_max, cur_depth, max_depth, item_size):
 
     nodes = []
     for elem in obj.list('pNodes', 'Node', count):
+        omax, offset = elem.offset_info()
+
         elem.tid('key').fnv(wdefs.fnv_val) #0/default or gamesync
 
         # Trees "should" reach max depth, but somehow v122 (and some v134) has dialogue trees
@@ -2321,10 +2323,11 @@ def parse_tree_node(obj, cls, count, count_max, cur_depth, max_depth):
         uidx = (id_ch >> 0)  & 0xFFFF
         ucnt = (id_ch >> 16) & 0xFFFF
         is_id = uidx > count_max or ucnt > count_max  # reliable enough...
+        is_over = omax and offset + ucnt * item_size > omax # for rare cases in (updated') battle_vo_orders__core.bnk
 
         is_max = cur_depth == max_depth
 
-        if is_max or is_id:
+        if is_max or is_id or is_over:
             elem.tid('audioNodeId').fnv(wdefs.fnv_no)
             children_count = 0
         else:
@@ -2347,10 +2350,37 @@ def parse_tree_node(obj, cls, count, count_max, cur_depth, max_depth):
 
     for elem, children_count in nodes:
         if children_count > 0:
-            parse_tree_node(elem, cls, children_count, count_max, cur_depth+1, max_depth)
+            parse_tree_node(elem, cls, children_count, count_max, cur_depth+1, max_depth, item_size)
 
     return
 
+# linear parse for tests
+def parse_tree_linear(obj, cls, count_max):
+    for elem in obj.list('pNodes', 'Node', count_max):
+        elem.tid('key')
+
+        id_ch = elem.peek32()
+        uidx = (id_ch >> 0)  & 0xFFFF
+        ucnt = (id_ch >> 16) & 0xFFFF
+        is_id = uidx > count_max or ucnt > count_max  # reliable enough...
+        #is_none = elem.lastval != 0 #not correct but works most of the time
+
+        if is_id:
+            elem.tid('audioNodeId').fnv(wdefs.fnv_no)
+        else:
+            elem.u16('children.uIdx')
+            elem.u16('children.uCount')
+
+        if   cls.version <= 29: #29=AoT2 test banks
+            pass
+        elif cls.version <= 36: #36=UFC
+            elem.u16('uWeight')
+            elem.u16('uProbability')
+        elif cls.version <= 45: #45=AoT2
+            pass
+        else:
+            elem.u16('uWeight')
+            elem.u16('uProbability')
 
 #048>=
 def AkDecisionTree__SetTree(obj, cls, size, depth):
@@ -2384,37 +2414,19 @@ def AkDecisionTree__SetTree(obj, cls, size, depth):
 
     # see parse tree node
     if   cls.version <= 29:  #29=AoT2 test banks
-        count_max = size // 0x08
+        item_size = 0x08
     elif cls.version <= 36: #36=UFC
-        count_max = size // 0x0c
+        item_size = 0x0c
     elif cls.version <= 45: #45=AoT2
-        count_max = size // 0x08
+        item_size = 0x08
     else:
-        count_max = size // 0x0C
+        item_size = 0x0c
+
+    count_max = size // item_size
 
     children_count = 1
-    parse_tree_node(obj, cls, children_count, count_max, 0, depth)
-
-#    linear parse for tests
-#    for elem in obj.list('pNodes', 'Node', count):
-#        elem.tid('key')
-#
-#        if elem.lastval != 0: #not correct but works most of the time
-#            elem.tid('audioNodeId').fnv(wdefs.fnv_no)
-#        else:
-#            elem.u16('children.uIdx')
-#            elem.u16('children.uCount')
-#
-#        if   cls.version <= 29: #29=AoT2 test banks
-#            pass
-#        elif cls.version <= 36: #36=UFC
-#            elem.u16('uWeight')
-#            elem.u16('uProbability')
-#        elif cls.version <= 45: #45=AoT2
-#            pass
-#        else:
-#            elem.u16('uWeight')
-#            elem.u16('uProbability')
+    parse_tree_node(obj, cls, children_count, count_max, 0, depth, item_size)
+    #parse_tree_linear(obj, cls, count_max)
 
     obj.consume()
     return

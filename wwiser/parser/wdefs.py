@@ -55,12 +55,13 @@ bank_versions = [
    #135, #0x87 Wwise 2019.1-B? *[Total War Saga: Troy (PC)-base]
     135, #0x87 Wwise 2019.2     [Assassin's Creed: Valhalla (PC), Mario Kart Live: Home Circuit (Switch)]
     136, #0x88 Wwise 2019.2-B? *[Total War Saga: Troy (PC)-update]
-    140, #0x8c Wwise 2021.1     [Disney Speedstorm (PC)]
-    141, #0x8d Wwise 2021.1-B?  [Overwatch (PC)]
+    140, #0x8C Wwise 2021.1     [Disney Speedstorm (PC)]
+    141, #0x8D Wwise 2021.1-B?  [Overwatch (PC)]
     144, #0x90 Wwise 2022.1-B   (none known)
     145, #0x91 Wwise 2022.1     [Sea of Stars (PC), Mortal Kombat 1 (PC)]
-    150, #0x96 Wwise 2023.1     [Aster Tatariqus (Android)-update, Dead by Daylight (PC)]
+    150, #0x96 Wwise 2023.1     [Aster Tatariqus (Android)-update, Dead by Daylight (PC), Age of Empires II DE (PC)-2024.11 update]
     152, #0x98 Wwise 2024.1-B   (none known)
+    154, #0x9A Wwise 2024.1     [Age of Empires II DE (PC)-2025.04 update]
 ]
 
 # no txtp support, even if forced
@@ -70,7 +71,7 @@ partial_versions = {
 
 ancient_versions = 25 #<=
 
-# Total War series have some weird versions with upper bit set. Possibly using beta Wwise or even custom versions?
+# Total War series have some weird versions with upper bit set, possibly custom versions (src available to licensed customers)
 # (all have special custom fields, that don't exist for regular versions).
 bank_custom_versions = {
     0x8000007A: 122,  #same as 120
@@ -480,7 +481,7 @@ AkCurveInterpolation = wfmt.FormatterLUT({
   0x5: "SCurve",
   0x6: "Exp1",
   0x7: "SineRecip",
-  0x8: "Exp3", #"LastFadeCurve" define as 0x8 too in all versions
+  0x8: "Exp3", #"LastFadeCurve" defined as 0x8 too in all versions
   0x9: "Constant",
 })
 
@@ -889,7 +890,7 @@ AkPropID_150 = wfmt.FormatterLUT({
   0x55: "AttenuationID",
   #0x56: "NUM",
 })
-AkPropID_152 = wfmt.FormatterLUT({
+AkPropID_154 = wfmt.FormatterLUT({
   #0x0: "FirstRtpc",
   0x00: "Volume",
   0x01: "Pitch",
@@ -2281,7 +2282,7 @@ def setup(version):
     elif version <= 150:
         AkPropID = AkPropID_150
     else:
-        AkPropID = AkPropID_152
+        AkPropID = AkPropID_154
 
     global AkBank__AKBKHircType
     if version <= 126:

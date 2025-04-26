@@ -1672,7 +1672,7 @@ def CAkBus__SetInitialMetadataParams(obj, cls):
 
 #046>=
 def CAkBus__SetInitialFxParams(obj, cls):
-    #CAkBus::SetInitialFxParams
+    #CAkBus::SetInitialFxParams > AkOwnedEffectSlots::SetInitialValues
     obj = obj.node('BusInitialFxParams')
 
     if   cls.version <= 26:
@@ -2204,11 +2204,13 @@ def CAkMusicTrack__SetInitialValues(obj, cls):
         obj.U8x('uOverrides') \
            .bit('bOverrideParentMidiTempo', obj.lastval, 1) \
            .bit('bOverrideParentMidiTarget', obj.lastval, 2)
-    else:
+    elif cls.version <= 152:
         obj.U8x('uFlags') \
             .bit('bOverrideParentMidiTempo', obj.lastval, 1) \
             .bit('bOverrideParentMidiTarget', obj.lastval, 2) \
             .bit('bMidiTargetTypeBus', obj.lastval, 3)
+    else:
+        pass
 
     obj.u32('numSources')
     count = obj.lastval
@@ -2220,6 +2222,14 @@ def CAkMusicTrack__SetInitialValues(obj, cls):
 
     for elem in obj.list('pSource', 'AkBankSourceData', count): #CAkMusicSource
         CAkBankMgr__LoadSource(elem, cls, True)
+
+    if   cls.version <= 152:
+        pass
+    else:
+        obj.U8x('uFlags') \
+            .bit('bOverrideParentMidiTempo', obj.lastval, 1) \
+            .bit('bOverrideParentMidiTarget', obj.lastval, 2) \
+            .bit('bMidiTargetTypeBus', obj.lastval, 3)
 
     if cls.version <= 26:
         pass

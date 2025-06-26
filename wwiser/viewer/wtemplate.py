@@ -17,7 +17,7 @@ class Template(object):
         ${: else x > 5: }
         ${ : }
         ${ #comment }
-        $\{:} escaped
+        $\\{:} escaped
         ${_write(x)} or ${x} or ${'%s' % x} or ${"", x} #x must exist
         ${:if:}{{test}}${:}  #also ok
         ${

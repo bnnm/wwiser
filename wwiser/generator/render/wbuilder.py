@@ -274,10 +274,18 @@ class Builder(object):
         bclass = wbuilder_util.get_builder_hirc_class(hircname)
 
         bnode = bclass()
+
+        # Add bnode to list *before* building it
+        #
+        # In very rare cases, an auxbus sets OverrideBusId to a bus that also uses that same auxbus.
+        # new _init_bnode auxbus > new _init_bnode bus > new _init_bnode auxbus > new ... (recursive exception).
+        # Setting it now ensures bus gets the same (not-fully built) object reference and stops the recursion.
+        # Not sure how Wwise handles it though.
+        self._node_to_bnode[id(node)] = bnode
+
         bnode.init_builder(self)
         bnode.init_node(node)
 
-        self._node_to_bnode[id(node)] = bnode
         if mark_used:
             self._used_node[id(node)] = True #register usage for unused detection
         return bnode

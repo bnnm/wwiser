@@ -775,3 +775,14 @@ Music_CoreInst_Test [SINGLESONG_SONG=afro_cuban] [People=SV_02]
 ```
 - many playlist nodes have OutputBusVolume at -96db but children object override buses
   - even though both define output bus only latest one matters, and won't see it's parent bus properties
+
+
+## Shadow Labyrinth (Switch)
+```
+348963605 Reverb (auxbus)
+> OverrideBusId=1584861537 SE (bus)
+  > OverrideBusId=3803692087 Master Audio Bus (bus)
+    > auxID=348963605 Reverb (auxbus)
+      > ...
+```
+- Init.bnk has an aux that references itself through a chain

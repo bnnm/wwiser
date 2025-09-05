@@ -20,7 +20,7 @@ from . import wfmt
 # - 07.2: Dynamic dialogue, plugins [KK2 has DialogueEvent in code, string table]
 # - 07.4: removed string table, SoundBanksInfo.xml instead of .info
 bank_versions = [
-    #--, #0x-- Wwise 2016.1~3  *
+    #--, #0x-- Wwise 2006.1~3  *(non-public betas)
     #14, #0x0E Wwise 2007.1/2? *[Shadowrun (X360)]
      26, #0x1A Wwise 2007.3?   *[Too Human (X360), KetnetKick 2 (PC)]
      29, #0x1D Wwise 2007.4?   *[Army of Two: The 40th Day (PS3)-test banks]
@@ -30,10 +30,10 @@ bank_versions = [
      38, #0x26 Wwise 2008.4    *[The King of Fighters XII (PS3), Food Network (Wii)]
      44, #0x2C Wwise 2009.1?   *[Assassin's Creed II (X360), Mass Effect 2 (X360), The Saboteur (X360), Doc Louis's Punch Out!! (Wii)]
      45, #0x2D Wwise 2009.2?   *[Dance on Broadway (Wii), Army of Two: The 40th Day (X360)-buggy + has v44/38/34 banks]
-     46, #0x2E Wwise 2009.3     [Enslaved (X360), The King of Fighters XIII (AC), Tron Evolution (PS3)]
-     48, #0x30 Wwise 2010.1     [Assassin's Creed: Brotherhood (X360), Splatterhouse (PS3), Harry Potter and the Deathly Hallows Part 1 (PS3)]
-     52, #0x34 Wwise 2010.2     [Chime Super Deluxe (PS3)]
-     53, #0x35 Wwise 2010.3     [Assassin's Creed: Revelations (X360), Saints Row The Third (PC), Captain America: Super Soldier (X360), inFamous 2 (PS3), Harry Potter and the Deathly Hallows Part 2 (PS3)]
+     46, #0x2E Wwise 2009.3     [Enslaved (X360), The King of Fighters XIII (AC), Tron Evolution (PS3), Epic Mickey (Wii), Driver: San Francisco (Wii)]
+     48, #0x30 Wwise 2010.1     [Assassin's Creed: Brotherhood (X360), Splatterhouse (PS3), Harry Potter and the Deathly Hallows Part 1 (PS3), Driver: San Francisco (X360)]
+     52, #0x34 Wwise 2010.2     [Chime Super Deluxe (PS3/X360), Saints Row the Third (X360)-some banks]
+     53, #0x35 Wwise 2010.3     [Assassin's Creed: Revelations (X360), Saints Row the Third (X360)-most banks, Captain America: Super Soldier (X360), inFamous 2 (PS3), Harry Potter and the Deathly Hallows Part 2 (PS3)]
      56, #0x38 Wwise 2011.1     [Super Stardust Delta (Vita), I Am Alive (PS3), Trine 2 (PS3), The King of Fighters XIII (PS3)]
      62, #0x3E Wwise 2011.2     [Borderlands 2 (X360), Quantum Conumdrum (X360), South Park: Tenorman's Revenge (X360)]
      65, #0x41 Wwise 2011.3?   *[Assassin's Creed III (X360), DmC (PC), Zone of the Enders HD (X360)]

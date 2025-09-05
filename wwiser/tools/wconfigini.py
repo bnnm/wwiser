@@ -1,3 +1,4 @@
+import logging
 import configparser
 
 _CONFIG_NAME = 'wwiser.ini'
@@ -6,6 +7,8 @@ _DEFAULT_SECTION = 'wwiser'
 class ConfigIni(object):
     def __init__(self):
         self._config = configparser.ConfigParser()
+
+        # ignored if file doesn't exist
         self._config.read('wwiser.ini')
 
         # inis need to put vars in sections
@@ -25,5 +28,9 @@ class ConfigIni(object):
         self._config.set(_DEFAULT_SECTION, key, val)
 
     def update(self):
-        with open(_CONFIG_NAME, 'w') as f:
-            self._config.write(f)
+        try:
+            with open(_CONFIG_NAME, 'w') as f:
+                self._config.write(f)
+        except PermissionError:
+            logging.info("config: can't save .ini (read only dir?)")
+            return # may happen in read-only dirs

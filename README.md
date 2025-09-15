@@ -17,11 +17,13 @@ How to play audio simulating the Wwise engine:
 - press *Generate TXTP* to make `.txtp` in the *base folder*
   - may need to fiddle with some options, such as setting language to `SFX` to skip voice lines
 - open those `.txtp` with some player like *foobar2000/winamp/audacious* with the *vgmstream* plugin installed (or use the CLI tool)
-  - note that TXTP currently can't simulate all Wwise features
-- you can also press *View banks* to explore, or *Dump banks* to save readable info, if needed
-  - info is presented as-is and may be a bit hard to understand, but isn't important to generate *TXTP*
-- when distribute audio rips, it may be better to set *TXTP subdir* to *empty* so that `.txtp` are generated in the *base folder*
-- Wwise is very complex so this program can only help so much, you may want to read and understand *doc/WWISER.md*
+  - this plays `.wem` closer to how they sound in-game (such as having multiple `.wem` at once if needed)
+  - it may be more usable to set *TXTP subdir* to *empty* so that `.txtp` are generated in the *base folder* instead of a subfolder
+  - note that *TXTP* currently can't simulate all Wwise features
+
+You can also press *View banks* to explore, or *Dump banks* to save (somewhat) readable info, but isn't important to generate *TXTP*.
+
+Wwise is very complex so this program can only help so much, you may need to read and understand *doc/WWISER.md* to get the full picture.
 
 
 ## OTHER INFO

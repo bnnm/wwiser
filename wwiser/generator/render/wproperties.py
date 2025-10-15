@@ -298,8 +298,8 @@ class PropertyCalculator(object):
                 self._txtp.info.report_statechunk(bsci)
 
                 if ws.sc_registrable() and include_combo:
-                    item = (bsci.nstategroupid, bsci.nstatevalueid)
-                    ws.scpaths.add(*item)
+                    item = (bsci.nstategroupid, bsci.nstatevalueid, bsci.props)
+                    ws.scpaths.add_statechunk(*item)
 
                 if include_combo:
                     # mark audio can be modified (technically could be delay only so maybe shouldn't be 'crossfades')

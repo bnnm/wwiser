@@ -303,3 +303,15 @@ class CAkProps(object):
     def barf_loop(self):
         if self.loop is not None:
             raise ValueError("loop flag found")
+
+    # used to compare
+    def get_props_hash(self):
+        exclude_prefixes = ['fields', '_', 'unknowns']
+        props = []
+        for key in vars(self):
+            if not any(key.startswith(prefix) for prefix in exclude_prefixes):
+                item = (key, getattr(self, key))
+                props.append(item)
+
+        hashable_props = tuple(props)
+        return hash(hashable_props)

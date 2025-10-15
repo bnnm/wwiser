@@ -4,7 +4,8 @@ from collections import OrderedDict
 from . import wparams
 from ... import wfnv
 
-MAX_COMBOS = 15
+MAX_COMBOS_CLEAN = 64  # arbitrary max
+MAX_COMBOS_IGNORE = 128  # arbitrary max
 
 # Sometimes (ex. Platinum games) set states control volumes, so musictracks must play or mute.
 # Usually if state is set volume becomes -96db (silenced) but it's also used to increase/decrease
@@ -39,7 +40,7 @@ MAX_COMBOS = 15
 # Typically only one variable is used though.
 #
 # Technically this list should exist as parts gamesync (in Wwise states are globals), but it's separate as
-# sometimes it generates insteresting variations that aren't possible in regular cases. It also makes easier
+# sometimes it generates interesting variations that aren't possible in regular cases. It also makes easier
 # to handle state combos.
 #
 # Editor shows all possible values in Statechunks (ex. using "bgm" group has m01, m02...) but only those states
@@ -53,20 +54,23 @@ class StateChunkItem(object):
         self.group_name = None
         self.value_name = None
         self.unreachable = False
+        self.props = None
 
-    def init_nstate(self, ngroup, nvalue):
+    # init a SC from node
+    def init_nstate(self, ngroup, nvalue, props):
         self.group = ngroup.value()
-        self.group_name = ngroup.get_attr('hashname')
         self.value = nvalue.value()
+
+        self.group_name = ngroup.get_attr('hashname')
         self.value_name = nvalue.get_attr('hashname')
-        # save volume instead of config b/c repeated groups+values may use different config objects
-        # (but same volume), and "val" tuple would be seen as different due to config, in the "not in" checks
-        # these are only used for combos, while config should be extracted from node's volume states
+        self.props = props
 
     #TODO improve name handling
+    # init a SC from base values and load names from wwnames
     def init_base(self, group, value, group_name=None, value_name=None, wwnames=None):
         self.group = group
         self.value = value
+
         # these params may come from external vars, try to get names from db
         if wwnames:
             row = wwnames.get_namerow(group)
@@ -95,12 +99,12 @@ class StateChunkItem(object):
 # stores current selected statechunk path
 class StateChunkParams(object):
     def __init__(self):
-        self._elems = OrderedDict()
-        self._unreachables = False
+        self._sc_items = OrderedDict()
+        self._has_unreachables = False
         pass
 
     def has_unreachables(self):
-        return self._unreachables
+        return self._has_unreachables
 
     def adds(self, scparams):
         for scparam in scparams:
@@ -110,19 +114,59 @@ class StateChunkParams(object):
         if scitem.group is None or scitem.value is None:
             return
         if scitem.unreachable:
-            self._unreachables = True
+            self._has_unreachables = True
+
         key = (scitem.group, scitem.value)
-        self._elems[key] = scitem
+        self._sc_items[key] = scitem
 
     def get_states(self):
-        return self._elems.values()
+        return self._sc_items.values()
 
     def add_scparam(self, scitem):
         self.add(scitem)
 
+    def __repr__(self):
+        return str(self._sc_items)
+
 # ---------------------------------------------------------
 
-# saves possible volume paths in a txtp
+# simplify statechunk paths by removing pseudo-duplicates
+# assumes var=value are already unique and sorted
+class StateChunkPathsSimplifier(object):
+
+    @staticmethod
+    def get_totals(elems):
+        totals = 1
+        for elem in elems:
+            totals *= len(elem)
+        return totals
+
+    @staticmethod
+    def _simplify_statechunks_scitems(scitems):
+        new_scitems = []
+
+        seen_props = set()
+        for scitem in scitems:
+            if not scitem.props: #for passed props
+                new_scitems.append(scitem)
+                continue
+
+            props_hash = scitem.props.get_props_hash() #use hash for faster comparison (I think?)
+            if props_hash not in seen_props:
+                seen_props.add(props_hash)
+                new_scitems.append(scitem)
+        return new_scitems
+
+    @staticmethod
+    def simplify_statechunks(elems):
+        new_elems = []
+        for scitems in elems:
+            new_scitems = StateChunkPathsSimplifier._simplify_statechunks_scitems(scitems)
+            new_elems.append(new_scitems)
+        return new_elems
+
+
+# saves possible statechunk paths in a txtp
 class StateChunkPaths(object):
 
     def __init__(self, wwnames=None):
@@ -146,32 +190,27 @@ class StateChunkPaths(object):
     def set_unreachables_only(self):
         self._unreachables_only = True
 
-    # register
-    def adds(self, ngamesyncs):
-        for ngroup, nvalue in ngamesyncs:
-            self.add(ngroup, nvalue)
+    # TODO: used? modify to pass props
+    # register a list of statechunks
+    #def add_statechunks(self, nstatechunks):
+    #    for ngroup, nvalue in nstatechunks:
+    #        self.add_statechunk(ngroup, nvalue)
 
-    def add(self, ngroup, nvalue):
-        scitem = StateChunkItem()
-        scitem.init_nstate(ngroup, nvalue)
-        self._add_scstate(scitem)
+    # register a single statechunk from nodes
+    def add_statechunk(self, ngroup, nvalue, props=None):
+        sc_item = StateChunkItem()
+        sc_item.init_nstate(ngroup, nvalue, props)
+        self._add_statechunk_item(sc_item)
 
-    def _add_scstate(self, scitem):
+    # internal register
+    def _add_statechunk_item(self, scitem):
         key = (scitem.type, scitem.group)
         if key not in self._elems:
             items = []
-            # maybe should have a special value of "variable X set to other, non-silencing thing"?
-            #val_default = (group, 0, group_name, None)
-            #items.append(val_default)
             self._elems[key] = items
-
-        #for scitem in self._elems[key]:
-        #    if scitem not in self._elems[key]:
-        #    self._elems[key].append(scitem)
 
         if scitem not in self._elems[key]:
             self._elems[key].append(scitem)
-
 
     def combos(self):
         if self._params is not None:
@@ -183,13 +222,18 @@ class StateChunkPaths(object):
         elems = self._elems.values()
 
         # combos of existing variables (order doesn't matter here)
-        totals = 1
-        for elem in elems:
-            totals *= len(elem)
+        totals = StateChunkPathsSimplifier.get_totals(elems)
 
-        if totals >= MAX_COMBOS:
-            # in rare cases (ZoE HD) there are too many silence combos
-            logging.info("generator: ignoring statechunk combo excess of %s (may need to pass manually)" % (totals))
+        if totals > MAX_COMBOS_CLEAN:
+            # In rare cases (ZoE HD, MGS Delta) there are too many silence combos. Typically they copy-paste
+            # all possible variables that do the same (silencing) save one or two states. Reduce totals by
+            # removing logical duplicates (same props in a group=*) and try again.
+            elems = StateChunkPathsSimplifier.simplify_statechunks(elems)
+            totals = StateChunkPathsSimplifier.get_totals(elems)
+
+        if totals > MAX_COMBOS_IGNORE:
+            logging.info("generator: ignoring %s statechunk variations (may need to pass manually)" % (totals))
+            # Give up iterating and use as-is. This makes odd 'all states applied at once' .txtp but not sure not to improve
             items = elems
         else:
             items = itertools.product(*elems)

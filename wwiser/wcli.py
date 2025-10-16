@@ -44,7 +44,7 @@ class Cli(object):
         p.add_argument('-m',  '--multi',                help="Treat files as multiple separate files", action='store_true')
         p.add_argument('-r',  '--recursive',            help="Load banks recursively (use with wildcards like **/*.bnk)", action='store_true')
         p.add_argument('-c',  '--config',               help="Set config text file\nAllows same CLI options but in a text file\n(may split commands into multiple lines)\n(write '#@new' to start a new process in the same file)")
-        p.add_argument('-d',  '--dump-type',            help="Set dump type: txt|xml|xsl|xsl_s|none (default: auto)", metavar='TYPE')
+        p.add_argument('-d',  '--dump-type',            help="Set dump type: txt|xml|xsl|xsl_s|xsl_xs|none (default: auto)", metavar='TYPE')
         p.add_argument('-dn', '--dump-name',            help="Set dump filename (default: auto)", metavar='NAME')
         p.add_argument('-l',  '--log',                  help="Write info to wwiser log (has extra messages)", action='store_true')
         p.add_argument('-v',  '--viewer',               help="Start the viewer", action='store_true')

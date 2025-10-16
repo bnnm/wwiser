@@ -738,7 +738,12 @@ class Gui(object):
         _, base_name = infoname
         default_name = base_name + '.xml'
 
-        filetypes = (("XML file",".xml"),("XML file (complete)",".xmlc"),("TXT file",".txt"))
+        filetypes = (
+            ("XML file",".xml"),
+            ("XML file (extra small)",".xs.xml"),
+            ("XML file (complete)",".c.xml"),
+            ("TXT file",".txt")
+        )
         outpath = filedialog.asksaveasfilename(initialfile=default_name, defaultextension="*.*", filetypes=filetypes)
         if not outpath:
             return
@@ -746,7 +751,8 @@ class Gui(object):
         dump_type = None
         dump_types = (
             (".xml", wdumper.TYPE_XSL_SMALLER),
-            (".xmlc", wdumper.TYPE_XSL),
+            (".xs.xml", wdumper.TYPE_XSL_XS),
+            (".c.xml", wdumper.TYPE_XSL),
             (".txt", wdumper.TYPE_TXT),
         )
         

@@ -1292,7 +1292,7 @@ def CAkActionPlay__SetActionParams(obj, cls):
         obj.tid('bankID').fnv(wdefs.fnv_bnk)
 
     if cls.version >= 144:
-        obj.U32('bankType').fmt(wdefs.AkActionType)
+        obj.U32('bankType').fmt(wdefs.AkBankTypeEnum)
 
     return
 

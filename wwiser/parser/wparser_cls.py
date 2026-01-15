@@ -25,7 +25,7 @@ wparser = None #needed for circular refs in python <3.7, see setup()
 #  CAkFxBaseStateAware : CAkStateAware
 # CAkIndexable
 #  CAkParamNodeStateAware : CAkStateAware
-#  CAkPBIAware : CAkIndexable
+#  CAkPBIAware : CAkIndexable #CAkIndexableObj in v168
 #   CAkParameterNodeBase : CAkPBIAware, CAkParamNodeStateAware, CAkRTPCSubscriberNode
 #    CAkParameterNode : CAkParameterNodeBase
 #     CAkSoundBase : CAkParameterNode
@@ -141,6 +141,8 @@ CAkEnvelopeModulator = 'CAkEnvelopeModulator'
 CAkAudioDevice = 'CAkAudioDevice'
 #CAkTimeModulator : CAkModulator
 CAkTimeModulator = 'CAkTimeModulator'
+#CAkSidechainMixIndexable : CAkIndexBase
+CAkSidechainMixIndexable = 'CAkSidechainMixIndexable'
 
 
 
@@ -476,6 +478,11 @@ def CAkAudioDevice__Create(obj):
 def CAkTimeModulator__Create(obj):
     #CAkTimeModulator::Create
     cls = AkClass(obj, CAkTimeModulator)
+    return cls
+
+def CAkSidechainMixIndexable__Create(obj):
+    #CAkSidechainMixIndexable::Create
+    cls = AkClass(obj, CAkSidechainMixIndexable)
     return cls
 
 

@@ -110,6 +110,7 @@ def AkPropBundle_AkPropValue_unsigned_char___SetInitialParams(obj, cls, modulato
     #AkPropBundle<AkPropValue,unsigned char>::SetInitialParams #v128>=
     #AkPropBundle<AkPropValue,unsigned char,(AkMemID)0>::SetInitialParams #v135>=
     #AkPropBundleBase<AkPropValue,unsigned char,(AkMemID)0>::SetInitialParams #v150>=
+    #AkPropBundleBase<AkPropValue,unsigned char,(AkMemID)1>::SetInitialParams #v150>=
     obj = obj.node('AkPropBundle<AkPropValue,unsigned char>') #AkPropBundle
 
     if modulator:
@@ -148,6 +149,9 @@ def AkPropBundle_RANGED_MODIFIERS_AkPropValue__unsigned_char___SetInitialParams(
     #AkPropBundle<RANGED_MODIFIERS<AkPropValue>>::SetInitialParams
     #AkPropBundle<RANGED_MODIFIERS<AkPropValue>,unsigned char>::SetInitialParams #v128>=
     #AkPropBundle<RANGED_MODIFIERS<AkPropValue>,unsigned char,(AkMemID)1>::SetInitialParams #v135>=
+    #AkPropBundleBase<RANGED_MODIFIERS<AkPropValue>,unsigned char,(AkMemID)0>::SetInitialParams #v150>=
+    #AkPropBundleBase<RANGED_MODIFIERS<AkPropValue>,unsigned char,(AkMemID)1>::SetInitialParams #v150>=
+    #AkPropBundleBase<RANGED_MODIFIERS<AkPropValue>,unsigned char,(AkMemID)2>::SetInitialParams #v150>=
     obj = obj.node('AkPropBundle<RANGED_MODIFIERS<AkPropValue>>') #AkPropBundle
 
     if modulator:
@@ -522,6 +526,10 @@ def CAkStateAware__ReadStateChunk(obj, cls):
     obj.var('ulNumStateGroups')
     for elem in obj.list('pStateChunks', 'AkStateGroupChunk', obj.lastval):
         elem.tid('ulStateGroupID').fnv(wdefs.fnv_var)
+        if cls.version <= 154:
+            pass
+        else:
+            elem.tid('ulGroupUsageID').fnv(wdefs.fnv_var)
         elem.U8x('eStateSyncType').fmt(wdefs.AkSyncType)
         elem.var('ulNumStates')
         for elem2 in elem.list('pStates', 'AkState', elem.lastval):
@@ -622,8 +630,8 @@ def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
         if   cls.version <= 89:
             pass
         else:
-            elem.U8x('rtpcType').fmt(wdefs.AkRtpcType)
-            elem.U8x('rtpcAccum').fmt(wdefs.AkRtpcAccum)
+            elem.U8x('rtpcType').fmt(wdefs.AkRtpcType) #gap0 in later versions
+            elem.U8x('rtpcAccum').fmt(wdefs.AkRtpcAccum) #gap0 in later versions
 
         if   cls.version <= 89:
             elem.U32('ParamID').fmt(wdefs.AkRTPC_ParameterID)
@@ -642,7 +650,7 @@ def SetInitialRTPC_CAkParameterNodeBase_(obj, cls, modulator=False):
             elem.U32('eScaling').fmt(wdefs.AkCurveScaling)
             elem.u32('ulSize')
         else: #44=AC2
-            elem.U8x('eScaling').fmt(wdefs.AkCurveScaling)
+            elem.U8x('eScaling').fmt(wdefs.AkCurveScaling) #gap0 in later versions
             elem.u16('ulSize')
         parse_rtpc_graph(elem) #indirectly in _vptr$CAkIndexable + 63
     return
@@ -1433,6 +1441,13 @@ def CAkEvent__SetInitialValues(obj, cls):
     #CAkEvent::SetInitialValues
     obj = obj.node('EventInitialValues')
 
+    if cls.version <= 154:
+        pass
+    else:
+        obj.U8x('gap20_0')
+        obj.u16('instanceLimit')
+        obj.f32('cooldownTime')
+
     if cls.version <= 122:
         obj.u32('ulActionListSize')
     else:
@@ -1446,6 +1461,7 @@ def CAkEvent__SetInitialValues(obj, cls):
 def CAkBankMgr__ReadEvent(obj):
     #CAkBankMgr::ReadEvent
     #CAkBankMgr::StdBankRead<CAkEvent,CAkEvent> #144>= (but also has leftover CAkBankMgr::ReadEvent)
+    #CAkBankMgr::StdBankRead<CAkEvent> #~154>=
     cls = wcls.CAkEvent__Create(obj)
     obj.set_name(cls.name)
 
@@ -1461,6 +1477,7 @@ def CAkBankMgr__ReadEvent(obj):
 #026>=
 def CAkRanSeqCntr__SetPlaylistWithoutCheck(obj, cls):
     #CAkRanSeqCntr::SetPlaylistWithoutCheck
+    #CAkRanSeqCntr::SetPlaylistNoCheck #168 >=
     obj = obj.node('CAkPlayList') #pPlayList
 
     if cls.version <= 38: #38=KOF12
@@ -1555,6 +1572,7 @@ def CAkRanSeqCntr__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkRanSeqCntr_CAkParameterNodeBase_(obj):
     #CAkBankMgr::StdBankRead<CAkRanSeqCntr,CAkParameterNodeBase>
+    #CAkBankMgr::StdBankRead<CAkRanSeqCntr>
     cls = wcls.CAkRanSeqCntr__Create(obj)
     obj.set_name(cls.name)
 
@@ -1606,10 +1624,14 @@ def CAkSwitchCntr__SetInitialValues(obj, cls):
                 .bit('bContinuePlayback', elem.lastval, 1)
             elem.U8x('byBitVector') \
                 .bit('eOnSwitchMode', elem.lastval, 0, 0x7, fmt=wdefs.AkOnSwitchMode)
+        elif cls.version <= 154:
+            elem.U8x('byBitVector') \
+                .bit('bIsFirstOnly', elem.lastval, 0) \
+                .bit('bContinuePlayback', elem.lastval, 1)
         else:
             elem.U8x('byBitVector') \
                 .bit('bIsFirstOnly', elem.lastval, 0) \
-                .bit('bContinuePlayback', elem.lastval, 1) \
+                .bit('bContinueAcrossSwitch', elem.lastval, 1)
 
         elem.s32('FadeOutTime')
         elem.s32('FadeInTime')
@@ -1619,6 +1641,7 @@ def CAkSwitchCntr__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkSwitchCntr_CAkParameterNodeBase_(obj):
     #CAkBankMgr::StdBankRead<CAkSwitchCntr,CAkParameterNodeBase>
+    #CAkBankMgr::StdBankRead<CAkSwitchCntr>
     cls = wcls.CAkSwitchCntr__Create(obj)
     obj.set_name(cls.name)
 
@@ -1644,6 +1667,7 @@ def CAkActorMixer__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkActorMixer_CAkParameterNodeBase_(obj):
     #CAkBankMgr::StdBankRead<CAkActorMixer,CAkParameterNodeBase>
+    #CAkBankMgr::StdBankRead<CAkActorMixer>
     cls = wcls.CAkActorMixer__Create(obj)
     obj.set_name(cls.name)
 
@@ -1986,8 +2010,7 @@ def CAkBankMgr__ReadBus(obj):
 
     obj.sid('ulID').fnv(wdefs.fnv_bus) #usually hashname
 
-    #callback, can only logically be this
-    CAkBus__SetInitialValues(obj, cls)
+    CAkBus__SetInitialValues(obj, cls) #callback, can only logically be this
     return
 
 
@@ -2049,6 +2072,7 @@ def CAkLayerCntr__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkLayerCntr_CAkParameterNodeBase_(obj):
     #CAkBankMgr::StdBankRead<CAkLayerCntr,CAkParameterNodeBase>
+    #CAkBankMgr::StdBankRead<CAkLayerCntr>
     cls = wcls.CAkLayerCntr__Create(obj)
     obj.set_name(cls.name)
 
@@ -2139,6 +2163,7 @@ def CAkMusicSegment__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkMusicSegment_CAkParameterNodeBase_(obj):
     #CAkBankMgr::StdBankRead<CAkMusicSegment,CAkParameterNodeBase>
+    #CAkBankMgr::StdBankRead<CAkMusicSegment>
     cls = wcls.CAkMusicSegment__Create(obj)
     obj.set_name(cls.name)
 
@@ -2242,7 +2267,7 @@ def CAkMusicTrack__SetInitialValues(obj, cls):
                 if cls.version <= 150:
                     pass
                 else:
-                    elem.U32('cacheID')
+                    elem.U32('cacheID') #part of a 128-bit hash, sometimes from in .wem's "hash" chunk
                 if cls.version <= 132:
                     pass
                 else:
@@ -2717,6 +2742,7 @@ def CAkMusicRanSeqCntr__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkMusicRanSeqCntr_CAkParameterNodeBase_(obj):
     #CAkBankMgr::StdBankRead<CAkMusicRanSeqCntr,CAkParameterNodeBase>
+    #CAkBankMgr::StdBankRead<CAkMusicRanSeqCntr>
     cls = wcls.CAkMusicRanSeqCntr__Create(obj)
     obj.set_name(cls.name)
 
@@ -2761,8 +2787,10 @@ def CAkAttenuation__SetInitialValues(obj, cls):
         num_curves = 5
     elif cls.version <= 141:
         num_curves = 7
-    else:
+    elif cls.version <= 154:
         num_curves = 19
+    else:
+        num_curves = 24
 
     for i in range(num_curves):
         obj.s8i('curveToUse[%i]' % i) #read as u8 but set to s8
@@ -2788,6 +2816,7 @@ def CAkAttenuation__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkAttenuation_CAkAttenuation_(obj):
     #CAkBankMgr::StdBankRead<CAkAttenuation,CAkAttenuation>
+    #CAkBankMgr::StdBankRead<CAkAttenuation>
     cls = wcls.CAkAttenuation__Create(obj)
     obj.set_name(cls.name)
 
@@ -2859,6 +2888,7 @@ def CAkDialogueEvent__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkDialogueEvent_CAkDialogueEvent_(obj):
     #CAkBankMgr::StdBankRead<CAkDialogueEvent,CAkDialogueEvent>
+    #CAkBankMgr::StdBankRead<CAkDialogueEvent>
     cls = wcls.CAkDialogueEvent__Create(obj)
     obj.set_name(cls.name)
 
@@ -2972,6 +3002,7 @@ def CAkFxBase__SetInitialValues(obj, cls):
 #-
 def CAkBankMgr__StdBankRead_CAkFxShareSet_CAkFxShareSet_(obj):
     #CAkBankMgr::StdBankRead<CAkFxShareSet,CAkFxShareSet>
+    #CAkBankMgr::StdBankRead<CAkFxShareSet>
     cls = wcls.CAkFxShareSet__Create(obj)
     obj.set_name(cls.name)
 
@@ -2987,6 +3018,7 @@ def CAkBankMgr__StdBankRead_CAkFxShareSet_CAkFxShareSet_(obj):
 #-
 def CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_(obj):
     #CAkBankMgr::StdBankRead<CAkFxCustom,CAkFxCustom>
+    #CAkBankMgr::StdBankRead<CAkFxCustom>
     cls = wcls.CAkFxCustom__Create(obj)
     obj.set_name(cls.name)
 
@@ -3003,13 +3035,13 @@ def CAkBankMgr__StdBankRead_CAkFxCustom_CAkFxCustom_(obj):
 def CAkBankMgr__StdBankRead_CAkAuxBus_CAkParameterNodeBase_(obj):
     #CAkBankMgr::ReadAuxBus 120<=
     #CAkBankMgr::StdBankRead<CAkAuxBus,CAkParameterNodeBase> 125>=
+    #CAkBankMgr::StdBankRead<CAkAuxBus>
     cls = wcls.CAkAuxBus__Create(obj)
     obj.set_name(cls.name)
 
     obj.sid('ulID').fnv(wdefs.fnv_bus) #usually hashname
 
-    #callback, can only logically be this
-    CAkBus__SetInitialValues(obj, cls) #_vptr$CAkIndexable + 83
+    CAkBus__SetInitialValues(obj, cls) #callback, can only logically be this
     return
 
 
@@ -3025,20 +3057,19 @@ def CAkModulator__SetInitialValues(obj, cls):
 
     AkPropBundle_RANGED_MODIFIERS_AkPropValue__unsigned_char___SetInitialParams(obj, cls, modulator=True)
 
-    #inline'd in 113
-    SetInitialRTPC_CAkModulator_(obj, cls)
+    SetInitialRTPC_CAkModulator_(obj, cls) #inline'd in 113
     return
 
 #- (112>=)
 def CAkBankMgr__StdBankRead_CAkLFOModulator_CAkModulator_(obj):
     #CAkBankMgr::StdBankRead<CAkLFOModulator,CAkModulator>
+    #CAkBankMgr::StdBankRead<CAkLFOModulator>
     cls = wcls.CAkLFOModulator__Create(obj)
     obj.set_name(cls.name)
 
     obj.sid('ulID').fnv(wdefs.fnv_no)
 
-    #callback, can only logically be this
-    CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
+    CAkModulator__SetInitialValues(obj, cls) # callback in older versions
     return
 
 
@@ -3048,6 +3079,7 @@ def CAkBankMgr__StdBankRead_CAkLFOModulator_CAkModulator_(obj):
 #- (112>=)
 def CAkBankMgr__StdBankRead_CAkEnvelopeModulator_CAkModulator_(obj):
     #CAkBankMgr::StdBankRead<CAkEnvelopeModulator,CAkModulator>
+    #CAkBankMgr::StdBankRead<CAkEnvelopeModulator>
     cls = wcls.CAkEnvelopeModulator__Create(obj)
     obj.set_name(cls.name)
 
@@ -3073,6 +3105,7 @@ def CAkAudioDevice__SetInitialValues(obj, cls):
 #- (118>=)
 def CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_(obj):
     #CAkBankMgr::StdBankRead<CAkAudioDevice,CAkAudioDevice>
+    #CAkBankMgr::StdBankRead<CAkAudioDevice>
     cls = wcls.CAkAudioDevice__Create(obj)
     obj.set_name(cls.name)
 
@@ -3091,6 +3124,7 @@ def CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_(obj):
 #- (128>)
 def CAkBankMgr__StdBankRead_CAkTimeModulator_CAkModulator_(obj):
     #CAkBankMgr::StdBankRead<CAkTimeModulator,CAkModulator>
+    #CAkBankMgr::StdBankRead<CAkTimeModulator>
     cls = wcls.CAkTimeModulator__Create(obj)
     obj.set_name(cls.name)
 
@@ -3098,6 +3132,32 @@ def CAkBankMgr__StdBankRead_CAkTimeModulator_CAkModulator_(obj):
 
     #callback, can only logically be this
     CAkModulator__SetInitialValues(obj, cls) #_vptr$CAkIndexable + ?
+    return
+
+
+#******************************************************************************
+# HIRC: Sidechain
+
+#168>=
+def CAkSidechainMixIndexable__SetInitialValues(obj, cls):
+    #CAkSidechainMixIndexable::SetInitialValues
+    obj = obj.node('SidechainMixInitialValues')
+
+    obj.tid('uId') #.fnv(wdefs.fnv_?)
+
+    obj.U32('channelCfg').fmt(wdefs.AkChannelConfigType)
+
+    return
+
+#- (168>=)
+def CAkBankMgr__ReadSidechainMix(obj):
+    #CAkBankMgr::ReadSidechainMix
+    cls = wcls.CAkSidechainMixIndexable__Create(obj)
+    obj.set_name(cls.name)
+
+    obj.sid('ulID').fnv(wdefs.fnv_no)
+
+    CAkSidechainMixIndexable__SetInitialValues(obj, cls)
     return
 
 
@@ -3162,6 +3222,7 @@ def get_hirc_dispatch(obj):
             0x14: CAkBankMgr__StdBankRead_CAkEnvelopeModulator_CAkModulator_,
             0x15: CAkBankMgr__StdBankRead_CAkAudioDevice_CAkAudioDevice_,
             0x16: CAkBankMgr__StdBankRead_CAkTimeModulator_CAkModulator_, #132>=
+            0x17: CAkBankMgr__ReadSidechainMix, #168>=
         })
 
     return hirc_dispatch
@@ -3309,6 +3370,7 @@ def CAkBankMgr__ProcessBankHeader(obj):
         if project_id == 0 and not root.has_feedback() and is_be and root.get_id() in wdefs.aot2_buggy_banks:
             root.set_subversion(45)
             pass
+
     # how fun, Dance on Broadway (Wii) v45 has one less field than AoT2 v45, try to autodetect AoT2
     if version == 45:
         if not root.has_feedback(): #DoB all .bnk use feedback
@@ -3545,7 +3607,6 @@ def CAkBankMgr__ProcessStringMappingChunk(obj):
 def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     #CAkBankMgr::ProcessGlobalSettingsChunk
     obj.set_name('GlobalSettingsChunk')
-
     version = get_version(obj)
 
     if version <= 140:
@@ -3558,12 +3619,17 @@ def CAkBankMgr__ProcessGlobalSettingsChunk(obj):
     if version <= 53:
         pass
     else:
-        obj.u16('maxNumVoicesLimitInternal')
+        obj.u16('maxNumVoicesLimitInternal') #aka u16MaxVoices
 
     if version <= 126:
         pass
     else:
-        obj.u16('maxNumDangerousVirtVoicesLimitInternal')
+        obj.u16('maxNumDangerousVirtVoicesLimitInternal') #aka u16MaxVirtVoices
+
+    if version <= 154:
+        pass
+    else:
+        obj.f32('fHSFEmphasis')
 
     obj.u32('ulNumStateGroups')
     for elem in obj.list('StateGroups', 'AkStateGroup', obj.lastval):
@@ -3684,29 +3750,34 @@ def CAkBankMgr__ProcessEnvSettingsChunk(obj):
     obj.set_name('EnvSettingsChunk')
     version = get_version(obj)
 
-    if   version <= 89:
-        max_x = 2
-        max_y = 2
-    elif version <= 150:
-        max_x = 2
-        max_y = 3
-    else:
-        max_x = 4
-        max_y = 3
+    if   version <= 154:
+        if   version <= 89:
+            max_x = 2
+            max_y = 2
+        elif version <= 150:
+            max_x = 2
+            max_y = 3
+        else:
+            max_x = 4
+            max_y = 3
 
-    obj = obj.node('ConversionTable')
-    for i in range(max_x):
-        for j in range(max_y):
-            # CAkEnvironmentsMgr->ConversionTable array
-            elem = obj.node('ObsOccCurve[%s][%s]' % (wdefs.eCurveXType.enum[i], wdefs.eCurveYType.enum[j]))
-            elem.u8i('bCurveEnabled') #when != 0
-            if version <= 36: #36=UFC
-                elem.u32('eCurveScaling').fmt(wdefs.AkCurveScaling)
-                elem.u32('ulCurveSize')
-            else:
-                elem.u8i('eCurveScaling').fmt(wdefs.AkCurveScaling)
-                elem.u16('ulCurveSize')
-            parse_rtpc_graph(elem, name='aPoints', subname='AkRTPCGraphPoint')
+        obj = obj.node('ConversionTable')
+        for i in range(max_x):
+            for j in range(max_y):
+                # CAkEnvironmentsMgr->ConversionTable array
+                elem = obj.node('ObsOccCurve[%s][%s]' % (wdefs.eCurveXType.enum[i], wdefs.eCurveYType.enum[j]))
+                elem.u8i('bCurveEnabled') #when != 0
+                if version <= 36: #36=UFC
+                    elem.u32('eCurveScaling').fmt(wdefs.AkCurveScaling)
+                    elem.u32('ulCurveSize')
+                else:
+                    elem.u8i('eCurveScaling').fmt(wdefs.AkCurveScaling)
+                    elem.u16('ulCurveSize')
+                parse_rtpc_graph(elem, name='aPoints', subname='AkRTPCGraphPoint')
+    else:
+        obj.tid('attenuationID')
+
+
     return
 
 

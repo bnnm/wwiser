@@ -70,24 +70,58 @@ def CAkToneGenParams__SetParamsBlock(obj, size):
 #AkParametricEQ
 def CAkParameterEQFXParams__SetParamsBlock(obj, size):
     #CAkParameterEQFXParams::SetParamsBlock
+    #CAkParametricEQFXParams::SetParamsBlock #168>=
     obj = obj.node('AkParameterEQFXParams') #m_Params
     obj.omax(size)
 
     version = get_version(obj)
 
-    count = 3
-    for elem in obj.list('Band', 'EQModuleParams', count):
-        elem.U32('eFilterType').fmt(wdefs.CAkParameterEQ__AkFilterType)
-        elem.f32('fGain')
-        elem.f32('fFrequency')
-        elem.f32('fQFactor')
-        elem.U8x('bOnOff')
-    obj.f32('fOutputLevel')
+    if version <= 168:
+        count = 3
+        for elem in obj.list('Band', 'EQModuleParams', count):
+            elem.U32('eFilterType').fmt(wdefs.CAkParameterEQ__AkFilterType)
+            elem.f32('fGain')
+            elem.f32('fFrequency')
+            elem.f32('fQFactor')
+            elem.U8x('bOnOff')
 
-    if version <= 26:
-        pass
-    else:
+        obj.f32('fOutputLevel')
+        if version <= 26:
+            pass
+        else:
+            obj.U8x('bProcessLFE')
+
+    elif version <= 169:
+        obj.f32('fOutputLevel')
         obj.U8x('bProcessLFE')
+
+        count = 8
+        for elem in obj.list('Band', 'EQModuleParams', count):
+            elem.U8x('bOnOff')
+            elem.U32('gap0') #.fmt(wdefs.CAkParameterEQ__AkFilterType)
+            elem.U32('uRolloff')
+            elem.f32('fGain')
+            elem.f32('fFrequency')
+            elem.f32('fQFactor')
+
+    else:
+        obj.f32('fOutputGain') #calculated from fOutputLevel
+        obj.U8x('bProcessLFE')
+        obj.tid('uSidechainId')
+        obj.U8x('bSidechainGlobalScope')
+        
+        obj.U8x('uNumBands')
+        count = obj.lastval
+
+        obj.U32('uBandEnabledBitfield')
+        obj.U32('uBandDynamicsEnabledBitfield')
+        
+        for elem in obj.list('Band', 'EQModuleParams', count):
+            elem.U8x('gap0') 
+            elem.U8x('uBandRolloff')
+            elem.f32('fBandFrequency')
+            elem.f32('fBandGainDb')
+            elem.f32('fBandQFactor')
 
     obj.consume()
     return
@@ -363,6 +397,7 @@ def CAkMeterFXParams__SetParamsBlock(obj, size):
         obj.U8x('NonRTPC.eScope').fmt(wdefs.CAkMeterFX__AkMeterScope)
     obj.U8x('NonRTPC.bApplyDownstreamVolume')
     obj.U32('NonRTPC.uGameParamID')
+    #TODO: check v172 param names
 
     obj.consume()
     return
@@ -552,6 +587,11 @@ def CREVFxSrcModelPlayerParams__SetParamsBlock(obj, size):
 
     obj.consume()
     return
+
+# internal plugins, possibly useful
+#SystemSinkParams::SetParamsBlock
+#BGMSinkParams::SetParamsBlock
+#AkSystemOutputMeta::SetParamsBlock
 
 # #############################################################################
 

@@ -62,6 +62,11 @@ bank_versions = [
     150, #0x96 Wwise 2023.1     [Aster Tatariqus (Android)-update, Dead by Daylight (PC), Age of Empires II DE (PC)-2024.11 update]
     152, #0x98 Wwise 2024.1-B   (none known)
     154, #0x9A Wwise 2024.1     [Age of Empires II DE (PC)-2025.04 update]
+    160, #0xA8 Wwise 2025.1.0-B (none known)-one bank
+    168, #0xA8 Wwise 2025.1.0-B (none known)
+    169, #0xA9 Wwise 2025.1.1-B (none known)
+    171, #0xAB Wwise 2025.1.2-B (none known)
+    172, #0xAC Wwise 2025.1.3   (none known)
 ]
 
 # no txtp support, even if forced
@@ -227,7 +232,7 @@ AkBank__AKBKHircType_126 = wfmt.FormatterLUT({
   0x16: "Envelope",
   0x17: "AudioDevice",
 })
-#128>=
+#128>= 154<=
 AkBank__AKBKHircType_128 = wfmt.FormatterLUT({
   0x01: "State",
   0x02: "Sound",
@@ -235,7 +240,7 @@ AkBank__AKBKHircType_128 = wfmt.FormatterLUT({
   0x04: "Event",
   0x05: "Random/Sequence Container",
   0x06: "Switch Container",
-  0x07: "Actor-Mixer",
+  0x07: "Actor-Mixer", #renamed to 'Containers' in 2025.1 but editor only, internally still Actor-Mixer
   0x08: "Audio Bus",
   0x09: "Layer Container",
   0x0a: "Music Segment",
@@ -251,6 +256,7 @@ AkBank__AKBKHircType_128 = wfmt.FormatterLUT({
   0x14: "Envelope",
   0x15: "Audio Device",
   0x16: "Time Mod",
+  0x17: "SidechainMix", #168>=
 })
 AkBank__AKBKHircType = None
 
@@ -973,6 +979,88 @@ AkPropID_154 = wfmt.FormatterLUT({
   0x4B: "AttenuationID",
   #0x4C: "NUM",
 })
+AkPropID_168 = wfmt.FormatterLUT({
+  #0x0: "FirstRtpc",
+  0x00: "Volume",
+  0x01: "Pitch",
+  0x02: "LPF",
+  0x03: "HPF",
+  0x04: "BusVolume",
+  0x05: "MakeUpGain",
+  0x06: "Priority",
+  0x07: "MuteRatio",
+  0x08: "UserAuxSendVolume0",
+  0x09: "UserAuxSendVolume1",
+  0x0A: "UserAuxSendVolume2",
+  0x0B: "UserAuxSendVolume3",
+  0x0C: "GameAuxSendVolume",
+  0x0D: "OutputBusVolume",
+  0x0E: "OutputBusHPF",
+  0x0F: "OutputBusLPF",
+  0x10: "OutputBusHSF",
+  0x11: "UserAuxSendLPF0",
+  0x12: "UserAuxSendLPF1",
+  0x13: "UserAuxSendLPF2",
+  0x14: "UserAuxSendLPF3",
+  0x15: "UserAuxSendHPF0",
+  0x16: "UserAuxSendHPF1",
+  0x17: "UserAuxSendHPF2",
+  0x18: "UserAuxSendHPF3",
+  0x19: "GameAuxSendLPF",
+  0x1A: "GameAuxSendHPF",
+  0x1B: "GameAuxSendHSF",
+  0x1C: "ReflectionBusVolume",
+  0x1D: "HDRBusThreshold",
+  0x1E: "HDRBusRatio",
+  0x1F: "HDRBusReleaseTime",
+  0x20: "HDRActiveRange",
+  0x21: "MidiTransposition",
+  0x22: "MidiVelocityOffset",
+  0x23: "PlaybackSpeed",
+  0x24: "InitialDelay",
+  0x25: "Positioning_Pan_X_2D",
+  0x26: "Positioning_Pan_Y_2D",
+  0x27: "Positioning_Pan_Z_2D",
+  0x28: "Positioning_Pan_X_3D",
+  0x29: "Positioning_Pan_Y_3D",
+  0x2A: "Positioning_Pan_Z_3D",
+  0x2B: "Positioning_CenterPercent",
+  0x2C: "Positioning_TypeBlend",
+  0x2D: "Positioning_EnableAttenuation",
+  0x2E: "Positioning_Cone_AttenuationOnOff",
+  0x2F: "Positioning_Cone_Attenuation",
+  0x30: "Positioning_Cone_LPF",
+  0x31: "Positioning_Cone_HPF",
+  0x32: "BypassFX",
+  0x33: "BypassAllFX",
+  0x34: "Available_0",
+  0x35: "MaxNumInstances",
+  0x36: "BypassAllMetadata",
+  0x37: "PlayMechanismSpecialTransitionsValue",
+  0x38: "AttenuationDistanceScaling",
+  #0x39: "FirstNonRtpc",
+  #0x38: "LastRtpc",
+  0x39: "PriorityDistanceOffset",
+  0x3A: "DelayTime",
+  0x3B: "TransitionTime",
+  0x3C: "Probability",
+  0x3D: "DialogueMode",
+  0x3E: "HDRBusGameParam",
+  0x3F: "HDRBusGameParamMin",
+  0x40: "HDRBusGameParamMax",
+  0x41: "MidiTrackingRootNote",
+  0x42: "MidiPlayOnNoteType",
+  0x43: "MidiKeyRangeMin",
+  0x44: "MidiKeyRangeMax",
+  0x45: "MidiVelocityRangeMin",
+  0x46: "MidiVelocityRangeMax",
+  0x47: "MidiChannelMask",
+  0x48: "MidiTempoSource",
+  0x49: "MidiTargetNode",
+  0x4A: "Loop",
+  0x4B: "AttenuationID",
+  #0x4C: "NUM",
+})
 AkPropID = None
 AkPropID_tids = {
     "AttachedPluginFXID", "AttenuationID"
@@ -1106,7 +1194,7 @@ AkActionType_062 = wfmt.FormatterLUT({
   0x1002: "UseState_E",
   0x1102: "UnuseState_E",
   0x0403: "Play",
-  0x0503: "PlayAndContinue",
+  0x0503: "PlayAndContinue", #removed in v168
   0x0102: "Stop_E",
   0x0103: "Stop_E_O",
   0x0104: "Stop_ALL",
@@ -2282,8 +2370,10 @@ def setup(version):
         AkPropID = AkPropID_128
     elif version <= 150:
         AkPropID = AkPropID_150
-    else:
+    elif version <= 154:
         AkPropID = AkPropID_154
+    else:
+        AkPropID = AkPropID_168
 
     global AkBank__AKBKHircType
     if version <= 126:

@@ -48,8 +48,8 @@ class DumpPrinter(object):
         self._smaller = False
         self._hide = False
         self._hide_attrs = []
-        self._skip_types = True
-        self._skip_empty = True
+        self._skip_types = False
+        self._skip_empty = False
 
 
     def dump(self):
@@ -220,6 +220,11 @@ class DumpPrinter(object):
     def _is_skippable(self, node, nodename, attrs, children):
         if not self._skip_empty:
             return False
+
+        #if not isinstance(node, wmodel.NodeError):
+        #    return False
+        #if not isinstance(node, wmodel.NodeSkip):
+        #    return False
 
         # useless fields
         name = attrs.get('name')

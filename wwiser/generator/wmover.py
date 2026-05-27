@@ -99,23 +99,23 @@ class Mover(object):
             dir = '.'
 
         if dir not in self._dirs:
-            self._dirs[dir] = os.listdir(dir)
+            self._dirs[dir] = list(os.scandir(dir))
         items = self._dirs[dir]
 
         # find OS's file as see if it's named differently
         name_lw = name.lower()
         
         for item in items:
-            if name_lw.endswith(item.lower()):
-                if name != item:
-                    _, item_in_ext = os.path.splitext(item)
+            if not item.is_file():
+                continue
+
+            if name_lw.endswith(item.name.lower()):
+                if name != item.name:
+                    _, item_in_ext = os.path.splitext(item.name)
                     item_out_ext = item_in_ext
 
-                    in_base, _ = os.path.splitext(in_name)
-                    _, in_ext = os.path.splitext(in_name)
-                    
-                    out_base, _ = os.path.splitext(out_name)
-                    _, out_ext = os.path.splitext(out_name)
+                    in_base, in_ext = os.path.splitext(in_name)
+                    out_base, out_ext = os.path.splitext(out_name)
 
                     if in_ext != out_ext and out_ext.lower().startswith('.l'): #localized
                         item_out_ext = '.L' + item_out_ext[1:]

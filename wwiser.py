@@ -5,7 +5,6 @@
 
 import sys
 from wwiser import wcli
-from wwiser import wgui
 
 _PROFILE = False
 
@@ -14,8 +13,12 @@ def main():
     if len(sys.argv) > 1:
         wcli.Cli().start()
     else:
-        wgui.Gui().start()
+        try:
+            from wwiser import wgui
 
+            wgui.Gui().start()
+        except ModuleNotFoundError:
+            wcli.Cli().start()
 
 def profile_simple():
     try:

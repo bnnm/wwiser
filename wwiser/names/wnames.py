@@ -377,10 +377,10 @@ class Names(object):
         logging.info("names: done")
 
 
-    def _parse_base(self, filename, callback, reverse_encoding=False):
+    def _parse_base(self, filename, callback):
+
+        # utf-8-sig (with or without bom) should fail if typical cp-1252 chars are found
         encodings = ['utf-8-sig', 'iso-8859-1']
-        if reverse_encoding:
-            encodings.reverse()
         try:
             testpath = os.path.realpath(filename) #for relative paths
             if testpath in self._loaded_wwnames:
@@ -481,7 +481,7 @@ class Names(object):
     def parse_txt_bnk(self, filename=None):
         if not filename:
             filename = os.path.splitext(self._bankname)[0] + '.txt'
-        self._parse_base(filename, self._parse_txt, reverse_encoding=True)
+        self._parse_base(filename, self._parse_txt)
 
     def _parse_txt(self, infile):
         #catch: "	1234155799	Play_Thing			\Default Work Unit\Play_Thing	" (with path being optional)

@@ -14,6 +14,7 @@ _IS_TEST_DIR = False
 
 _HASH_BUF_SIZE = 0x8000
 
+#TODO: same wem used in 2 banks aren't detected as dupes
 _OBJECT_SOURCES = {
     'CAkSound': 'AkBankSourceData',
     'CAkMusicTrack': 'AkBankSourceData',

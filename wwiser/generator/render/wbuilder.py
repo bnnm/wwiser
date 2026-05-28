@@ -266,6 +266,8 @@ class Builder(object):
         # check is node already in cache
         bnode = self._node_to_bnode.get(id(node))
         if bnode:
+            if mark_used:
+                self._used_node[id(node)] = True #register usage for unused detection
             return bnode
 
         # builder node with a helper class and save to cache

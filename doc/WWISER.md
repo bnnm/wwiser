@@ -663,7 +663,7 @@ The most notable case is game updates, where newer `.bnk` may be put in a separa
 
 Repeated banks may have the same IDs but different contents. For example a *music-switch* object in v1.0 may have 10 cases (10 `.txtp`), while v1.1 has 12 cases (12 `.txtp`), but the other way around could be possible. *wwiser* can only use either v1.0 or v1.1, but can't guess which *music-switch* is the newer/better one.
 
-By default it favors bigger banks first (usually v1.1) while still allowing both. This can be overridden to ignore repeated banks (first only, last only, biggest, etc) for fine tuning. In comple cases you may need to experiment and see if other mores make more `.txtp`. There is nothing stopping tricky devs of reusing a bank ID with completely different contents though, so use with care.
+By default it favors bigger banks first (usually v1.1) while still allowing both. This can be overridden to ignore repeated banks (first only, last only, biggest, etc) for fine tuning. In complex cases you may need to experiment and see if other mores make more `.txtp`. There is nothing stopping tricky devs of reusing a bank ID with completely different contents though, so use with care.
 
 
 ## KNOWN ISSUES
@@ -671,7 +671,7 @@ Bank format may change a bit between major Wwise SDK versions, adding new featur
 - earliest versions used in *Shadowrun (X360)* and *Too Human (X360)* partially supported
 - parameters for custom plugins not always parsed (uncommon and time-consuming to add)
 - some versions' field names and descriptions may be incorrect (missing SDKs)
-- viewer doesn't work in older (IE11<) browsers
+- viewer doesn't work in ancient (IE11<) browsers
 - some functions may not properly handle repeated IDs on different objects (unlikely and unsure how Wwise handles this)
 
 New bank versions must be manually added. If you find an unsupported version, or the tool outputs "errors" (overreads) and "skips" (underreads) please report.

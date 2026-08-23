@@ -10,7 +10,7 @@ identifies all fields. *wwiser* *can't* modify banks.
 ## MINI GUIDE
 How to play audio simulating the Wwise engine:
 - open *wwiser.pyz*
-- press *Load dirs...* and select a *base folder* with `.bnk` and `.wem` inside
+- press *Load dirs...* and select a *base folder* with `.bnk` and `.wem` inside (or in subfolders)
   - if you have `.pck`, use *Quickbms* + [this script](https://github.com/bnnm/wwiser-utils/blob/master/scripts/wwise_pck_extractor.bms) to extract `.wem`/`.bnk` first
   - if game has `SoundbanksInfo.xml`, `Wwise_IDs.h`, `(bankname).txt` or similar files you will have (some) names
   - or make/download a [name list](https://github.com/bnnm/wwiser-utils/tree/master/wwnames) put it as `wwnames.txt` in the *base folder*

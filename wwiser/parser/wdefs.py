@@ -1062,8 +1062,10 @@ AkPropID_168 = wfmt.FormatterLUT({
   #0x4C: "NUM",
 })
 AkPropID = None
+
+# AKProps are unions and the value depends on the property itself, so keep a quick list of which ones are IDs
 AkPropID_tids = {
-    "AttachedPluginFXID", "AttenuationID"
+    "AttachedPluginFXID", "AttenuationID", "MidiTargetNode"
 }
 
 #046>= 088<=

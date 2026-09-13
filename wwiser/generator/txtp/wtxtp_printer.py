@@ -359,7 +359,7 @@ class TxtpPrinter(object):
             self.has_streams = True
 
         if sound.unreachable:
-            name = "#" + name
+            name = "?" + name  #borderlands 4 layers
             info += " ##unreachable"
 
 

@@ -24,6 +24,7 @@ class GeneratorFilterItem(object):
         self.is_pattern = False
         # actual filter
         self.value = None
+        self.value_hash = None #for bank
         self.value_index = None #for index
 
         value = value.lower()
@@ -51,6 +52,7 @@ class GeneratorFilterItem(object):
         if '*' in value:
             self.is_pattern = True
 
+
         # detect type of filter
         if value.isnumeric():
             # 123456789
@@ -64,12 +66,12 @@ class GeneratorFilterItem(object):
             # (bankname).bnk
             self.use_bank = True
 
-            # compare (name).bnk as (hash).bnk when no wildcards are used, to improve detection
+            # calc (hash).bnk to improve detection (ex. filter is music.bnk but filename is 3991942870.bnk)
             if not self.is_pattern:
                 value_bank, __ = os.path.splitext(value)
                 if not value_bank.isnumeric():
                     bankhash = wfnv.Fnv().get_hash(value_bank)
-                    self.value = '%s.bnk' % (bankhash)
+                    self.value_hash = '%s.bnk' % (bankhash)
 
         elif '-' in value:
             # (bankname or bank hashname)-(index)-(description)
@@ -78,7 +80,13 @@ class GeneratorFilterItem(object):
             parts = value.split('-')
             bankname = parts[0]
             index = parts[1].split('~')[0] #remove possible extra parts
-            self.value = self.get_bankcomp(bankname)
+
+            if self.is_pattern or bankname.isnumeric():
+                self.value = '%s.bnk' % (bankname)
+            else:
+                bankhash = wfnv.Fnv().get_hash(bankname)
+                self.value = '%s.bnk' % (bankhash)
+
             self.value_index = int(index)
 
         else:
@@ -87,51 +95,57 @@ class GeneratorFilterItem(object):
 
         return
 
-    def get_bankcomp(self, bankname):
-        # TODO: improve
-        # bankname here shouldn't have an extension but filters do, so add it back
+    # comps can be music.bnk + 3991942870.bnk or just 3991942870.bnk
+    def _get_bankcomps(self, bankname):
+        comps = []
+        comps.append( '%s.bnk' % (bankname) )
+        if not bankname.isnumeric():
+            bankhash = wfnv.Fnv().get_hash(bankname)
+            comps.append( '%s.bnk' % (bankhash) )
 
-        if self.is_pattern or self.use_bank:
-            return '%s.bnk' % (bankname)
-
-        # use bank's hash when no wildcards are used, to improve detection #???
-        if bankname.isnumeric():
-            return bankname
-
-        bankhash = wfnv.Fnv().get_hash(bankname)
-        return '%s.bnk' % (bankhash)
+        return comps
 
     def match(self, sid, hashname, classname, bankname, index):
 
         # filter's accepted value
-        value = self.value
+        values = [self.value]
 
         # depending on filter, set things to compare (comps)
         if   self.use_sid:
             comps = [str(sid)]
+
         elif self.use_bank:
             if not bankname: #only happens when sorting
                 return False
-            comps = [self.get_bankcomp(bankname)]
+
+            # filter may be music.bnk but filename is 3991942870.bnk, so also compare filter's hashname
+            if self.value_hash:
+                values.append(self.value_hash)
+
+            comps = self._get_bankcomps(bankname)
+
         elif self.use_class:
             comps = [classname]
+
         elif self.use_index:
             # index needs multiple fields, check index here and bank below
             if self.value_index != index:
                 return False
-            comps = [self.get_bankcomp(bankname)]
+            comps = self._get_bankcomps(bankname)
         else:
             comps = [str(sid), hashname] # bnk and hashnames sometimes clash
+
 
         # test external comp vs current item's filter value
         for comp in comps:
             if not comp:
                 continue
             comp = comp.lower()
-            if self.is_pattern and fnmatch.fnmatch(comp, value):
-                return True
-            elif comp == value:
-                return True
+            for value in values:
+                if self.is_pattern and fnmatch.fnmatch(comp, value):
+                    return True
+                elif comp == value:
+                    return True
 
         return False
 

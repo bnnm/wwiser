@@ -871,6 +871,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             if   cls.version <= 132:
                 fld.bit('bHoldEmitterPosAndOrient', obj.lastval, 3)
                 fld.bit('bHoldListenerOrient', obj.lastval, 4)
+                fld.bit('bIsLooping', obj.lastval, 5) #for Ak3DAutomationParams
             elif cls.version <= 134:
                 fld.bit('bEnableAttenuation', obj.lastval, 3)
                 fld.bit('bHoldEmitterPosAndOrient', obj.lastval, 4)

@@ -863,6 +863,7 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
             uBits3d = obj.lastval
 
             #todo bit meanings may vary more in older versions
+            # AkPositioningSettings
             if   cls.version <= 126:
                 fld.bit('eSpatializationMode', obj.lastval, 0, mask=1, fmt=wdefs.Ak3DSpatializationMode)
             else:
@@ -874,12 +875,13 @@ def CAkParameterNodeBase__SetPositioningParams(obj, cls):
                 fld.bit('bEnableAttenuation', obj.lastval, 3)
                 fld.bit('bHoldEmitterPosAndOrient', obj.lastval, 4)
                 fld.bit('bHoldListenerOrient', obj.lastval, 5)
-                fld.bit('bIsNotLooping?', obj.lastval, 7) #from tests
+                fld.bit('bIsLooping', obj.lastval, 6) #for Ak3DAutomationParams
             else:
                 fld.bit('bEnableAttenuation', obj.lastval, 3)
                 fld.bit('bHoldEmitterPosAndOrient', obj.lastval, 4)
                 fld.bit('bHoldListenerOrient', obj.lastval, 5)
-                fld.bit('bEnableDiffraction', obj.lastval, 6)
+                fld.bit('bIsLooping', obj.lastval, 6) #for Ak3DAutomationParams
+                fld.bit('bEnableDiffraction', obj.lastval, 7)
 
         if   cls.version <= 89:
             obj.tid('uAttenuationID')

@@ -376,10 +376,9 @@ def CAkMeterFXParams__SetParamsBlock(obj, size):
     obj = obj.node('AkMeterFXParams') #m_Params
     obj.omax(size)
 
-    if size < 0x20:
+    if size < 0x20: #v056+ (size 0x19+)
         #RTPC: AkMeterRTPCParams
         #NonRTPC: AkMeterNonRTPCParams
-        obj.u32('unk')
         obj.f32('RTPC.fAttack')
         obj.f32('RTPC.fRelease')
         obj.f32('RTPC.fMin')
@@ -387,17 +386,11 @@ def CAkMeterFXParams__SetParamsBlock(obj, size):
         obj.f32('RTPC.fHold')
         if size >= 0x1c: #v144>=
             obj.U8x('RTPC.bInfiniteHold')
-
-        if size == 0x19: #v088<=
-            pass
-        else:
-            obj.U8x('NonRTPC.eMode').fmt(wdefs.CAkMeterFX__AkMeterMode)
-
-        if size <= 0x1A: #v120<=
-            pass
-        else: #0x1B #v125>=
+        obj.U8x('NonRTPC.eMode').fmt(wdefs.CAkMeterFX__AkMeterMode)
+        if size >= 0x1B: #v125>=
             obj.U8x('NonRTPC.eScope').fmt(wdefs.CAkMeterFX__AkMeterScope)
-        obj.U8x('NonRTPC.bApplyDownstreamVolume')
+        if size >= 0x1A: #v120<=
+            obj.U8x('NonRTPC.bApplyDownstreamVolume')
         obj.U32('NonRTPC.uGameParamID')
 
     else: #v172>=

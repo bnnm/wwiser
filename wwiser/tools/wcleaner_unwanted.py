@@ -21,7 +21,8 @@ _IS_TEST_DIR = False
 _FILE_PATTERN = re.compile(r"^[ ]*[?]*[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.[0-9a-zA-Z_]+).*$")
 # catch comment with .bnk used to generate current .txtp
 _BANK_PATTERN = re.compile(r"^#[ ]*-[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.bnk).*$")
-_UNREACHABLE_PATTERN = re.compile(r"^[ ]*[?]*[ ]*#[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.[0-9a-zA-Z_]+).*$")
+# catch folder-like parts followed by name + extension + #unreachable
+_UNREACHABLE_PATTERN = re.compile(r"^[ ]*[?]*[ ]*([0-9a-zA-Z()\[\]_\- \\/\.]*[0-9a-zA-Z_]+\.[0-9a-zA-Z_]+).*$")
 _VALID_EXTS = ['.wem', '.bnk', '.xma', '.ogg', '.wav', '.logg', '.lwav']
 
 class CleanerUnwanted(object):

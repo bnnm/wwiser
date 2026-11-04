@@ -215,10 +215,11 @@ class RN_CAkMusicSwitchCntr(RN_CAkHircNode):
         self._register_transitions(bnode.rules)
         self._register_stingers(bnode.stingerlist)
 
-        if bnode.ntid:
+        # key 0, no depth (NMH3)
+        if bnode.tree and bnode.tree.ntid:
             # rarely tree plays a single object with any state
             txtp.group_single(config)
-            self._render_next(bnode.ntid, txtp)
+            self._render_next(bnode.tree.ntid, txtp)
             txtp.group_done()
             return
 

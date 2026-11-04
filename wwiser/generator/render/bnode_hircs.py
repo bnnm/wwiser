@@ -431,7 +431,6 @@ class CAkMusicSwitchCntr(CAkParameterNode):
         self.gtype = None
         self.ngname = None
         self.gvalue_ntid = {}
-        self.ntid = False
         self.rules = None
         self.tree = None
 

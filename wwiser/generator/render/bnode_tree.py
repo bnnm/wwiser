@@ -39,6 +39,7 @@ class AkDecisionTree(object):
         self.args = []
         self.paths = []
         self.tree = {}
+        self.ntid = None
 
         self._build(node)
 

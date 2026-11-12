@@ -1,5 +1,4 @@
 import logging, re, os, os.path, sys
-from datetime import datetime
 
 from .. import wfnv
 from ..parser import wdefs
@@ -33,6 +32,7 @@ class Names(object):
     ONREPEAT_BEST = 4 #compare caps and pick
     EMPTY_BANKTYPE = ''
     EMPTY_BANKLANG = 0
+    FNV_SPLITTER = re.compile(r"[A-Za-z_][A-Za-z0-9\_]*")
 
 
     def __init__(self):
@@ -309,13 +309,11 @@ class Names(object):
             bankname = bank.get_root().get_bankname()
             bankpath = bank.get_root().get_path()
 
-            self._add_name(None, bankname, source=NameRow.NAME_SOURCE_EXTRA)
-            if bankpath:
-                # just in case add paths (generally only useful in UE4 event-based banks though)
-                splitter = '\\' if '\\' in bankpath else '/'
-                items = bankpath.split(splitter)
-                for item in items:
-                    self._add_name(None, item, source=NameRow.NAME_SOURCE_EXTRA)
+            # rare for Wwise, but split by valid FNV strings in case the .bnk was renamed
+            items = self.FNV_SPLITTER.findall(bankname)
+            items += self.FNV_SPLITTER.findall(bankpath) if bankpath else []
+            for item in items:
+                self._add_name(None, item, source=NameRow.NAME_SOURCE_EXTRA)
 
             # might as well register now
             self._register_classify_bank(bank)

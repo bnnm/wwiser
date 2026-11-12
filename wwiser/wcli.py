@@ -281,10 +281,10 @@ class Cli(object):
         # dump files
         dump_name = args.dump_name
         if not dump_name:
-            if len(filenames) == 1:
-                dump_name = filenames[0]
-            else:
-                dump_name = 'banks'
+            #if len(filenames) == 1: #should just use -m
+            #    dump_name = filenames[0]
+            #else:
+            dump_name = 'banks'
 
         # default dump type
         if args.dump_type is None:

@@ -96,6 +96,7 @@ class AkBankSourceData(object):
         self.nfileid = nbnksrc.find(name='uFileID') #optional
         self.nlang = nbnksrc.find(name='bIsLanguageSpecific') #flags
         self._lang_loaded = False
+        self.localized = self.nlang and self.nlang.value() != 0
 
         if self.nfileid:
             # in older games (<=112) fileID exists and can be different from sourceID

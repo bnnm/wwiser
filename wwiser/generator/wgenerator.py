@@ -130,6 +130,9 @@ class Generator(object):
     def set_write_delays(self, flag):
         self._txtpcache.write_delays = flag
 
+    def set_skip_localized(self, flag):
+        self._txtpcache.skip_localized = flag
+
     def set_x_silence(self, flag):
         self._txtpcache.x_silence_all = flag
 

@@ -27,6 +27,7 @@ class TxtpCache(object):
         self.wwnames = None
         self.statechunks_skip_default = False
         self.statechunks_skip_unreachables = False
+        self.skip_localized = False
 
         self.no_txtp = False
         self.x_noloops = False

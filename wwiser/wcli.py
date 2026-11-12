@@ -88,6 +88,7 @@ class Cli(object):
         p.add_argument('-grm','--txtp-random-multi',    help="Force multiloops to be selectable like a 'random'\n(ex. make .txtp per layer in multiloops files)", action='store_true')
         p.add_argument('-grf','--txtp-random-force',    help="Force base section to be selectable like a 'random'\n(ex. make .txtp per layer in all files)", action='store_true')
         p.add_argument('-gwd','--txtp-write-delays',    help="Don't skip initial delay.\n(some .txtp will start with some delay)", action='store_true')
+        p.add_argument('-gsl', '--txtp-skip-localized',  help="Remove localized .wem from .txtp\nUseful when banks mix localized voice and bgm .wem", action='store_true')
 
         p = parser.add_argument_group('other options')
         p.add_argument('-te', '--tags-event',           help="Use shorter .txtp names and put full names in !tags.m3u", action='store_true')
@@ -394,6 +395,7 @@ class Cli(object):
             generator.set_random_multi(args.txtp_random_multi)
             generator.set_random_force(args.txtp_random_force)
             generator.set_write_delays(args.txtp_write_delays)
+            generator.set_skip_localized(args.txtp_skip_localized)
 
             generator.set_tags(tags)
 

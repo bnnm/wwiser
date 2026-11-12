@@ -160,6 +160,11 @@ class TxtpSimplifier(object):
                 self._kill_node(node)
                 return
 
+        # kill localized nodes on request, since sometimes they are mixed with non-localized bgm
+        if self._txtpcache.skip_localized and node.is_sound() and node.sound.source and node.sound.source.localized:
+            self._kill_node(node)
+            return
+
         # set externals flag
         if node.is_sound() and node.sound.source and node.sound.source.plugin_external:
             self._printer.has_externals = True
